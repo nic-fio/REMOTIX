@@ -85,7 +85,6 @@ int main(int argc, char **argv)
 	/* 4 */
 	{
 		pid_t k[3];
-		t0 = now_ms();
 		for (int i = 0; i < 3; i++)
 			k[i] = stuck_child();
 		usleep(50000);
@@ -117,7 +116,7 @@ int main(int argc, char **argv)
 		}
 		fn = b ? strstr(b, "void children_turn_off(children *f)") : NULL;
 		if (fn) {
-			char *end = strstr(fn, "\nfree(f->v);");
+			char *end = strstr(fn, "\n\tfree(f->v);");
 			if (!end)
 				end = fn + 3500;
 			char save = *end;

@@ -24,6 +24,9 @@
  *      not yet introduced is never judged, an answer of the old size (no name_check) is accepted; name_resolution() gives the
  *      three verdicts; a LOGIN through children_ensure_from() does one lookup and passes, or kills on another uid or a
  *      vanished name.
+ *  12. (audit of the session, 25 Oct 2026) the «who are you» question that nobody answers: a child that never answers is killed 180 s after the
+ *      question (not before, and not if no question was asked yet); one that answers every minute is never touched; one that does not answer but
+ *      keeps sending messages is NOT killed (a line says so, the wait starts again); the wait is armed even when the question cannot go out.
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -75,7 +78,7 @@ static int rxt_clock_gettime(clockid_t c, struct timespec *ts);
 #undef log_says_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 39
+#define EXPECTED_CHECKS 47
 
 static void require(int cond, const char *desc)
 {
@@ -544,6 +547,75 @@ int main(void)
 		require(!name_still_ours(&g, why, sizeof why) && strstr(why, "now uid") != NULL, "...and for another uid");
 		nss_uid = getuid();
 		require(name_still_ours(&g, why, sizeof why), "...and true when it holds");
+	}
+
+	printf("  12. the «who are you» question that nobody answers\n");
+	{
+		const uint64_t T0 = 1000000;
+		struct children f;
+		struct child g;
+
+		/* 40: never answered → killed at 180 s after the question, not before; no question yet → no deadline */
+		if (!live_child(&f, &g))
+			return 1;
+		sigkills = 0;
+		children_recheck(&f, T0 + 10000);            /* before the first minute: no question, nothing armed */
+		children_recheck(&f, T0 + 60000 + WHOAMI_DEADLINE_MS - 1);  /* (first question goes out here; asked_ms = this instant) */
+		require(sigkills == 0 && g.used, "40a. before the first question, and at the instant it is asked: nobody is killed");
+		{
+			uint64_t asked = g.whoami_asked_ms;
+			children_recheck(&f, asked + WHOAMI_DEADLINE_MS - 1);
+			require(sigkills == 0, "40b. 1 ms before the 180 s: not killed");
+			children_recheck(&f, asked + WHOAMI_DEADLINE_MS);
+			require(sigkills == 1 && g.exiting, "40c. 180 s after the question and not a word from the child: SIGKILL, the slot is leaving");
+		}
+		/* 41: it answers every minute → never touched */
+		if (!live_child(&f, &g))
+			return 1;
+		sigkills = 0;
+		for (int m = 1; m <= 12; m++) {
+			children_recheck(&f, T0 + (uint64_t)m * RECHECK_MS);
+			if (!send_intro(&g, NAME_HOLDS, (uint32_t)g.uid, sizeof(struct body_whoami)))
+				return 1;
+			one_round(&f, T0 + (uint64_t)m * RECHECK_MS + 1);
+		}
+		children_recheck(&f, T0 + 12 * RECHECK_MS + WHOAMI_DEADLINE_MS * 2);
+		require(sigkills == 0 && g.used && !g.exiting && g.whoami_asked_ms != 0, "41. a child that answers every minute is never touched (12 minutes)");
+		/* 42: it does not answer but keeps delivering → not killed, a line, the wait restarts */
+		if (!live_child(&f, &g))
+			return 1;
+		sigkills = 0;
+		children_recheck(&f, T0 + RECHECK_MS);
+		{
+			uint64_t asked = g.whoami_asked_ms;
+			if (!send_canvas(&g, 1920))
+				return 1;
+			one_round(&f, asked + 100000);            /* a message arrives after the question */
+			lines = 0;
+			children_recheck(&f, asked + WHOAMI_DEADLINE_MS);
+			require(sigkills == 0 && g.used && !g.exiting && lines >= 1 && strstr(last, "NOT killed") != NULL,
+			        "42. it does not answer but sent a message after the question: NOT killed, one line says so");
+			require(g.whoami_asked_ms == asked + WHOAMI_DEADLINE_MS, "42b. and the wait starts again from there");
+			children_recheck(&f, asked + 2 * WHOAMI_DEADLINE_MS);
+			require(sigkills == 1, "42c. if then it says nothing at all for another 180 s: SIGKILL");
+		}
+		/* 43: the question cannot go out (the descriptor refuses the send) → the wait is armed all the same */
+		if (!live_child(&f, &g))
+			return 1;
+		{
+			int pp[2];
+			if (pipe(pp) != 0)
+				return 1;
+			close(g.fd);
+			g.fd = pp[0];                             /* send() on a pipe: ENOTSOCK */
+			sigkills = 0;
+			children_recheck(&f, T0 + RECHECK_MS);
+			children_recheck(&f, T0 + RECHECK_MS + WHOAMI_DEADLINE_MS);
+			require(g.whoami_asked_ms == T0 + RECHECK_MS && sigkills == 1, "43. a question that cannot go out arms the wait: SIGKILL after 180 s");
+			close(pp[0]);
+			close(pp[1]);
+			g.fd = -1;
+		}
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);
