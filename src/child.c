@@ -46,6 +46,7 @@
  *    writing**, and an unprivileged process cannot declare false ones.  It is
  *    the only way "verified on every message" is a fact and not a promise.
  */
+#include "runwait.h"
 #include "child.h"
 
 /* ⛔ ONLY for the session cap (`RCP_SESSION_CAP`, `rcp_cap()`).  ⚠ The
@@ -2031,25 +2032,61 @@ static bool card_groups(const char *user, gid_t primary,
  * Returns `true` if it changed something (and then the groups must be read
  * again).
  */
-static bool run_as_root(const char *which, char *const argv[], const char *user)
+#define RUN_AS_ROOT_MAX_MS 10000
+
+/* How run_as_root() ended (review of 19eef4c3): the caller must tell "the program is not there" (try the next path) from "it started and ran out of time" (do NOT start a second
+ * one on top of the first: look at the groups instead) from "it ran and failed". */
+enum run_result { RUN_OK = 0, RUN_FAILED, RUN_NOT_STARTED, RUN_TIMED_OUT };
+
+static enum run_result run_as_root(const char *which, char *const argv[], const char *user)
 {
 	pid_t p = fork();
 	int state = 0;
 
 	if (p < 0)
-		return false;
+		return RUN_NOT_STARTED;
 	if (p == 0) {
+		/* ⭐ E-R9 (audit of 25 Oct 2026): `usermod` and friends must not inherit the service's sockets (the UDP and TCP ones, the command socket
+		 *    and every accepted connection), as `become_and_exec()` already does for the children.  Best effort: if close_range() fails,
+		 *    the exec goes ahead as before. */
+		(void)close_range(3, ~0U, 0);
 		execv(which, argv);
 		_exit(127);
 	}
-	if (waitpid(p, &state, 0) != p)
-		return false;
+	/* ⭐ E-R9: the wait is LIMITED.  `usermod` waits for its own timeout (tens of seconds) if /etc/passwd or /etc/group are locked, and this process serves everybody. */
+	{
+		int waited = run_wait(p, RUN_AS_ROOT_MAX_MS, &state);
+
+		if (waited == 0 || waited == 2) {
+			log_says_of(LOG_CHILD, user, "⛔ «%s» did not finish in %d ms (/etc/passwd or /etc/group locked?): killed",
+			            which, RUN_AS_ROOT_MAX_MS);
+			return RUN_TIMED_OUT;
+		}
+		if (waited < 0)
+			return RUN_FAILED;
+	}
+	if (WIFEXITED(state) && WEXITSTATUS(state) == 127)
+		return RUN_NOT_STARTED;   /* the exec did not happen (`_exit(127)` above): the next path may */
 	if (!WIFEXITED(state) || WEXITSTATUS(state) != 0) {
 		log_says_of(LOG_CHILD, user, "⛔ «%s» did not work (status %d)", which,
 		                 WIFEXITED(state) ? WEXITSTATUS(state) : -1);
-		return false;
+		return RUN_FAILED;
 	}
-	return true;
+	return RUN_OK;
+}
+
+/* Is `user` in `gid` NOW?  Read again from the system, as `card_groups()` does at every connection (getgrouplist), not from the list taken before `usermod`. */
+static bool user_in_group_now(const char *user, gid_t primary, gid_t gid)
+{
+	gid_t list[256];
+	int n = (int)(sizeof list / sizeof list[0]);
+
+	if (getgrouplist(user, primary, list, &n) < 0)
+		return false;
+	for (int i = 0; i < n; i++)
+		if (list[i] == gid)
+			return true;
+	return false;
 }
 
 /*
@@ -2242,8 +2279,25 @@ static bool enroll_in_card_groups(const char *user, uid_t uid, gid_t primary,
 	 * recording an enrolment never made would make the uninstallation remove a
 	 * group put there by others. */
 	fd = groups_open_file(why, sizeof why);
-	if (!run_as_root("/usr/sbin/usermod", argv_mod, user) &&
-	    !run_as_root("/sbin/usermod", argv_mod, user)) {
+	enum run_result ran = run_as_root("/usr/sbin/usermod", argv_mod, user);
+
+	/* ⭐ Review of 19eef4c3: the second path ONLY if the first program did not start (127).  After a timeout a second usermod on top of the first (killed, maybe half way) is
+	 *    wrong: the groups are READ AGAIN, and what was added counts — it is recorded below like any other enrolment. */
+	if (ran == RUN_NOT_STARTED)
+		ran = run_as_root("/sbin/usermod", argv_mod, user);
+	if (ran == RUN_TIMED_OUT) {
+		int kept = 0;
+
+		for (int j = 0; j < nplaced; j++)
+			if (user_in_group_now(user, primary, seen_items[placed[j]]))
+				placed[kept++] = placed[j];
+		log_says_of(LOG_CHILD, user, "⚠ after the timeout %d of %d groups are there: %s", kept, nplaced,
+		            kept ? "recording those" : "nothing was added");
+		nplaced = kept;
+		if (kept)
+			ran = RUN_OK;
+	}
+	if (ran != RUN_OK) {
 		log_says_of(LOG_CHILD, user,
 		                 "⛔ I could not enrol «%s» in «%s»: the session will be born "
 		                 "BLIND, and the manual cure is `usermod -aG %s %s`",
