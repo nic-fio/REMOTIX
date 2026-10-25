@@ -38,6 +38,8 @@ GRUPPI = [
         (S + "rootside_proto.h", "The closed list of messages between the two sides (AUTH, SPAWN, CLOSE_ORPHAN, SIGNAL and the events): fixed sizes, magic and version"),
         (S + "walls.h", "The network side's walls, in plain words: private read-only mount namespace, no privileges, seccomp, SELinux domain"),
         (S + "walls.c", "Applies the walls in the fork, in the order that matters, and refuses to start the network side if one fails"),
+        (S + "hsrate.h", "The rate of new QUIC handshakes (per address, per network, in all), apart from the caps on pending ones (audit R4)"),
+        (S + "pagebucket.h", "The accept buckets of the page listener, apart so that a unit test can try them alone"),
         (S + "linebudget.h", "A budget of log lines per time window for the whole process: the first lines are written, the rest counted in one line at the end (audit R8, R12)"),
         (S + "lookup.h", "The CID map and the ring of used Retry tokens of the transport, hashed instead of scanned for every packet"),
         (S + "sigchld.h", "When the main loop reaps its children: on SIGCHLD (a flag set by a handler) plus a safety scan every second, not a waitpid per child per round"),

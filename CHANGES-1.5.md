@@ -1,6 +1,6 @@
 # REMOTIX 1.5 — release notes (draft, 25 Oct 2026)
 
-> ⭐ This file describes the branch `finale` = `integrazione2` (`a4b9cb1f`) + `pktinfo` + `rootside-completo` (the split, OFF by default) + `rifiniture` (CSP and decoder correction) + `doc-chiusura`. `ff-worker` (§11.36) is NOT in it: it waits for the user's decision D2. Sections 5-7 say what is inside and what is not.
+> ⭐ This file describes the branch `finale` = `integrazione2` (`a4b9cb1f`) + `pktinfo` + `rootside-completo` (the split, OFF by default) + `rifiniture` (CSP and decoder correction) + `doc-chiusura`. **`finale-ff` = this branch + `ff-worker` (§11.36): ff-worker merged (D2 = A)**; in `finale` it is not (it waits for D2). Sections 5-7 say what is inside and what is not.
 > Range of `integrazione2`: `git log 5cf8ca10..a4b9cb1f` (`finale` adds the merges of section 6: `git log a4b9cb1f..finale`) (package 1b, audit, login defences, and the ports from the abandoned
 > attempt: sessions, packages, RCP, page, card, KDE, misc) over package 1 (`git log 04f6aa18..5cf8ca10`). Every line cites a commit or a
 > section of `docs/1.5/DECISIONS-11.md` (written «§11.x»).
@@ -146,11 +146,11 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
   `PIANO.md` and on `f031-a-p1b`, to be tested on the phone) and NVIDIA (a rented server, `PIANO.md`): both excluded from this release's closing.
 - **Three decisions of the user** (opinions collected from Argon, gpt-oss and Laguna in `tmp/dom5.txt`, none taken): **D1** the root-side
   split ON or OFF in 1.5 (§11.50); **D2** the Firefox worker as default (§11.36); **D3** decoder `PACE` ON by default (§11.32). Without
-  a decision the release is the safe one: D1 OFF, D2 `ff-worker` not merged (it is not in `finale`), D3 OFF (section 7).
+  a decision the release is the safe one: D1 OFF, D2 `ff-worker` merged only in `finale-ff` (D2 = A; it is not in `finale`), D3 OFF (section 7).
 - **In `finale` (merged, to be measured)**: branch `rifiniture`: `connect-src` of the CSP narrowed to `'self'` (it was `'self' https:` in `page.c`; the WebTransport behaviour on Chrome
   and Firefox is still to be measured), and the correction of the decoder in `page.html` (`7e49f5b1`, from `b1dea604`): a keyframe rebuilds a decoder that an error closed, also at the
-  same size (before, the picture stayed frozen for the rest of the session). **Not in `finale`**: branch `ff-worker` (approved on reading; the live proof is still to do), the port of §11.36 D, the worker route as default **only on desktop Firefox**, with
-  automatic fallback to the main-thread route; merged only if the user chooses D2 = A.
+  same size (before, the picture stayed frozen for the rest of the session). **`ff-worker` merged (D2 = A) in `finale-ff` only**: the port of §11.36 D, the worker route as default **only on desktop Firefox**, with
+  automatic fallback to the main-thread route (its `4c9c78ee` is the same decoder fix as `7e49f5b1`: one copy in `page.html`); approved on reading, the live proof in a browser is still to do.
 - **Not done, optional**: the
   zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
   login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
@@ -178,7 +178,7 @@ These are approved and are **not** in the range above; `finale` has them, merged
 - **Merge order, done in `finale`**: `pktinfo` first (small; it also repairs a defect of 1.0), then `rootside-completo` (one conflict in `src/transport.c`, in
   `transport_open_fd()`: the family and `bound_any` now come from the socket's own `getsockname`, as the split needs), then `rifiniture`, then `doc-chiusura`
   (conflict in `DECISIONS-11.md`, the status paragraph: the one of `doc-chiusura` kept, then rewritten for `finale`). `verifica-rami` and the runs of section 5 are to be done on `finale`.
-  `ff-worker` is **not** merged. `integrazione2` itself is not touched.
+  `ff-worker` is merged in `finale-ff` (D2 = A) and **not** in `finale`. `integrazione2` itself is not touched.
 - Already in `integrazione2` since the 24 Oct run: `61ea9a6c` (the 429 for a second session counted as chatter), `879cf5fa` (a name clash of `rcp_logged_in`),
   `549a9e06` (the product build declared five capabilities in HERE_I_AM and wrote four), `0b4d3bda`/`4be3a981` (tests of the six failing units),
   `c2766ea1`/`8a7f5247` (F-027 rewritten to the new ban rules), `a4b9cb1f` (test client `--rebind` with QUIC PING).
@@ -196,8 +196,8 @@ These are approved and are **not** in the range above; `finale` has them, merged
   −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. Needs decision D1.
 - **Decoder `PACE` (§11.32)**: present (`4895f2ad`, `c7bfef17`), enabled with `--decoder-pace`; the page declares `video.pace` only then. The measures
   of the first attempt favoured ON (slow decoder: 26 → 61 photos/min on Firefox 4K), but the default is a change seen by the browser. Needs decision D3.
-- **Firefox worker as default (§11.36)**: written on the branch `ff-worker` (default on desktop Firefox only, fallback to the main-thread route; Chrome and Android
-  unchanged), approved on reading, live proof still to do, NOT merged. It enters 1.5 only if the user chooses D2 = A.
+- **Firefox worker as default (§11.36)**: **ff-worker merged (D2 = A)** in the branch `finale-ff` (default on desktop Firefox only, fallback to the main-thread route; Chrome and Android
+  unchanged); approved on reading, live proof still to do. In `finale` it is NOT merged: it enters 1.5 only with D2 = A, i.e. with `finale-ff`.
 
 ## 8. Upgrading from 1.0
 What an administrator will notice, most likely first. Everything here is in the sections above; this is the short list.
@@ -213,4 +213,4 @@ What an administrator will notice, most likely first. Everything here is in the 
 - **Options.** New: `--max-connections`, `--max-pending`, `--max-pending-per-address`, `--max-pending-per-48`, `--render-node`, `--decoder-pace`, and the split options (`--split`, `--network-user`, `--network-run-dir`, `--network-state-dir`). None of the 1.0 options was removed.
 - **Installer and packages.** The plan states the port before the question; the codes `RX-H264-003`, `RX-H264-004` and `RX-FW-004` are retired and no longer raised (`RX-H264-002` and `RX-FW-002` instead); zlib is a new dependency (the page is compressed).
 - **Encoder padding.** `REMOTIX_VPP_PADDING=0` in the server's environment switches off the VPP padding strips of the encoder (`src/encoder.c:3206`; for an A/B on a box); by default they are on, and if the driver refuses them once the frame is redone without them.
-- **Unchanged by default.** The root/network split, decoder `PACE` and the Firefox worker are OFF: no new system user, no moved files, no new unit. The SELinux policy of the split (`remotix.te.split`) has not been measured yet.
+- **Unchanged by default.** The root/network split and decoder `PACE` are OFF (the Firefox worker is the default on desktop Firefox in this branch, `finale-ff`: D2 = A): no new system user, no moved files, no new unit. The SELinux policy of the split (`remotix.te.split`) has not been measured yet.
