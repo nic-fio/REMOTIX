@@ -4,7 +4,7 @@ installer/run.sh, src/opus-wasm/build.sh; phases/17-the-installer.md §6.1-§6.4
 import json
 import re
 
-from build import ROOT, arrow, box, c, code, esc, fig, flow, note, p, rif, steps, table, text, tip, tree, warn, zone
+from build import ROOT, arrow, box, c, code, esc, fig, flow, h4, note, p, rif, steps, table, text, tip, tree, ul, warn, zone
 
 MAKEFILE = (ROOT / "src" / "Makefile").read_text()
 CAT_VER = json.loads((ROOT / "installer" / "catalog" / "catalog.json").read_text())["version"]
@@ -384,7 +384,7 @@ S_ARCH = p(c("packaging/arch/PKGBUILD") + " is built by " + c("packaging/arch/bu
          + " so ngtcp2's asserts do not carry " + c("$srcdir") + "; " + c("!lto !debug")],
         [c("check()"), c("#define BANCO_ACCESO 0") + " (see " + rif("The Debian package") + "); " + c("ldd") + " shows no ngtcp2/nghttp3 and nothing missing"],
         [c("remotix.install"), "post_install prints a notice only; post_upgrade " + c("systemctl try-restart")
-         + " then " + c("post-upgrade") + "; pre_remove " + c("disable --now") + "; post_remove removes certificates "
+         + " then " + c("post-upgrade") + "; pre_remove " + c("remotix-net-move --back") + " (split builds, see " + rif("Arch: rolling back the network-side move") + ") then " + c("disable --now") + "; post_remove removes certificates "
          "and ban"],
         ["Reproducible", c("SOURCE_DATE_EPOCH") + " = commit time (without it, same binary but different packages "
          "for " + c("builddate") + " and mtree dates, measured 29 Sep)"],
@@ -651,6 +651,76 @@ S_PITFALLS = p("Problems already met while building, and the cure now in the scr
          + "; " + c("podman unshare rm -rf") + " for rpm work folders"],
     ], "«TAB» — Build pitfalls already met")
 
+S_ARCH_BACK = p("Phase F (" + c("DECISIONS-11.md") + " §11.50) moves the network side's files from the 1.0 paths to "
+                + c("/var/lib/remotix/net") + ", owned by the user " + c("remotix") + ". The package is <b>inert</b> about it "
+                "unless it was built with " + c("REMOTIX_SPLIT=1") + " (only then " + c("/usr/lib/remotix/remotix-net-move")
+                + " is installed); every call below is skipped when that file is missing.", lead=True) + \
+    table(["Direction", "What " + c("remotix-net-move") + " does", "Who calls it on Arch"], [
+        ["forward (no argument)", "moves " + c("/var/lib/remotix/certificates") + ", " + c("ban") + " and " + c("ban.new")
+         + " into " + c("net/") + " with " + c("mv -T") + " (nothing copied, nothing followed, idempotent); owners and modes are set "
+         "right after by " + c("systemd-tmpfiles --create remotix.conf"), c("post_install") + " and " + c("post_upgrade")
+         + " (function " + c("network_side()") + ")"],
+        [c("--back"), "stops " + c("remotix.service") + " first (the desktops stay), writing " + c("/run/remotix/was-running")
+         + " if it was active or activating; moves " + c("net/certificates") + ", " + c("net/ban") + ", " + c("net/ban.new")
+         + " back to " + c("/var/lib/remotix/") + " and gives them to root again; idempotent, and a run interrupted between the "
+         "move and the chown resumes. It leaves in " + c("net/") + ", with a warning, a hard-linked ban and any file whose twin "
+         "already exists at the 1.0 path (never merges)", c("pre_remove") + " only (function " + c("net_back()") + ")"],
+    ], "«TAB» — remotix-net-move on Arch") + \
+    p("The .deb calls " + c("--back") + " from " + c("prerm") + " on <b>remove</b> and on a <b>downgrade</b> (" + c("dpkg --compare-versions")
+      + " says the incoming version is lower); the .rpm from " + c("%preun") + " on the last erase and on a downgrade. "
+      "<b>Arch calls it on removal only.</b> pacman has no " + c("pre_upgrade") + " that sees the older package's scripts: on a "
+      "downgrade the NEW (older) package's own scripts run, and the 1.0 ones know nothing of " + c("net/") + ".") + \
+    h4("Steps for the Arch administrator") + \
+    steps([
+        "<b>Removal</b> (" + c("pacman -R remotix") + ", " + c("-Rns") + "): nothing to do by hand. " + c("pre_remove") + " runs "
+        + c("--back") + " and then " + c("disable --now") + "; " + c("post_remove") + " then deletes the state the service made "
+        "(R6), so after a removal no certificate or ban is left either way.",
+        "<b>Downgrade to 1.0</b> (" + c("pacman -U remotix-1.0.0-…pkg.tar.zst") + "): <b>before</b> it, as root, run "
+        + c("/usr/lib/remotix/remotix-net-move --back") + ". Check its exit status is 0 and read the check list below.",
+        "Run " + c("pacman -U") + " on the older package. The service stays stopped after the downgrade (that is the point of "
+        + c("/run/remotix/was-running") + "): if the file exists, " + c("systemctl start remotix.service") + " when you are ready, "
+        "then " + c("rm /run/remotix/was-running") + ".",
+        "If the downgrade is only a trial and you go forward again, nothing is needed: the next " + c("post_upgrade")
+        + " runs the forward move, which finds the files in the 1.0 paths and moves them into " + c("net/") + " again (if the 1.0 server made new ones in between, it warns «both exist» and leaves the old ones).",
+    ]) + \
+    h4("What happens if the package is removed or downgraded without --back") + \
+    ul([
+        "<b>Removal:</b> no harm to the administrator. " + c("post_remove") + " deletes " + c("/var/lib/remotix/net") + " and the 1.0 "
+        "paths anyway; the only effect of a failed " + c("--back") + " is a warning on stderr from pacman.",
+        "<b>Downgrade:</b> the 1.0 server looks for " + c("ban") + " and " + c("certificates/") + " in " + c("/var/lib/remotix")
+        + ", finds nothing, and makes new ones: the <b>ban list is reset</b> (an attacker's failures are forgotten) and the "
+        "<b>certificate fingerprint changes</b> (every browser must trust it again). The old files are not lost: "
+        "they stay in " + c("net/") + " owned by remotix, and running " + c("--back") + " afterwards (before the 1.0 server writes its "
+        "own) recovers them; once the 1.0 server has made new ones, " + c("--back") + " warns «both exist» and leaves the net/ ones "
+        "where they are.",
+    ]) + \
+    h4("How to check that the return succeeded") + \
+    code("""# exit status 0, and the journal says what moved
+/usr/lib/remotix/remotix-net-move --back; echo "rc=$?"
+journalctl -t remotix-package -n 20 --no-pager     # «moved … (1.5 → 1.0)» lines, no «⛔» and no «⚠»
+# the files are back, and root's
+ls -ld /var/lib/remotix/certificates /var/lib/remotix/ban     # root root
+ls -A /var/lib/remotix/net                                    # no certificates, no ban, no ban.new
+# the service is stopped; the desktops are still there
+systemctl is-active remotix.service                            # inactive
+ls /run/remotix/was-running                                    # present if it was running
+loginctl list-sessions                                         # the desktop sessions are still listed
+""", "bash", "Checking the --back") + \
+    warn("a «⚠ … more than one hard link» line means the ban was left in " + c("net/") + " on purpose (a hard link could be "
+         "an attack on a root-owned file): inspect it by hand before the downgrade. A «⛔ … not a directory» line means "
+         + c("net/") + " is a link or a plain file: nothing was moved.") + \
+    warn("<b>Gap in the Arch scripts.</b> " + c("post_remove") + " runs " + c("rm -rf /var/lib/remotix/net") + " whatever "
+         + c("pre_remove") + " achieved, so a " + c("--back") + " that stopped halfway (hard-linked ban, both copies present) loses "
+         "the files it refused to move. .deb (only at " + c("purge") + ") and .rpm (" + c("%ghost") + ") do not have this problem "
+         "on a plain remove. Proposed correction: " + c("net_back()") + " returns non-zero and creates a marker "
+         "(for example " + c("/run/remotix/back-incomplete") + ") when " + c("--back") + " fails, and " + c("post_remove")
+         + " skips " + c("rm -rf /var/lib/remotix/net") + " when the marker exists, printing «remotix: net/ kept: "
+         "--back was incomplete». Optional: a " + c("pre_upgrade") + " that detects " + c("$2") + " (the incoming version) lower than "
+         "the installed one and runs " + c("--back") + ", as .deb and .rpm do; pacman passes the new version as " + c("$1")
+         + " and the old as " + c("$2") + " to " + c("pre_upgrade") + ", but that function belongs to the package being "
+         "installed — so it only helps from 1.5 onwards, on a 1.5 → 1.5.x downgrade, never for 1.0.", "Open point.")
+
+
 CHAPTER = ("Build and release", [
     ("The build roads", S_ROADS),
     ("Declared build dependencies", S_DEPS),
@@ -662,6 +732,7 @@ CHAPTER = ("Build and release", [
     ("The Debian package", S_DEB),
     ("The RPM package", S_RPM),
     ("The Arch package", S_ARCH),
+    ("Arch: rolling back the network-side move", S_ARCH_BACK),
     ("What the packages install", S_INSTALLED),
     ("Building the installer engine", S_ENGINE),
     ("The release command", S_RELEASE),
