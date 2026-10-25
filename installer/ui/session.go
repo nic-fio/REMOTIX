@@ -187,7 +187,7 @@ func (s *Session) Apply(digest string, events func(engine.PublicEvent)) (*Outcom
 		es.Error = messageOf(err)
 	}
 	es.Addresses = Addresses()
-	es.FingerprintTLS = FingerprintTLS("/var/lib/remotix/certificates/page.pem")
+	es.FingerprintTLS = ServerFingerprint("/")
 	return es, nil
 }
 
@@ -238,6 +238,22 @@ func Addresses() []string {
 		r = append(r, h)
 	}
 	return r
+}
+
+// serverCertificates: where the server keeps the page's certificate, relative to the root of the machine.  1.5 (the split, ON by
+// default since 25 Oct 2026) keeps it in the network side's own directory; the 1.0 and the single-process build (`--no-split`,
+// `REMOTIX_SPLIT=0`) in /var/lib/remotix/certificates.  Looking only at the old path showed NO fingerprint after a 1.5 install —
+// the page the user is told to open — because the package's move had taken the certificates out of it (remotix-net-move).
+var serverCertificates = []string{"var/lib/remotix/net/certificates/page.pem", "var/lib/remotix/certificates/page.pem"}
+
+// ServerFingerprint: the fingerprint of the page's certificate, from the first place that has one (root = "/" on a real machine).
+func ServerFingerprint(root string) string {
+	for _, p := range serverCertificates {
+		if f := FingerprintTLS(filepath.Join(root, p)); f != "" {
+			return f
+		}
+	}
+	return ""
 }
 
 // FingerprintTLS: the SHA-256 of the page's certificate (the one the browser shows), if there is one.

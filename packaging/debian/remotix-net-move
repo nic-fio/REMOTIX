@@ -15,7 +15,7 @@
 #    tmpfiles' job, run right after by every family's script).
 # ⛔ An administrator's page.pem/page.key (no page.ours mark) moves with the
 #    rest, and the journal says so: it is never regenerated.
-# ⭐ `remotix-net-move --back` is the reverse (net/ → the 1.0 paths, owned by root again), for a DOWNGRADE to 1.0 or a
+# ⭐ `remotix-net-move --back` is the reverse (net/ → the 1.0 paths, owned by root again, the empty net/ removed and /var/lib/remotix 0700 again), for a DOWNGRADE to 1.0 or a
 #    removal, called by the prerm / %preun / pre_remove of the split package (never on an upgrade; Arch calls it only from
 #    pre_remove — on a DOWNGRADE the administrator runs it by hand, as the remotix.install comment says): a 1.0
 #    would otherwise not find its ban and certificates, and make new ones (ban reset, another fingerprint).  Same
@@ -104,6 +104,17 @@ if [ "${1:-}" = "--back" ]; then
 			own_back "$S/$f" || { say "⛔ $S/$f could not be given back to root"; exit 1; }
 		fi
 	done
+	# net/ itself is the 1.5 package's own: once it is empty it goes (rmdir: never recursive, never a link), so the tree is the
+	# 1.0's again — an empty directory owned by remotix would stay for ever, nobody would remove it.  Not empty (a hard-linked
+	# ban, a file the administrator put there): it stays, and was said above.
+	if [ -d "$N" ] && [ ! -L "$N" ]; then
+		rmdir "$N" 2>/dev/null && say "removed the empty $N"
+	fi
+	# and with net/ gone nobody needs to cross $S any more: it is 0700 again, as the 1.0's tmpfiles (`d /var/lib/remotix 0700 root root`)
+	# and its rpm %dir say (the forward move made it 0755 so that remotix could reach net/).  By path, not through a link.
+	if [ ! -e "$N" ] && [ ! -L "$N" ] && [ -d "$S" ] && [ ! -L "$S" ]; then
+		chmod 0700 -- "$S" || say "⚠ could not make $S 0700 again"
+	fi
 	exit 0
 fi
 
