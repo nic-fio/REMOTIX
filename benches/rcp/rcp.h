@@ -1456,6 +1456,15 @@ void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
  * `rcp_verdict(..., false, ...)` and it counts as a failure.) */
 bool rcp_verdict_lost(rcp_session *s, uint64_t ticket);
 
+/* ⛔⭐ THE NAME OF A USER OF THIS MACHINE, AS THE MACHINE WRITES IT (audit P-R6/Q-R8, 25 Oct 2026).  The registry of slots, the
+ * children and the stages are keyed by the NAME, and the name is what the visitor TYPED.  Where the system does not tell two spellings
+ * apart (sssd / LDAP with `case_sensitive = false`, which is the usual setting for a directory), «Anna» and «anna» are the same user
+ * with two keys: two slots, two children, two desktops of one uid, and a single user could take every slot of the server by varying
+ * the capitals.  After PAM has said yes, the name is brought to `pw_name`.
+ * `true` = `out` holds the name of the system (it may be the same as `typed`); `false` = the system could not say (the name stays as
+ * it was).  ⚠ `getpwnam_r` may ask NSS: it is called only for a login that PAM has already admitted. */
+bool rcp_canonical_user(const char *typed, char *out, size_t cap);
+
 /* ⛔ The secret of the tags `unknown user [hmac6]` of the log (§4.4-bis D):
  * `<dir>/log-secret`, 0600, next to the QUIC token secret.  Returns 1 = read,
  * 0 = made and written, -1 = the secret of this run only (the tags change at

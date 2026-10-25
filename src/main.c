@@ -779,9 +779,21 @@ static bool has_capabilities(struct bridge *p, const char *user, char *why,
 static void presence_mark(const char *user, uint64_t now_ms);
 
 static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
-                              const char *user, const char *rhost, bool lost)
+                              const char *user_typed, const char *rhost, bool lost)
 {
 	struct bridge *p = (struct bridge *)ctx;
+	/* ⛔⭐ THE NAME OF THE SYSTEM, NOT THE ONE TYPED (audit P-R6/Q-R8): the children, the stages, the budget and the abandonment clock
+	 *    are keyed by the name, and where the system does not tell «Anna» from «anna» (sssd with `case_sensitive = false`) one user
+	 *    could have one desktop per spelling.  Only for a verdict somebody waits for and PAM admitted; the orphan verdict at the end keeps
+	 *    counting by what was typed, like the ban. */
+	char user_buf[257];
+	const char *user = user_typed;
+	if (admitted && !lost && user_typed && user_typed[0] && transport_awaits_verdict(p->t, ticket) &&
+	    rcp_canonical_user(user_typed, user_buf, sizeof user_buf) && strcmp(user_buf, user_typed) != 0) {
+		registro_dice(LOG_CHILD, "⚠ the name typed «%s» is the user «%s» of this machine: the desktop goes by «%s»", user_typed,
+		              user_buf, user_buf);
+		user = user_buf;
+	}
 	/* ⛔ The farewell is sent AFTER `transport_verdict()`: the long reason is
 	 *    at the end of the function, in the box «AND THE FAREWELL GOES OUT
 	 *    HERE, AFTER THE VERDICT». */

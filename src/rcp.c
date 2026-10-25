@@ -9733,6 +9733,21 @@ void rcp_channel_closed(rcp_session *s)
  *
  * ⚠ And it sends nothing on the wire: `rcp_time()` takes care of that, when
  *   the fixed second of §4.4-bis has passed too. */
+bool rcp_canonical_user(const char *typed, char *out, size_t cap)
+{
+	struct passwd pw, *res = NULL;
+	char spare[2048];
+
+	if (!typed || !*typed || !out || cap == 0)
+		return false;
+	if (getpwnam_r(typed, &pw, spare, sizeof spare, &res) != 0 || !res || !res->pw_name || !res->pw_name[0])
+		return false;
+	if (strlen(res->pw_name) >= cap)
+		return false;
+	snprintf(out, cap, "%s", res->pw_name);
+	return true;
+}
+
 bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
                   uint64_t now)
 {
@@ -9778,6 +9793,19 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 		} else {
 			login_resolve(s->address, s->user, admitted, now, &r);
 			login_report(&k, s->address, s->user, admitted, &r, now);
+		}
+	}
+	/* ⛔⭐ ADMITTED: FROM HERE THE SESSION GOES BY THE NAME OF THE SYSTEM (audit P-R6/Q-R8) — the slot, the ATTACH, the messages to the
+	 *    stage.  The ban and the attempt booking above are keyed by what was TYPED, as they must be (the attacker chooses the spelling).
+	 *    `main.c` brings the child and the stage to the same name (`delivery_verdict()`). */
+	if (admitted) {
+		char canon[sizeof s->user];
+
+		if (rcp_canonical_user(s->user, canon, sizeof canon) && strcmp(canon, s->user) != 0) {
+			reg(s, "⚠ the name typed «%s» is the user «%s» of this machine (the system does not tell the two spellings "
+			       "apart): the slot, the session and the desktop go by «%s»",
+			    s->user, canon, canon);
+			snprintf(s->user, sizeof s->user, "%s", canon);
 		}
 	}
 	return true;
