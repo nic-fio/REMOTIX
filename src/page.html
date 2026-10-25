@@ -1343,7 +1343,7 @@ const VIA_MSE = new URLSearchParams(location.search).get("draw") === "mse";
  *      a «desktop site» `userAgent` on Android stays on its route.
  *   ⚠ And the worker is not trusted blindly: if it paints nothing, or breaks,
  *     the page goes back to the main thread for the rest of the session ONCE,
- *     and writes it in the diary — see `worker_fall_back()`. */
+ *     and writes it in the page's log — see `worker_fall_back()`. */
 const VIDEO_ASKED = (function () {
   const q = new URLSearchParams(location.search).get("video");
   const h = new URLSearchParams(location.hash.replace(/^#/, "")).get("video");
@@ -1383,11 +1383,13 @@ note("video route: " + VIDEO_ROUTE.chosen + " — " + VIDEO_ROUTE.why);
    `#video_fault=die` throws in the worker at every stream; `mute` throws
    the streams away unread; `blind` reads the keyframe and paints nothing.
    ⚠ Read from the FRAGMENT only (it never reaches the server, and a link
-   with a query cannot carry it) and only where the diary is on — that is, on
-   a bench box: the installed product has no `/diary` (§11.10) and ignores it.
-   Absent = nothing changes. */
+   with a query cannot carry it) and only with `?logbook` in the address, the
+   page's explicit opt-in to diagnostics: the build has no bench marker in the
+   page since 8a46c9c9 removed `/diary` and its `DIARY` flag, so a link with
+   only the fragment cannot break anybody's video.  The bench adds `?logbook`
+   to the URL together with `#video_fault=…`.  Absent = nothing changes. */
 const VIDEO_FAULT = (function () {
-  if (!DIARY) return null;
+  if (location.search.indexOf("logbook") < 0) return null;
   const v = new URLSearchParams(location.hash.replace(/^#/, "")).get("video_fault");
   return (v === "die" || v === "mute" || v === "blind") ? v : null;
 })();
@@ -8430,7 +8432,7 @@ async function clipboard_send(type, body) {
  *    instant of `writeText`.  ⛔ Synchronous, inside try/catch, no `await` before
  *    the call: it must not move the gesture's timing.  No `readText` (it would
  *    ask for a permission).  The lines start with "clipboard ·" so the bench's
- *    diary filter picks them up. */
+ *    log filter picks them up. */
 let clip_diag_arrival = null;
 function clip_diag_state() {
   try {
@@ -9567,7 +9569,7 @@ function __summary(a) {
    ⇒ The NEW samples since the last mirror cross (a few per 100 ms, not the
    two hundred of the window), and over there they go into the SAME arrays
    of the mirror instance: \`age_ms\`, \`recv_ms\`, \`dec_ms\`.  ⭐ So the
-   diary line and \`stretches()\` compute them with the same code as the
+   audio log line and \`stretches()\` compute them with the same code as the
    main-thread route, under the same names (form E2 of \`REVIEWER.md\`).
    ⚠ The arrays are never re-created by \`Viewer\` (only its constructor
    makes them), so wrapping their \`push\` here holds for the session. */
@@ -9789,7 +9791,7 @@ function start_worker_wire(V) {
    *     The old line here said "falling back would be measuring one route
    *     and calling it by the other's name" — true while the worker was a
    *     switch someone turned on to MEASURE; as a default it is the user's
-   *     picture.  ⇒ The fall back is NAMED instead of hidden: one diary line,
+   *     picture.  ⇒ The fall back is NAMED instead of hidden: one line in the page's log,
    *     the route in `stretches()` becomes the main thread's, and
    *     `stretches().video_route.fell_back` says when and why. */
   V.sess = 0;                 /* +1 at every `restart`, the worker counts the same */
@@ -9912,7 +9914,7 @@ function start_worker_wire(V) {
       Object.assign(viewer.counts, m.counts);
       /* ⭐ The picture age and its neighbours (see `__fresh` in the shell):
          the new samples go into the mirror's OWN arrays, with the same cap
-         (200) the `Viewer` keeps — so the diary line and `stretches()`
+         (200) the `Viewer` keeps — so the audio log line and `stretches()`
          read them as on the main-thread route. */
       if (m.fresh) {
         for (const [k, a] of [["age", viewer.age_ms], ["recv", viewer.recv_ms],
@@ -10018,7 +10020,7 @@ function start_worker_wire(V) {
       engine without WebCodecs is the ONLY one. */
 /* ⚠ `let` and not `const` since 15 Oct 2026: `worker_fall_back()` sets it
    to `null`, and from that instant every `if (VW)` of this page takes the
-   main-thread road — the stream loop, `stretches()`, the diary line. */
+   main-thread road — the stream loop, `stretches()`, the audio log line. */
 const CANVAS_LISTENERS = [];          /* see `track_canvas_listeners` */
 let VW = start_video_worker();
 function start_video_worker() {
@@ -10142,7 +10144,7 @@ function redirect_viewer_to_worker() {
  *      view — and a gap (§5.2) asks the server for a keyframe NOW, instead of
  *      waiting for a delta to discover that this decoder does not exist.
  * ⚠ The frames that were inside the worker are lost: that is the gap, and
- *   the keyframe closes it.  ⛔ And it is SAID: one diary line, the route in
+ *   the keyframe closes it.  ⛔ And it is SAID: one line in the page's log, the route in
  *   `stretches()`, and `stretches().video_route.fell_back`. */
 function worker_fall_back(why) {
   const V = VW;
@@ -10161,7 +10163,7 @@ function worker_fall_back(why) {
         V.w.terminate(); } catch (e) { /* already gone */ }
   const line = "⛔ VIDEO the worker route FELL BACK to the main thread, once, for "
              + "the rest of this page: " + why;
-  note(line);                     /* ⛔ ⇒ `note()` sends it to the diary */
+  note(line);                     /* ⛔ ⇒ `note()` writes it in the page's log */
   /* ⛔ The redirections go FIRST: if the canvas swap below threw, they would
      be left pointing at a worker that no longer exists (`VW` is null), and
      every call of the session would throw. */

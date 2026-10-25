@@ -31,7 +31,7 @@
 //      `#video_fault=blind` switch reads the key and delivers nothing
 //   E  the fall back on the main thread: the canvas is replaced WITH its
 //      listeners, the redirected methods are gone, a keyframe is asked at once,
-//      the next frames paint on this side, the diary says so ONCE, the route says
+//      the next frames paint on this side, the page's log says so ONCE, the route says
 //      «main» — and a second fall back does nothing
 //   F  a fall back in the middle of a canvas change (after CANVAS(FITTED), and
 //      with a FIT_CANVAS unanswered): no PROTOCOL_ERROR — the main instance kept
@@ -282,7 +282,7 @@ const shadowLine = (src.match(/const WORKER_SHADOWED = \[[^\]]*\];/) || [null])[
 
 function mainScope(opts) {
   opts = opts || {};
-  const diaryLines = [], notes = [];
+  const notes = [];
   const clock = { t: 1000, timers: [] };
   const old = new FakeCanvas(); old.setAttribute("id", "viewer"); old.setAttribute("tabindex", "-1");
   old.transferred = !!opts.transferred;
@@ -294,9 +294,8 @@ function mainScope(opts) {
                 body: { dataset: {} }, pointerLockElement: null, fullscreenElement: null },
     audio_stop: () => {}, logout_show: (yes) => { M.logout_shown = !!yes; }, logout_shown: true,
     window: { REMOTIX: { video: "the worker object" } },
-    // the page's `note()`: a ⛔/MEASURE/MARK line goes to the diary too
-    diary: (l) => diaryLines.push(l),
-    note: (l) => { notes.push(l); if (/⛔|MEASURE|MARK/.test(l)) diaryLines.push("PAGE " + l); },
+    // the page's `note()`: a line in the page's log (since 8a46c9c9 nothing goes to the server)
+    note: (l) => { notes.push(l); },
     view_size: () => [1280, 720], devicePixelRatio: 1,
     VIDEO_ROUTE: { chosen: "worker", fell_back: null },
     VIDEO_WORKER: true, start_worker: opts.start_worker || (() => { throw new Error("not in this scene"); }),
@@ -323,7 +322,7 @@ function mainScope(opts) {
     }
     clock.t = end;
   };
-  return { sc, M, diaryLines, notes, old, clock, advance };
+  return { sc, M, notes, old, clock, advance };
 }
 
 // a page with the worker route on: the mirror, its wire to a fake worker, the redirections
@@ -434,14 +433,14 @@ if (!workerReady) {
                 terminated: m.terminated, chosen: m.M.VIDEO_ROUTE.chosen, remotix_video: m.M.window.REMOTIX.video,
                 fell_back: m.M.VIDEO_ROUTE.fell_back && m.M.VIDEO_ROUTE.fell_back.why,
                 failed: m.M.VIDEO_ROUTE.fell_back && m.M.VIDEO_ROUTE.fell_back.failed,
-                diary: m.diaryLines.filter((l) => l.indexOf("FELL BACK") >= 0).length,
+                logged: m.notes.filter((l) => l.indexOf("FELL BACK") >= 0).length,
                 route_line: m.vlines.some((l) => l.indexOf("after the fall back") >= 0),
                 protocol_errors: m.protocolErrors };
     check("E fall back: new canvas with its listeners, prototype methods, keyframe asked at once, paints, once, said once",
       first === true && second === false && f.VW_after === null && f.new_canvas && f.id === "viewer"
         && f.tabindex === "-1" && f.has_context && f.viewer_canvas_is_new && wheel === 1
         && removedCalled === 0 && f.redirect_left.length === 0 && m.keysAsked.length === 1
-        && keysAtFallBack === 1 && f.painted > 0 && f.terminated === 1 && f.diary === 1 && !f.failed
+        && keysAtFallBack === 1 && f.painted > 0 && f.terminated === 1 && f.logged === 1 && !f.failed
         && f.chosen === "main" && f.remotix_video === null && f.route_line && f.protocol_errors.length === 0, f);
     if (process.env.V) console.log(m.notes.concat(m.vlines).join("\n"));
   }
