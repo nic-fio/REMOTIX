@@ -156,6 +156,8 @@ enum rxr_refusal {
 	RXR_REF_RATE      = 9,  /* ⭐ review 4 B, finding 22: over a rate bound (the CLOSE_ORPHAN
 	                         * bucket, one per uid per 30 s) — it used to travel as FULL or
 	                         * CLOSING, and the network side wrote the wrong reason */
+	RXR_REF_TOO_SOON  = 10, /* ⭐ 1.6 (split audit R1): CLOSE_ORPHAN for a desktop that has not
+	                         * been without a client for `abandon_s` yet (or the clock is off) */
 };
 
 struct rxr_spawn_refused {

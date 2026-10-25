@@ -57,7 +57,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 56
+#define EXPECTED_CHECKS 65
 
 static void require(int cond, const char *desc)
 {
@@ -477,6 +477,53 @@ int main(void)
 			require(filled == ROOTSIDE_ORPHAN_UIDS - 1
 			        && !rootside_orphan_uid_admit(&hb, 1000, 10000 + ROOTSIDE_ORPHAN_UID_MS - 1),
 			        "a table full of live holds refuses new uids and never frees uid 1000's");
+		}
+	}
+
+	printf("  1.6 (split audit R1): CLOSE_ORPHAN only for a desktop abandoned for abandon_s\n");
+	{
+		struct rootside_bounds ab;
+		uint64_t left = 0;
+
+		rootside_bounds_init(&ab, 5000);
+		require(!rootside_orphan_abandoned(&ab, 1000, 999999999, &left) && left == UINT64_MAX,
+		        "abandonment clock off (abandon_ms 0): never accepted, whatever the time");
+		ab.abandon_ms = 60000;
+		require(!rootside_orphan_abandoned(&ab, 1000, 64999, &left) && left == 1,
+		        "no exit seen (desktop found after the root side's restart): counts from the "
+		        "root side's start — 1 ms short, refused");
+		require(rootside_orphan_abandoned(&ab, 1000, 65000, &left) && left == UINT64_MAX,
+		        "… and accepted exactly at start + abandon_s");
+		rootside_exit_note(&ab, 1000, 100000);
+		require(!rootside_orphan_abandoned(&ab, 1000, 159999, &left) && left == 1
+		        && rootside_orphan_abandoned(&ab, 1000, 160000, NULL),
+		        "a child of uid 1000 left at 100 s: refused until 160 s, accepted from then");
+		require(rootside_orphan_abandoned(&ab, 1001, 160000, NULL)
+		        && rootside_orphan_abandoned(&ab, 1001, 65000, NULL),
+		        "another uid is not held up by uid 1000's exit");
+		rootside_exit_note(&ab, 1000, 200000);
+		require(!rootside_orphan_abandoned(&ab, 1000, 250000, NULL)
+		        && rootside_orphan_abandoned(&ab, 1000, 260000, NULL),
+		        "a second exit of the same uid moves the clock forward (one entry, not two)");
+		/* a full table drops the OLDEST and keeps its time as a floor for uids with no entry:
+		 * a forgotten uid then waits at least as long as it really should */
+		{
+			struct rootside_bounds fb;
+
+			rootside_bounds_init(&fb, 5000);
+			fb.abandon_ms = 60000;
+			for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++)
+				rootside_exit_note(&fb, (uid_t)(2000 + i), (uint64_t)(100000 + i));
+			rootside_exit_note(&fb, 3000, 200000); /* evicts uid 2000 (100000) */
+			require(!rootside_orphan_abandoned(&fb, 2000, 159999, NULL)
+			        && rootside_orphan_abandoned(&fb, 2000, 160000, NULL),
+			        "a table full: the evicted uid waits from the forgotten exit, not from the start");
+			require(!rootside_orphan_abandoned(&fb, 2005, 160004, NULL)
+			        && rootside_orphan_abandoned(&fb, 2005, 160005, NULL),
+			        "… and a uid still in the table keeps its own time");
+			require(!rootside_orphan_abandoned(&fb, 3000, 259999, NULL)
+			        && rootside_orphan_abandoned(&fb, 3000, 260000, NULL),
+			        "… and the newcomer has its own");
 		}
 	}
 

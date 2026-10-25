@@ -112,6 +112,11 @@ struct rootside_options {
 	 *    `--network-run-dir` (default /run/remotix/net). */
 	const char *net_state_dir;
 	const char *net_run_dir;
+	/* ⭐ 1.6 (split audit R1): `--abandon-s` as main.c read it, in seconds.  The root side
+	 * accepts CLOSE_ORPHAN for a uid only when no child of that uid has existed for this
+	 * long (see `rootside_orphan_abandoned`); `0` = the abandonment clock is OFF, and then
+	 * no CLOSE_ORPHAN is ever accepted (the network side does not ask either). */
+	uint64_t abandon_s;
 };
 
 /* ⛔ The root side's entry: never returns while the service lives; the return
@@ -230,6 +235,9 @@ int rootside_check_packet(const struct rootside_peer *p, const void *buf,
  * one entry per desktop found again, and the children cap is 10 by default
  * (§11.50) — 32 leaves room for --session-cap up to it.  `[?]` */
 #define ROOTSIDE_ORPHAN_UIDS 32
+/* ROOTSIDE_EXIT_UIDS: the uids whose last child exit is remembered (R1); the cap of
+ * children is 10 by default, so 32 holds many generations of users. */
+#define ROOTSIDE_EXIT_UIDS 32
 struct rootside_grant {
 	bool used;
 	uint8_t bytes[RXR_GRANT_BYTES];
@@ -251,6 +259,15 @@ struct rootside_bounds {
 		uid_t uid;
 		uint64_t at_ms;
 	} orphan_uid[ROOTSIDE_ORPHAN_UIDS];
+	/* ⭐ 1.6 (split audit R1): when the LAST child of a uid left, and the abandonment
+	 *    the root side enforces.  See `rootside_orphan_abandoned()`. */
+	uint64_t started_ms;          /* when these bounds were made: the root side's start */
+	uint64_t abandon_ms;          /* 0 = clock off: CLOSE_ORPHAN is never accepted */
+	uint64_t exits_forgot_ms;     /* the latest exit dropped from the table below */
+	struct {
+		uid_t uid;
+		uint64_t at_ms;           /* 0 = free */
+	} exits[ROOTSIDE_EXIT_UIDS];
 };
 /* ⛔ Review 2, M1: a CLOSE_ORPHAN is a birth without a password, so its rate is
  *    the abandonment's, not a login's — one desktop found again expires per
@@ -269,6 +286,18 @@ bool rootside_orphan_admit(struct rootside_bounds *b, uint64_t now_ms);
 /* … and one for this uid: `false` if one was born for it less than
  * ROOTSIDE_ORPHAN_UID_MS ago.  `true` records it. */
 bool rootside_orphan_uid_admit(struct rootside_bounds *b, uid_t uid, uint64_t now_ms);
+/* ⭐ 1.6 (split audit R1): a child of `uid` has just left (reaped by the root side). */
+void rootside_exit_note(struct rootside_bounds *b, uid_t uid, uint64_t now_ms);
+/* ⭐ 1.6 (split audit R1): may a CLOSE_ORPHAN for `uid` be accepted now?  Only if the uid
+ * has had no child for at least `b->abandon_ms`, counted from its last exit, or — for a
+ * desktop found again after the root side's own restart, whose exit nobody saw — from
+ * the root side's start (or from the latest exit forgotten when the table was full: the
+ * strictest of the two, never a shorter wait than the real one).  `*left_ms` (may be
+ * NULL) = how much longer to wait; UINT64_MAX when the clock is off.  The network
+ * side's own clock starts no earlier than this one, so an honest request is not refused
+ * on a normal day. */
+bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint64_t now_ms,
+                               uint64_t *left_ms);
 void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms);
 /* May this AUTH go to PAM now?  `false` = over the in-flight or rate bound
  * (VERDICT NOT_CHECKED).  `true` takes a token and a place in flight. */

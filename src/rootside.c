@@ -178,6 +178,7 @@ void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms)
 	b->tokens_ms = now_ms;
 	b->orphan_tokens = ROOTSIDE_ORPHAN_BURST;
 	b->orphan_tokens_ms = now_ms;
+	b->started_ms = now_ms;
 }
 
 bool rootside_auth_admit(struct rootside_bounds *b, uint64_t now_ms)
@@ -233,6 +234,60 @@ bool rootside_orphan_uid_admit(struct rootside_bounds *b, uid_t uid, uint64_t no
 	b->orphan_uid[k].uid = uid;
 	b->orphan_uid[k].at_ms = now_ms ? now_ms : 1;
 	return true;
+}
+
+void rootside_exit_note(struct rootside_bounds *b, uid_t uid, uint64_t now_ms)
+{
+	int k = -1, oldest = 0;
+
+	if (!now_ms)
+		now_ms = 1;
+	for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++) {
+		if (b->exits[i].at_ms && b->exits[i].uid == uid) {
+			b->exits[i].at_ms = now_ms;
+			return;
+		}
+		if (!b->exits[i].at_ms) {
+			if (k < 0)
+				k = i;
+		} else if (b->exits[i].at_ms < b->exits[oldest].at_ms || !b->exits[oldest].at_ms) {
+			oldest = i;
+		}
+	}
+	if (k < 0) {
+		/* full: the OLDEST goes, and its time is kept as a floor for every uid that has no
+		 * entry — a forgotten uid then waits at least as long as it really should */
+		k = oldest;
+		if (b->exits[k].at_ms > b->exits_forgot_ms)
+			b->exits_forgot_ms = b->exits[k].at_ms;
+	}
+	b->exits[k].uid = uid;
+	b->exits[k].at_ms = now_ms;
+}
+
+bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint64_t now_ms,
+                               uint64_t *left_ms)
+{
+	uint64_t since = b->started_ms, due;
+
+	if (left_ms)
+		*left_ms = UINT64_MAX;
+	if (!b->abandon_ms)
+		return false;
+	if (b->exits_forgot_ms > since)
+		since = b->exits_forgot_ms;
+	for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++)
+		if (b->exits[i].at_ms && b->exits[i].uid == uid) {
+			if (b->exits[i].at_ms > since)
+				since = b->exits[i].at_ms;
+			break;
+		}
+	due = since + b->abandon_ms;
+	if (now_ms >= due)
+		return true;
+	if (left_ms)
+		*left_ms = due - now_ms;
+	return false;
 }
 
 void rootside_auth_done(struct rootside_bounds *b)
@@ -834,6 +889,28 @@ static void birth(uint64_t request, const char *user, const char *rhost, uint32_
 		send_refused(request, RXR_REF_NO_ORPHAN);
 		return;
 	}
+	/* ⭐ 1.6 (split audit R1): a desktop is closed only when it has really been abandoned —
+	 *    the root side's own clock (`--abandon-s`, its last child's exit or its own start),
+	 *    not the network side's word: a network side taken over could otherwise close the
+	 *    desktop of anyone who had merely disconnected.  BEFORE the per-uid hold, so a
+	 *    refusal here takes no hold. */
+	if (orphan) {
+		uint64_t left;
+
+		if (!rootside_orphan_abandoned(&R.bounds, uid, log_now_ms(), &left)) {
+			if (left == UINT64_MAX)
+				registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: the abandonment "
+				              "clock is off (--abandon-s 0), no desktop is closed for "
+				              "abandonment", user);
+			else
+				registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: uid %ld has not "
+				              "been without a client for %llu s yet (%llu s to go)", user,
+				              (long)uid, (unsigned long long)(R.bounds.abandon_ms / 1000),
+				              (unsigned long long)((left + 999) / 1000));
+			send_refused(request, RXR_REF_TOO_SOON);
+			return;
+		}
+	}
 	/* ⛔ One CLOSE_ORPHAN per uid per 30 s (review 2, M1): CLOSE_ORPHAN →
 	 *    SIGNAL KILL → reaped → CLOSE_ORPHAN was a new logind session each
 	 *    round, for any user with a live desktop.  ⚠ AFTER logind's check (lane
@@ -1098,6 +1175,8 @@ static void reap_kids(void)
 		 *    never asked to remove anything (§11.50). */
 		if (k->render_grant)
 			render_grant_remove(k->user, k->uid, k->gid);
+		/* ⭐ 1.6 (R1): the moment the user was left without a client, for CLOSE_ORPHAN */
+		rootside_exit_note(&R.bounds, k->uid, log_now_ms());
 		registro_dice(LOG_ROOT, "the child of «%s» (pid %ld, serial %llu) is reaped by "
 		              "the root side: %s", k->user, (long)k->pid,
 		              (unsigned long long)k->serial, status_text(st, said, sizeof said));
@@ -1561,6 +1640,7 @@ int rootside_main(const struct rootside_options *o)
 		return 1;
 	}
 	rootside_bounds_init(&R.bounds, log_now_ms());
+	R.bounds.abandon_ms = o->abandon_s * 1000;
 	registro_dice(LOG_ROOT,
 	              "⭐ ROOT SIDE on (pid %ld, DECISIONS.md §11.50): single-threaded, PAM "
 	              "helper and children below it, up to %d children; the network side "

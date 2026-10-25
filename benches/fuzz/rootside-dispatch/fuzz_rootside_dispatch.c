@@ -182,6 +182,7 @@ static uid_t pkt_uid;
 /* the model */
 struct mgrant { bool used; uint8_t b[RXR_GRANT_BYTES]; char user[RXR_USER_MAX];
                 char rhost[RXR_RHOST_MAX]; uint64_t minted; uint32_t gen; };
+#define FUZZ_ABANDON_MS 1000 /* R1: the abandonment the harness gives the root side */
 static uint64_t orphan_born_ms[5]; /* the last close-only birth per user */
 static struct mgrant grants[1024]; /* a ring: the root side keeps 32 */
 static int ngrants;
@@ -463,6 +464,9 @@ static child_outcome rxr_child_birth(const struct birth_opts *b, const char *use
 		ORACLE(!rhost && strcmp(c.user, user) == 0, "CLOSE_ORPHAN of «%s» gave birth to «%s»",
 		       c.user, user);
 		ORACLE(logind_live[ui], "CLOSE_ORPHAN of «%s» without its live remotix session", user);
+		ORACLE(rx_now_ms >= t_start + FUZZ_ABANDON_MS,
+		       "CLOSE_ORPHAN of «%s» accepted %llu ms after the root side started, under the abandon clock",
+		       user, (unsigned long long)(rx_now_ms - t_start));
 		ORACLE(!orphan_born_ms[ui] || rx_now_ms >= orphan_born_ms[ui] + ROOTSIDE_ORPHAN_UID_MS,
 		       "a second close-only child for «%s» %llu ms after the first", user,
 		       (unsigned long long)(rx_now_ms - orphan_born_ms[ui]));
@@ -691,6 +695,7 @@ static void setup(void)
 	R.net_pid = NET_PID;
 	R.generation = 1;
 	rootside_bounds_init(&R.bounds, rx_now_ms);
+	R.bounds.abandon_ms = FUZZ_ABANDON_MS; /* R1: CLOSE_ORPHAN needs this much quiet */
 	t_start = rx_now_ms;
 	ngrants = nqs = nkids = nreq = 0;
 	memset(orphan_born_ms, 0, sizeof orphan_born_ms);

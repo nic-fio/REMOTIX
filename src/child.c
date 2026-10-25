@@ -2410,6 +2410,7 @@ static const char *refusal_text(int r)
 	case RXR_REF_MOVED:        return "the name now points to another uid";
 	case RXR_REF_NAME_UNKNOWN: return "the name could not be looked up now";
 	case RXR_REF_RATE:         return "over the root side's rate bound (one close-only birth per user every 30 s, or the CLOSE_ORPHAN bucket)";
+	case RXR_REF_TOO_SOON:     return "the root side finds the desktop not abandoned yet (no client gone for --abandon-s), or the abandonment clock is off";
 	case ROOTSIDE_NO_ANSWER:   return "no answer from the root side within the wait";
 	case ROOTSIDE_NO_GRANT:    return "no grant kept for this login (expired, used, or the table was full)";
 	case ROOTSIDE_NOT_SENT:    return "the request could not be sent to the root side";

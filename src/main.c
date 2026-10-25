@@ -2601,6 +2601,7 @@ int main(int argc, char **argv)
 		o.quality_recovery = quality_recovery;
 		o.bandwidth_cap_mbit = bandwidth_cap_mbit;
 		o.audio_silence = audio_silence;
+		o.abandon_s = abandon_ms / 1000; /* R1: the root side enforces it for CLOSE_ORPHAN */
 		o.udp_fd = transport_bind(address, port);
 		if (o.udp_fd < 0)
 			return 1;
