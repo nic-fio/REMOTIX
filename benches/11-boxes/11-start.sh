@@ -670,7 +670,8 @@ server)
 	#   REMOTIX_BOX_SPLIT=1 (opt-in, NOT TRIED): then the box gets the user remotix and the network side's directories
 	#   (certificates, ban and command socket live in them: the root side refuses them elsewhere), and the box has
 	#   CAP_SYS_ADMIN for the walls.  The command socket stays reachable at its old path through a link.
-	SPLIT_OPTS="--no-split"; SPLIT_PREP=""
+	# the guard runs INSIDE the box (the text goes into the sh -c below): the 1.0 binary knows no --no-split and exits 2 on it
+	SPLIT_OPTS='$(grep -qa -e "--no-split" /opt/remotix/remotix && echo --no-split)'; SPLIT_PREP=""
 	BOX_CERT=/var/lib/rete11/certificati; BOX_BAN=/var/lib/rete11/ban; BOX_SOCK=/var/lib/rete11/command.sock
 	if [ "${REMOTIX_BOX_SPLIT:-0}" = 1 ]; then
 		SPLIT_OPTS="--split --network-state-dir /var/lib/rete11/net --network-run-dir /run/rete11-net"
