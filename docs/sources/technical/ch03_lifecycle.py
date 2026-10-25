@@ -103,10 +103,14 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
     warn("with no " + c("--command-socket") + " in the packaged command line, a banned address can only wait for "
          "its wait (15 minutes, 1 hour or 12 hours): the unblock command promised by SPECS.md §4.2 is there only if the administrator adds "
          "the option in " + c("REMOTIX_OPTIONS") + " (the " + c("tmpfiles") + " entry creates "
-         + c("/run/remotix") + " for that socket). The only code path that exits with 78 (" + c("EXIT_CONFIG") + ") is the "
-         "experimental " + c("--split") + " (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side "
-         "that drops to the system user " + c("remotix") + "; off by default, no packaged unit passes it): without " + c("REMOTIX_SPLIT_EXPERIMENTAL=1") +
-         " in the environment it logs why and exits with 78, so " + c("RestartPreventExitStatus=78") + " matters today only to whoever tries it.", "Two gaps of the unit.") + \
+         + c("/run/remotix") + " for that socket). The only code that exits with 78 (" + c("EXIT_CONFIG") + ", eight places in " + c("main.c") + ") is the startup refusal of the experimental "
+         + c("--split") + " (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side that drops to the "
+         "system user " + c("remotix") + "; off by default). It refuses, and logs why, when: " + c("--split") + " is given without "
+         + c("REMOTIX_SPLIT_EXPERIMENTAL=1") + " in the environment; " + c("--network-side") + " is given without " + c("--split") + "; "
+         + c("--split") + " does not run as root; the network user is missing or has uid/gid 0; the certificates or the ban file are not in "
+         + c("net/") + "; the page is not readable by the network user; or there are too many arguments. The default unit does not pass "
+         + c("--split") + ". The " + c("remotix.service.split") + " unit that the split build installs (debian/rules, remotix.spec, PKGBUILD) does, "
+         "with " + c("Environment=REMOTIX_SPLIT_EXPERIMENTAL=1") + ", so " + c("RestartPreventExitStatus=78") + " matters only there", "Two gaps of the unit.") + \
     note("the server must not run inside a user's session. " + c("pam_systemd") + ", called by a process that is "
          "already in a logind session, does not create a second one and does not say so: the children stay without "
          "runtime directory, bus and desktop (measured 16 August 2026, eight bench runs out of eight). As a system "
