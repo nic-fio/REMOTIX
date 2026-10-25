@@ -648,7 +648,7 @@ int main(void)
 		require(client_of(p, "[127.0.0.100]") == 1, "the newcomer got in");
 
 		printf("4. churn cannot evict the lone client\n");
-		/* ⭐ 1.5: the accept bucket is 32 a second burst per address now (it was 8): the churn is sized to TWICE what the eight crowded addresses can take
+		/* ⭐ 1.5: the accept bucket per address is 8 a second with a burst of 32 now (it was 4 and 8): the churn is sized to TWICE what the eight crowded addresses can take
 		 *   before their buckets run dry, so that, as before, a part of it is parked or refused by the rate and the rest pushes out each other. */
 		for (int k = 0; k < 8 * 2 * PAGE_ACCEPT_BURST; k++) {
 			snprintf(src, sizeof src, "127.0.0.%d", 1 + k % 8);
