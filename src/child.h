@@ -403,10 +403,7 @@ void children_turn_off(children *f);
  *    treat it as "maybe": no stage, no pixels.  The roads leading here are
  *    listed in `child.c`, function `children_ensure`. */
 bool children_ensure(children *f, const char *user);
-/* ⭐ PHASE 17 T6: the same, with the client's (bare) address that the child's
- *    PAM session receives as `PAM_RHOST`, like sshd's (logind: `RemoteHost`).
- *    NULL or "" ⇒ "remotix", as before. */
-bool children_ensure_from(children *f, const char *user, const char *rhost);
+/* `children_ensure_from()` is declared at the end of this file, after `child_outcome`. */
 
 /* The descriptors to put in the `poll`.  Returns how many it wrote. */
 size_t children_descriptors(children *f, struct pollfd *fds, size_t max);
@@ -665,5 +662,66 @@ const char *child_render_node_requested(void);
  *    with the reason for each "no".  Returns false if nothing is offered. */
 bool child_video_capabilities(char *offered, size_t offered_bytes, char *explanation,
                            size_t explanation_byte);
+
+/* ======================================================================= */
+/* ⭐ 1.5 (DECISIONS-11.md §11.50) — the BIRTH on its own.  Same text as
+ *    port-rootside's child.h (614d48e9), where `rootside.c` uses it; here the
+ *    implementation is `child_birth()` in `child.c`, called by
+ *    `children_ensure_from()` (phase D1). */
+
+/* How a birth ends (`child_birth()`, and `children_ensure_from()` which adds
+ * the table's answers):
+ *      CHILD_READY         the child is born (or was there);
+ *      CHILD_FAILED        the birth failed (the reason is in the log);
+ *      CHILD_CLOSING       the user's previous desktop is still closing;
+ *      CHILD_NAME_UNKNOWN  the name does not resolve;
+ *      CHILD_NAME_MOVED    the name no longer resolves to the child's uid.
+ * ⚠ In the single-process server CHILD_CLOSING is not returned yet: the
+ *   «closing» is decided by `main.c` before it asks (`delivery_verdict()`). */
+typedef enum {
+	CHILD_READY = 0,
+	CHILD_FAILED,
+	CHILD_CLOSING,
+	CHILD_NAME_UNKNOWN,
+	CHILD_NAME_MOVED,
+} child_outcome;
+
+/* Everything a child is born with that is not its user: the root side's own
+ * argv, never a request (§11.50). */
+struct birth_opts {
+	uint32_t canvas_w, canvas_h;
+	const char *dir_survey;          /* NULL or "" ⇒ "-" */
+	bool quality_rises;
+	uint32_t bandwidth_cap_mbit;
+	bool audio_silence;
+	const char *my_path;             /* /proc/self/exe resolved, not "(deleted)" */
+	long parent_uid;                 /* ≥ 0 ⇒ `--parent-uid N`; -1 ⇒ root (absent) */
+	/* ⛔ `--close-only` (§11.50, CLOSE_ORPHAN): the child takes no stage, sends
+	 *    no frame, takes no input or clipboard — it obeys only «end the
+	 *    session» and exits after it, or after `CLOSE_ONLY_LIFE_MS`.  Set by
+	 *    the ROOT SIDE for a birth without a password, never by the request.
+	 * ⚠ Written on the child's command line (phase D5) only when set; the
+	 *   single-process server sets neither (-1 and false), so nothing changes. */
+	bool close_only;
+};
+struct child_born {
+	pid_t pid;
+	int fd;                          /* the parent's end, O_NONBLOCK, SO_PASSCRED */
+	uid_t uid;
+	gid_t gid;
+	bool render_grant;               /* to be removed at the reaping */
+	char user[64];
+};
+/* ⛔ Resolves `user` (uid 0 refused), enrols it in the card groups, makes the
+ *    pair, takes the render grant, forks and `become_and_exec()`s. */
+child_outcome child_birth(const struct birth_opts *b, const char *user,
+                          const char *rhost, uint64_t serial,
+                          struct child_born *out);
+
+/* ⭐ PHASE 17 T6: `children_ensure()` with the client's (bare) address that the
+ *    child's PAM session receives as `PAM_RHOST`, like sshd's (logind:
+ *    `RemoteHost`).  NULL or "" ⇒ "remotix", as before.  `CHILD_READY` ⇔ the
+ *    old `true`; anything else is the old `false` (no child, no stage). */
+child_outcome children_ensure_from(children *f, const char *user, const char *rhost);
 
 #endif

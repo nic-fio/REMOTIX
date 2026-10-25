@@ -22,6 +22,9 @@ int rcp_authenticate_judged(const char *user, const char *password, const char *
 }
 static uint64_t locked_mark;
 void rcp_refusal_locked(uint64_t ticket) { locked_mark = ticket; }
+/* D4b: the bracket of «not checked»; the delivery records what it saw */
+static uint64_t unchecked_mark, unchecked_seen;
+void rcp_refusal_unchecked(uint64_t ticket) { unchecked_mark = ticket; }
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap)
 {
 	/* the form of authentication.c: «[address]:port» -> «address» */
@@ -64,12 +67,29 @@ static void deliver(void *ctx, uint64_t ticket, bool admitted, const char *user,
 {
 	struct got *g = ctx;
 	mark_seen = locked_mark; /* the mark of §11.47 B, as the delivery sees it */
+	unchecked_seen = unchecked_mark; /* D4b: and the mark of «not checked» */
 	g->n++;
 	g->ticket = ticket;
 	g->admitted = admitted;
 	g->lost = lost;
 	snprintf(g->user, sizeof g->user, "%s", user);
 	snprintf(g->rhost, sizeof g->rhost, "%s", rhost);
+}
+
+struct root_got {
+	int n;
+	uint64_t ticket;
+	int outcome;
+	char user[257], rhost[64];
+};
+static void on_outcome(void *c, uint64_t ticket, int outcome, const char *user, const char *rhost)
+{
+	struct root_got *r = c;
+	r->n++;
+	r->ticket = ticket;
+	r->outcome = outcome;
+	snprintf(r->user, sizeof r->user, "%s", user);
+	snprintf(r->rhost, sizeof r->rhost, "%s", rhost);
 }
 
 static void make(helper *h, int *peer)
@@ -149,6 +169,7 @@ int main(void)
 		make(&h, &peer);
 		memset(&g, 0, sizeof g);
 		mark_seen = 77;
+		unchecked_seen = 77;
 		CHECK(helper_ask(&h, "frank", "pw", "[1.2.3.4]:9", 1000, &t), "ask (outcome %d)", oc);
 		CHECK(recv(peer, &rq2, sizeof rq2, 0) == (ssize_t)sizeof rq2, "the dispatcher gets the request");
 		struct response rs2 = {rq2.ticket, (uint8_t)oc};
@@ -158,6 +179,62 @@ int main(void)
 		CHECK(mark_seen == (oc == 2 ? g.ticket : 0), "outcome %d: the locked mark is %s during the delivery (saw %llu)", oc,
 		      oc == 2 ? "the ticket" : "0", (unsigned long long)mark_seen);
 		CHECK(locked_mark == 0, "outcome %d: and it is cleared after", oc);
+		/* D3: outcome 3 = «not checked» (the dispatcher's own cap): a no that is OURS — delivered `lost`, like the dead helper */
+		CHECK(g.lost == (oc == 3), "outcome %d: lost is %d (only 3 is «not checked»)", oc, g.lost);
+		/* D4b: only outcome 3 is delivered inside the rcp_refusal_unchecked(ticket) bracket, and it is closed after */
+		CHECK(unchecked_seen == (oc == 3 ? g.ticket : 0), "outcome %d: the unchecked mark during the delivery is %s (saw %llu)", oc,
+		      oc == 3 ? "the ticket" : "0", (unsigned long long)unchecked_seen);
+		CHECK(unchecked_mark == 0, "outcome %d: and the unchecked mark is cleared after", oc);
+		close(peer); close(h.fd);
+	}
+
+	/* 6. D3 (§11.50): the ROOT SIDE's helper — nothing of rcp.c is touched, every end is ONE call of the callback:
+	 *    1 yes, 0 no, 2 locked, 3 not checked (the dispatcher's answer 3, the dead helper), 4 expired (the PAM timeout: counts) */
+	{
+		struct root_got rg;
+		memset(&rg, 0, sizeof rg);
+		for (int oc = 0; oc <= 3; oc++) {
+			struct request rq3;
+			make(&h, &peer);
+			h.root = true;
+			h.outcome_cb = on_outcome;
+			h.outcome_ctx = &rg;
+			memset(&rg, 0, sizeof rg);
+			mark_seen = 77;
+			CHECK(helper_ask_bare(&h, "gina", "pw", "9.9.9.9", 1000, &t), "root: ask_bare (outcome %d)", oc);
+			CHECK(recv(peer, &rq3, sizeof rq3, 0) == (ssize_t)sizeof rq3 && strcmp(rq3.rhost, "9.9.9.9") == 0,
+			      "root: the dispatcher gets the bare rhost as it is");
+			struct response rs3 = {rq3.ticket, (uint8_t)oc};
+			CHECK(send(peer, &rs3, sizeof rs3, 0) == (ssize_t)sizeof rs3, "root: answer");
+			helper_move(&h, deliver, &g);
+			CHECK(rg.n == 1 && rg.outcome == oc && strcmp(rg.user, "gina") == 0 && strcmp(rg.rhost, "9.9.9.9") == 0,
+			      "root: outcome %d reaches the callback once (n=%d got %d)", oc, rg.n, rg.outcome);
+			CHECK(mark_seen == 77, "root: rcp.c is not touched (no locked mark)");
+			close(peer); close(h.fd);
+		}
+		/* the PAM timeout is outcome 4 (expired, it counts); the dead helper is 3 (not checked, ours) */
+		make(&h, &peer);
+		h.root = true;
+		h.outcome_cb = on_outcome;
+		h.outcome_ctx = &rg;
+		memset(&rg, 0, sizeof rg);
+		CHECK(helper_ask_bare(&h, "hal", "pw", "1.1.1.1", 1000, &t), "root: ask for the timeout");
+		helper_expired(&h, 1000 + 8000, NULL, NULL);
+		CHECK(rg.n == 1 && rg.outcome == 4 && rg.ticket == t, "root: the PAM timeout is outcome 4 (expired: counts), not 3 (free)");
+		CHECK(helper_ask_bare(&h, "ivy", "pw", "2.2.2.2", 1000, &t), "root: ask for the death");
+		close(peer);
+		helper_move(&h, NULL, NULL);
+		CHECK(rg.n == 2 && rg.outcome == 3 && strcmp(rg.user, "ivy") == 0 && h.fd < 0 && helper_in_flight(&h) == 0,
+		      "root: the dead helper is outcome 3, once, nothing left in flight");
+		/* a root helper has no places kept for a known key: all 16 */
+		make(&h, &peer);
+		h.root = true;
+		stub_known = false;
+		taken = 0;
+		for (int i = 0; i < 17; i++)
+			if (helper_ask_bare(&h, "jo", "pw", "3.3.3.3", 1000, &t))
+				taken++;
+		CHECK(taken == 16, "root: 16 places for everybody (got %d)", taken);
 		close(peer); close(h.fd);
 	}
 

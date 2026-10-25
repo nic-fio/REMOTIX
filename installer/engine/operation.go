@@ -59,7 +59,7 @@ func (m *Engine) ProfileV() *ProfileV {
 	if m.Examine != nil {
 		return m.Examine()
 	}
-	return Preflight(m.Env, PreflightOptions{Porta: m.Porta, Pacchetti: m.Catalog.Components()})
+	return Preflight(m.Env, PreflightOptions{Porta: m.Porta, Pacchetti: m.Catalog.Components(), PackageHasNetUser: PackageCarriesNetUser})
 }
 
 // Components: the extra packages the catalogue wants to know whether they are there.

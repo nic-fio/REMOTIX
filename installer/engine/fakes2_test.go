@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"testing"
 )
 
@@ -122,6 +123,32 @@ func (g *fakeManager) Install(file, names []string) error {
 		b, _ := json.Marshal(in)
 		if err := WriteAtomic(g.p("finto-pacchetti.json"), b, 0o644); err != nil {
 			return err
+		}
+		if a.Nome == "remotix" { // the REMOTIX package, when the test says so: its sysusers file, and the account its postinst makes
+			if _, err := os.Stat(g.p("finto-crea-utente-rete")); err == nil {
+				os.MkdirAll(filepath.Join(g.root, filepath.Dir(netSysusers)[1:]), 0o755)
+				os.WriteFile(filepath.Join(g.root, netSysusers[1:]), []byte("u remotix - \"REMOTIX network side\" / /usr/sbin/nologin\n"), 0o644)
+				// ⭐ What the package's postinst also leaves (tmpfiles.d): /var/lib/remotix/net, 0700, the network user's own — the
+				// post-install «network-side» check (RX-NETUSER-003) fails without it.  A test cannot chown to uid 990, so the
+				// account is made with the test's own uid/gid (as `netMachine()` does), and a system user by login.defs' UID_MIN.
+				ownUid, ownGid := os.Getuid(), os.Getgid()
+				if ownUid == 0 || ownGid == 0 {
+					ownUid, ownGid = 990, 990 // root can chown anything; and uid/gid 0 is never the network user's (PersonAccount)
+				}
+				uid, gid := strconv.Itoa(ownUid), strconv.Itoa(ownGid)
+				os.MkdirAll(filepath.Join(g.root, NetDir[1:]), 0o700)
+				os.Chmod(filepath.Join(g.root, NetDir[1:]), 0o700)
+				// ⚠ login.defs is OVERWRITTEN here (only when this package is the one that makes the network user): the fake
+				// «prova» at uid 1000 no longer counts as a person in THIS test only — nothing here may rely on it being one.
+				// (And a test run as root has uid 0, which is root's, not ours: use 990.)
+				os.WriteFile(filepath.Join(g.root, "etc/login.defs"), []byte("UID_MIN "+strconv.Itoa(ownUid+1)+"\n"), 0o644)
+				for f, line := range map[string]string{"etc/passwd": "remotix:x:" + uid + ":" + gid + ":REMOTIX network side:/:/usr/sbin/nologin\n", "etc/group": "remotix:x:" + gid + ":\n"} {
+					if h, err := os.OpenFile(filepath.Join(g.root, f), os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+						h.WriteString(line)
+						h.Close()
+					}
+				}
+			}
 		}
 		if a.Nome == "sddm" { // a display manager's postinst: enables, and starts if policy-rc.d does not stop it
 			os.WriteFile(filepath.Join(g.root, "etc/systemd/system/sddm.service"), []byte("[Unit]\n"), 0o644)

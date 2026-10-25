@@ -118,7 +118,7 @@ func (s *Session) Check(port int) (*CheckReport, error) {
 
 func (s *Session) examine(port int) {
 	s.port = port
-	s.prof = engine.Preflight(s.env, engine.PreflightOptions{Porta: port, Pacchetti: s.cat.Components()})
+	s.prof = engine.Preflight(s.env, engine.PreflightOptions{Porta: port, Pacchetti: s.cat.Components(), PackageHasNetUser: engine.PackageCarriesNetUser})
 	s.rap = engine.Evaluate(s.cat, s.prof)
 }
 

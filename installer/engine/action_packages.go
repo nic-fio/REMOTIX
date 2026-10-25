@@ -56,6 +56,15 @@ type beforePackages struct {
 	File        []string   `json:"files,omitempty"`
 	Names       []string   `json:"names"`
 	ResolvedSet []Artifact `json:"resolved_set"`
+	// ⭐ 1.5 (DECISIONS §11.50): the network side's system user was NOT on the machine before the
+	//   packages (their scripts make it, sysusers.d).  A PURGE rollback — a failed installation is
+	//   «the machine as it was» — then removes it too; a plain uninstallation keeps it (the
+	//   distributions' rule).  [M] 16 Oct 2026, rxtest installer --tests interrupt (debian13,
+	//   service): rolled back, «remotix left: + G remotix:x:990: + P remotix:x:990:990».
+	NetUserAbsent bool `json:"net_user_absent,omitempty"`
+	// … and the same for its GROUP: groupdel only a group the packages made; a group that was
+	//   there before may be taken away by userdel (USERGROUPS_ENAB), and the rollback says so.
+	NetGroupAbsent bool `json:"net_group_absent,omitempty"`
 }
 
 func newPackages(p PlanAction) (Action, error) {
@@ -130,6 +139,20 @@ func (a *packets) Snapshot(c *Context) (json.RawMessage, Origine, error) {
 		return nil, "", &ErrorRX{messageSimulate(err)}
 	}
 	p := beforePackages{Origine: PREEXISTING, Manager: g.Nome(), File: a.file, Names: a.names, ResolvedSet: ins}
+	if _, there := ReadAccount(c.Env, NetUser); !there {
+		p.NetUserAbsent = true
+	} else if _, err := os.Stat(c.Env.P(netSysusers)); err != nil {
+		// ⛔ 24 Oct 2026, review of 532c577d: «the user existed before» is true ONLY if the account is there and the
+		//   1.5 sysusers file is NOT yet: the user was born before any package that creates it.  With the file present
+		//   the account is the package's own (an install that already made it, now an upgrade or a repeat): recording it
+		//   as preexisting would make a later --purge leave a user the packages created.
+		recordNetUserPreexisting(c) // the uninstallation will leave it alone
+	}
+	if g, err := ReadGroups(c.Env.P("/etc/group")); err == nil {
+		if _, there := g[NetUser]; !there {
+			p.NetGroupAbsent = true
+		}
+	}
 	for _, x := range ins {
 		if x.Outcome != "present" {
 			p.Origine = DIRECT
@@ -273,7 +296,36 @@ func (a *packets) Rollback(c *Context, before json.RawMessage) error {
 		return err
 	}
 	if len(remove) > 0 {
-		return g.Remove(remove, c.Purge)
+		if err := g.Remove(remove, c.Purge); err != nil {
+			return err
+		}
+	}
+	if c.Purge && p.NetUserAbsent {
+		return dropNewNetUser(c, p.NetGroupAbsent)
+	}
+	return nil
+}
+
+// dropNewNetUser: the system user remotix (and its group) the packages' scripts made — only a
+// SYSTEM user, never a person's account (PersonAccount).  Idempotent.
+func dropNewNetUser(c *Context, groupAbsent bool) error {
+	r := &removeSystemUser{NetUser}
+	user, group, err := r.present(c)
+	if err != nil {
+		return err
+	}
+	if user {
+		if u, _ := ReadAccount(c.Env, NetUser); PersonAccount(c.Env, u) != "" {
+			return nil
+		}
+		if err := runOrError(c.Env, "userdel", NetUser); err != nil {
+			return err
+		}
+	}
+	if _, group, err = r.present(c); err != nil {
+		return err
+	} else if group && groupAbsent {
+		return runOrError(c.Env, "groupdel", NetUser)
 	}
 	return nil
 }
@@ -309,6 +361,22 @@ func (a *packets) RolledBack(c *Context, before json.RawMessage) (bool, string, 
 	}
 	if len(via) > 0 {
 		return false, fmt.Sprintf("%d new packages still installed", len(via)), nil
+	}
+	if c.Purge && p.NetUserAbsent {
+		if u, there := ReadAccount(c.Env, NetUser); there && PersonAccount(c.Env, u) == "" {
+			return false, "the system user " + NetUser + " the packages made is still there", nil
+		}
+		g, err := ReadGroups(c.Env.P("/etc/group"))
+		if err != nil {
+			return false, "", err
+		}
+		_, there := g[NetUser]
+		if p.NetGroupAbsent && there {
+			return false, "the group " + NetUser + " the packages made is still there", nil
+		}
+		if !p.NetGroupAbsent && !there {
+			return false, "the group " + NetUser + " that was there BEFORE the packages is gone: userdel took it away (USERGROUPS_ENAB)", nil
+		}
 	}
 	if len(stays) > 0 {
 		return true, "[RX-PACCHETTI-006] " + T("pacchetti.trattenuti", strings.Join(stays, ", ")), nil

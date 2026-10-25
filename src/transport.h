@@ -51,6 +51,12 @@
 
 typedef struct transport transport;
 
+/* ⭐ 1.5 (§11.50) phase D4 — `transport_open()` in two: the bind (UDP socket, non-blocking, IP_PKTINFO; -1 on
+ *    failure, said in the log) and the stack on a bound socket.  `transport_open()` does both, as always. */
+int transport_bind(const char *address, const char *port);
+transport *transport_open_fd(int fd, const char *address, const char *port,
+                             SSL_CTX *ctx, helper *help, const char *secret_dir);
+
 /* Opens the UDP socket and prepares the stack.  `port` is the same as TCP's.
  *
  * ⭐ `help` is the PAM helper (`DECISIONS.md` §1.10), started by `main.c`

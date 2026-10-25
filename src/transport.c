@@ -1019,17 +1019,6 @@ static void note_login(transport *t, connection *c)
 	           "not yet logged in (%zu left)", c->provenance, t->unlogged);
 }
 
-/* ⚠ The RCP states AFTER a granted login, by the names `rcp_state_name()` gives
- *   them.  It is how the login is seen also on the SYNCHRONOUS PAM fallback, where
- *   `transport_verdict()` is never called.  If `rcp.c` renamed them the cost is
- *   bounded: a logged-in connection would keep counting against its address. */
-static bool wt_logged_in_now(const wt *w)
-{
-	const char *s = w ? wt_rcp_state(w) : "";
-	return strcmp(s, "wait-attach") == 0 || strcmp(s, "active") == 0 ||
-	       strcmp(s, "detached-by-silence") == 0;
-}
-
 /* ⛔ The states an eviction may close, by rank (lower goes first; -1 = never):
  *    0 `finished` — the RCP session is over and serves nobody;
  *    1 `(none)` — a QUIC connection that never opened its WebTransport session: it
@@ -2110,10 +2099,6 @@ void transport_expired(transport *t)
 		 *    nothing goes out. */
 		if (wt_heartbeat_ns(c->w) <= now)
 			wt_beat(c->w, now);
-		/* ⭐ 1.5: the login also seen here — the synchronous PAM fallback never
-		 *    goes through `transport_verdict()`. */
-		if (c->unlogged && wt_logged_in_now(c->w))
-			note_login(t, c);
 		/* ⭐ 1.5: and the absolute age (the box on MAX_CONNECTIONS) */
 		if (c->unlogged && now - c->born >= UNLOGGED_MAX_S * NGTCP2_SECONDS) {
 			log_detail(REG_QUIC, "%s: not logged in after %d s (%s): closed",
@@ -2352,11 +2337,9 @@ static void secret_load(transport *t, const char *dir)
 	              path);
 }
 
-transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
-                          helper *help, const char *secret_dir)
+int transport_bind(const char *address, const char *port)
 {
 	struct addrinfo hints, *result = NULL, *r;
-	transport *t;
 	int fd = -1, uno = 1;
 
 	memset(&hints, 0, sizeof hints);
@@ -2366,7 +2349,7 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 
 	if (getaddrinfo(address, port, &hints, &result) != 0) {
 		registro_dice(REG_QUIC, "⛔ %s:%s does not resolve", address, port);
-		return NULL;
+		return -1;
 	}
 	for (r = result; r; r = r->ai_next) {
 		fd = socket(r->ai_family, r->ai_socktype | SOCK_NONBLOCK, r->ai_protocol);
@@ -2402,31 +2385,53 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 		registro_dice(REG_QUIC, "⛔ cannot bind to %s:%s over UDP: %s", address,
 		              port, strerror(errno));
 		freeaddrinfo(result);
+		return -1;
+	}
+	freeaddrinfo(result);
+	return fd;
+}
+
+/* ⭐ 1.5 (DECISIONS.md §11.50): the stack on a socket somebody else bound — the
+ *    root side, before it forked us (phase D4: in the single-process server
+ *    `transport_open()` binds and opens in one call, as before).  The family is asked of the socket itself
+ *    (`getsockname`), not remembered from an `addrinfo` that lived in another
+ *    process; `address` and `port` are for the log line only. */
+transport *transport_open_fd(int fd, const char *address, const char *port,
+                             SSL_CTX *ctx, helper *help, const char *secret_dir)
+{
+	struct sockaddr_storage ss;
+	socklen_t len = sizeof ss, tlen;
+	int type = 0;
+	transport *t;
+
+	if (fd < 0)
+		return NULL;
+	tlen = sizeof type;
+	memset(&ss, 0, sizeof ss);
+	if (getsockname(fd, (struct sockaddr *)&ss, &len) != 0 ||
+	    (ss.ss_family != AF_INET && ss.ss_family != AF_INET6) ||
+	    getsockopt(fd, SOL_SOCKET, SO_TYPE, &type, &tlen) != 0 ||
+	    type != SOCK_DGRAM) {
+		registro_dice(REG_QUIC, "⛔ descriptor %d is not a bound UDP socket "
+		              "(family %d, type %d): no QUIC", fd, (int)ss.ss_family, type);
+		close(fd);
 		return NULL;
 	}
-
 	t = calloc(1, sizeof *t);
 	if (!t) {
 		close(fd);
-		freeaddrinfo(result);
 		return NULL;
 	}
 	t->fd = fd;
-	t->family = r->ai_family;
-	{
-		struct sockaddr_storage me;
-		socklen_t ml = sizeof me;
-		t->bound_any = true;
-		if (getsockname(fd, (struct sockaddr *)&me, &ml) == 0) {
-			if (me.ss_family == AF_INET6)
-				t->bound_any = IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)&me)->sin6_addr);
-			else if (me.ss_family == AF_INET)
-				t->bound_any = ((struct sockaddr_in *)&me)->sin_addr.s_addr == htonl(INADDR_ANY);
-		}
-	}
+	t->family = ss.ss_family;
+	/* ⭐ pktinfo: `ss` is the socket's own address (getsockname above): wildcard or one address */
+	t->bound_any = true;
+	if (ss.ss_family == AF_INET6)
+		t->bound_any = IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)&ss)->sin6_addr);
+	else if (ss.ss_family == AF_INET)
+		t->bound_any = ((struct sockaddr_in *)&ss)->sin_addr.s_addr == htonl(INADDR_ANY);
 	t->ctx = ctx;
 	t->help = help;
-	freeaddrinfo(result);
 
 	if (RAND_bytes(t->secret, sizeof t->secret) != 1) {
 		registro_dice(REG_QUIC, "⛔ cannot generate the static secret");
@@ -2447,6 +2452,13 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 	              "streams granted = 16 of §2.3 + the 3 of HTTP/3",
 	              address, port, IDLE_MS, 19);
 	return t;
+}
+
+transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
+                          helper *help, const char *secret_dir)
+{
+	int fd = transport_bind(address, port);
+	return fd < 0 ? NULL : transport_open_fd(fd, address, port, ctx, help, secret_dir);
 }
 
 void transport_close(transport *t)

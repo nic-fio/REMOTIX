@@ -1,0 +1,59 @@
+# remotix.service — the REMOTIX server, .rpm family (`phases/17-the-installer.md` §6.4).
+# Same in substance as `packaging/debian/remotix.service` (line B).
+#
+# ⭐ As ROOT, and outside any user session: PAM must be able to verify the
+#    password of ANYONE, and the server drops each child to the uid of its
+#    user (`child.c`).  No `User=`, no `ProtectSystem`: it opens
+#    logind sessions, writes in the users' homes, touches /dev/dri.
+# ⭐ 1.5, DECISIONS-11.md §11.50 (PHASE F, NOT ACTIVE YET: this is the unit the split build installs — REMOTIX_SPLIT=1 / rpm `--with split`):
+#    the process systemd starts is the ROOT side (PAM, the desktops' birth); it forks the NETWORK side, which drops itself to the
+#    system user `remotix` (remotix.sysusers) and keeps its files in /var/lib/remotix/net.  ⛔ No `User=` and no hardening here:
+#    whatever this unit restricts, every desktop born from it inherits (§11.11); the network side's walls are in the program (walls.c).
+# ⭐ Certificate: if missing in /var/lib/remotix/net/certificates it is generated at start
+#    (`certificates.c:302`); one from the administrator (without the «.ours» mark)
+#    is used as is.
+# ⭐ The name in the certificate is the machine name (%H).  Whoever connects with an
+#    IP address declares it in /etc/remotix/remotix.conf.d/<something>.conf:
+#        REMOTIX_OPTIONS=--name 192.168.1.10
+#    (the last --name wins).  ⚠ PROVISIONAL format, environment variables: the
+#    real configuration belongs to the engine (T4).
+# ⭐ `KillMode=mixed`, `LimitRTPRIO`, `LimitNICE`: the same as the benches
+#    (`src/restart-7700.sh`).  `[M]` T2 (§5.2): with `mixed`, stopping the service
+#    kills parent, PAM helper and child, NOT the desktops (the stage is born with
+#    `setsid --fork` outside the unit).
+# ⭐ `--journal`: the lines go to the journal with their fields too (priority,
+#    `REMOTIX_AREA`, `REMOTIX_TENANT`) and from the child, which sits in the
+#    session scope (`log.h`: ⇒ `journalctl -t remotix`).
+# ⛔ No bench options (`--survey`, `--command-socket`, `--audio-test`,
+#    `--verbose`): R13.
+# ⛔ `DECISIONS.md` §10.12: the package does NOT enable and does NOT start this unit
+#    (the engine does), and no guard prevents it from starting.
+[Unit]
+Description=REMOTIX, the desktop in the browser
+After=network.target systemd-logind.service
+Wants=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/usr/share/remotix/remotix.conf
+EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
+# ⭐ 1.5 (§11.50, D6): the TWO-PROCESS server is switched on by `--split` in ExecStart (without it the binary is the
+#    single-process 1.0).  While the split is EXPERIMENTAL the binary also demands this variable and refuses (78) without
+#    it: REMOVE the `Environment=` line when the gate in `main.c` ("REMOTIX_SPLIT_EXPERIMENTAL") is removed.
+Environment=REMOTIX_SPLIT_EXPERIMENTAL=1
+WorkingDirectory=/
+# ⭐ T6 (SELinux): the program is launched DIRECTLY, without `/bin/sh -c`.  systemd
+#    transitions to `remotix_t` only if it executes `remotix_exec_t` itself (init_t → remotix_t); a
+#    shell in between would run in `unconfined_service_t` and its `exec` would stay there.
+#    `${REMOTIX_PORT}` is a single word; `$REMOTIX_OPTIONS` without braces is split
+#    into words, and when empty yields none (systemd.service, «Command lines»).
+ExecStart=/usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --split --journal $REMOTIX_OPTIONS
+KillMode=mixed
+LimitRTPRIO=20
+LimitNICE=-11
+Restart=on-failure
+RestartPreventExitStatus=78
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -96,7 +96,6 @@ enum { T_HELLO = 0x0001, T_CREDENTIALS = 0x0003 };
 static void o_send(void *ctx, const uint8_t *d, size_t n) { (void)ctx; (void)d; (void)n; }
 static void o_close(void *ctx, uint8_t r) { (void)ctx; (void)r; }
 static void o_log(void *ctx, const char *l) { (void)ctx; if (getenv("WPL_LOG")) fprintf(stderr, "rcp> %s\n", l); }
-static bool o_verify(void *ctx, const char *u, const char *p) { (void)ctx; (void)u; (void)p; return false; }
 static bool o_ask(void *ctx, const char *u, const char *p, uint64_t *t)
 {
 	(void)ctx; (void)u; (void)p;
@@ -138,7 +137,6 @@ static rcp_session *session(const char *provenance, const char *user, const char
 	hooks_rcp.send_msg = o_send;
 	hooks_rcp.close = o_close;
 	hooks_rcp.record = o_log;
-	hooks_rcp.verify = o_verify;
 	hooks_rcp.ask_verify = o_ask;
 	rcp_session *s = rcp_open(&hooks_rcp, provenance, now);
 	if (!s)

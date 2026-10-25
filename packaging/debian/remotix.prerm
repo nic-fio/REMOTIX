@@ -11,6 +11,26 @@ if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
 	deb-systemd-invoke stop remotix.service >/dev/null || true
 fi
 
+# ⭐ DECISIONS-11.md §11.50 (PHASE F): the network side's files go back to the 1.0 paths (`remotix-net-move --back`) on a
+#    DOWNGRADE (the version being installed is LOWER than this one) and on a removal — never on an upgrade.  A purge deletes
+#    them afterwards (postrm).  INERT unless the package carries remotix-net-move (a REMOTIX_SPLIT=1 build).  A failure is
+#    said, never makes dpkg fail.
+if [ -x /usr/libexec/remotix/remotix-net-move ]; then
+	back=
+	case "$1" in
+	remove) back=1 ;;
+	upgrade)
+		cur=$(dpkg-query -W -f='${Version}' remotix 2>/dev/null || true)
+		if [ -n "$cur" ] && [ -n "${2:-}" ] && dpkg --compare-versions "$2" lt "$cur"; then
+			back=1
+		fi
+		;;
+	esac
+	if [ -n "$back" ]; then
+		/usr/libexec/remotix/remotix-net-move --back || echo "remotix: ⚠ the move of /var/lib/remotix/net back is incomplete" >&2
+	fi
+fi
+
 #DEBHELPER#
 
 exit 0

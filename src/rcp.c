@@ -2027,6 +2027,17 @@ void rcp_refusal_locked(uint64_t ticket)
 	locked_ticket = ticket;
 }
 
+/* ⭐ 1.5 (`DECISIONS.md` §11.50, D4b): the ticket the helper answered «not
+ *    checked» for (its dispatcher's cap, a fork that failed, a helper that
+ *    died or is down); 0 = none.  Set by the host only around ONE delivery
+ *    (`rcp_refusal_unchecked()`, `rcp.h`). */
+static uint64_t unchecked_ticket;
+
+void rcp_refusal_unchecked(uint64_t ticket)
+{
+	unchecked_ticket = ticket;
+}
+
 /* ⛔⭐ A «NO» THAT DOES NOT COUNT — `DECISIONS.md` §11.47 B (the user, 15 Oct
  *     2026).  Both must hold:
  *       1. the helper said «refused while `pam_faillock` had the account
@@ -2410,6 +2421,10 @@ void rcp_orphan_verdict(const char *user, const char *rhost, bool admitted,
 		return;
 	}
 	rcp_key_address(rhost, key, sizeof key);
+	/* ⭐ D4b: «not checked» (`rcp_refusal_unchecked()`) is the same case as a
+	 *    dead helper: our defect, nothing counted, the booking given back. */
+	if (!admitted && unchecked_ticket && ticket == unchecked_ticket)
+		lost = true;
 	if (lost) {
 		/* ⛔ The helper died: that is a defect of OURS, and it must not ban
 		 *    anybody.  The booking is given back and nothing is counted. */
@@ -3523,22 +3538,19 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 			       "given back");
 		}
 	} else {
-		/* ⚠ THE DECLARED FALLBACK (`CODER.md` §4.2), and it blocks whoever
-		 *   calls it: it is the road of the in-process benches, where there is
-		 *   no loop to free — and the FAULT that `benches/02-pam-*` injects to
-		 *   certify itself, because it is exactly how the server was before. */
-		bool ok = s->g.verify && s->g.verify(s->g.ctx, user, password);
-		reg(s, "PAM answered: %s  ⚠ (SYNCHRONOUSLY: no asynchronous "
-		       "hook connected — the thread stood still)",
-		    ok ? "admitted" : "refused");
-		s->cred_good = ok;
-		s->cred_reason = RCP_WRONG_CREDENTIALS;
-		/* ⛔ The verdict is already here: the booking made above is resolved
-		 * at once, by the same function as the asynchronous road. */
-		struct sink k = {s, NULL, NULL};
-		struct login_result r;
-		login_resolve(s->address, s->user, ok, now, &r);
-		login_report(&k, s->address, s->user, ok, &r, now);
+		/* ⛔⭐ NO SYNCHRONOUS FALLBACK ANY MORE — D4b of `DECISIONS.md` §11.50,
+		 *     a DELIBERATE change of behaviour.  Until D4b a host without the
+		 *     asynchronous hook (the helper not started) had PAM called
+		 *     right here, which stops the server's only loop for 1-2 s at every
+		 *     attempt.  Now: no helper hook ⇒ the check is NOT made, the login
+		 *     is REFUSED as ours (`0x0E`, not `0x07`), nothing is counted and
+		 *     the booking is given back — the same road as a question that
+		 *     did not leave, which is exactly what this is. */
+		s->refusal_is_ours = true;
+		login_release(s->address, s->user);
+		reg(s, "⛔ no helper: the check was NOT made, REJECTED as ours "
+		       "(invariant I3), NOT counted as a failed attempt of §4.4-bis; "
+		       "the booking is given back");
 	}
 	/* ⛔ The password is zeroed as soon as PAM has answered, and does not appear
 	 * in any log at any level (§4.4).
@@ -8994,6 +9006,22 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 	s->expected_verdict = false;
 	s->cred_good = admitted;
 	s->cred_reason = RCP_WRONG_CREDENTIALS;
+	/* ⛔⭐ D4b (`DECISIONS.md` §11.50, §11.39): the helper could NOT check
+	 *     (the bracket of `rcp_refusal_unchecked()`).  Refused as ours, at the
+	 *     fixed second and not at the 12 s net: `0x0E` on the wire, and the
+	 *     count of §4.4-bis is NOT touched — PAM never judged.  Same road as
+	 *     `rcp_verdict_lost()`. */
+	if (!admitted && unchecked_ticket && ticket == unchecked_ticket) {
+		s->cred_good = false;
+		s->refusal_is_ours = true;
+		login_release(s->address, s->user);
+		reg(s, "⛔ the helper could NOT check request %llu (its cap, a failed "
+		       "fork, or it died): REJECTED as ours — 0x0E at the fixed second, "
+		       "NOT counted towards the ban, the booking is given back "
+		       "(DECISIONS.md §11.50)",
+		    (unsigned long long)ticket);
+		return true;
+	}
 	reg(s, "PAM answered (request %llu): %s  ⭐ and the thread never "
 	       "stopped (DECISIONS.md §1.10)",
 	    (unsigned long long)ticket, admitted ? "admitted" : "refused");

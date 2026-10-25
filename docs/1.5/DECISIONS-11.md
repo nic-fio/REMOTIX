@@ -1062,8 +1062,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     or waiting for HELLO or for CREDENTIALS). ⛔ A connection in **wait-verdict** (its password is being
     checked) is **never** evicted, nor one already signed in. A newcomer whose own address or /48 is full is
     refused, not given room. Evictions are counted in the 10 s summary line;
-  - a connection stops counting as «pending» at sign-in (admitted verdict, or the RCP state seen in
-    `transport_expired()` for the synchronous PAM fallback) or when reaped. ⭐ It is charged to its **birth
+  - a connection stops counting as «pending» at sign-in (admitted verdict, in `transport_verdict_from()`) or when reaped. ⭐ It is charged to its **birth
     address** and keeps it after a migration (§2.3), so moving cannot free a place on the old address.
 - ⚠ **The price, accepted knowingly:** everybody behind one shared IPv4 address (an office behind one NAT
   router) gets **8 sign-ins in progress at once**; the ninth is refused and must retry (the administrator can raise
@@ -1644,7 +1643,25 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
 
-> ⚠ NOT in this tree; still to port: the whole section — no root side / network side split exists in this code
+> 🔸 Phases A and B ported on `port-rootside` — to be built and tested: the protocol and API (`src/rootside_proto.h`, `rootside.h`) and the root side itself (`src/rootside.c`, the FINAL file of the abandoned attempt, with its desk tests `benches/02-rootside-*` and the fuzz harnesses `benches/fuzz/rootside-proto` and `rootside-dispatch`; commits `614d48e9` declarations, `61227c1f` fuzz, `a2ed3ecd` root side). `rootside.o` is NOT in the product link and `main.c`, `child.c`, `helper.c`, `transport.c`, `rcp.c` are untouched.
+> ⚠ **On `port-rootside-D` (24 Oct 2026)**: the walls (`walls.c/h`, merged from `port-rootside-mura`), `child_birth()` (D1), `render_grant_remotix_session()` (D2), `transport_bind/open_fd` and `page_bind/open_fd` (D4a), the remote mode of the children table and `--parent-uid/--close-only` (D5), the helper in root form (D3) and `main.c` in two halves behind `--split` (D6, EXPERIMENTAL: it refuses unless `REMOTIX_SPLIT_EXPERIMENTAL=1`) are in the tree. Still NOT: the network side's helper in remote mode (a patch, to apply after this merge), the installer's network-side step and the packaging (`port-rootside-inst`, `port-rootside-pacch`).
+> ⚠ NOT in this tree as a running split: the product is still ONE process. Steps D1-D4b of the port (the hooks) are on the branches
+> `port-rootside-D` (child birth, render grant) and `port-rootside-D3` (the PAM helper, below); the root side itself is on
+> `port-rootside`, the walls on `port-rootside-mura`; `main.c` in two halves (D6) is still to do.
+>
+> ⭐ **D3 / D4b, ported on `port-rootside-D3` (to be built and tested):**
+> - The PAM dispatcher is **re-executed** (`/proc/self/exe --pam-helper`, fresh memory image, descriptors above 3 closed) and
+>   **restarted with a doubling pause** (1 s … 60 s; loud after 5 deaths in a row) by `helper_expired()`, the watchdog.
+>   While it is down the logins are refused as ours.
+> - **Root form** (`helper_turn_on_root`, `helper_ask_bare`, `HelperOutcome`): every request ends in ONE callback: 1 admitted, 0
+>   refused, 2 refused while `pam_faillock` held the account, **3 not checked** (the dispatcher's cap of 2×16, a failed `fork`
+>   there, the dispatcher dead or down — our defect, never counted), **4 expired** (no answer in 8 s: it COUNTS as a failed
+>   attempt, the 24 Oct 2026 decision).
+> - **The synchronous PAM fallback is GONE** (a deliberate change): with no helper, or its hook missing, the login is refused
+>   `0x0E`, not counted, booking released (`login_release`); `hook_verify`/`rcp_hooks.verify` removed, and `rcp_refusal_unchecked(ticket)`
+>   brackets the delivery of «not checked» so `rcp.c` turns it into `refusal_is_ours` (same road as `rcp_verdict_lost`).
+>   In the single-process product «not checked» also travels as `lost=true`.
+> 🔸 Phase F (packaging) ported on `port-rootside-pacch` — to be built and tested, **OFF by default behind one switch** (debian: `REMOTIX_SPLIT=1`, passed through by `build-deb.sh`; rpm: `--with split`, `build-rpm.sh` with `RX_SPLIT=1`; Arch: `REMOTIX_SPLIT=1`, passed by `packaging/arch/build.sh`; any other value, or none, leaves the pieces OFF): the system user `remotix` (`sysusers`), `remotix-net-move` (the 1.0 → 1.5 move of `certificates/` and `ban` into `/var/lib/remotix/net`), the split units and tmpfiles (`*.split`), the rpm SELinux domain (`remotix.{te,fc}.split`), the Arch install script. **Inert today** (no build installs them without the switch; the install scripts' blocks run only if `remotix-net-move` is in the package): the new files, the guards in `postinst` / `%post` / `remotix.install`, the extra `rm`/`rmdir` of `net/` at purge. **Would change today's behaviour, therefore behind the switch**: creating the user, moving the certificates and the ban file (today's 1.5 server reads the old paths and would regenerate its certificate and `quic-secret`), the units' `--certificates` / `--ban-file` on `net/`, `/var/lib/remotix` 0755 (0700 today), the SELinux domain `remotix_net_t`, `daemon-reload` and `tmpfiles --create` in the scripts. No hardening in the units by design (the desktops inherit what the unit restricts): the network side hardens itself with `walls.c` (phase C, not in this tree). `remotix-net-move --back` (the reverse, for a downgrade or removal) leaves the service STOPPED after a downgrade: the marker `/run/remotix/was-running` (written if the unit was active or activating) says whether it was running, so whoever does the downgrade (or the installer engine, later) can start it again; Arch calls it only from `pre_remove`, on a downgrade the administrator runs it by hand.
 
 - **The user's rulings** (16 Oct 2026, to the questions put after the inventory of the root operations — seven
   reports, one per area: network side, PAM, desktop birth, the per-session child, cards and input, packaging,
@@ -1708,6 +1725,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   passes it to the network side, waits for its farewell (0x0c) up to 5 s, then exits.
 - **Removed**: the synchronous PAM fallback in the network process (`webtransport.c` `hook_verify` →
   `authentication.c`): as `remotix` it would refuse every right password and count it towards the ban.
+  ⭐ *Done in step D4b on `port-rootside-D3`, in the single-process product too (not only in the network side): with no helper
+  the login is `0x0E`, not counted.*
 - **Kept byte-identical** (benches read them): the log lines «PAM helper started: pid N», «child spawned for…»,
   «I AM MAKING IT BE BORN», «is in the card's groups», «FOUND AGAIN», «graphical session is over», under the same
   `-t remotix`.

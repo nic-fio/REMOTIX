@@ -78,7 +78,7 @@ SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
             input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
             clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c \
-            render_grant.c render_node.c
+            render_grant.c render_node.c walls.c rootside.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -332,7 +332,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 FORCE
+.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-rootside test-walls FORCE
 
 all: fingerprints $(NOME)
 
@@ -462,6 +462,17 @@ test-colors709: ../benches/23-colors709-edge-test.c colors709.c colors709.h
 	  ../benches/23-colors709-edge-test.c colors709.c -lm; \
 	"$$d/simd"; "$$d/c"
 
+# ⭐ 1.5 (DECISIONS.md §11.50) — the network side's walls (`walls.c` included by
+#    the test).  As an ordinary user it checks the refusals; as root in a
+#    container that may mount (`--privileged`) it puts the walls up for real in
+#    a fork and checks them (`benches/02-walls-test.c`, header).
+test-walls: ../benches/02-walls-test.c walls.c walls.h
+	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-walls.XXXXXX"); \
+	trap 'rm -rf "$$d"' EXIT; \
+	$(CC) $(CFLAGS) -I. -o "$$d/test" ../benches/02-walls-test.c $(DL_LIBS); \
+	"$$d/test"
+
+
 %-client-protocol.h: protocols/%.xml
 	$(SCANNER) client-header $< $@
 
@@ -544,7 +555,8 @@ $(OGGETTI): log.h .flags
 #    `DECISIONS.md` §1.10-bis: those four links are opened by the CHILD, which runs
 #    as the user.  The parent is root, and root has nobody to talk to.
 main.o:           helper.h certificates.h command.h child.h page.h rcp.h \
-                  log.h tls.h transport.h rediscover.h
+                  log.h tls.h transport.h rediscover.h rootside.h walls.h
+rootside.o:       rootside.h rootside_proto.h child.h helper.h log.h render_grant.h
 transport.o:      transport.h helper.h log.h webtransport.h
 webtransport.o:   webtransport.h helper.h rcp.h log.h child.h audio.h
 page.o:         page.h certificates.h rcp.h log.h
@@ -568,7 +580,8 @@ helper.o:       helper.h log.h
 #    product only, like `helper.c`.
 child.o:         child.h log.h session.h capture.h mutter.h encoder.h \
                   input.h sentinel.h audio.h sound.h clipboard.h rediscover.h \
-                  render_grant.h render_node.h unchanged.h
+                  render_grant.h render_node.h unchanged.h \
+                  rootside.h rootside_proto.h
 
 # ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
 #    only — in `benches/rcp/` they do not exist, because the graft into ngtcp2's
@@ -637,6 +650,25 @@ cursor.o:        cursor.h log.h
 #    ⛔ It is the same reason why `rcp.c` reaches this module
 #    by HOOKS and not by `#include`.
 clipboard.o:        clipboard.h log.h
+
+# ⭐ 1.5 (DECISIONS-11.md §11.50) — the ROOT SIDE's desk test (`benches/02-rootside-validator-test.c`: the closed list's
+#    validator, the grants, the AUTH bounds, the names refused before PAM).  `rootside.c` is #included by the test (its
+#    statics too); nothing is forked, no channel opened.  ⚠ `rootside.o` IS part of the product link since phase D6, but
+#    only `--split` reaches it.  This recipe stays as it was (the symbols of phase D are in the tree now, so few stubs are left): it links the log stub of the fuzz harness and ONE
+#    stub per undefined symbol, generated from the linker's list, that TRAPS if the test reaches it.
+test-rootside: ../benches/02-rootside-validator-test.c rootside.c rootside.h rootside_proto.h
+	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-rootside.XXXXXX"); \
+	trap 'rm -rf "$$d"' EXIT; \
+	$(CC) $(CFLAGS) -I. -c -o "$$d/t.o" ../benches/02-rootside-validator-test.c; \
+	$(CC) $(CFLAGS) -I. -c -o "$$d/log.o" ../benches/fuzz/rootside-dispatch/stubs_log.c; \
+	LC_ALL=C $(CC) -o "$$d/probe" "$$d/t.o" "$$d/log.o" 2> "$$d/link.log" || true; \
+	{ echo '#include <stdio.h>'; \
+	  echo 'static void hit(const char *n) { fprintf(stderr, "STUB: the root-side desk test reached %s (phase D)", n); fputc(10, stderr); __builtin_trap(); }'; \
+	  sed -n 's/.*undefined reference to .\([A-Za-z_0-9]*\)..*/\1/p' "$$d/link.log" | sort -u | while read -r n; do \
+	    echo "void $$n(void); void $$n(void) { hit(\"$$n\"); }"; done; } > "$$d/stubs.c"; \
+	$(CC) $(CFLAGS) -c -o "$$d/stubs.o" "$$d/stubs.c"; \
+	$(CC) -o "$$d/test" "$$d/t.o" "$$d/log.o" "$$d/stubs.o"; \
+	RXFUZZ_LOG=1 "$$d/test"
 
 # ⭐ The automatic dependencies written by `-MMD` (absent on the first build: `-include` does not mind).
 -include $(OGGETTI:.o=.d)

@@ -12,7 +12,9 @@
 #      compares) and packaging/debian/ as debian/; debian/changelog is WRITTEN
 #      here, with the version and date of the commit (the date becomes
 #      SOURCE_DATE_EPOCH: same source, same package — R23);
-#   3. `dpkg-buildpackage -b` in the container, then lintian;
+#   3. `dpkg-buildpackage -b` in the container, then lintian (REMOTIX_SPLIT=1 in the environment is passed through to
+#      debian/rules: DECISIONS-11 §11.50, phase F, the network side's user, directories and unit.  ⛔ OFF by default: the
+#      pieces are useless, and would break today's 1.5, until phase D exists);
 #   4. the checks on the FINISHED package, not on the tree:
 #        R13  the bench function is not in the binary extracted from the .deb, and
 #             is in an rcp.o built with BENCH_ON 1 (the positive
@@ -83,7 +85,7 @@ EOF
 }
 
 build_in() {  # build_in <copied> <bitmap> <log>
-	podman run --rm --userns=keep-id -v "$1:/lavoro" -w /lavoro/remotix "$2" \
+	podman run --rm --userns=keep-id -e REMOTIX_SPLIT="${REMOTIX_SPLIT:-0}" -v "$1:/lavoro" -w /lavoro/remotix "$2" \
 		sh -c 'dpkg-buildpackage -b -us -uc' >"$3" 2>&1
 }
 

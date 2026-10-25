@@ -173,14 +173,9 @@ typedef struct {
 	/* Checks the credentials.  Separate because PAM has nothing to do with the
 	 * protocol, and so that a bench can replace it by declaring it.
 	 *
-	 * ⛔⭐ THIS HOOK BLOCKS WHOEVER CALLS IT, and since 12 Aug 2026 it is the
-	 *     FALLBACK, not the good road: it is used only when `ask_verify`
-	 *     is NULL.  ⚠ It was not removed, and not out of laziness — the harness
-	 *     of `benches/01-b3-graft-rcp.py` mounts this same module on a
-	 *     host that has no loop of its own to free, and breaking it in silence
-	 *     would be worse than the defect (`CODER.md` §4.2: the fallback is
-	 *     DECLARED). */
-	bool (*verify)(void *ctx, const char *user, const char *password);
+	 * (D4b of `DECISIONS.md` §11.50: the SYNCHRONOUS `verify` hook is GONE.  A
+	 *  host without `ask_verify` has its logins refused as ours, `0x0E`, not
+	 *  counted — see `rcp_credentials()`.) */
 	/* ⭐ THE ASYNCHRONOUS CHECK — `DECISIONS.md` §1.10, 12 Aug 2026.
 	 *
 	 * ⛔ `verify` blocks whoever calls it, and in the product whoever calls it
@@ -193,9 +188,9 @@ typedef struct {
 	 * the outcome is NO, at once and without appeal — invariant I3: failure is
 	 * a no, not a maybe.
 	 *
-	 * ⚠ If it is NULL `verify` is used, and the module behaves exactly
-	 *   as before 12 Aug 2026: it is what the in-process benches do,
-	 *   and it is also the FAULT that `benches/02-pam-*` injects to certify itself. */
+	 * ⚠ If it is NULL (D4b) there is no check at all: the login is refused as
+	 *   ours (`0x0E`, not counted).  A bench that needs a login to succeed sets
+	 *   this hook and calls `rcp_verdict()`. */
 	bool (*ask_verify)(void *ctx, const char *user, const char *password,
 	                        uint64_t *ticket);
 
@@ -693,6 +688,14 @@ bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket);
  *    an admitted login in the last 30 days (the notion of the places kept for
  *    a known key), and counts as any other otherwise.  The wire does not change. */
 void rcp_refusal_locked(uint64_t ticket);
+/* ⭐ 1.5 (`DECISIONS.md` §11.50, D4b): the «no» about to be delivered for
+ *    `ticket` is the helper's «not checked» (its dispatcher's cap, a fork that
+ *    failed, a helper that died or is down): set just before ONE delivery, 0
+ *    just after, like `rcp_refusal_locked()`.  Such a no is refused as OURS at
+ *    the fixed second — `0x0E`, never counted, the booking given back —
+ *    instead of waiting for the 12 s net.  An orphan (the client hung up) is
+ *    given back the same way. */
+void rcp_refusal_unchecked(uint64_t ticket);
 
 /* ⭐ THE TWO PAM SLOTS KEPT FOR A KNOWN KEY — 15 Oct 2026, `DECISIONS.md`
  *    §11.39 addendum.  True ONLY while `rcp.c` is inside `ask_verify` for

@@ -82,13 +82,13 @@ bool fake_children_alive_of(const children *f, const char *user)
 	(void)user;
 	return alive;
 }
-bool fake_children_ensure_from(children *f, const char *user, const char *rhost)
+child_outcome fake_children_ensure_from(children *f, const char *user, const char *rhost)
 {
 	(void)f;
 	(void)user;
 	(void)rhost;
 	n_ensure++;
-	return true;
+	return CHILD_READY;
 }
 int fake_children_count(const children *f)
 {

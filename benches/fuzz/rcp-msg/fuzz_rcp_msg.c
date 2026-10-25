@@ -11,7 +11,7 @@
  *    byte 1 = the FAILURE MASK (low 8 bits; op 13 sets all 16 later): which hooks answer «no» —
  *        bit0 ask_verify (rcp.c: the question to PAM did not leave) · bit1 video_write · bit2 input_* answer -1
  *        bit3 input_letter answers 1 (cannot be produced) · bit4 recanvas · bit5 layout · bit6 clipboard_write
- *        bit7 clipboard_offer · bit8 verify (sync) · bit9 clipboard_response
+ *        bit7 clipboard_offer · bit8 (unused since D4b: the synchronous verify hook is gone) · bit9 clipboard_response
  *    then the OP STREAM of common.h (`u8 op · u16 length · argument`), op taken modulo 32:
  *        0 rcp_receive(arg)                       (the control channel, any split of the bytes)
  *        1 rcp_receive_input(stream = arg[0]&3, arg+1)
@@ -78,7 +78,6 @@ static void h_close(void *c, uint8_t r)
 }
 static void h_record(void *c, const char *l) { (void)c; (void)l; }
 #define FAILS(b) ((h.fail >> (b)) & 1)
-static bool h_verify(void *c, const char *u, const char *p) { (void)c; return !FAILS(8) && u && p && (p[0] & 1); }
 static bool h_ask_verify(void *c, const char *u, const char *p, uint64_t *t)
 {
 	(void)c; (void)u; (void)p;
@@ -166,7 +165,7 @@ static void open_session(void)
 {
 	rcp_hooks g;
 	memset(&g, 0, sizeof g);
-	g.send_msg = h_send; g.close = h_close; g.record = h_record; g.verify = h_verify;
+	g.send_msg = h_send; g.close = h_close; g.record = h_record;
 	if (h.cfg & 1) g.ask_verify = h_ask_verify;
 	g.video_open = h_vopen; g.video_write = h_vwrite; g.video_fin = h_vfin; g.video_reset = h_vfin;
 	if (h.cfg & 4) {

@@ -54,6 +54,7 @@
  *    dependency on the protocol. */
 #include "rcp.h"
 #include "log.h"
+#include "rootside.h"
 /* ⭐ PHASE 17 T7: the PARENT's half asks logind and /proc whether a desktop
  *    is alive (nothing of the stage). */
 #include "rediscover.h"
@@ -179,6 +180,8 @@
  *    alive (see `closing_asked_ms`): the desktop logs out in a few seconds; past
  *    this the child is treated as alive again, and a login attaches to it. */
 #define CLOSING_GRACE_MS 30000
+/* ⭐ 1.5: SIGKILLs (3 s apart) before a slot whose CHILD_EXITED never came is freed (network mode). */
+#define EXITED_FALLBACK_ROUNDS 10
 
 enum {
 	MSG_CHI_SEI = 1,      /* parent → child */
@@ -558,6 +561,15 @@ struct child {
 	 *    `RECHECK_MS` timer: not on every message (a 4K keyframe is ~64, and
 	 *    with sssd/LDAP every lookup is a network call inside the loop). */
 	uint64_t name_checked_ms;
+	/* ⭐ 1.5 (§11.50), network mode only (inert in the single-process server):
+	 *    the name as typed at the login when it differs from the canonical one
+	 *    the root side resolved; a close-only child (CLOSE_ORPHAN); the root
+	 *    side's CHILD_EXITED; the SIGKILLs sent while exiting. */
+	char alias[64];
+	bool close_only;
+	bool reaped;
+	int reaped_status;
+	int kill_rounds;
 	/* ⛔ The refused messages: in a row (`REFUSED_STREAK_MAX`), and the log
 	 *    lines of the current window (`REFUSED_LOG_BURST`) with what was only
 	 *    counted.  `refused_now`: the message being handled was refused. */
@@ -647,6 +659,8 @@ struct children {
 	 *    is the EXCEPTION to the default, not the default. */
 	bool phase9_audio_silence;
 	char my_path[512]; /* /proc/self/exe resolved, for the `exec` */
+	/* ⭐ 1.5 (§11.50): true in the network side, whose children are born, signalled and reaped by the root side. */
+	bool remote;
 	ChildSessionFinished on_session_finished;
 	void *ctx_session_finished;
 	ChildCanvasWait on_canvas_wait;
@@ -954,6 +968,8 @@ static bool refused_quietly(struct child *g)
 }
 
 /* The second half: the kernel has confirmed, the slot is freed. */
+static void child_signal(struct children *f, struct child *g, int sig);
+
 static void child_free(struct children *f, struct child *g, const char *why)
 {
 	if (!g->used)
@@ -1004,7 +1020,7 @@ static void child_dismiss(struct children *f, struct child *g, const char *why)
 	 *    exits — but "it would be enough" is not "I did it": the signal makes
 	 *    the shutdown a fact instead of a race. */
 	if (g->pid > 0)
-		kill(g->pid, SIGTERM);
+		child_signal(f, g, SIGTERM);
 	/* ⛔ And the deposit is released AT ONCE, not at reaping: from this instant
 	 *    there is no stage behind those pixels any more, and keeping them would
 	 *    be showing the image of a user whose process is gone. */
@@ -1016,18 +1032,111 @@ static void child_dismiss(struct children *f, struct child *g, const char *why)
  *    `CLOSING_GRACE_MS`. */
 static bool child_closing(const struct child *g)
 {
-	return g->exiting
+	return g->exiting || g->close_only
 	       || (g->closing_asked_ms
 	           && log_now_ms() < g->closing_asked_ms + CLOSING_GRACE_MS);
 }
 
+/* ⛔ The slot is found by its canonical name or by the name as typed
+ *    (`alias`): exact strings, no NSS — this runs on every message. */
 static struct child *search(struct children *f, const char *user)
 {
 	for (int i = 0; i < f->cap; i++)
-		if (f->v[i].used && strcmp(f->v[i].user, user) == 0)
+		if (f->v[i].used && (strcmp(f->v[i].user, user) == 0
+		                     || (f->v[i].alias[0] && strcmp(f->v[i].alias, user) == 0)))
 			return &f->v[i];
 	return NULL;
 }
+
+/* ⛔ Review 4, finding 6: at a LOGIN only.  The slot holds the CANONICAL name
+ *    the root side resolved (M3), the login brings the name as TYPED.  With an
+ *    NSS that folds case or has aliases, a second login «BRUNO» missed
+ *    «bruno»'s child, asked a SPAWN, and the root side's own_by_uid() answered
+ *    «closing» for the whole life of that desktop.  ⇒ An exact miss is looked
+ *    up again BY UID — the uid NSS gives the typed name, the root side's own
+ *    rule — and the typed name is kept as the slot's alias, so the session's
+ *    messages find it without NSS.  ⚠ One lookup per login, on a miss only. */
+static struct child *search_login(struct children *f, const char *user)
+{
+	struct child *g = search(f, user);
+	struct passwd pw, *r = NULL;
+	char buf[4096];
+
+	/* ⚠ network mode only: there the root side resolved the name and the
+	 *   slot may hold another spelling; in the single-process server the slot
+	 *   holds what was typed, and the spawn's own lookup follows (I3: a full
+	 *   table asks NSS nothing) */
+	if (g || !f->remote)
+		return g;
+	if (getpwnam_r(user, &pw, buf, sizeof buf, &r) != 0 || !r || r->pw_uid == 0)
+		return NULL;
+	for (int i = 0; i < f->cap; i++)
+		if (f->v[i].used && f->v[i].uid == r->pw_uid && strlen(user) < sizeof f->v[i].alias) {
+			snprintf(f->v[i].alias, sizeof f->v[i].alias, "%s", user);
+			return &f->v[i];
+		}
+	return NULL;
+}
+
+/* ⭐ 1.5 (§11.50): the root side's client is referenced WEAKLY, so the seams
+ *    and the fuzz harness that `#include` this file without `rootside.c`
+ *    still link — and there `f->remote` is never true. */
+#pragma weak rootside_attached
+#pragma weak rootside_spawn
+#pragma weak rootside_close_orphan
+#pragma weak rootside_signal
+#pragma weak rootside_hook_child_exited
+#pragma weak rootside_pump_until
+
+/* ⛔ The one road by which the parent half signals a child.  In network mode
+ *    the child is the ROOT SIDE's (another uid, not our child): SIGNAL by
+ *    serial, and the root side checks it is one of its own, unreaped. */
+static void child_signal(struct children *f, struct child *g, int sig)
+{
+	if (g->pid <= 0)
+		return;
+	if (f->remote) {
+		if (!rootside_signal || !rootside_signal(g->serial, sig))
+			registro_dice(LOG_CHILD,
+			              "⛔ the %s for the child of «%s» (serial %llu) did not "
+			              "reach the root side",
+			              sig == SIGKILL ? "SIGKILL" : "SIGTERM", g->user,
+			              (unsigned long long)g->serial);
+		return;
+	}
+	kill(g->pid, sig);
+}
+
+/* ⛔ The reaping, `WNOHANG`: our own `waitpid()`, or in network mode the
+ *    CHILD_EXITED the root side sent (it reaped, and removed the render
+ *    grant, before telling). */
+static pid_t child_reap(struct children *f, struct child *g, int *state)
+{
+	if (f->remote) {
+		if (!g->reaped)
+			return 0;
+		*state = g->reaped_status;
+		return g->pid;
+	}
+	return waitpid(g->pid, state, WNOHANG);
+}
+
+static void child_exited_event(void *ctx, uint64_t serial, int wait_status)
+{
+	struct children *f = (struct children *)ctx;
+
+	for (int i = 0; i < f->cap; i++)
+		if (f->v[i].used && f->v[i].serial == serial) {
+			f->v[i].reaped = true;
+			f->v[i].reaped_status = wait_status;
+			return;
+		}
+	log_detail(LOG_CHILD,
+	           "CHILD_EXITED for serial %llu, which is not in this table (born "
+	           "for a previous network side): nothing to free",
+	           (unsigned long long)serial);
+}
+
 
 /* ⭐ The trigger reaches the PARENT and must be passed on to the children: see
  *    the box inside `children_move()`.  ⛔ Here it is only noted — the work is
@@ -1071,6 +1180,19 @@ children *children_turn_on(uint32_t canvas_w, uint32_t canvas_h, const char *dir
 	f->cursor = cursor;
 	f->canvas = canvas;
 	f->ctx = ctx;
+	/* ⭐ 1.5 (§11.50): attached to a root side, the children are born, signalled
+	 *    and reaped THERE; only their sockets are here.  (Nobody is attached
+	 *    in the single-process server: this branch is inert.) */
+	if (rootside_attached && rootside_attached()) {
+		f->remote = true;
+		rootside_hook_child_exited(child_exited_event, f);
+		registro_dice(LOG_CHILD,
+		              "⭐ children table on: up to %d, one per user (I2), "
+		              "canvas %ux%u — born, signalled and reaped by the ROOT "
+		              "SIDE (DECISIONS.md §11.50): only their sockets are here",
+		              f->cap, canvas_w, canvas_h);
+		return f;
+	}
 	/* ⭐ 1.5: card grants left by a previous run whose desktop is gone
 	 *    (`render_grant.h`) — before any child is born. */
 	render_grant_sweep();
@@ -1281,12 +1403,13 @@ fine:
  *
  * ⚠ This function never returns: either it does `exec`, or it exits with a
  *   code. */
-static void become_and_exec(const struct children *f, const struct child *g,
-                              int socket_child, const struct passwd *pw,
+static void become_and_exec(const struct birth_opts *b, uint64_t serial,
+                              const char *rhost, int socket_child,
+                              const struct passwd *pw,
                               const gid_t *groups, int ngroups)
 {
 	char a_user[80], a_uid[32], a_gid[32], a_l[32], a_a[32], a_serial[40];
-	char a_cap[32];
+	char a_cap[32], a_parent[32];
 	char e_home[512], e_user[96], e_log[96], e_path[128], e_runtime[160],
 		e_bus[224], e_shell[16];
 	/* ⚠ Twenty: the nine fixed ones, the NULL, and the TEN optional words
@@ -1297,7 +1420,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	 *   parent has them (see below).  ⛔ The count is redone for every new
 	 *   word: an `argv[]` that is too short does not give an error, it writes
 	 *   past the end of the stack. */
-	char *argv[20];
+	char *argv[23];
 	/* ⚠ 16 and not 9: to the seven we compose ourselves are added those that
 	 *   `pam_systemd` puts in the session's environment — `XDG_SESSION_ID`
 	 *   first, which is what Mutter was missing. */
@@ -1394,7 +1517,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 			 *    logind marks `Remote=no`, as for ssh from 127.0.0.1: the
 			 *    guardian of §5.1 discriminates on the seat, not on Remote. */
 			pam_set_item(pam, PAM_RHOST,
-			             g->rhost[0] ? g->rhost : "remotix");
+			             rhost && rhost[0] ? rhost : "remotix");
 			pam_set_item(pam, PAM_TTY, "remotix");
 
 			rv = pam_open_session(pam, PAM_SILENT);
@@ -1484,9 +1607,9 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	snprintf(a_user, sizeof a_user, "%s", pw->pw_name);
 	snprintf(a_uid, sizeof a_uid, "%ld", (long)pw->pw_uid);
 	snprintf(a_gid, sizeof a_gid, "%ld", (long)pw->pw_gid);
-	snprintf(a_l, sizeof a_l, "%u", f->canvas_w);
-	snprintf(a_a, sizeof a_a, "%u", f->canvas_h);
-	snprintf(a_serial, sizeof a_serial, "%llu", (unsigned long long)g->serial);
+	snprintf(a_l, sizeof a_l, "%u", b->canvas_w);
+	snprintf(a_a, sizeof a_a, "%u", b->canvas_h);
+	snprintf(a_serial, sizeof a_serial, "%llu", (unsigned long long)serial);
 	argv[na++] = (char *)"remotix-child";
 	argv[na++] = (char *)"--internal-child";
 	argv[na++] = a_user;
@@ -1495,7 +1618,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	argv[na++] = a_l;
 	argv[na++] = a_a;
 	argv[na++] = a_serial;
-	argv[na++] = f->has_survey ? (char *)f->dir_survey : (char *)"-";
+	argv[na++] = b->dir_survey && b->dir_survey[0] ? (char *)b->dir_survey : (char *)"-";
 	/*
 	 * ⛔⭐⭐⭐ AND THE CHATTER IS PASSED TO THE CHILD — 16 Aug 2026, and it is
 	 *        the defect that cost me a whole day.
@@ -1545,10 +1668,10 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	 *   break.  ⭐ And they appear in `/proc/<pid>/cmdline`: whoever watches a
 	 *   bench sees what that child was born with, without trusting a log.
 	 */
-	if (f->phase9_quality_rises)
+	if (b->quality_rises)
 		argv[na++] = (char *)"--quality-recovery";
-	if (f->phase9_bandwidth_cap_mbit) {
-		snprintf(a_cap, sizeof a_cap, "%u", f->phase9_bandwidth_cap_mbit);
+	if (b->bandwidth_cap_mbit) {
+		snprintf(a_cap, sizeof a_cap, "%u", b->bandwidth_cap_mbit);
 		argv[na++] = (char *)"--bandwidth-cap-mbit";
 		argv[na++] = a_cap;
 	}
@@ -1562,7 +1685,7 @@ static void become_and_exec(const struct children *f, const struct child *g,
 	 *      with the parent's command line.  ⚠ If a positive `--audio-silenzio`
 	 *      appeared here there would be TWO names for the same cure, and that
 	 *      is exactly what this phase removed. */
-	if (!f->phase9_audio_silence)
+	if (!b->audio_silence)
 		argv[na++] = (char *)"--no-audio-silence";
 	/* ⭐ PHASE 19: the card's route, if forced (`--encoding-route vaapi|vulkan`):
 	 *    the default "card" is not passed, and the child is born with the same. */
@@ -1575,9 +1698,23 @@ static void become_and_exec(const struct children *f, const struct child *g,
 		argv[na++] = (char *)"--render-node";
 		argv[na++] = (char *)child_render_node_requested();
 	}
+	/* ⭐ 1.5 (§11.50): the uid whose stamp the child accepts on the parent's
+	 *    messages — `remotix`, the network side, which holds the other end.
+	 *    ⛔ Written by the ROOT SIDE from its own knowledge, never from a
+	 *    request; absent = 0, the single-process server's root. */
+	if (b->parent_uid >= 0) {
+		snprintf(a_parent, sizeof a_parent, "%ld", b->parent_uid);
+		argv[na++] = (char *)"--parent-uid";
+		argv[na++] = a_parent;
+	}
+	/* ⛔ 1.5 (§11.50): a birth WITHOUT a password (CLOSE_ORPHAN) is a child
+	 *    that can only close the desktop — the root side's choice, never the
+	 *    request's (`child_alive()`, the box at `close_only`). */
+	if (b->close_only)
+		argv[na++] = (char *)"--close-only";
 	argv[na] = NULL;
 
-	execve(f->my_path, argv, envp);
+	execve(b->my_path, argv, envp);
 	_exit(37);
 }
 
@@ -2072,75 +2209,27 @@ static bool enroll_in_card_groups(const char *user, uid_t uid, gid_t primary,
 	return true;
 }
 
-bool children_ensure(children *f, const char *user)
+/* ⭐ 1.5 (DECISIONS-11.md §11.50) — THE BIRTH, on its own: resolves `user`,
+ *    enrols it in the card groups, makes the pair, takes the render grant,
+ *    forks and `become_and_exec()`s.  It was the second half of
+ *    `children_ensure_from()`; the table (search, slot, name check) stays
+ *    there.  Called by `children_ensure_from()` in the single-process server;
+ *    the root side of the split will call it too (phase D). */
+child_outcome child_birth(const struct birth_opts *b, const char *user,
+                          const char *rhost, uint64_t serial,
+                          struct child_born *out)
 {
-	return children_ensure_from(f, user, NULL);
-}
-
-bool children_ensure_from(children *f, const char *user, const char *rhost)
-{
-	struct child *g;
 	struct passwd pw, *result = NULL;
 	char spare[1024];
 	gid_t groups[64];
 	int ngroups = (int)(sizeof groups / sizeof groups[0]);
 	int sv[2];
 	int uno = 1;
-	int free_slot = -1;
 	bool grant = false;
 	pid_t p;
 
-	if (!f || !user || !user[0])
-		return false;
-
-	/* ⛔⭐ I2 — "only one graphical session per user".  Two connections of the
-	 *     same user do NOT make two children: the second finds the first, and
-	 *     sees the same stage.  ⚠ And if the first is dead, the slot has
-	 *     already been freed by `children_move()`: nothing is resurrected here. */
-	g = search(f, user);
-	if (g && !g->exiting) {
-		/* ⛔ A new RCP session attaching to this child: the name is checked
-		 *    again NOW, once per login — the per-message check is gone
-		 *    (`name_still_ours()`), and a login is exactly the moment a
-		 *    name NSS now gives to another uid would be bound to a stage. */
-		char why[256];
-
-		why[0] = 0;
-		if (!name_still_ours(g, why, sizeof why)) {
-			registro_dice(LOG_CHILD,
-			              "⛔⛔ «%s» logs in and its child can no longer be "
-			              "proven to be that user: %s.  The child is killed, "
-			              "and this login gets none",
-			              user, why);
-			if (g->pid > 0)
-				kill(g->pid, SIGKILL);
-			child_dismiss(f, g, "its name no longer resolves to its uid");
-			return false;
-		}
-		g->name_checked_ms = log_now_ms();
-	}
-	if (g) {
-		registro_dice(LOG_CHILD,
-		              "«%s» is already served by the child pid %ld (uid %ld): a "
-		              "second one is NOT born — invariant I2, and the stage is the "
-		              "same because it belongs to the SESSION (I4)",
-		              user, (long)g->pid, (long)g->uid);
-		return true;
-	}
-
-	for (int i = 0; i < f->cap; i++)
-		if (!f->v[i].used) {
-			free_slot = i;
-			break;
-		}
-	if (free_slot < 0) {
-		registro_dice(LOG_CHILD,
-		              "⛔ %d children already alive: «%s» will NOT get one, and so "
-		              "will not get a stage.  It is a declared no, not a maybe "
-		              "(invariant I3)",
-		              f->cap, user);
-		return false;
-	}
+	if (!b || !user || !user[0] || !out)
+		return CHILD_FAILED;
 
 	/* ⛔ The name is resolved HERE, in the parent, and the uid that comes out
 	 *    is the one the kernel will have to stamp on every message.  ⚠
@@ -2154,7 +2243,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              "resolve, and in that case there is no uid to "
 		              "drop to",
 		              user, strerror(errno));
-		return false;
+		return CHILD_NAME_UNKNOWN;
 	}
 	if (pw.pw_uid == 0) {
 		/* ⛔ A child at uid 0 would not be a child: it would be the parent
@@ -2166,7 +2255,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              "§1.10-bis), and one at uid 0 would not have anyone's "
 		              "session bus anyway",
 		              user);
-		return false;
+		return CHILD_FAILED;
 	}
 	if (getgrouplist(pw.pw_name, pw.pw_gid, groups, &ngroups) < 0) {
 		/* More groups than the buffer holds: what is there is taken and it is
@@ -2190,7 +2279,11 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 	 *    user's decision, 20 Sep 2026): once enrolled, the groups are read
 	 *    again and declared again — the line the administrator reads must be
 	 *    the TRUE one of this session, not the one from before the cure. */
-	if (enroll_in_card_groups(pw.pw_name, pw.pw_uid, pw.pw_gid, groups, ngroups)) {
+	/* ⛔ A close-only child (CLOSE_ORPHAN, no password) has no stage: no
+	 *    enrolment and no card grant for it (review 2, L2) — or a hijacked
+	 *    network side could re-enrol a user an administrator took out. */
+	if (!b->close_only
+	    && enroll_in_card_groups(pw.pw_name, pw.pw_uid, pw.pw_gid, groups, ngroups)) {
 		ngroups = (int)(sizeof groups / sizeof groups[0]);
 		if (getgrouplist(pw.pw_name, pw.pw_gid, groups, &ngroups) < 0)
 			ngroups = (int)(sizeof groups / sizeof groups[0]);
@@ -2208,7 +2301,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              "⛔ no socketpair for «%s» (%s): no child, "
 		              "no stage",
 		              user, strerror(errno));
-		return false;
+		return CHILD_FAILED;
 	}
 	/* ⛔⭐ THIS LINE IS INVARIANT I3 OF THE WHOLE FILE.  Without
 	 *     `SO_PASSCRED`, the kernel does not stamp the credentials and every
@@ -2223,7 +2316,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		              strerror(errno));
 		close(sv[0]);
 		close(sv[1]);
-		return false;
+		return CHILD_FAILED;
 	}
 
 	/* ⭐⭐ 1.5 (DECISIONS.md §11.4) — THE CARD FOR A STALE USER MANAGER.
@@ -2236,7 +2329,7 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 	{
 		DesktopSession ds = desktop_session();
 
-		if (ds == SESSION_DESKTOP_GNOME || ds == SESSION_DESKTOP_KDE) {
+		if (!b->close_only && (ds == SESSION_DESKTOP_GNOME || ds == SESSION_DESKTOP_KDE)) {
 			int need = render_grant_needed(pw.pw_uid, pw.pw_name);
 
 			if (need > 0)
@@ -2249,15 +2342,6 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		}
 	}
 
-	g = &f->v[free_slot];
-	memset(g, 0, sizeof *g);
-	g->render_grant = grant;
-	g->serial = f->next_serial;
-	snprintf(g->user, sizeof g->user, "%s", pw.pw_name);
-	snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
-	g->uid = pw.pw_uid;
-	g->gid = pw.pw_gid;
-
 	p = fork();
 	if (p < 0) {
 		registro_dice(LOG_CHILD, "⛔ fork for «%s»: %s — no stage", user,
@@ -2265,39 +2349,254 @@ bool children_ensure_from(children *f, const char *user, const char *rhost)
 		close(sv[0]);
 		close(sv[1]);
 		if (grant)
-			render_grant_remove(g->user, g->uid, g->gid);
-		memset(g, 0, sizeof *g);
-		g->fd = -1;
-		return false;
+			render_grant_remove(pw.pw_name, pw.pw_uid, pw.pw_gid);
+		return CHILD_FAILED;
 	}
 	if (p == 0) {
 		close(sv[0]);
-		become_and_exec(f, g, sv[1], &pw, groups, ngroups);
+		become_and_exec(b, serial, rhost, sv[1], &pw, groups, ngroups);
 		_exit(38); /* never reached */
 	}
 
 	close(sv[1]);
-	g->used = true;
-	g->pid = p;
-	g->fd = sv[0];
 	/* ⛔ Non-blocking on the PARENT's side, and only on that one: here we are
 	 *    inside the server's single `poll` loop, and a read that waits stops
 	 *    all connections together (`CODER.md` §4.4) — the defect just cured on
 	 *    PAM, brought back through another door.  ⚠ The CHILD's end stays
 	 *    blocking on purpose: there waiting is the job. */
-	fcntl(g->fd, F_SETFL, O_NONBLOCK);
-	g->born_ms = log_now_ms();
-	g->last_recheck_ms = g->born_ms;
-	g->name_checked_ms = g->born_ms; /* resolved just above, before the fork */
-	f->next_serial++;
+	fcntl(sv[0], F_SETFL, O_NONBLOCK);
+
+	memset(out, 0, sizeof *out);
+	out->pid = p;
+	out->fd = sv[0];
+	out->uid = pw.pw_uid;
+	out->gid = pw.pw_gid;
+	out->render_grant = grant;
+	snprintf(out->user, sizeof out->user, "%s", pw.pw_name);
 
 	registro_dice(LOG_CHILD,
 	              "⭐ child spawned for «%s»: pid %ld, uid %ld, gid %ld, "
 	              "serial %llu.  ⛔ That it REALLY is that uid is not for me "
 	              "to say: the kernel will say it on each of its messages (SO_PASSCRED)",
+	              out->user, (long)out->pid, (long)out->uid, (long)out->gid,
+	              (unsigned long long)serial);
+	return CHILD_READY;
+}
+
+static void birth_opts_of(const struct children *f, struct birth_opts *b)
+{
+	memset(b, 0, sizeof *b);
+	b->canvas_w = f->canvas_w;
+	b->canvas_h = f->canvas_h;
+	b->dir_survey = f->has_survey ? f->dir_survey : NULL;
+	b->quality_rises = f->phase9_quality_rises;
+	b->bandwidth_cap_mbit = f->phase9_bandwidth_cap_mbit;
+	b->audio_silence = f->phase9_audio_silence;
+	b->my_path = f->my_path;
+	b->parent_uid = -1; /* the parent is root: the child's default */
+}
+
+#define SPAWN_WAIT_MS 15000
+
+static const char *refusal_text(int r)
+{
+	switch (r) {
+	case RXR_REF_GRANT:        return "no valid grant (unknown, used or expired)";
+	case RXR_REF_FULL:         return "the root side's children are at its cap";
+	case RXR_REF_USER:         return "the name is refused (uid 0, denied-users, or it no longer resolves)";
+	case RXR_REF_NO_ORPHAN:    return "no live remotix session of that user in logind";
+	case RXR_REF_FAILED:       return "the birth failed: the reason is in the root side's line above";
+	case RXR_REF_CLOSING:      return "a child of that user is still being closed";
+	case RXR_REF_MOVED:        return "the name now points to another uid";
+	case RXR_REF_NAME_UNKNOWN: return "the name could not be looked up now";
+	case RXR_REF_RATE:         return "over the root side's rate bound (one close-only birth per user every 30 s, or the CLOSE_ORPHAN bucket)";
+	case ROOTSIDE_NO_ANSWER:   return "no answer from the root side within the wait";
+	case ROOTSIDE_NO_GRANT:    return "no grant kept for this login (expired, used, or the table was full)";
+	case ROOTSIDE_NOT_SENT:    return "the request could not be sent to the root side";
+	case ROOTSIDE_LOST:        return "the root channel is lost";
+	default:                   return "a refusal this side does not know";
+	}
+}
+
+/* ⭐⭐ 1.5 (§11.50) — the network side's birth: SPAWN with the grant of this
+ *     login (or CLOSE_ORPHAN for a desktop found again: `rhost` NULL), and the
+ *     slot is filled with what the root side answered — serial, pid, uid,
+ *     gid and the socket end.  ⛔ The uid/gid are the ROOT SIDE's resolution:
+ *     the kernel stamps them on every message, and `credentials_match()`
+ *     compares, unchanged. */
+static child_outcome ensure_remote(struct children *f, struct child *g,
+                                   const char *user, const char *rhost)
+{
+	struct rootside_born b;
+	int one = 1;
+	int r;
+	uint64_t asked_ms = log_now_ms();
+
+	if (rhost)
+		r = rootside_spawn(user, rhost, f->canvas_w, f->canvas_h, SPAWN_WAIT_MS, &b);
+	else
+		r = rootside_close_orphan(user, SPAWN_WAIT_MS, &b);
+	if (r != 0) {
+		registro_dice(LOG_CHILD,
+		              "⛔ the root side did NOT give birth to a child for «%s» "
+		              "(%s): %s",
+		              user, rhost ? "SPAWN" : "CLOSE_ORPHAN", refusal_text(r));
+		return r == RXR_REF_CLOSING        ? CHILD_CLOSING
+		       : r == RXR_REF_MOVED        ? CHILD_NAME_MOVED
+		       : r == RXR_REF_NAME_UNKNOWN ? CHILD_NAME_UNKNOWN
+		                                   : CHILD_FAILED;
+	}
+	/* ⛔ Review 2, M3: the request number already binds the answer to the
+	 *    ask, and the root side writes the CANONICAL name (NSS's `pw_name`):
+	 *    with sssd case-insensitive or an alias «BRUNO» comes back «bruno».
+	 *    Comparing it with the typed name killed every child of such a user
+	 *    — never able to log in, worse than 1.0, which kept `c.user` as it
+	 *    was.  ⇒ The canonical name is taken; the uid ≠ 0, the length and
+	 *    the socket are still checked. */
+	if (!b.user[0] || strlen(b.user) >= sizeof g->user || b.uid == 0 || b.fd < 0) {
+		registro_dice(LOG_CHILD,
+		              "⛔⛔ the root side answered SPAWNED for «%s» with user «%s» "
+		              "uid %ld: not a child this side can hold — the child is killed",
+		              user, b.user, (long)b.uid);
+		(void)rootside_signal(b.serial, SIGKILL);
+		if (b.fd >= 0)
+			close(b.fd);
+		return CHILD_FAILED;
+	}
+	/* ⛔ `SO_PASSCRED` is per socket: set again on the end received. */
+	if (setsockopt(b.fd, SOL_SOCKET, SO_PASSCRED, &one, sizeof one) != 0) {
+		registro_dice(LOG_CHILD,
+		              "⛔ SO_PASSCRED does not turn on on the socket of «%s» (%s): "
+		              "the child is killed — no stage I cannot prove",
+		              user, strerror(errno));
+		(void)rootside_signal(b.serial, SIGKILL);
+		close(b.fd);
+		return CHILD_FAILED;
+	}
+	fcntl(b.fd, F_SETFL, O_NONBLOCK);
+	fcntl(b.fd, F_SETFD, FD_CLOEXEC);
+	memset(g, 0, sizeof *g);
+	g->serial = b.serial;
+	memcpy(g->user, b.user, strlen(b.user) + 1); /* < sizeof g->user, checked above */
+	/* review 4, finding 6: the typed name, for the session's messages */
+	if (strcmp(user, b.user) != 0 && strlen(user) < sizeof g->alias)
+		snprintf(g->alias, sizeof g->alias, "%s", user);
+	snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
+	g->close_only = rhost == NULL; /* CLOSE_ORPHAN: the root side made it --close-only */
+	g->uid = b.uid;
+	g->gid = b.gid;
+	g->used = true;
+	g->pid = b.pid;
+	g->fd = b.fd;
+	g->born_ms = log_now_ms();
+	g->last_recheck_ms = g->born_ms;
+	g->name_checked_ms = g->born_ms;
+	/* ⭐ «SPAWNED after N ms»: the time this loop stood still waiting for the
+	 *    root side (enrolment, render grant, fork) — read by the stress bench. */
+	registro_dice(LOG_CHILD,
+	              "⭐ the root side gave birth to the child of «%s»: pid %ld, uid "
+	              "%ld, gid %ld, serial %llu — SPAWNED after %llu ms; its socket is "
+	              "here, and the kernel stamps every message (SO_PASSCRED)",
 	              g->user, (long)g->pid, (long)g->uid, (long)g->gid,
-	              (unsigned long long)g->serial);
-	return true;
+	              (unsigned long long)g->serial,
+	              (unsigned long long)(g->born_ms - asked_ms));
+	return CHILD_READY;
+}
+
+bool children_ensure(children *f, const char *user)
+{
+	return children_ensure_from(f, user, NULL) == CHILD_READY;
+}
+
+child_outcome children_ensure_from(children *f, const char *user, const char *rhost)
+{
+	struct child *g;
+	int free_slot = -1;
+
+	if (!f || !user || !user[0])
+		return CHILD_FAILED;
+
+	/* ⛔⭐ I2 — "only one graphical session per user".  Two connections of the
+	 *     same user do NOT make two children: the second finds the first, and
+	 *     sees the same stage.  ⚠ And if the first is dead, the slot has
+	 *     already been freed by `children_move()`: nothing is resurrected here. */
+	g = search_login(f, user);
+	/* ⭐ 1.5 (network mode only): a close-only child is a desktop being closed,
+	 *    not a stage to attach to. */
+	if (g && g->close_only)
+		return CHILD_CLOSING;
+	if (g && !g->exiting) {
+		/* ⛔ A new RCP session attaching to this child: the name is checked
+		 *    again NOW, once per login — the per-message check is gone
+		 *    (`name_still_ours()`), and a login is exactly the moment a
+		 *    name NSS now gives to another uid would be bound to a stage. */
+		char why[256];
+
+		why[0] = 0;
+		if (!name_still_ours(g, why, sizeof why)) {
+			registro_dice(LOG_CHILD,
+			              "⛔⛔ «%s» logs in and its child can no longer be "
+			              "proven to be that user: %s.  The child is killed, "
+			              "and this login gets none",
+			              user, why);
+			if (g->pid > 0)
+				child_signal(f, g, SIGKILL);
+			child_dismiss(f, g, "its name no longer resolves to its uid");
+			return CHILD_NAME_MOVED;
+		}
+		g->name_checked_ms = log_now_ms();
+	}
+	if (g) {
+		registro_dice(LOG_CHILD,
+		              "«%s» is already served by the child pid %ld (uid %ld): a "
+		              "second one is NOT born — invariant I2, and the stage is the "
+		              "same because it belongs to the SESSION (I4)",
+		              user, (long)g->pid, (long)g->uid);
+		return CHILD_READY;
+	}
+
+	for (int i = 0; i < f->cap; i++)
+		if (!f->v[i].used) {
+			free_slot = i;
+			break;
+		}
+	if (free_slot < 0) {
+		registro_dice(LOG_CHILD,
+		              "⛔ %d children already alive: «%s» will NOT get one, and so "
+		              "will not get a stage.  It is a declared no, not a maybe "
+		              "(invariant I3)",
+		              f->cap, user);
+		return CHILD_FAILED;
+	}
+
+	if (f->remote)
+		return ensure_remote(f, &f->v[free_slot], user, rhost);
+	{
+		struct birth_opts b;
+		struct child_born c;
+		child_outcome o;
+
+		birth_opts_of(f, &b);
+		o = child_birth(&b, user, rhost, f->next_serial, &c);
+		if (o != CHILD_READY)
+			return o;
+		g = &f->v[free_slot];
+		memset(g, 0, sizeof *g);
+		g->render_grant = c.render_grant;
+		g->serial = f->next_serial;
+		snprintf(g->user, sizeof g->user, "%s", c.user);
+		snprintf(g->rhost, sizeof g->rhost, "%s", rhost ? rhost : "");
+		g->uid = c.uid;
+		g->gid = c.gid;
+		g->used = true;
+		g->pid = c.pid;
+		g->fd = c.fd;
+	}
+	g->born_ms = log_now_ms();
+	g->last_recheck_ms = g->born_ms;
+	g->name_checked_ms = g->born_ms; /* resolved just above, before the fork */
+	f->next_serial++;
+	return CHILD_READY;
 }
 
 size_t children_descriptors(children *f, struct pollfd *fds, size_t max)
@@ -2681,7 +2980,7 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 			              "stamped it as %ld: the child is killed",
 			              g->user, s.uid, s.euid, s.suid, (long)g->uid);
 			if (g->pid > 0)
-				kill(g->pid, SIGKILL);
+				child_signal(f, g, SIGKILL);
 			child_dismiss(f, g, "declares a uid different from the stamped one");
 			return false;
 		}
@@ -2891,7 +3190,7 @@ static bool refused_too_many(struct children *f, struct child *g)
 	              "it is a flood running as that user: the child is killed",
 	              g->user, g->refused_streak);
 	if (g->pid > 0)
-		kill(g->pid, SIGKILL);
+		child_signal(f, g, SIGKILL);
 	child_dismiss(f, g, "sent only refused messages");
 	return false;
 }
@@ -2921,6 +3220,9 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 	 *    PARENT ONLY.  ⚠ The `--kill-whom=all` road would also deliver to
 	 *    `gnome-shell`, for which `SIGUSR1` means "die": it would shut down the
 	 *    very scene one wanted to photograph. */
+	/* ⭐ 1.5: the children are the root side's, not ours to signal. */
+	if (shot_to_forward && f->remote)
+		shot_to_forward = 0;
 	if (shot_to_forward) {
 		int which = shot_to_forward == 2 ? SIGUSR2 : SIGUSR1;
 
@@ -3033,7 +3335,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 				              "invisibly.  The child is killed.",
 				              g->user, why);
 				if (g->pid > 0)
-					kill(g->pid, SIGKILL);
+					child_signal(f, g, SIGKILL);
 				child_dismiss(f, g, "the kernel's credentials did not match");
 				break;
 			}
@@ -3068,7 +3370,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 		 *     asynchronous loop (`CODER.md` §4.4). */
 		if (g->pid > 0) {
 			int state = 0;
-			pid_t closed = waitpid(g->pid, &state, WNOHANG);
+			pid_t closed = child_reap(f, g, &state);
 			if (closed == g->pid) {
 				char said[160];
 				/* ⛔ THE CAUSE, not "it ended": whoever reads the log six
@@ -3093,12 +3395,31 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 			 *    ⚠ A child that ignores `SIGTERM` while holding a user's virtual
 			 *    monitor is an orphan in the making. */
 			if (g->exiting && now_ms >= g->dismissed_ms + 3000) {
+				/* ⛔ Review 4, finding 5: in network mode the death arrives as
+				 *    the root side's CHILD_EXITED.  If that event never comes
+				 *    (lost by a root side whose outbox was full), the slot
+				 *    stayed «exiting» for ever.  ⇒ After EXITED_FALLBACK_ROUNDS
+				 *    unanswered SIGKILLs (3 s apart) the slot is freed as exited.
+				 *    Safe: if the child were still alive the root side would
+				 *    refuse a new SPAWN for that uid, never make a second desktop. */
+				if (f->remote && g->kill_rounds >= EXITED_FALLBACK_ROUNDS) {
+					registro_dice(LOG_CHILD,
+					              "⛔ the child of «%s» (serial %llu): no CHILD_EXITED "
+					              "from the root side %d s after the farewell and %d "
+					              "SIGKILL — the slot is freed as exited",
+					              g->user, (unsigned long long)g->serial,
+					              3 * (EXITED_FALLBACK_ROUNDS + 1), g->kill_rounds);
+					g->pid = 0;
+					child_free(f, g, "no CHILD_EXITED from the root side: treated as exited");
+					continue;
+				}
 				registro_dice(LOG_CHILD,
 				              "⛔ the child of «%s» (pid %ld) did not die within 3 s "
 				              "of the farewell: SIGKILL",
 				              g->user, (long)g->pid);
-				kill(g->pid, SIGKILL);
+				child_signal(f, g, SIGKILL);
 				g->dismissed_ms = now_ms;
+				g->kill_rounds++;
 			}
 			/* ⚠ And while it is leaving nothing more is asked of it: the slot
 			 *   stays its own until the kernel confirms. */
@@ -3116,7 +3437,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 			              "user that does not answer is not a stage",
 			              g->user, (long)g->pid, SHOW_UP_DEADLINE_MS);
 			if (g->pid > 0)
-				kill(g->pid, SIGKILL);
+				child_signal(f, g, SIGKILL);
 			/* ⚠ No waiting here: the reaping belongs to the next round. */
 			child_dismiss(f, g, "did not introduce itself in time");
 		}
@@ -3151,7 +3472,7 @@ void children_recheck(children *f, uint64_t now_ms)
 				              "invisibly.  The child is killed.",
 				              g->user, why);
 				if (g->pid > 0)
-					kill(g->pid, SIGKILL);
+					child_signal(f, g, SIGKILL);
 				child_dismiss(f, g, "its name no longer resolves to its uid");
 				continue;
 			}
@@ -3708,6 +4029,15 @@ bool children_video(children *f, const char *user, uint8_t codec,
  *   so it takes none back.  The desktop lives on without a child (`rediscover.h`), is found again
  *   at the next start, and `render_grant_sweep()` keeps its grant ("KEPT", no child) or takes it
  *   back once the desktop is gone.  Uninstalling removes what is left. */
+/* ⭐ 1.5: how long `children_turn_off()` waits for one child's CHILD_EXITED;
+ *    the root side waits 5 s for the whole network side (§11.50). */
+#define TURN_OFF_WAIT_MS 1500
+
+static bool child_reaped_now(void *ctx)
+{
+	return ((const struct child *)ctx)->reaped;
+}
+
 void children_turn_off(children *f)
 {
 	if (!f)
@@ -3724,16 +4054,27 @@ void children_turn_off(children *f)
 			g->fd = -1;
 		}
 		if (g->pid > 0) {
-			kill(g->pid, SIGTERM);
+			child_signal(f, g, SIGTERM);
 			/* ⚠ It WAITS, and it is outside the `poll` loop: `CODER.md` §4.4
 			 *   forbids waiting INSIDE the loop, and this is the line after the
 			 *   last round.  ⛔ The stage must be dismantled before the process
 			 *   exits, or the virtual monitor would stay attached to the user's
-			 *   session. */
-			waitpid(g->pid, NULL, 0);
+			 *   session.
+			 * ⭐ 1.5: in network mode the wait is for the root side's
+			 *    CHILD_EXITED, at most `TURN_OFF_WAIT_MS` per child. */
+			if (f->remote)
+				rootside_pump_until(child_reaped_now, g, TURN_OFF_WAIT_MS);
+			else
+				waitpid(g->pid, NULL, 0);
 		}
-		registro_dice(LOG_CHILD, "the child of «%s» (pid %ld) is shut down",
-		              g->user, (long)g->pid);
+		/* review 4 B, finding 17: «shut down» only when it is known */
+		if (f->remote && g->pid > 0 && !child_reaped_now(g))
+			registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld): no CHILD_EXITED "
+			              "within %d ms of the SIGTERM — this side leaves it to the "
+			              "root side", g->user, (long)g->pid, TURN_OFF_WAIT_MS);
+		else
+			registro_dice(LOG_CHILD, "the child of «%s» (pid %ld) is shut down",
+			              g->user, (long)g->pid);
 		if (g->app_mount)
 			explicit_bzero(g->app_mount, g->app_total);
 		free(g->app_mount);
@@ -8517,6 +8858,24 @@ static bool remount_only_capture(MutterSession *m, Capture **c, uint32_t l,
 
 /* ⛔ The child's entry point.  `main.c` gets here BEFORE anything else, and
  *    it never returns. */
+/* ⭐ 1.5 (§11.50): whose stamp the parent's messages must carry.  0 = root, the
+ *    single-process server's parent; the root side writes `--parent-uid N` for
+ *    the network side's `remotix`.  Nobody passes it today. */
+static uid_t parent_uid = 0;
+/* ⛔⭐ 1.5 (§11.50, review of the split, finding 1) — `--close-only`, written
+ *     by the ROOT SIDE for CLOSE_ORPHAN, the one birth without a password.
+ *     A hijacked network side could ask it for any user with an abandoned
+ *     desktop; a full child there would be video and input on that desktop
+ *     without the password.  ⇒ This child takes NO stage (no capture, no
+ *     frame, no `libei`, no clipboard), discards every message but «end the
+ *     session» (and `MSG_SHUT_DOWN`, `MSG_CHI_SEI`), exits after the attempt
+ *     whatever its outcome, and by itself after `CLOSE_ONLY_LIFE_MS`.  ⚠ The
+ *     most the network side gets is what CLOSE_ORPHAN is for: that abandoned
+ *     desktop closed.  Nobody passes it today (phase D5, inert). */
+static bool close_only = false;
+static uint64_t close_only_since_ms;
+#define CLOSE_ONLY_LIFE_MS 30000
+
 void child_alive(int argc, char **argv)
 {
 	struct body_whoami s;
@@ -8622,6 +8981,28 @@ void child_alive(int argc, char **argv)
 		 *     and it is the reason `f9_audio_silence` starts from `true`. */
 		else if (strcmp(argv[i], "--no-audio-silence") == 0)
 			f9_audio_silence = false;
+		/* ⭐ 1.5 (§11.50): the network side's uid, written by the root side. */
+		else if (strcmp(argv[i], "--parent-uid") == 0 && i + 1 < argc) {
+			/* ⛔ review 4 B, finding 3: digits only and a uid that fits — a
+			 *    bare strtoul made garbage or an empty value uid 0, the
+			 *    single-process server's parent, without a line.  0 written
+			 *    as «0» stays legal (the bench's fake parent is root). */
+			const char *v = argv[++i];
+			char *end = NULL;
+			unsigned long pu;
+
+			errno = 0;
+			pu = strtoul(v, &end, 10);
+			if (!v[0] || v[0] < '0' || v[0] > '9' || *end || errno
+			    || pu != (unsigned long)(uid_t)pu || (uid_t)pu == (uid_t)-1) {
+				fprintf(stderr, "child: ⛔ --parent-uid «%s» is not a uid: this child "
+				        "does not start\n", v);
+				_exit(40);
+			}
+			parent_uid = (uid_t)pu;
+		}
+		else if (strcmp(argv[i], "--close-only") == 0)
+			close_only = true;
 	}
 	encoder_quality_rises(f9_rises);
 	codificatore_tetto_banda(f9_cap);
@@ -8705,10 +9086,17 @@ void child_alive(int argc, char **argv)
 	 *    `GSettings` (`session_settings()`, `input_layout()`) and
 	 *    before the threads — `g_setenv` must not be done with other threads
 	 *    alive.  GNOME only; the box is in `session.c`. */
-	session_dconf_prepare();
-	/* ⭐ R1/R2 — and what a badly ended session left in the user manager goes
-	 *    away now (only with the session dead: see the box). */
-	session_clear_out_handler("child startup: leftovers from before");
+	/* ⛔ NOT for the close-only child (review 4, finding 2): it is born
+	 *    without a password for a LIVE desktop found again, and only «end the
+	 *    session» may come out of it — preparing the session's dconf and
+	 *    clearing the user manager's environment are a desktop's birth, and
+	 *    would touch the very session it exists to close. */
+	if (!close_only) {
+		session_dconf_prepare();
+		/* ⭐ R1/R2 — and what a badly ended session left in the user manager
+		 *    goes away now (only with the session dead: see the box). */
+		session_clear_out_handler("child startup: leftovers from before");
+	}
 
 	/* ⛔⭐⭐ THE PHASE 9 PARAMETERS ARE WRITTEN AT BIRTH — 23 Aug 2026.
 	 *
@@ -8791,7 +9179,17 @@ void child_alive(int argc, char **argv)
 	 *     needed" there is **at least one second guaranteed by the protocol**,
 	 *     and it is all the time this child has to be born, connect to the
 	 *     bus, capture and encode.  Waiting for a request would throw it away. */
-	if (!take_stage(canvas_w, canvas_h, dir_survey, true, &mut, &cat)) {
+	if (close_only) {
+		/* ⛔ No stage, ever: the retry is put where it never comes. */
+		registro_dice(LOG_CHILD,
+		              "⭐ CLOSE-ONLY child of «%s» (born for a desktop found again, "
+		              "without a password — DECISIONS.md §11.50): no stage, no frame, "
+		              "no input; only «end the session» is obeyed, and I exit within "
+		              "%d s",
+		              user, CLOSE_ONLY_LIFE_MS / 1000);
+		stage_retry_ms = UINT64_MAX;
+		close_only_since_ms = log_now_ms();
+	} else if (!take_stage(canvas_w, canvas_h, dir_survey, true, &mut, &cat)) {
 		/* ⛔⭐ AND IF AT BIRTH THE STAGE IS NOT THERE, WE DO NOT STAY LIKE THIS —
 		 *     it is the second twin defect, `[M]` from the user's real
 		 *     session: a child born without a graphical session **never**
@@ -8850,7 +9248,15 @@ void child_alive(int argc, char **argv)
 		 * ⚠ One per second, and only while there is no stage: when the desktop
 		 *   runs, this line never appears.
 		 */
-		if (!cat) {
+		/* ⛔ The close-only child's own end (box at `close_only`). */
+		if (close_only && log_now_ms() >= close_only_since_ms + CLOSE_ONLY_LIFE_MS) {
+			registro_dice(LOG_CHILD,
+			              "⭐ CLOSE-ONLY child: no «end the session» within %d s — "
+			              "exiting, the desktop untouched",
+			              CLOSE_ONLY_LIFE_MS / 1000);
+			break;
+		}
+		if (!cat && !close_only) {
 			static uint64_t heartbeat_ms;
 			uint64_t t_now = log_now_ms();
 
@@ -8939,11 +9345,11 @@ void child_alive(int argc, char **argv)
 				if (!cat) {
 					uint64_t t_now = log_now_ms();
 
-					wait_ms = stage_retry_ms > t_now
-					                ? (int)(stage_retry_ms - t_now)
-					                : 0;
-					if (wait_ms > 1000)
-						wait_ms = 1000;
+					/* ⚠ Compared before the cast: a retry far away
+					 *   (`close_only`'s «never») is not a negative int. */
+					wait_ms = stage_retry_ms <= t_now ? 0
+					          : stage_retry_ms - t_now > 1000 ? 1000
+					          : (int)(stage_retry_ms - t_now);
 				}
 				/* ⛔⭐ AND WITH AUDIO ON THE LOOP CANNOT SLEEP A SECOND.  The
 				 *     ring fills at 48 000 frames per second whatever the video
@@ -9042,14 +9448,22 @@ void child_alive(int argc, char **argv)
 			memcpy(&t, envelope, sizeof t);
 			if (!magic_ok(&t))
 				continue;
-			/* ⛔ The parent must be root AND must be my parent process.  A
-			 *    message without the kernel's stamp is not a message from the
-			 *    parent. */
-			if (!c_e || chi.uid != 0) {
-				registro_dice(LOG_CHILD,
-				              "⛔ a message that claims to come from the parent and "
-				              "does not carry root's stamp (uid %ld): DISCARDED",
-				              c_e ? (long)chi.uid : -1L);
+			/* ⛔ The parent must be root — or, since 1.5 (§11.50), the
+			 *    network side's `remotix`, as the root side wrote on my
+			 *    command line (`--parent-uid`).  A message without the
+			 *    kernel's stamp is not a message from the parent. */
+			if (!c_e || chi.uid != parent_uid) {
+				if (parent_uid == 0)
+					registro_dice(LOG_CHILD,
+					              "⛔ a message that claims to come from the parent and "
+					              "does not carry root's stamp (uid %ld): DISCARDED",
+					              c_e ? (long)chi.uid : -1L);
+				else
+					registro_dice(LOG_CHILD,
+					              "⛔ a message that claims to come from the parent and "
+					              "does not carry its stamp (uid %ld, expected %ld): "
+					              "DISCARDED",
+					              c_e ? (long)chi.uid : -1L, (long)parent_uid);
 				continue;
 			}
 			if (t.declared_uid != (uint32_t)my_uid) {
@@ -9062,6 +9476,32 @@ void child_alive(int argc, char **argv)
 			if (t.kind == MSG_SHUT_DOWN) {
 				fine = true;
 				break;
+			}
+			/* ⛔ The close-only child (box at `close_only`): «end the
+			 *    session» and «who are you», nothing else — no video, audio,
+			 *    clipboard, layout, pace or gesture reaches this desktop. */
+			if (close_only && t.kind != MSG_CHI_SEI) {
+				struct body_input ci;
+
+				if (t.kind != MSG_INPUT || (size_t)readings < sizeof t + sizeof ci)
+					ci.action = 0;
+				else
+					memcpy(&ci, envelope + sizeof t, sizeof ci);
+				if (t.kind != MSG_INPUT || ci.action != CHILDREN_INPUT_TERMINATE) {
+					log_detail(LOG_CHILD,
+					           "CLOSE-ONLY child: a message of kind %u DISCARDED — "
+					           "only «end the session» is obeyed here",
+					           (unsigned)t.kind);
+					/* ⛔ review 4, finding 7: the life ceiling is checked
+					 *    HERE too — this read loop leaves only when the socket
+					 *    is quiet, so a network side that keeps sending
+					 *    discarded messages kept the child alive past 30 s.
+					 *    Out of the read loop, the check at the top of the
+					 *    outer loop ends it with its line. */
+					if (log_now_ms() >= close_only_since_ms + CLOSE_ONLY_LIFE_MS)
+						break;
+					continue;
+				}
 			}
 			if (t.kind == MSG_VIDEO) {
 				struct body_video cv;
@@ -9327,6 +9767,13 @@ void child_alive(int argc, char **argv)
 						              "now the two truths do not "
 						              "match — and this line is "
 						              "the only place where it shows");
+						/* ⛔ The close-only child has nothing else to
+						 *    do: it does not stay to be bound to a
+						 *    login (box at `close_only`). */
+						if (close_only) {
+							fine = true;
+							break;
+						}
 						continue;
 					}
 					/* ⛔⭐ PHASE 17 T7 — AND THE CHILD EXITS WITH IT.
@@ -9866,7 +10313,7 @@ void child_alive(int argc, char **argv)
 		 *   client stays connected, and when the stage comes back the desktop
 		 *   reappears by itself.  ⛔ But it does not stand still either: a child
 		 *   without a stage is not a frozen session, it is a child of no use. */
-		if (!cat) {
+		if (!cat && !close_only) {
 			uint64_t now = log_now_ms();
 			/*
 			 * ⛔⭐ AND IF WE ARE ONLY WAITING, IT IS SAID — once per second,

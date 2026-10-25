@@ -27,8 +27,6 @@
 #include <errno.h>
 #include <sys/random.h>
 
-bool rcp_authenticate_from(const char *user, const char *password,
-                      const char *rhost);
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap);
 
 /* ------------------------------------------------------------------------ */
@@ -2512,28 +2510,6 @@ static void hook_log(void *ctx, const char *line)
 	    && !prelogin_may_log(w))
 		return;
 	log_says_of(REG_RCP, chi, "%s", line);
-}
-
-/* ⛔⭐ THIS HOOK IS THE FALLBACK, SINCE 12 AUG 2026 — `DECISIONS.md` §1.10.
- *
- *     ⚠ PAM BLOCKS, and here it blocked the whole loop: one user's
- *       handshake stopped everybody else's and delayed the packets of
- *       whoever was already connected.  `[M]` B8, 11 Aug 2026: **from 1.0 to
- *       2.2 seconds**, and PAM was the one adding them (+1034 ms on the refused against
- *       +84 ms on the admitted — the signature of `pam_faildelay`).
- *
- * ⛔ Now the good road is `hook_ask`, below.  This one stays
- *    connected because `rcp.c` uses it when the helper is not there — and then it is
- *    right that the server works all the same, with less (`CODER.md` §4.2).
- * ⚠ But the fallback IS DECLARED: whoever takes it finds it written in the log
- *   by `rcp.c`, «SYNCHRONOUSLY — the wire stood still». */
-static bool hook_verify(void *ctx, const char *user, const char *password)
-{
-	wt *w = (wt *)ctx;
-	char rhost[64];
-	(void)rcp_rhost_from_provenance(w ? w->provenance : NULL, rhost,
-	                               sizeof rhost);
-	return rcp_authenticate_from(user, password, rhost);
 }
 
 /* ⭐⭐ THE GOOD ROAD: one asks, one does not wait — `DECISIONS.md` §1.10.
@@ -7108,7 +7084,6 @@ static void rcp_start(wt *w, int64_t stream_id)
 	g.send_msg = hook_send;
 	g.close = hook_close;
 	g.record = hook_log;
-	g.verify = hook_verify;
 	/* ⛔ And it is connected ONLY if the helper is there: `rcp.c` looks at this pointer
 	 *    to decide which of the two roads to take, and connecting it to nothing
 	 *    would mean telling it «ask nobody». */
