@@ -1003,9 +1003,23 @@ static struct {
 /* The connection has logged in (now, or once: a closed session keeps it). */
 static bool wt_logged_in(wt *w)
 {
-	if (w && w->rcp && rcp_logged_in(w->rcp))
+	if (w && w->rcp && rcp_logged_in(w->rcp)) {
+		/* ⭐ rilettura-wt W5: the pre-login caps count what a connection does BEFORE it earns the login; they start again at the moment it does (false -> true), never when it merely loses it:
+		 *    a stranger who opens and closes sessions without logging in must not get a fresh count each time. */
+		if (!w->was_logged_in) {
+			w->sessions_opened = 0;
+			w->stray_requests = 0;
+		}
 		w->was_logged_in = true;
+	}
 	return w && w->was_logged_in;
+}
+
+/* ⭐ rilettura-wt W5: the connection is «before the login» again.  ONLY the flag: the pre-login counters (sessions_opened, stray_requests) are not touched here — they start again when a login
+ *    is EARNED (wt_logged_in(), false -> true), so the real user's third login is not closed, and a stranger cannot get a new count by opening and closing sessions. */
+static void forget_login(wt *w)
+{
+	w->was_logged_in = false;
 }
 
 /* ⛔ R8 (audit of 25 Oct 2026): ONE budget for ALL addresses, over the per-address ones.  Those are 20 lines every 10 s for each of
@@ -5889,7 +5903,9 @@ static void network_cycle(wt *w, uint64_t now_ms)
 	const char *said;
 	int g;
 
-	if (!w->conn || w->closing >= 0)
+	/* ⭐ rilettura-wt W4: like rate_cycle() and the other periodic ones, nothing for a connection without a control channel — the ~700-byte `quic-net` line was written every second by each of the
+	 *    128 waiting connections that moved a packet, outside every pre-login budget. */
+	if (!w->conn || !w->rcp || w->closing >= 0)
 		return;
 	/* ⚠ At most one a second.  ⛔ And the FIRST always comes out, without waiting:
 	 *   `network_logged_ms == 0` means «never spoken», which is not «nothing has
@@ -5994,6 +6010,7 @@ static void network_cycle(wt *w, uint64_t now_ms)
 
 	since_ms = w->network_logged_ms ? now_ms - w->network_logged_ms : 0;
 
+	if (prelogin_may_log(w))   /* ⭐ rilettura-wt W4: also for a connection that opened the control channel but has not logged in (it writes every second otherwise) */
 	log_says_of(REG_WT, wt_chi(w),
 	                 "quic-net %s since_ms=%llu lost=%llu lost_d=%llu "
 	                 "bytes_lost=%llu bytes_lost_d=%llu sent=%llu sent_d=%llu "
@@ -7378,6 +7395,11 @@ static void close_now(wt *w, uint8_t reason)
 	uint8_t b[16];
 	size_t n = 0;
 
+	/* ⭐ rilettura-wt W6: the session stream is already closed (`wt_stream_closed()` put session back to -1): the capsule would go to stream -1 and stay in the queue for ever — never delivered, never
+	 *    killed — so `queue_empty()` stays false, the shutdown waits for this connection, and the new control channel of the same connection gets no answer behind it. */
+	if (w->session == -1)
+		return;
+
 	/* ⛔⭐ THE CAPSULE GOES INSIDE A `DATA` FRAME, AND IN THE GRAFT IT WENT OUT NAKED.
 	 *
 	 *    The body of an extended CONNECT is a stream of capsules (RFC 9297),
@@ -7421,6 +7443,11 @@ static void close_session(wt *w, uint8_t reason)
 	 *    application error code equal to the reason code — not the
 	 *    QUIC connection, which can carry other things. */
 	if (w->session == -1)
+		return;
+	/* ⭐ rilettura-wt W3: idempotent.  A second call used to re-arm closing_since (+0.5 s) and closing_deadline (+3 s) and write the line again: a client that sent one more offending stream every
+	 *    less than half a second kept the closure from ever maturing — and, `closing` being set, the 5 s of the control channel could not fire either — on a connection with no login.  The FIRST
+	 *    reason and the FIRST deadline stand. */
+	if (w->closing >= 0)
 		return;
 
 	/* ⛔⭐ AND THE CAPSULE IS DEFERRED, instead of being enqueued now — found by
@@ -7539,7 +7566,9 @@ static void closed_by_client(wt *w, uint32_t code)
 	 *    contradicted each other two lines apart. */
 	valid = code >= (uint32_t)RCP_CLOSED_BY_USER &&
 	         code <= (uint32_t)RCP_ALREADY_ACTIVE_REMOTELY;
-	if (!valid)
+	/* ⭐ rilettura-wt W1: the three lines of the capsule parser (this one, "SKIPPED" and "the page CLOSED") went straight to the log: a client with NO credentials, one CONNECT open, could write
+	 *    one or two lines per 7-byte capsule (about 14:1) for ever.  They go through the budget of the connection before the login (prelogin_may_log(); a logged-in connection writes all). */
+	if (!valid && prelogin_may_log(w))
 		log_says_of(REG_RCP, wt_chi(w),
 		                 "⛔ VIOLATION §3.1 — the page closed the session "
 		                 "with code 0x%x, which is not a reason of §8.2 "
@@ -7619,6 +7648,7 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 		if (lung > WT_CAPSULE_MAX) {
 			uint64_t here = w->capsbuf.n - off - a - b;
 			uint64_t grabbed = here < lung ? here : lung;
+			if (prelogin_may_log(w))   /* ⭐ rilettura-wt W1 */
 			log_says_of(REG_WT, wt_chi(w),
 			                 "capsule 0x%llx %llu bytes long, beyond the "
 			                 "cap of %d: SKIPPED without keeping it (RFC "
@@ -7640,10 +7670,11 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 			                  ((uint32_t)body[1] << 16) |
 			                  ((uint32_t)body[2] << 8) |
 			                  (uint32_t)body[3];
-			log_says_of(REG_WT, wt_chi(w),
-			                 "the page CLOSED the "
-			                 "WebTransport session: code 0x%x",
-			                 code);
+			if (prelogin_may_log(w))   /* ⭐ rilettura-wt W1 */
+				log_says_of(REG_WT, wt_chi(w),
+				                 "the page CLOSED the "
+				                 "WebTransport session: code 0x%x",
+				                 code);
 			closed_by_client(w, code);
 		}
 		off += a + b + (size_t)lung;
@@ -7822,6 +7853,8 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 	            : channel == 0x01 ? G_UNI_INPUT
 	            : channel == 0x02 ? G_UNI_CLIPBOARD
 	                             : G_UNI_OK;
+	/* ⭐ rilettura-wt W2: one line per unidirectional stream of the client, whatever it is: before the login they go through the budget of the connection (a logged-in one writes them all) */
+	if (prelogin_may_log(w))
 	log_says_of(REG_WT, wt_chi(w),
 	                 "client unidirectional stream %ld, session %llu, type "
 	                 "0x%04x, channel 0x%02x — %s",
@@ -7847,9 +7880,10 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 			 *   second conditional of §3.1 at work: demanding
 			 *   all three points always would give red on the
 			 *   right code. */
-			log_says_of(REG_WT, wt_chi(w),
-			                 "⚠ no control channel: the reason "
-			                 "travels only in the session closure");
+			if (prelogin_may_log(w))   /* ⭐ rilettura-wt W2 */
+				log_says_of(REG_WT, wt_chi(w),
+				                 "⚠ no control channel: the reason "
+				                 "travels only in the session closure");
 			close_session(w, RCP_PROTOCOL_ERROR);
 		}
 	} else if (channel == 0x01) {
@@ -8841,10 +8875,20 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 		rcp_free(w->rcp);
 		w->rcp = NULL;
 		w->rcp_stream = -1;
+		/* ⭐ rilettura-wt W5: `was_logged_in` was a latch for the whole life of the connection; the control channel is gone, so the connection is «before the login» again (its next one will earn it back) */
+		forget_login(w);
 		rule_heartbeat(w);
 	}
-	if (stream_id == w->session)
+	if (stream_id == w->session) {
 		w->session = -1;
+		forget_login(w);   /* ⭐ rilettura-wt W5: the session is gone too */
+		/* ⭐ rilettura-wt W6: a closure still pending belonged to THIS session. Left armed, its deadline would close the NEXT session of the same connection (and a stale channel_deadline would
+		 *    time out the new one before it has had its 5 s): they go with the session they were for. */
+		w->closing = -1;
+		w->closing_since = 0;
+		w->closing_deadline = 0;
+		w->channel_deadline = 0;
+	}
 
 	r = request_find(w, stream_id, false);
 	if (r)

@@ -110,6 +110,11 @@ static void rxt_detail_of(const char *file, int text_line, const char *area, con
 	(void)file; (void)text_line; (void)area; (void)chi; (void)fmt;
 }
 static uint64_t rxt_now(void) { return 5000000; }
+/* prelogin_may_log() (rilettura-wt W1) is linked in by the included file and asks rcp_key_address(); this harness links no rcp.o, and no connection here is pre-login */
+void rcp_key_address(const char *text, char *out, size_t cap)
+{
+	snprintf(out, cap, "%s", text ? text : "");
+}
 
 /* ── the OLD parser, verbatim from b0aabae3 (webtransport.c, `capsule()`): bytes_remove_head() at every capsule ── */
 static void old_capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
@@ -252,7 +257,9 @@ int main(void)
 			size_t used = 0, at = 0;
 
 			memset(&Wo, 0, sizeof Wo);
+			Wo.was_logged_in = true;   /* (both parsers call the same closed_by_client(), now behind prelogin_may_log()) */
 			memset(&Wn, 0, sizeof Wn);
+			Wn.was_logged_in = true;   /* rilettura-wt W1: capsule()'s lines pass prelogin_may_log(); a logged-in connection writes every line, as the old parser did */
 			memset(&so, 0, sizeof so);
 			memset(&sn, 0, sizeof sn);
 			while (used + 64 < sizeof stream && rnd() % 40 != 0)
@@ -298,7 +305,9 @@ int main(void)
 
 		memset(chunk, 0, sizeof chunk);                      /* 0x00 0x00 pairs: 4095 capsules and one stray byte */
 		memset(&Wo, 0, sizeof Wo);
+			Wo.was_logged_in = true;   /* (both parsers call the same closed_by_client(), now behind prelogin_may_log()) */
 		memset(&Wn, 0, sizeof Wn);
+			Wn.was_logged_in = true;   /* rilettura-wt W1: capsule()'s lines pass prelogin_may_log(); a logged-in connection writes every line, as the old parser did */
 		moved = 0; t0 = now_s();
 		for (int i = 0; i < N; i++)
 			old_capsule(&Wo, 0, chunk, sizeof chunk);
@@ -321,6 +330,7 @@ int main(void)
 		size_t n = 0, nb = 0;
 
 		memset(&Wn, 0, sizeof Wn);
+			Wn.was_logged_in = true;   /* rilettura-wt W1: capsule()'s lines pass prelogin_may_log(); a logged-in connection writes every line, as the old parser did */
 		memset(&sn, 0, sizeof sn);
 		n += put_varint(close_cap + n, 0x2843, 2);
 		n += put_varint(close_cap + n, 4, 1);
@@ -333,6 +343,7 @@ int main(void)
 		bytes_free(&Wn.capsbuf);
 
 		memset(&Wn, 0, sizeof Wn);
+			Wn.was_logged_in = true;   /* rilettura-wt W1: capsule()'s lines pass prelogin_may_log(); a logged-in connection writes every line, as the old parser did */
 		memset(&sn, 0, sizeof sn);
 		nb += put_varint(big + nb, 0x77, 1);
 		nb += put_varint(big + nb, 5000, 2);                  /* above the cap of 1028 */
