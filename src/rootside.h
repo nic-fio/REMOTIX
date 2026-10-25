@@ -53,10 +53,12 @@
 
 /* ⭐ Review 4 B, finding 24: ONE reset of the signals for every fork of the
  *    root side's process (the network side, the PAM helper, the children, the
- *    usermod and probe forks): every disposition back to the default — except
- *    SIGPIPE, kept IGNORED (a write to a closed socket must be an EPIPE the
- *    code reads, not a death) — and nothing blocked.  The PAM helper's fork
- *    used to reset SIGPIPE to the default while child.c kept it ignored. */
+ *    usermod and probe forks): every disposition back to the default and
+ *    nothing blocked.  This one keeps SIGPIPE IGNORED (the network side and the
+ *    PAM helper: a write to a closed socket must be an EPIPE the code reads,
+ *    not a death); the children and the usermod (`child.c`,
+ *    `child_signals_default()`) get SIGPIPE at its default too — a child sets
+ *    it ignored itself from its first instruction (`main.c`). */
 static inline void rootside_fork_signals_fresh(void)
 {
 	sigset_t none;

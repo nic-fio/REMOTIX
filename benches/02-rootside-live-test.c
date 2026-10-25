@@ -761,6 +761,18 @@ int main(int argc, char **argv)
 	 *    case 676af717 cured (the fork wrote its lines into the root channel). */
 	if (getenv("RX_LIVE_JOURNAL") && strcmp(getenv("RX_LIVE_JOURNAL"), "1") == 0)
 		(void)log_journal(true);
+	/* ⭐ 1.5: the root side started the way a careless launcher starts it — SIGHUP, SIGQUIT and SIGWINCH ignored, SIGURG
+	 *    blocked: the children must still be born with all at their default (child.c, before the execve). */
+	{
+		sigset_t blk;
+
+		signal(SIGHUP, SIG_IGN);
+		signal(SIGQUIT, SIG_IGN);
+		signal(SIGWINCH, SIG_IGN);
+		sigemptyset(&blk);
+		sigaddset(&blk, SIGURG);
+		sigprocmask(SIG_BLOCK, &blk, NULL);
+	}
 	/* ⭐ 1.6 (R8 B): the live desktop of fiona, before the root side looks for the desktops found again */
 	if (!getenv("RX_LIVE_MODE") || strcmp(getenv("RX_LIVE_MODE"), "plain") == 0 || strcmp(getenv("RX_LIVE_MODE"), "journal") == 0)
 		start_stage();
