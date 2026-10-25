@@ -6,7 +6,7 @@
     python3 15-f027-password-and-ban.py --box kde --browser firefox --base-port 4910 [--fault]
 
 ⛔ ON THE G8 GROUP'S SERVER (port 8621 gnome · 8622 kde · 8623 xfce · 8624 lxqt,
-   `15-g8-server.sh`), NEVER on the 85xx: five wrong passwords of one user, or twelve of the
+   `15-g8-server.sh`), NEVER on the 85xx: five wrong passwords of one user, or twenty of the
    address, ban 192.168.0.2 (15 minutes the first time).
    If the G8 server is off the test starts it; at the beginning and at the end it
    UNBLOCKS it from the command socket.  Two browsers of the same type: A (porte-base)
@@ -31,7 +31,7 @@ F-028  (§4.2, `DECISIONS.md` §1.9, src/rcp.c `mark_failed`) —
              address of [192.168.0.2] as <user>»; the 6th attempt, with the RIGHT
              password, receives 0x08 WITHOUT PAM («BANNED: … PAM is not queried», no
              «PAM answered» after the ban); the page of the address is NOT banned;
-         (b) ADDRESS level: 12 wrong passwords with different users ⇒ «⛔ BANNED address
+         (b) ADDRESS level: 20 wrong passwords with different users ⇒ «⛔ BANNED address
              of [192.168.0.2]»; the RIGHT password receives 0x08; the reloaded page
              LOADS ANYWAY and says «attempts exhausted» with the minutes
              (data-banned="yes"); the ban file of the G8 server carries [192.168.0.2];
@@ -42,7 +42,7 @@ F-028  (§4.2, `DECISIONS.md` §1.9, src/rcp.c `mark_failed`) —
          it serves the page and makes it speak — that is what is judged.
 
 FAULTS (after the healthy pass, same session):
-  F-028  twelve real errors (address level) ⇒ banned; then the ban is REMOVED secretly (UNBLOCK)
+  F-028  twenty real errors (address level) ⇒ banned; then the ban is REMOVED secretly (UNBLOCK)
          before the judge looks ⇒ the judge must say «not banned».
   F-027  A says farewell, and the «wrong» password that B sends is actually RIGHT
          ⇒ B is admitted ⇒ the judge must say red.
@@ -67,7 +67,7 @@ SERVER = "15-g8-server.sh"
 # «failed attempt from [ip] as USER: 1 of 5 for the user, 5 of 12 for the address, 0 of 30 for the IPv6 /48 within the window»
 RE_FAILED = re.compile(r"failed attempt from \[([0-9.]+)\] as (.+?): (\d+) of (\d+) for the user, "
                        r"(\d+) of (\d+) for the address")
-USER_LIMIT, ADDRESS_LIMIT = 5, 12      # rcp.c LIMIT[]: the product's, not lowered for the test
+USER_LIMIT, ADDRESS_LIMIT = 5, 20      # rcp.c LIMIT[]: the product's, not lowered for the test (1.5 margini-nat: the address level is 20)
 ADDR = "[%s]" % G.ADDRESS
 
 
@@ -154,8 +154,10 @@ def judge_ban_user(lines, sixth, page):
         return S.FAIL, "the ban is not at the %dth failure of the user: counters %s" % (
             USER_LIMIT, failed_counts(lines))
     after = lines[ban[0] + 1:]
-    if not any("BANNED:" in r and "PAM is not queried" in r for r in after):
-        return S.FAIL, "the 6th attempt was not refused by the ban («BANNED: … PAM is not queried»)"
+    # 1.5 (log-tetti): the «BANNED: … PAM is not queried» line of a refused attempt is a PRE-LOGIN line and can be hidden by
+    # the per-address budget; the session closed with code 0x08 is then the server's own trace of it (the PAM check below still holds)
+    if not any(("BANNED:" in r and "PAM is not queried" in r) or "closed the WebTransport session, code 0x08" in r for r in after):
+        return S.FAIL, "the 6th attempt was not refused by the ban («BANNED: … PAM is not queried» or a session closed with 0x08)"
     if any("PAM answered" in r for r in after):
         return S.FAIL, "the 6th attempt (right password) reached PAM although the user was banned"
     if G.SENTENCE[0x08] not in (sixth or ""):
@@ -166,7 +168,7 @@ def judge_ban_user(lines, sixth, page):
 
 
 def judge_ban_address(page, my_file, lines):
-    """F-028 (b), ADDRESS level, after 12 wrong passwords of different users.  (outcome, reason)."""
+    """F-028 (b), ADDRESS level, after 20 wrong passwords of different users.  (outcome, reason)."""
     if not any("⛔ BANNED address of %s" % ADDR in r for r in lines):
         return S.FAIL, ("%d failed attempts of different users and the server does not say "
                         "«BANNED address»" % ADDRESS_LIMIT)
@@ -369,7 +371,7 @@ def body(o, E):
             print("   F-028 (user level): %s — %s" % (eu, ru), flush=True)
             print("   counters back to zero: %s" % srv.unblock(), flush=True)
 
-            # ── F-028 (2b): ADDRESS level — 12 wrong passwords of DIFFERENT users ⇒ ban
+            # ── F-028 (2b): ADDRESS level — 20 wrong passwords of DIFFERENT users ⇒ ban
             sign = srv.log_line_list()
             others = set()
             while len(others) < ADDRESS_LIMIT:
