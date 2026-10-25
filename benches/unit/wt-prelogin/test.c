@@ -60,7 +60,7 @@ static uint64_t rxt_now(void);
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 23
+#define EXPECTED_CHECKS 24
 
 static void require(int cond, const char *desc)
 {
@@ -310,6 +310,15 @@ int main(void)
 		prelogin_summary(0, fake_now);
 		require(prelogin_folded == 7 && prelogin_all.hidden == 0,
 		        "a per-address summary refused by the spent global budget joins the global line as 7, not 8");
+		/* ...and a line from a NEW address in the same window writes nothing, and no global line comes out in the middle of the window */
+		{
+			wt *wn = wt_new(NULL, &eg, "[10.7.7.7]:1", NULL);
+
+			says = 0;
+			hook_log(wn, "a line in the same window");
+			require(says == 0 && prelogin_folded == 7,
+			        "a new address in the same window: nothing written, the folded count still waits for the end of the window");
+		}
 	}
 	require(true, "the end was reached");
 	(void)w2;

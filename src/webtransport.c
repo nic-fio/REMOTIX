@@ -1034,7 +1034,7 @@ static bool prelogin_all_may(uint64_t now)
 	struct line_budget_closed c;
 	bool ok = line_budget_take(&prelogin_all, now, WT_PRELOGIN_WINDOW_MS, WT_PRELOGIN_GLOBAL_BURST, &c);
 
-	if (c.hidden || prelogin_folded)
+	if (c.hidden || (prelogin_folded && c.written)) /* c.written: a window really closed, not a line in the middle of one */
 		prelogin_all_say(&c); /* before the caller writes the first line of the new window */
 	return ok;
 }
