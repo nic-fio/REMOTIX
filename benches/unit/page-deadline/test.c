@@ -8,7 +8,7 @@
  *   later `now` to `page_expired()`, not by waiting.  The sources are
  *   127.0.0.1-9 (all of 127/8 is local).
  *
- *   1. four idle connections from one address are taken, the fifth is refused;
+ *   1. PAGE_PER_ADDRESS idle connections from one address are taken, the next is refused (1.5: 32; it was four);
  *   2. 128 idle connections from 32 addresses fill the table;
  *   3. a newcomer from a fresh address evicts ONE idle client (fair share:
  *      from a group holding 4), and the victim sees a RESET;
@@ -603,19 +603,25 @@ int main(void)
 	int nf = 0;
 	char src[32];
 
-	printf("1. four idle from one address are taken, the fifth is refused\n");
-	for (int i = 0; i < 5; i++) {
+	printf("1. PAGE_PER_ADDRESS idle from one address are taken, the next one is refused\n");
+	for (int i = 0; i < PAGE_PER_ADDRESS + 1; i++) {
 		fds[nf++] = connect_from(port, "127.0.0.1", 0);
 		pump(p, 2);
 	}
-	require(active(p) == 4, "4 clients active after 5 connections from 127.0.0.1");
-	require(closed_by_server(fds[4]), "the 5th socket was closed by the server");
+	require(active(p) == PAGE_PER_ADDRESS, "PAGE_PER_ADDRESS clients active after one more connection from 127.0.0.1 (1.5: it was 4; now 32, for an office of eight)");
+	require(closed_by_server(fds[PAGE_PER_ADDRESS]), "the socket past the cap was closed by the server");
 	/* ⚠ The first refusal writes the summary line at once and zeroes the
 	 *   counters: «written» is what is checked. */
 	require(p->refused_ever && p->refused_address == 0,
 	        "the refusal was reported in the summary line");
-	close(fds[4]);
+	close(fds[PAGE_PER_ADDRESS]);
 	nf--;
+	/* back to the four idle connections the next sections start from (1.5: the cap is 32 now, so the others are closed here) */
+	for (int i = 4; i < PAGE_PER_ADDRESS; i++)
+		close(fds[i]);
+	nf = 4;
+	pump(p, 4);
+	require(active(p) == 4, "four clients active again from 127.0.0.1, the state the next sections start from");
 
 	printf("2. 128 idle from 32 addresses fill the table\n");
 	for (int a = 2; a <= 32; a++)

@@ -49,8 +49,8 @@
  *     address, keyed by `rcp_key_address()` (IPv4 per address, IPv6 per /64):
  *     one machine can no longer take every slot.  A page load needs one
  *     connection at a time (`Connection: close`, one GET plus `/fingerprint`);
- *     4 leaves room for a browser's speculative preconnects and a few devices
- *     behind one NAT.
+ *     (4 was the first value, «a few devices behind one NAT»; 1.5 raised it to
+ *     32 for an office of eight, see the box at its definition.)
  *   · PAGE_PER_48 — and at most this many from one IPv6 /48 (as transport.c):
  *     one subscriber holds a whole /48, that is 65536 /64 keys.
  *   · And when all slots are taken, one is freed to make room — by FAIR
@@ -84,8 +84,11 @@
 #define PAGE_STALL_MS 60000u
 #define PAGE_RATE_GRACE_MS 20000u
 #define PAGE_RATE_FLOOR 2048u /* bytes per second */
-#define PAGE_PER_ADDRESS 4
-#define PAGE_PER_48 8
+/* ⭐ 1.5: 4 and 8 closed on the spot every connection past the fourth from one address — eight people behind a NAT who reload together are
+ *   8 to 24 connections at once (`otto-utenti-nat`).  32 per address leaves room for 8 users with 3 connections each, 64 per IPv6 /48 keeps the
+ *   old proportion; the fair-share eviction below still makes a crowd the first victim when the table is full. */
+#define PAGE_PER_ADDRESS 32
+#define PAGE_PER_48 64
 #define PAGE_EVICT_AGE_MS 5000u
 /* At most this many accepts per `accept_page()` call (refused ones included). */
 #define PAGE_ACCEPTS_PER_CALL 32
@@ -103,10 +106,14 @@
  *   addresses than that busy to push a new address onto the shared overflow
  *   bucket); a new key takes only a FULL bucket (a full bucket is the same
  *   as no bucket), see bucket_of(). */
-#define PAGE_ACCEPT_RATE 4
-#define PAGE_ACCEPT_BURST 8
-#define PAGE_ACCEPT_RATE_48 8
-#define PAGE_ACCEPT_BURST_48 16
+/* ⭐ 1.5, margins for the 8-user target (test `otto-utenti-nat`): eight people behind ONE address (an office NAT) reload the page together after a
+ *   restart, each load being 1-3 connections.  The accept bucket was 4 a second, burst 8: 24 connections at once waited past PAGE_RATE_WAIT_MS and
+ *   were served «503 busy».  Now 8 a second, burst 32 per address (3 connections for each of 8 users fit with no wait), and the IPv6 /48, which
+ *   holds many addresses, twice that. */
+#define PAGE_ACCEPT_RATE 8
+#define PAGE_ACCEPT_BURST 32
+#define PAGE_ACCEPT_RATE_48 16
+#define PAGE_ACCEPT_BURST_48 64
 #define PAGE_RATE_KEYS 256
 /* ⭐ R-5 (audit of 25 Oct 2026): the keys are ALREADY the IPv4 address / IPv6 /64 (`rcp_key_address()`) and the /48 has its own table, but an
  *   attacker with ONE large IPv6 allocation (a /32 holds 65536 /48s) could keep all 256 buckets of a table busy with rotating /64s or /48s, and

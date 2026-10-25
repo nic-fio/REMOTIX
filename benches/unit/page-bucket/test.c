@@ -5,7 +5,7 @@
  * further keys drained: «503 busy» for everybody.  Now the BUSY buckets of one IPv6 /32 are at most PAGE_KEYS_PER_32 (32) in a table.
  *
  * What is checked, on the REAL header (nothing copied):
- *   1. a bucket: the burst (8), then 4 a second, for an IPv4 key (nothing changed);
+ *   1. a bucket: the burst (32), then 8 a second, for an IPv4 key (nothing changed);
  *   2. 400 /64s of ONE /32 at one instant: at most 32 buckets of that /32 are in the table, the attacker's further keys share the overflow bucket,
  *      and a visitor from ANOTHER /32 still gets a bucket of its own with its full burst;
  *   3. the mutant (cap disabled = the old behaviour, bucket_of_cap with cap32 = PAGE_RATE_KEYS): the same visitor is pushed onto the overflow
@@ -32,8 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PAGE_ACCEPT_RATE 4
-#define PAGE_ACCEPT_BURST 8
+#define PAGE_ACCEPT_RATE 8   /* 1.5: the values of src/page.c (it was 4 / 8); `otto-utenti-nat` reads them from the source */
+#define PAGE_ACCEPT_BURST 32
 #define PAGE_RATE_KEYS 256
 #define PAGE_KEYS_PER_32 32
 #include "pagebucket.h"
@@ -77,14 +77,14 @@ int main(void)
 	/* 1 */
 	reset();
 	n = 0;
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 2 * PAGE_ACCEPT_BURST; i++) {
 		b = bucket_of(tab, over, "[10.0.0.1]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
 		if (b->milli >= 1000u) {
 			b->milli -= 1000u;
 			n++;
 		}
 	}
-	CHECK(n == PAGE_ACCEPT_BURST, "1. a bucket: the burst of 8");
+	CHECK(n == PAGE_ACCEPT_BURST, "1. a bucket: the burst of 32");
 	n = 0;
 	for (int i = 0; i < 20; i++) {
 		b = bucket_of(tab, over, "[10.0.0.1]", t0 + 1000, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
@@ -93,7 +93,7 @@ int main(void)
 			n++;
 		}
 	}
-	CHECK(n == PAGE_ACCEPT_RATE, "1b. then 4 a second");
+	CHECK(n == PAGE_ACCEPT_RATE, "1b. then 8 a second");
 
 	/* 2 */
 	reset();
@@ -126,8 +126,8 @@ int main(void)
 	}
 	b = bucket_of(tab, over, "[2001:db8:2:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
 	CHECK(b == &over[1], "4. (setup) the /32 is at its cap while its buckets are busy");
-	b = bucket_of(tab, over, "[2001:db8:2:1::]", t0 + 2500, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	CHECK(b != &over[1] && b->milli == PAGE_ACCEPT_BURST * 1000u, "4b. 2.5 s later they are idle: the same /32 gets a bucket of its own again");
+	b = bucket_of(tab, over, "[2001:db8:2:1::]", t0 + 4500, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b != &over[1] && b->milli == PAGE_ACCEPT_BURST * 1000u, "4b. 4.5 s later (> burst/rate = 4 s) they are idle: the same /32 gets a bucket of its own again");
 
 	/* 5 */
 	reset();
