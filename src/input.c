@@ -181,6 +181,7 @@
  *        message: `[M]` removing THAT line (`RG4`) the healing stops.
  *      ⚠ The `close()` stays so as not to lose a descriptor at every healing.
  */
+#include "wheelclamp.h"
 #include "input.h"
 
 #include <errno.h>
@@ -745,6 +746,17 @@ static int send_key(Input *in, uint16_t code, int pressed)
 	/* ⛔ `SIOCOUTQ` is read BEFORE the key: libei writes at once, so read
 	 *    after it the count holds the key's own bytes, is almost never 0, and
 	 *    every keystroke would get an always-on «⚠ RECEIPT» line. */
+	/* ⭐ S-R4 for the keys (libei path; the wlroots one has the filter in `wlr_input_key()`): the SAME state already known is not sent again — and BEFORE the receipt is asked,
+	 *    which stays untouched (no receipt is expected for a key that does not leave).  ⚠ Not for an orphan: its bit is set but the new device never saw the press.
+	 *    Auto-repeat is not affected: the page discards the browser's repeats, so a repeated key-down never gets here.  ⛔ The log says only HOW MANY, under --verbose:
+	 *    no code, no time (privacy rule of the file). */
+	if ((pressed != 0) == bit_read(in->keys, code) && !bit_read(in->orphan_keys, code))
+	{
+		static unsigned skipped;
+
+		log_detail(AREA, "a repeated key state was not sent again (%u so far)", ++skipped);
+		return 0;
+	}
 	unsigned unread_before = unread_by_compositor(in);
 	ei_device_keyboard_key(in->keyboard_dev, code, pressed != 0);
 	beat_border(in, in->keyboard_dev);
@@ -807,6 +819,16 @@ static int send_button(Input *in, uint16_t code, int pressed)
 		              "(`child_alive()`), before `capture_resize()`",
 		              code, in->pointer_replacements);
 		return -1;
+	}
+
+	/* ⭐ S-R4 (audit of the session, 25 Oct 2026): the SAME state already known is not sent again — the filter that `wlr_input_button()` has («the seat would
+	 *    count two presses»), and here it was missing: a press sent twice and released once leaves Mutter's seat count at 1, and from then on no click arrives
+	 *    until the EIS channel falls.  ⚠ NOT for an orphan: after a device replacement the bit is still set, but the NEW device never saw that press, so a
+	 *    press must go through. */
+	if ((pressed != 0) == bit_read(in->buttons, code) && !bit_read(in->orphan_buttons, code))
+	{
+		log_detail(AREA, "button 0x%X: already %s, not sent again", code, pressed ? "down" : "up");
+		return 0;
 	}
 
 	ei_device_button_button(in->pointer, code, pressed != 0);
@@ -1978,15 +2000,22 @@ int input_bring_back_inside(Input *in)
 	/* ⛔ We start from an EMPTY keyboard: a modifier left down would make
 	 *    a combination labwc does not recognise (or, worse, another one). */
 	input_release_all(in);
-	for (down = 0; down < amount; down++)
+	bool took_combination[G_N_ELEMENTS(combination)] = { false };
+	for (down = 0; down < amount; down++) {
+		took_combination[down] = !bit_read(in->keys, combination[down]);   /* ⭐ S-R4: only what THIS round presses is released */
 		if (send_key(in, combination[down], 1) < 0) {
 			outcome = -1;
+			took_combination[down] = false;
 			break;
 		}
+	}
 	/* ⛔ And EVERYTHING that left is released in reverse, even if the
-	 *    combination stayed half way. */
-	while (down > 0)
-		send_key(in, combination[--down], 0);
+	 *    combination stayed half way — but only what this round pressed: a key the user holds is not ours to release. */
+	while (down > 0) {
+		--down;
+		if (took_combination[down])
+			send_key(in, combination[down], 0);
+	}
 
 	/* The pointer goes back where the user had it, on the canvas of NOW. */
 	if (in->wlr_pointer_known && in->wlr_pl && in->wlr_pa && in->canvas_w && in->canvas_h) {
@@ -2280,6 +2309,9 @@ int input_button(Input *in, uint16_t code, int pressed)
 
 int input_wheel(Input *in, int32_t axis_x, int32_t axis_y)
 {
+	/* ⭐ S-R9: bounded BEFORE the minus signs below (`-INT32_MIN` is an overflow) and before the compositor is asked for millions of notches */
+	axis_x = wheel_clamp(axis_x);
+	axis_y = wheel_clamp(axis_y);
 	/* ⭐ wlroots: same direction as below — the vertical is inverted HERE, once
 	 *    only (see the box), and `wlr_input_wheel()` receives the
 	 *    Wayland convention.  It makes the whole notches itself (§7.2 n.1). */
@@ -2358,18 +2390,25 @@ int input_letter(Input *in, uint32_t character)
 	}
 
 	/* The modifiers first, the key last; released in reverse. */
+	/* ⭐ S-R4: only the keys THIS gesture presses are released — a Shift the user holds (the page sent it before) must not be released under them. */
+	bool took[KEYBOARD_MAX_POSITIONS] = { false };
 	for (size_t i = 0; i < how_many; i++)
+	{
+		took[i] = !bit_read(in->keys, codes[i]);
 		if (send_key(in, codes[i], 1) < 0)
 		{
 			/* ⛔ Half way, what was pressed is released: a Shift
 			 *    left down because of a send error is the same damage as the
 			 *    Ctrl left down at detach. */
 			for (size_t j = i; j > 0; j--)
-				send_key(in, codes[j - 1], 0);
+				if (took[j - 1])
+					send_key(in, codes[j - 1], 0);
 			return -1;
 		}
+	}
 	for (size_t i = how_many; i > 0; i--)
-		send_key(in, codes[i - 1], 0);
+		if (took[i - 1])
+			send_key(in, codes[i - 1], 0);
 	return 0;
 }
 
@@ -2734,15 +2773,21 @@ static int letter_wlr(Input *in, uint32_t character)
 	 * ⭐ It is here that the modifiers of `wlr_input.c` do their job: the
 	 *    pressed Shift updates OUR state, and the compositor receives it
 	 *    as `modifiers` before the letter. */
+	bool took[KEYBOARD_MAX_POSITIONS] = { false };   /* ⭐ S-R4: only what this gesture presses is released (see `input_letter`) */
 	for (size_t i = 0; i < how_many; i++)
+	{
+		took[i] = !bit_read(in->keys, codes[i]);
 		if (send_key(in, codes[i], 1) < 0)
 		{
 			for (size_t j = i; j > 0; j--)
-				send_key(in, codes[j - 1], 0);
+				if (took[j - 1])
+					send_key(in, codes[j - 1], 0);
 			return -1;
 		}
+	}
 	for (size_t i = how_many; i > 0; i--)
-		send_key(in, codes[i - 1], 0);
+		if (took[i - 1])
+			send_key(in, codes[i - 1], 0);
 	return 0;
 }
 

@@ -2,6 +2,8 @@
  * appunti_kde — see `clipboard_kde.h`.  The comments citing `kde.md` and KWin's
  * files refer to v1's study, now in `STUDIES.md` §kde.
  */
+#include "xfertime.h"
+#include "mimecap.h"
 #include "clipboard_kde.h"
 
 #include <errno.h>
@@ -43,6 +45,10 @@ static const char *const TEXT_TYPES[] = {
 typedef struct {
 	struct zwlr_data_control_offer_v1 *proxy;
 	GPtrArray *mime;
+	/* ⭐ S-R9 (audit of the session, 25 Oct 2026): a reference count.  The pump thread (`on_selection`) and the child's thread (`clipboard_kde_read_now`) both
+	 *    touch the offers; `read_text` used to copy `proxy` under the lock and USE it after releasing it, for up to 5 s per type, while `on_selection` could
+	 *    destroy it: use after free.  Now `read_text` holds a reference for the whole read and the proxy is destroyed by whoever drops the LAST one. */
+	gint refs;
 } Offer;
 
 struct ClipboardKde {
@@ -85,9 +91,18 @@ struct ClipboardKde {
 /* ------------------------------------------------------------------ *
  * The session's offers
  * ------------------------------------------------------------------ */
+static Offer *offer_ref(Offer *offer)
+{
+	g_atomic_int_inc(&offer->refs);
+	return offer;
+}
+
+/* Drops ONE reference (the name stays: `g_clear_pointer(.., offer_free)` is used all over); the last one destroys. */
 static void offer_free(Offer *offer)
 {
 	if (!offer)
+		return;
+	if (!g_atomic_int_dec_and_test(&offer->refs))
 		return;
 	if (offer->proxy)
 		zwlr_data_control_offer_v1_destroy(offer->proxy);
@@ -133,8 +148,18 @@ static void on_type_offered(void *data, struct zwlr_data_control_offer_v1 *proxy
 {
 	Offer *offer = data;
 
-	if (mime && *mime)
+	/* ⭐ S-R10: bounded in number and in length (see mimecap.h) */
+	if (mime_keep(offer->mime->len, mime))
 		g_ptr_array_add(offer->mime, g_strdup(mime));
+	else if (mime && *mime && !offer_has(offer, mime)) {
+		/* ⭐ Review of 695b0d74: the types we LOOK FOR are always kept, even past the ceiling (a program that lists 64 others first must not hide its text); once each, so the
+		 *    overshoot is at most the three of TEXT_TYPES */
+		for (int i = 0; TEXT_TYPES[i]; i++)
+			if (g_ascii_strcasecmp(mime, TEXT_TYPES[i]) == 0) {
+				g_ptr_array_add(offer->mime, g_strdup(mime));
+				break;
+			}
+	}
 }
 
 static const struct zwlr_data_control_offer_v1_listener offer_listener = { on_type_offered };
@@ -144,6 +169,7 @@ static void on_new_offer(void *data, struct zwlr_data_control_device_v1 *device,
 {
 	Offer *offer = g_new0(Offer, 1);
 
+	offer->refs = 1;
 	offer->proxy = proxy;
 	offer->mime = g_ptr_array_new_with_free_func(g_free);
 	/* The offer hooks onto ITSELF: the `offer`s arrive before knowing
@@ -324,14 +350,17 @@ static void bind_ext_if_needed(ClipboardKde *clipboard)
 /* ⛔ `POLLHUP` on read counts as "ready": whoever writes and closes (the normal
  *    case) can make `poll` return with only `POLLHUP`, and the data is
  *    in the pipe (`[M]` v1, 8 August 2026). */
-static bool ready(int fd, short what)
+static bool ready(int fd, short what, uint64_t deadline)
 {
 	struct pollfd probe = { .fd = fd, .events = what, .revents = 0 };
 	int outcome;
+	int wait = xfer_left_ms(deadline, WAIT_TRANSFER_MS);   /* ⭐ S-R5/S-R6: the step, or what is left of the transfer's deadline */
 
+	if (wait <= 0)
+		return false;
 	do
-		outcome = poll(&probe, 1, WAIT_TRANSFER_MS);
-	while (outcome < 0 && errno == EINTR);
+		outcome = poll(&probe, 1, wait);
+	while (outcome < 0 && errno == EINTR && (wait = xfer_left_ms(deadline, WAIT_TRANSFER_MS)) > 0);
 	if (outcome <= 0)
 		return false;
 	if (probe.revents & what)
@@ -346,6 +375,7 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 {
 	int pipe_fd[2];
 	GByteArray *collection;
+	uint64_t deadline;
 
 	if (pipe2(pipe_fd, O_CLOEXEC) != 0) {
 		*why = "pipe not created";
@@ -358,17 +388,18 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 	close(pipe_fd[1]);
 
 	collection = g_byte_array_new();
+	deadline = xfer_deadline();   /* ⭐ S-R6: a total limit as well (see xfertime.h) */
 	for (;;) {
 		guint8 piece[16384];
 		ssize_t amount;
 
-		if (!ready(pipe_fd[0], POLLIN)) {
+		if (!ready(pipe_fd[0], POLLIN, deadline)) {
 			close(pipe_fd[0]);
 			explicit_bzero(piece, sizeof piece);
 			if (collection->data)
 				explicit_bzero(collection->data, collection->len);
 			g_byte_array_unref(collection);
-			*why = "whoever owns the clipboard wrote nothing for 5 s";
+			*why = "whoever owns the clipboard wrote nothing for 5 s, or did not finish in 10 s";
 			return NULL;
 		}
 		amount = read(pipe_fd[0], piece, sizeof piece);
@@ -399,18 +430,20 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 static char *read_text(ClipboardKde *clipboard, size_t *byte)
 {
 	struct zwlr_data_control_offer_v1 *proxy = NULL;
-	Offer *offer;
+	Offer *offer, *held = NULL;
 	GPtrArray *types = NULL;
 
 	g_mutex_lock(&clipboard->state);
 	offer = clipboard->current;
 	if (offer) {
+		held = offer_ref(offer);   /* ⭐ S-R9: kept alive for the whole read, whatever `on_selection` does meanwhile */
 		proxy = offer->proxy;
 		types = g_ptr_array_ref(offer->mime);
 	}
 	g_mutex_unlock(&clipboard->state);
 
 	if (!proxy || !types || types->len == 0) {
+		offer_free(held);
 		if (types)
 			g_ptr_array_unref(types);
 		log_detail(LOG_CLIPBOARD, "the session has nothing in the clipboard");
@@ -478,6 +511,7 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 			explicit_bzero((void *)start, amount);
 			g_bytes_unref(data);
 			g_ptr_array_unref(types);
+			offer_free(held);
 			log_detail(LOG_CLIPBOARD, "read %zu bytes of «%s» from the session",
 			                   (size_t)amount, TEXT_TYPES[i]);
 			return text;
@@ -485,18 +519,24 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 	}
 
 	{
+		static uint64_t last_line;
 		GString *listing = g_string_new(NULL);
 
-		for (guint k = 0; k < types->len; k++)
+		/* ⭐ S-R10: at most MIME_LOG_TYPES names and one line per second (a program that copies in a loop wrote one line each time) */
+		for (guint k = 0; k < types->len && k < MIME_LOG_TYPES; k++)
 			g_string_append_printf(listing, "%s%s", k ? ", " : "",
 			                       (const char *)g_ptr_array_index(types, k));
-		registro_dice(LOG_CLIPBOARD,
-		              "the session copied something that is not text (%s): not "
-		              "announced.  ⚠ `DECISIONS.md` §5-ter.1 — text only",
-		              listing->str);
+		if (types->len > MIME_LOG_TYPES)
+			g_string_append_printf(listing, " … and %u more", types->len - MIME_LOG_TYPES);
+		if (mime_line_allowed(&last_line))
+			registro_dice(LOG_CLIPBOARD,
+			              "the session copied something that is not text (%s): not "
+			              "announced.  ⚠ `DECISIONS.md` §5-ter.1 — text only",
+			              listing->str);
 		g_string_free(listing, TRUE);
 	}
 	g_ptr_array_unref(types);
+	offer_free(held);
 	return NULL;
 }
 
@@ -817,6 +857,7 @@ void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *t
 	gpointer value;
 	char *fallback = NULL;
 	size_t written = 0;
+	uint64_t deadline;
 	int fd;
 
 	if (!clipboard)
@@ -856,10 +897,14 @@ void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *t
 	}
 
 	/* ⛔ It is ALWAYS closed, even without data: the end of the stream is the `close`. */
+	deadline = xfer_deadline();   /* ⭐ S-R5: one deadline for the whole answer (see xfertime.h) */
+	/* ⚠ and non-blocking: POLLOUT says there is room for SOME bytes, and a blocking `write` of the rest would wait for the reader with no limit */
+	if (text && fcntl(fd, F_GETFL) >= 0)
+		fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 	while (text && written < byte) {
 		ssize_t done_ones;
 
-		if (!ready(fd, POLLOUT)) {
+		if (!ready(fd, POLLOUT, deadline)) {
 			registro_dice(LOG_CLIPBOARD, "⛔ whoever is pasting does not read: %zu bytes of %zu, "
 			                           "then I give up", written, byte);
 			break;

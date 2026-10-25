@@ -11,6 +11,7 @@
  *     · the wait promised by `sound_listen_stop()` is really done — v1
  *       promised it and did not do it (the box is next to the function).
  */
+#include "audiochunk.h"
 #include "sound.h"
 
 #include <pipewire/pipewire.h>
@@ -305,12 +306,17 @@ static void on_process(void *data)
 	{
 		struct spa_data *piano = &bundle->buffer->datas[0];
 
-		if (bundle->buffer->n_datas > 0 && piano->data && piano->chunk && piano->chunk->size > 0)
+		uint32_t chunk_offset = 0, chunk_size = 0;
+
+		/* ⭐ S-R8: a chunk that does not fit in its buffer is REDUCED to the buffer (offset modulo maxsize, size cut to what is left), never read outside it (see audiochunk.h) */
+		if (bundle->buffer->n_datas > 0 && piano->data && piano->chunk && piano->chunk->size > 0 &&
+		    (chunk_offset = piano->chunk->offset, chunk_size = piano->chunk->size,
+		     audio_chunk_fit(&chunk_offset, &chunk_size, piano->maxsize)))
 		{
 			const int16_t *samples =
-			    (const int16_t *) ((const uint8_t *) piano->data + piano->chunk->offset);
+			    (const int16_t *) ((const uint8_t *) piano->data + chunk_offset);
 			uint32_t frames =
-			    (uint32_t) (piano->chunk->size / (sizeof(int16_t) * AUDIO_CHANNELS));
+			    (uint32_t) (chunk_size / (sizeof(int16_t) * AUDIO_CHANNELS));
 
 			if (frames > 0)
 			{
