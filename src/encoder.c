@@ -59,6 +59,7 @@
  */
 #include "encoder.h"
 #include "colors709.h"
+#include "dimcheck.h"
 #include "log.h"
 #include "bit_writer.h"
 #include "vadirect.h"
@@ -2844,6 +2845,18 @@ bool codificatore_ridimensiona(Encoder *c, uint32_t width, uint32_t height,
 		di(error, error_byte, "%ux%u: 4:2:0 wants even sizes", width, height);
 		return false;
 	}
+	/* ⭐ E-R3 (audit of 25 Oct 2026): `open_device()` checks zero and the driver's maximum only at birth; a resize to a size the
+	 *    driver declared it cannot encode used to be found out by the reopening (a failed open, the encoder dropped), after the
+	 *    surfaces had already been asked for.  Refused here, before touching anything: the encoder stays as it was. */
+	if (width == 0 || height == 0) {
+		di(error, error_byte, "%ux%u: a size with a zero side", width, height);
+		return false;
+	}
+	if ((c->conf.max_size_w && width > c->conf.max_size_w) || (c->conf.max_size_h && height > c->conf.max_size_h)) {
+		di(error, error_byte, "%ux%u is beyond the %ux%u the driver declared for this encoder", width, height,
+		   c->conf.max_size_w, c->conf.max_size_h);
+		return false;
+	}
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⛔⛔ NOT WITH A PACKET IN HAND — it is the ONLY place in the file where
@@ -3085,6 +3098,8 @@ static VASurfaceID import_dmabuf(Encoder *c, const EncoderSurface *s)
 		    && c->imported[i].modifier == s->modifier)
 			return c->imported[i].surface;
 
+	uint32_t object_size = 0;
+
 	memset(&d, 0, sizeof d);
 	/*
 	 * ⛔ THE VA-API FOURCC IS NOT THE DRM ONE, and the two look alike
@@ -3112,7 +3127,15 @@ static VASurfaceID import_dmabuf(Encoder *c, const EncoderSurface *s)
 	d.height = s->height;
 	d.num_objects = 1;
 	d.objects[0].fd = s->fd;
-	d.objects[0].size = s->offset + s->stride * s->height;
+	/* ⭐ E-R6 (audit of 25 Oct 2026): the product is made in 64 bits; a size that does not fit the 32-bit field of the import is refused,
+	 *    not wrapped to a smaller one. */
+	if (!dim_object_size(s->offset, s->stride, s->height, &object_size)) {
+		registro_dice(LOG_ENCODING,
+		              "⛔ the DMA-BUF object (offset %u + stride %u x %u rows) does not fit in 32 bits: not imported",
+		              s->offset, s->stride, s->height);
+		return VA_INVALID_ID;
+	}
+	d.objects[0].size = object_size;
 	d.objects[0].drm_format_modifier = s->modifier;
 	d.num_layers = 1;
 	d.layers[0].drm_format = s->formato_drm;
@@ -4604,6 +4627,17 @@ bool codificatore_comprimi_scheda(Encoder *c, const EncoderSurface *surface,
 bool codificatore_in_hardware(const Encoder *c)
 {
 	return c ? c->hardware : false;
+}
+
+bool codificatore_e_morto(const Encoder *c)
+{
+	if (!c)
+		return false;
+	if (!c->conf.has_obeyed)
+		return true;
+	if (!c->hardware)
+		return false; /* no card context to lose: `open_context()` already refused it at birth */
+	return c->route == ROUTE_VULKAN ? (c->vk == NULL || vulkanvideo_lost(c->vk)) : (c->va == NULL || vadirect_lost(c->va));
 }
 
 uint32_t encoder_card_alignment(void)

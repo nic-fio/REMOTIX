@@ -55,6 +55,7 @@
 #include "rcp.h"
 #include "log.h"
 #include "rootside.h"
+#include "reapwait.h"
 /* ⭐ PHASE 17 T7: the PARENT's half asks logind and /proc whether a desktop
  *    is alive (nothing of the stage). */
 #include "rediscover.h"
@@ -96,6 +97,8 @@
 #include "sentinel.h"
 #include "sound.h"
 #include "encoder.h"
+#include "dimcheck.h"
+#include "encbackoff.h"
 #include "input.h"
 #include "mutter.h"
 #include "kwin.h"
@@ -141,6 +144,17 @@ static void child_signals_default(void)
  *   stage outlives the detach, and a child that is silent because nobody is
  *   asking it anything is doing its job. */
 #define SHOW_UP_DEADLINE_MS 15000
+/* ⭐ Audit of the session (25 Oct 2026): the once-a-minute «who are you» question (`children_recheck()`) is the only thing the parent ASKS of a child that
+ *   has already introduced itself.  If it stays unanswered this long the child's loop is stuck (a call that does not return), and nobody will ever notice:
+ *   it is killed — unless it has sent ANY message since the question: a child that is still delivering (frames, canvas, ...) but does not answer is not
+ *   killed, one line says so and the wait starts again.  This does not touch I4: the child is not silent because nobody asks it anything, it is being
+ *   asked, every minute. */
+#define WHOAMI_DEADLINE_MS 600000
+/* ⭐ Why 600 s and not 180 (review of c4cf6db2): the full answer waits for `getpwnam_r()` (the NAME check, in the child), which with sssd or LDAP down can
+ *   take 300 s or have no limit at all; with the answer alone as the sign of life every idle child would have been killed TOGETHER when the directory
+ *   stalled.  So the child now sends a LIGHT confirmation first (a MSG_INTRO with `name_check` NAME_NOT_ASKED, before any lookup): it proves the loop is
+ *   alive and clears the wait; the name verdict follows, whenever NSS lets it.  600 s is the margin on top of that, for a child whose loop is really stuck
+ *   — which no lookup can explain, since the confirmation comes before it. */
 
 /* ⛔ §6.2 of `RCP.md`: a legal frame reaches 16 MiB.  The cap is here because
  * the bytes pass through here, and a lower cap of OURS would bite in place of
@@ -582,6 +596,9 @@ struct child {
 	uint64_t serial;
 	uint64_t born_ms;
 	uint64_t last_recheck_ms;
+	/* ⭐ The «who are you» question that is still unanswered since this instant (0 = none), and the last instant ANY accepted message came from the child. */
+	uint64_t whoami_asked_ms;
+	uint64_t last_heard_ms;
 	/* ⭐ The last time the child answered «my name no longer resolves» and a line said so (see `handle()`, MSG_INTRO): a
 	 *    line at most every NAME_GONE_LOG_MS per child. */
 	uint64_t name_gone_logged_ms;
@@ -2062,6 +2079,10 @@ static bool run_as_root(const char *which, char *const argv[], const char *user)
 		return false;
 	if (p == 0) {
 		child_signals_default(); /* a usermod must not inherit this process's ignored signals either */
+		/* ⭐ E-R9 (audit of 25 Oct 2026): `usermod` and friends must not inherit the service's sockets (the UDP and TCP ones, the command socket
+		 *    and every accepted connection), as `become_and_exec()` already does for the children.  Best effort: if close_range() fails,
+		 *    the exec goes ahead as before. */
+		(void)close_range(3, ~0U, 0);
 		execv(which, argv);
 		_exit(127);
 	}
@@ -3071,6 +3092,7 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 			return refused_quietly(g);
 		memset(&s, 0, sizeof s);
 		memcpy(&s, body, byte < sizeof s ? byte : sizeof s);
+		g->whoami_asked_ms = 0; /* it answered: no question is waiting any more */
 		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0: the same lines are
 		 *   in 04f6aa18): the socket is UNTRUSTED, and `user` and `runtime` are fixed arrays
 		 *   that the log prints with %s.  Nothing guaranteed the final zero: a child that
@@ -3494,6 +3516,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 				continue;
 			}
 			g->refused_now = false;
+			g->last_heard_ms = f->round_ms; /* a message that passed every wall: the child is alive and delivering */
 			if (!handle(f, g, &t, envelope + sizeof t, t.byte))
 				break;
 			/* ⭐ An accepted message starts the streak again; a refused one
@@ -3603,9 +3626,31 @@ void children_recheck(children *f, uint64_t now_ms)
 		 *     the child looks its own name up and answers it in `body_whoami.name_check` (see `handle()`, MSG_INTRO). */
 		if (!g->showed_up)
 			continue;
+		/* ⭐ The question that nobody answers (see WHOAMI_DEADLINE_MS) */
+		if (g->whoami_asked_ms && now_ms >= g->whoami_asked_ms + WHOAMI_DEADLINE_MS) {
+			if (g->last_heard_ms > g->whoami_asked_ms) {
+				registro_dice(LOG_CHILD,
+				              "⚠ the child of «%s» (pid %ld) has not answered the «who are you» question for %d s but is still sending "
+				              "messages: it is NOT killed",
+				              g->user, (long)g->pid, WHOAMI_DEADLINE_MS / 1000);
+				g->whoami_asked_ms = now_ms;
+			} else {
+				registro_dice(LOG_CHILD,
+				              "⛔ the child of «%s» (pid %ld) has not answered the «who are you» question for %d s and sent nothing at all: "
+				              "its loop is stuck. SIGKILL",
+				              g->user, (long)g->pid, WHOAMI_DEADLINE_MS / 1000);
+				if (g->pid > 0)
+					child_signal(f, g, SIGKILL);
+				child_dismiss(f, g, "did not answer the «who are you» question");
+				continue;
+			}
+		}
 		if (now_ms < g->last_recheck_ms + RECHECK_MS)
 			continue;
 		g->last_recheck_ms = now_ms;
+		/* ⚠ The wait is armed when the question is ASKED, even if it does not go out: a child that does not even empty its socket is stuck too */
+		if (!g->whoami_asked_ms)
+			g->whoami_asked_ms = now_ms;
 
 		memset(&t, 0, sizeof t);
 		magic_write(&t);
@@ -4156,6 +4201,9 @@ bool children_video(children *f, const char *user, uint8_t codec,
 /* ⭐ 1.5: how long `children_turn_off()` waits for one child's CHILD_EXITED;
  *    the root side waits 5 s for the whole network side (§11.50). */
 #define TURN_OFF_WAIT_MS 1500
+/* ⭐ Audit of the session (25 Oct 2026): in single-process mode the wait was `waitpid(pid, NULL, 0)`, WITHOUT a limit; now SIGTERM, the same
+ *    TURN_OFF_WAIT_MS, then SIGKILL and TURN_OFF_KILL_WAIT_MS more (reapwait.h).  A child still not reaped after that is said and left to init. */
+#define TURN_OFF_KILL_WAIT_MS 1000
 
 static bool child_reaped_now(void *ctx)
 {
@@ -4168,6 +4216,7 @@ void children_turn_off(children *f)
 		return;
 	for (int i = 0; i < f->cap; i++) {
 		struct child *g = &f->v[i];
+		bool left_to_init = false;
 		if (!g->used)
 			continue;
 		/* ⛔ First the socket is closed — which is the most honest signal,
@@ -4186,13 +4235,24 @@ void children_turn_off(children *f)
 			 *   session.
 			 * ⭐ 1.5: in network mode the wait is for the root side's
 			 *    CHILD_EXITED, at most `TURN_OFF_WAIT_MS` per child. */
-			if (f->remote)
+			if (f->remote) {
 				rootside_pump_until(child_reaped_now, g, TURN_OFF_WAIT_MS);
-			else
-				waitpid(g->pid, NULL, 0);
+			} else if (!reap_within(g->pid, TURN_OFF_WAIT_MS)) {
+				registro_dice(LOG_CHILD, "⛔ the child of «%s» (pid %ld) did not die within %d ms of the SIGTERM: SIGKILL",
+				              g->user, (long)g->pid, TURN_OFF_WAIT_MS);
+				child_signal(f, g, SIGKILL);
+				if (!reap_within(g->pid, TURN_OFF_KILL_WAIT_MS)) {
+					registro_dice(LOG_CHILD, "⛔ the child of «%s» (pid %ld) is STILL not reaped %d ms after the SIGKILL "
+					              "(a call that does not return?): the shutdown goes on without it",
+					              g->user, (long)g->pid, TURN_OFF_KILL_WAIT_MS);
+					left_to_init = true; /* said below as «not shut down» */
+				}
+			}
 		}
 		/* review 4 B, finding 17: «shut down» only when it is known */
-		if (f->remote && g->pid > 0 && !child_reaped_now(g))
+		if (left_to_init)
+			registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld) is not confirmed shut down: left to init", g->user, (long)g->pid);
+		else if (f->remote && g->pid > 0 && !child_reaped_now(g))
 			registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld): no CHILD_EXITED "
 			              "within %d ms of the SIGTERM — this side leaves it to the "
 			              "root side", g->user, (long)g->pid, TURN_OFF_WAIT_MS);
@@ -7384,6 +7444,38 @@ static void stretches_count(const CaptureStopped *fo, const EncoderFrame *fg,
 	}
 }
 
+/* ⭐ E-R1 (audit of 25 Oct 2026, part E): an encoder that FAILED and is dead — its card context could not be reopened after a
+ * quality change or a drain (VRAM taken by others, driver error, lost device) — would be given every frame, refuse it, and write
+ * three lines each: the video of that user frozen until the end of the session, and the log growing at 60-180 lines a second.
+ * It is dropped here, the next frame is a key (`key_debt`), and `encoder_of()` makes a new one with the backoff that already
+ * exists for a failed opening (500 ms, doubling up to 10 s: no context opened and closed sixty times a second).  A frame that
+ * fails while the encoder is still alive (a transient error) does NOT drop it. */
+static uint8_t enc_death[CODEC_MAX]; /* consecutive deaths per codec; cleared when a frame is sent */
+
+static void encoder_drop_if_dead(uint8_t nr, CodecVideo codec)
+{
+	if (nr >= CODEC_MAX || !enc[nr] || !codificatore_e_morto(enc[nr]))
+		return;
+	/* ⛔ A count of deaths APART from `enc_wait_ms`: that one is reset by every successful creation, and a permanent cause (VRAM taken, a driver
+	 *    that always fails the reopening) makes the creation succeed and the first quality change kill it — it would have been made again every
+	 *    500 ms for the whole session.  This count doubles the wait up to ENC_RETRY_MAX_MS and goes back to zero only after a frame was SENT. */
+	uint64_t wait;
+
+	if (enc_death[nr] < 255)
+		enc_death[nr]++;
+	wait = enc_death_wait_ms(enc_death[nr], ENC_RETRY_MIN_MS, ENC_RETRY_MAX_MS);
+	enc_retry_ms[nr] = log_now_ms() + wait;
+	registro_dice(LOG_CHILD,
+	              "⛔⛔ encoder %u (codec %d) is DEAD after a failure (no card context any more; death number %u in a row): dropping it, "
+	              "the next frame will be a KEYFRAME, and it is made again in %llu ms — not frame after frame",
+	              nr, (int)codec, (unsigned)enc_death[nr], (unsigned long long)wait);
+	codificatore_libera(enc[nr]);
+	enc[nr] = NULL;
+	enc_profile[nr] = 0;
+	enc_level[nr] = 0;
+	key_debt[nr] = true;
+}
+
 /* Encodes a frame with the LIVE encoder of that codec and sends it to the
  * parent.  ⛔ `key` is not assumed: it is what the encoder read from the
  * stream (`fg.key`), and §6.2 writes it in the `kind` field. */
@@ -7507,6 +7599,7 @@ static bool encode_and_send(const CaptureStopped *fo, CodecVideo codec,
 			              "«this one is not sent»",
 			              (int)codec);
 			cycle_faults++;
+			encoder_drop_if_dead(nr, codec);
 			return false;
 		}
 	} else if (!codificatore_comprimi(cod, fo->pixel, fo->stride, &fg)) {
@@ -7516,8 +7609,11 @@ static bool encode_and_send(const CaptureStopped *fo, CodecVideo codec,
 		              "sent»",
 		              (int)codec);
 		cycle_faults++;
+		encoder_drop_if_dead(nr, codec);
 		return false;
 	}
+	if (nr < CODEC_MAX)
+		enc_death[nr] = 0; /* a frame came out: the encoder lives, the next death starts again from the shortest wait */
 	c = codificatore_confessione(cod);
 	/* ⛔ The first is stated, the following go to chatter: at sixty per second
 	 *    this line would make the whole rest of the log unreadable — and that
@@ -10396,6 +10492,11 @@ void child_alive(int argc, char **argv)
 				s.sgid = sg;
 				s.ppid = (uint32_t)getppid();
 				s.descriptors = how_many_descriptors();
+				/* ⭐ FIRST a light confirmation (review of c4cf6db2): the parent's wait for the answer ends here; the NAME check below may wait a
+				 *    long time for NSS, and a child that is only waiting for sssd must not look like a child whose loop is stuck */
+				s.name_check = NAME_NOT_ASKED;
+				s.name_uid = 0;
+				send_msg(MSG_INTRO, &s, sizeof s, NULL, 0);
 				/* ⭐ the periodic NAME check, made HERE (it may wait for NSS; it stalls this stage only) */
 				{
 					uid_t other = 0;
@@ -11025,21 +11126,27 @@ void child_alive(int argc, char **argv)
 			 *   that region.  ⛔ A stride shorter than the declared width would
 			 *   make the GPU read beyond the object, which is the same defect as
 			 *   before with another reader. */
-			if (!fo.width || !fo.height || !fo.stride
-			    || fo.stride < (guint64) fo.width * 4u
-			    || fo.byte < (guint64) fo.stride * fo.height) {
+			/* ⭐ E-R3 (audit of 25 Oct 2026): and the size is the one the product can
+			 *    carry.  The RCP requests are clamped to RCP_CANVAS_MAX_W x _H, but the size
+			 *    of a frame is the COMPOSITOR's: a wlroots output of 16000x4000 would have had
+			 *    every encoder reopened at that size (hundreds of MB of VRAM/RAM for one user).
+			 *    Such a frame is not encoded and the encoders are not touched. */
+			if (!dim_frame_ok(fo.width, fo.height, fo.stride, fo.byte, RCP_CANVAS_MAX_W,
+			                  RCP_CANVAS_MAX_H)) {
 				inconsistent_frames++;
 				if (inconsistent_frames == 1)
 					registro_dice(LOG_CHILD,
 					              "⛔ frame DISCARDED: it declares %ux%u with stride %u "
 					              "and carries %llu bytes — whoever compresses it would read "
 					              "beyond the copy (stride >= %llu and bytes >= "
-					              "%llu are needed).  ⚠ It is the window between a renegotiation and "
+					              "%llu are needed), or it is larger than the canvas maximum "
+					              "(%ux%u, E-R3).  ⚠ It is the window between a renegotiation and "
 					              "the new buffers",
 					              fo.width, fo.height, fo.stride,
 					              (unsigned long long)fo.byte,
 					              (unsigned long long)((guint64)fo.width * 4u),
-					              (unsigned long long)((guint64)fo.stride * fo.height));
+					              (unsigned long long)((guint64)fo.stride * fo.height),
+					              RCP_CANVAS_MAX_W, RCP_CANVAS_MAX_H);
 				capture_stopped_free(&fo);
 				continue;
 			}
