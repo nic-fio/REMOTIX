@@ -704,9 +704,8 @@ void render_grant_remove(const char *user, uid_t uid, gid_t gid)
 	            user, (long)gid);
 }
 
-/* ⭐ phase D2: the function below is PREPARED and not yet used by `render_grant_sweep()`, which still asks
- *    `rediscover_alive()` (the single-process server may use GDBus).  Today only the root side's CLOSE_ORPHAN check
- *    (`rootside.c`) calls it; the sweep switches to it when the root side owns the sweep. */
+/* ⭐ phase D2, 1.6 (R8): used by `render_grant_sweep()` below and by the root side's CLOSE_ORPHAN — never `rediscover_alive()`,
+ *    whose GDBus would start a thread in the root side. */
 /* ⭐⭐ 1.5 (DECISIONS.md §11.50) — logind's own files, not its bus.  The sweep
  *     runs in the ROOT SIDE, which forks the children and must stay
  *     single-threaded: `rediscover_alive()` opens the system bus with GDBus,
@@ -774,9 +773,18 @@ int render_grant_remotix_session_at(const char *sessions_dir, const char *cgroup
 		if (e->d_name[0] == '.' || strchr(e->d_name, '.'))
 			continue; /* `.ref` pipes and temporary files */
 		snprintf(path, sizeof path, "%s/%s", sessions_dir, e->d_name);
-		f = fopen(path, "re");
-		if (!f)
-			continue;
+		/* ⭐ NOFOLLOW and NONBLOCK, then S_ISREG: a link or a FIFO planted in the sessions' folder is not read */
+		{
+			struct stat fst;
+			int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+
+			if (fd < 0)
+				continue;
+			if (fstat(fd, &fst) != 0 || !S_ISREG(fst.st_mode) || !(f = fdopen(fd, "r"))) {
+				close(fd);
+				continue;
+			}
+		}
 		/* ⛔ WHOLE lines, and the FIRST of each key (review of the split,
 		 *    finding 9): with 256-byte `fgets` chunks the tail of a long
 		 *    line — a value the user had a say in — was read as a line of
@@ -848,7 +856,8 @@ void render_grant_sweep(void)
 	if (ng <= 0)
 		return;
 	for (int i = 0; i < ng; i++) {
-		int alive = rediscover_alive(v[i].uid, NULL);
+		/* ⭐ 1.6 (R8): logind's own files, never its bus — this runs in the ROOT side, which stays single-threaded (no GDBus) */
+		int alive = render_grant_remotix_session(v[i].uid);
 
 		if (alive != 0) {
 			log_says_of(LOG_GRANT, v[i].user,

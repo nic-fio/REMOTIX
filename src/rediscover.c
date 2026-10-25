@@ -7,6 +7,7 @@
 #include "rediscover.h"
 
 #include <dirent.h>
+#include <limits.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <gio/gio.h>
@@ -68,13 +69,14 @@ static ssize_t read_small(const char *fpath, char *buf, size_t cap)
 }
 
 /* The unified cgroup (line `0::`) of the process, without the `\n`.  false if it
- * cannot be read (process died meanwhile: the normal /proc race). */
-static bool cgroup_di(pid_t pid, char *dove, size_t cap)
+ * cannot be read (process died meanwhile: the normal /proc race).
+ * ⭐ 1.6: `proc_root` is "/proc" in the product; a desk test gives it a fake one. */
+static bool cgroup_di(const char *proc_root, pid_t pid, char *dove, size_t cap)
 {
-	char fpath[64], buf[2048];
+	char fpath[PATH_MAX + 32], buf[2048];
 	char *r;
 
-	snprintf(fpath, sizeof fpath, "/proc/%ld/cgroup", (long)pid);
+	snprintf(fpath, sizeof fpath, "%s/%ld/cgroup", proc_root, (long)pid);
 	if (read_small(fpath, buf, sizeof buf) < 0)
 		return false;
 	for (r = buf; r && *r; r = strchr(r, '\n') ? strchr(r, '\n') + 1 : NULL) {
@@ -162,22 +164,54 @@ static int candidate(struct candidate_entry *v, int cap, char *why, size_t how_m
 	return n;
 }
 
+/* ⭐ 1.6: field 22 of a /proc/<pid>/stat, from the text AFTER the last «)» of the name: its first token is field 3 (the state),
+ *    so field 22 is the 20th.  false if it is not there or not all digits. */
+static bool starttime_after_paren(const char *p, unsigned long long *out)
+{
+	char *end = NULL;
+
+	for (int i = 1; i < 20; i++) {
+		p += strspn(p, " ");
+		if (!*p)
+			return false;
+		p += strcspn(p, " ");
+	}
+	p += strspn(p, " ");
+	if (*p < '0' || *p > '9')
+		return false;
+	errno = 0;
+	*out = strtoull(p, &end, 10);
+	return errno == 0 && end != p && (*end == ' ' || *end == '\n' || *end == '\0');
+}
+
+bool rediscover_starttime(const char *proc_root, pid_t pid, unsigned long long *out)
+{
+	char fpath[PATH_MAX + 32], buf[1024];
+	const char *close_paren;
+
+	snprintf(fpath, sizeof fpath, "%s/%ld/stat", proc_root, (long)pid);
+	if (read_small(fpath, buf, sizeof buf) < 0)
+		return false;
+	close_paren = strrchr(buf, ')');
+	return close_paren && starttime_after_paren(close_paren + 1, out);
+}
+
 /* ⭐ The heart: a single pass over /proc for all the candidates `c` (`nc` > 0).
  * `solo_uid` (if not (uid_t)-1) restricts to one user. */
-static int scan(const struct candidate_entry *c, int nc, RediscoveredDesktop *v, int cap,
+static int scan(const char *proc_root, const struct candidate_entry *c, int nc, RediscoveredDesktop *v, int cap,
                 uid_t solo_uid, char *why, size_t how_much)
 {
 	int matches = 0;
 	DIR *proc;
 	struct dirent *e;
 
-	proc = opendir("/proc");
+	proc = opendir(proc_root);
 	if (!proc) {
-		snprintf(why, how_much, "/proc: %s", strerror(errno));
+		snprintf(why, how_much, "%s: %s", proc_root, strerror(errno));
 		return -1;
 	}
 	while ((e = readdir(proc)) != NULL) {
-		char fpath[64], stat_buf[1024], cg[1024], cg_padre[1024];
+		char fpath[PATH_MAX + 32], stat_buf[1024], cg[1024], cg_padre[1024];
 		const char *is_closed;
 		long pid, ppid = 0, pgrp = 0, sid = 0;
 		char state;
@@ -187,7 +221,7 @@ static int scan(const struct candidate_entry *c, int nc, RediscoveredDesktop *v,
 		if (e->d_name[0] < '1' || e->d_name[0] > '9')
 			continue;
 		pid = strtol(e->d_name, NULL, 10);
-		snprintf(fpath, sizeof fpath, "/proc/%ld/stat", pid);
+		snprintf(fpath, sizeof fpath, "%s/%ld/stat", proc_root, pid);
 		if (read_small(fpath, stat_buf, sizeof stat_buf) < 0)
 			continue;
 		/* ⚠ The name is in parentheses and may contain some: start from the LAST one. */
@@ -197,13 +231,13 @@ static int scan(const struct candidate_entry *c, int nc, RediscoveredDesktop *v,
 		/* 1. leader of its own process session — the setsid signature */
 		if (sid != pid || state == 'Z')
 			continue;
-		snprintf(fpath, sizeof fpath, "/proc/%ld", pid);
+		snprintf(fpath, sizeof fpath, "%s/%ld", proc_root, pid);
 		if (stat(fpath, &st) != 0 || st.st_uid == 0)
 			continue;
 		if (solo_uid != (uid_t)-1 && st.st_uid != solo_uid)
 			continue;
 		/* 2. inside the scope of a `remotix` session of the same user */
-		if (!cgroup_di((pid_t)pid, cg, sizeof cg))
+		if (!cgroup_di(proc_root, (pid_t)pid, cg, sizeof cg))
 			continue;
 		for (int i = 0; i < nc; i++)
 			if (c[i].uid == st.st_uid && strcmp(last_piece(cg), c[i].scope) == 0) {
@@ -214,7 +248,7 @@ static int scan(const struct candidate_entry *c, int nc, RediscoveredDesktop *v,
 			continue;
 		/* 3. and the parent OUTSIDE that scope: orphan of `setsid --fork`, not the
 		 *    shell of a terminal opened in the desktop */
-		if (ppid > 0 && cgroup_di((pid_t)ppid, cg_padre, sizeof cg_padre) &&
+		if (ppid > 0 && cgroup_di(proc_root, (pid_t)ppid, cg_padre, sizeof cg_padre) &&
 		    strcmp(cg_padre, cg) == 0)
 			continue;
 		/* one per user: the first found; the others are only counted */
@@ -231,6 +265,7 @@ static int scan(const struct candidate_entry *c, int nc, RediscoveredDesktop *v,
 			v[matches].uid = st.st_uid;
 			snprintf(v[matches].session, sizeof v[matches].session, "%s", c[which].id);
 			v[matches].stage = (pid_t)pid;
+			(void)starttime_after_paren(is_closed + 1, &v[matches].starttime);
 			{
 				const char *is_open = strchr(stat_buf, '(');
 				size_t n = is_open ? (size_t)(is_closed - is_open - 1) : 0;
@@ -267,7 +302,7 @@ static int search(RediscoveredDesktop *v, int cap, uid_t solo_uid, char *why, si
 		free(c);
 		return nc;
 	}
-	n = scan(c, nc, v, cap, solo_uid, why, how_much);
+	n = scan("/proc", c, nc, v, cap, solo_uid, why, how_much);
 	free(c);
 	return n;
 }
@@ -491,8 +526,19 @@ void rediscover_collect(void)
 	}
 }
 
+static bool refused_here;
+
+void rediscover_refuse_here(void)
+{
+	refused_here = true;
+}
+
 int rediscover_search(RediscoveredDesktop *v, int cap, char *why, size_t how_much)
 {
+	if (refused_here) {
+		snprintf(why, how_much, "the network side does not read /proc or ask logind: the root side tells it");
+		return -1;
+	}
 	uint64_t now;
 	int n;
 
@@ -522,7 +568,7 @@ int rediscover_search(RediscoveredDesktop *v, int cap, char *why, size_t how_muc
 			snprintf(why, how_much, "%s", later.why);
 			return -1;
 		}
-		return later.nc ? scan(later.c, later.nc, v, cap, (uid_t)-1, why, how_much) : 0;
+		return later.nc ? scan("/proc", later.c, later.nc, v, cap, (uid_t)-1, why, how_much) : 0;
 	}
 
 	rediscover_collect();
@@ -538,7 +584,7 @@ int rediscover_search(RediscoveredDesktop *v, int cap, char *why, size_t how_muc
 		         (unsigned long long)((now - later.asked_ms) / 1000));
 		n = -1;
 	} else {
-		n = later.nc ? scan(later.c, later.nc, v, cap, (uid_t)-1, why, how_much) : 0;
+		n = later.nc ? scan("/proc", later.c, later.nc, v, cap, (uid_t)-1, why, how_much) : 0;
 	}
 	/* ⭐ And the next question leaves AFTER this answer is used. */
 	if (!later.inflight)
@@ -546,11 +592,127 @@ int rediscover_search(RediscoveredDesktop *v, int cap, char *why, size_t how_muc
 	return n;
 }
 
+/* ⭐ 1.6 (R8): the candidates from logind's own files — see `rediscover.h`.  Whole lines, the FIRST of each key, a line over
+ *    4 KiB is no key logind writes (the rule of `render_grant.c`).  A session with no name in NSS is skipped: the network side
+ *    keys everything by name. */
+static int candidates_from_files(const char *dir, struct candidate_entry *v, int cap, char *why, size_t how_much)
+{
+	DIR *d = opendir(dir);
+	struct dirent *e;
+	char *line = NULL;
+	size_t linecap = 0;
+	int n = 0;
+
+	if (!d) {
+		snprintf(why, how_much, "%s: %s", dir, strerror(errno));
+		return -1;
+	}
+	while (n < cap && (e = readdir(d)) != NULL) {
+		char path[PATH_MAX + 300], scope[sizeof v[0].scope] = "", uname[sizeof v[0].user] = "";
+		bool uid_seen = false, service_seen = false, scope_seen = false, user_seen = false, uid_ok = false,
+		     service_ok = false;
+		unsigned long uidv = 0;
+		ssize_t len;
+		struct stat fst;
+		FILE *f;
+		int fd;
+
+		if (e->d_name[0] == '.' || strchr(e->d_name, '.') || strlen(e->d_name) >= sizeof v[0].id)
+			continue; /* `.ref` pipes and temporary files */
+		snprintf(path, sizeof path, "%s/%s", dir, e->d_name);
+		/* ⭐ a regular file only: NOFOLLOW (a link planted there is not followed) and NONBLOCK (a FIFO does not hold the
+		 *    root side), then S_ISREG */
+		fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+		if (fd < 0)
+			continue;
+		if (fstat(fd, &fst) != 0 || !S_ISREG(fst.st_mode) || !(f = fdopen(fd, "r"))) {
+			close(fd);
+			continue;
+		}
+		while ((len = getline(&line, &linecap, f)) > 0) {
+			char *end = NULL;
+
+			if (len > 4096)
+				continue;
+			line[strcspn(line, "\n")] = 0;
+			if (!uid_seen && strncmp(line, "UID=", 4) == 0) {
+				uid_seen = true;
+				errno = 0;
+				uidv = strtoul(line + 4, &end, 10);
+				uid_ok = line[4] >= '0' && line[4] <= '9' && errno == 0 && *end == 0;
+			} else if (!service_seen && strncmp(line, "SERVICE=", 8) == 0) {
+				service_seen = true;
+				service_ok = strcmp(line + 8, FOUND_AGAIN_PAM_SERVICE) == 0;
+			} else if (!user_seen && strncmp(line, "USER=", 5) == 0) {
+				user_seen = true;
+				/* logind's own name for the user: used as it is, if it is a plausible one */
+				if (line[5] && strlen(line + 5) < sizeof uname && !strpbrk(line + 5, "/ \t\r"))
+					snprintf(uname, sizeof uname, "%s", line + 5);
+			} else if (!scope_seen && strncmp(line, "SCOPE=", 6) == 0) {
+				scope_seen = true;
+				if (strlen(line + 6) < sizeof scope)
+					snprintf(scope, sizeof scope, "%s", line + 6);
+			}
+		}
+		fclose(f);
+		if (uid_ok && service_ok && scope[0]) {
+			/* ⭐ the name from the session file's USER= (logind wrote it, whatever NSS says now); NSS only as a fallback */
+			if (!uname[0]) {
+				struct passwd pw, *res = NULL;
+				char buf[4096];
+
+				if (getpwuid_r((uid_t)uidv, &pw, buf, sizeof buf, &res) != 0 || !res ||
+				    strlen(res->pw_name) >= sizeof uname)
+					continue;
+				snprintf(uname, sizeof uname, "%s", res->pw_name);
+			}
+			memset(&v[n], 0, sizeof v[n]);
+			v[n].uid = (uid_t)uidv;
+			snprintf(v[n].id, sizeof v[n].id, "%.*s", (int)sizeof v[n].id - 1, e->d_name);
+			snprintf(v[n].scope, sizeof v[n].scope, "%s", scope);
+			snprintf(v[n].user, sizeof v[n].user, "%s", uname);
+			n++;
+		}
+	}
+	free(line);
+	closedir(d);
+	return n;
+}
+
+int rediscover_search_files_at(const char *sessions_dir, const char *proc_root, RediscoveredDesktop *v, int cap,
+                               char *why, size_t how_much)
+{
+	struct candidate_entry *c = calloc(MAX_CANDIDATES, sizeof *c);
+	int nc, n;
+
+	if (!c) {
+		snprintf(why, how_much, "out of memory");
+		return -1;
+	}
+	nc = candidates_from_files(sessions_dir, c, MAX_CANDIDATES, why, how_much);
+	if (nc <= 0) {
+		free(c);
+		return nc;
+	}
+	n = scan(proc_root, c, nc, v, cap, (uid_t)-1, why, how_much);
+	free(c);
+	return n;
+}
+
+int rediscover_search_files(RediscoveredDesktop *v, int cap, char *why, size_t how_much)
+{
+	return rediscover_search_files_at("/run/systemd/sessions", "/proc", v, cap, why, how_much);
+}
+
 int rediscover_alive(uid_t uid, RediscoveredDesktop *d)
 {
 	RediscoveredDesktop uno;
 	char why[256] = "";
-	int n = search(&uno, 1, uid, why, sizeof why);
+	int n;
+
+	if (refused_here)
+		return -1;
+	n = search(&uno, 1, uid, why, sizeof why);
 
 	if (n < 0)
 		return -1;

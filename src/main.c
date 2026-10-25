@@ -554,6 +554,28 @@ static int stage_count(const struct bridge *p)
 	return children_count(p->f) + found_again_n;
 }
 
+/* ⭐ 1.6 (R8): in the split server the ROOT side looks for the desktops (it reads /proc and logind's files; the network side
+ *    reads neither) and says over the channel when one is gone.  Same effect as the sweep below, same lines; and only for a
+ *    desktop still in the table — one that already has a child was removed by `children_ensure()`, and its clock stays. */
+#define FOUND_AGAIN_WAIT_MS 3000
+
+static void found_again_gone_event(void *ctx, uid_t uid, const char *user)
+{
+	int i = found_again_index(user);
+
+	(void)ctx;
+	if (i < 0 || found_again[i].uid != uid)
+		return;
+	registro_dice(LOG_CHILD,
+	              "⚠ PHASE 17 T7: the desktop found again of «%s» is gone "
+	              "(the stage pid %ld «%s» vanished without anyone "
+	              "coming back): it leaves the cap, the budget and the "
+	              "abandonment clock",
+	              user, (long)found_again[i].stage, found_again[i].comm);
+	found_again_remove(user);
+	presence_forget(user);
+}
+
 static void found_again_at_startup(uint64_t now_ms)
 {
 	char why[256] = "";
@@ -569,7 +591,12 @@ static void found_again_at_startup(uint64_t now_ms)
 		              "counted (cap, budget, abandonment)");
 		return;
 	}
-	n = rediscover_search(found_again, MAX_FOUND_AGAIN, why, sizeof why);
+	if (rootside_attached()) {
+		rootside_hook_found_gone(found_again_gone_event, NULL);
+		n = rootside_wait_found(found_again, MAX_FOUND_AGAIN, FOUND_AGAIN_WAIT_MS, why, sizeof why);
+	} else {
+		n = rediscover_search(found_again, MAX_FOUND_AGAIN, why, sizeof why);
+	}
 	if (n < 0) {
 		registro_dice(LOG_CHILD,
 		              "⛔ PHASE 17 T7: could not look for live REMOTIX desktops "
@@ -628,6 +655,8 @@ static void found_again_sweep(uint64_t now_ms)
 	char why[256] = "";
 	int n;
 
+	if (rootside_attached()) /* ⭐ 1.6 (R8): FOUND_GONE says it (found_again_gone_event) */
+		return;
 	if (!found_again_n || now_ms - last < FOUND_AGAIN_SWEEP_MS)
 		return;
 	last = now_ms;
@@ -1976,7 +2005,8 @@ static bool network_side_born_right(void)
 	} fds[] = {{FD_ROOT, SOCK_SEQPACKET, "the root channel (SEQPACKET)"},
 	           {FD_UDP, SOCK_DGRAM, "UDP"},
 	           {FD_TCP, SOCK_STREAM, "TCP"}};
-	pid_t parent = getppid();
+	struct ucred peer;
+	socklen_t peer_len = sizeof peer;
 
 	if (getuid() == 0 || geteuid() == 0) {
 		registro_dice(LOG_STARTUP,
@@ -1985,17 +2015,35 @@ static bool network_side_born_right(void)
 		              "(DECISIONS.md §11.50) — never by hand.  Not starting.");
 		return false;
 	}
-	/* ⛔ The kernel clears PR_SET_PDEATHSIG across this exec (uid change,
-	 *    secure exec): armed again here, then the parent checked — if the root
-	 *    side died before this line, nobody would send the signal.
-	 * ⚠ Parent pid 1 is NOT a death by itself: in a container the root side
-	 *   IS pid 1 (`[M]` integration-a, 16 Oct 2026).  A root side dead before
-	 *   `main()` is caught by `rootside_attach()` (no READY from that pid). */
-	if (prctl(PR_SET_PDEATHSIG, SIGTERM) != 0 || getppid() != parent) {
+	/* ⭐ 1.6 (R8 B): the root side starts it as PID 1 of a PID namespace of its own (walls.c, `walls_fork_pidns()`): its parent is
+	 *    outside, so `getppid()` says 0.  A network side that is not pid 1, or has a visible parent, was not started by the root
+	 *    side — and would read the host's /proc. */
+	if (getpid() != 1 || getppid() != 0) {
 		registro_dice(LOG_STARTUP,
-		              "⛔ --network-side: the root side is gone (parent pid %ld) "
-		              "or PR_SET_PDEATHSIG failed.  Not starting.",
-		              (long)getppid());
+		              "⛔ --network-side: this is pid %ld with parent %ld, not PID 1 of its own PID "
+		              "namespace as the root side starts it (DECISIONS.md §11.50).  Not starting.",
+		              (long)getpid(), (long)getppid());
+		return false;
+	}
+	/* ⛔ The kernel clears PR_SET_PDEATHSIG across this exec (uid change, secure exec): armed again here.  The root side's
+	 *    death before this line is caught by `rootside_attach()` (no READY: EOF on fd 3).  ⚠ As PID 1 a signal with the default
+	 *    action is IGNORED — SIGTERM (the root side's stop, PDEATHSIG) works only because `main()` installs its handler before
+	 *    this point; SIGKILL always works. */
+	if (prctl(PR_SET_PDEATHSIG, SIGTERM) != 0) {
+		registro_dice(LOG_STARTUP, "⛔ --network-side: PR_SET_PDEATHSIG failed (%s).  Not starting.",
+		              strerror(errno));
+		return false;
+	}
+	/* ⭐ The root channel's other end belongs to uid 0 (the root side); its pid is not visible from here (SO_PEERCRED says 0) */
+	if (getsockopt(FD_ROOT, SOL_SOCKET, SO_PEERCRED, &peer, &peer_len) != 0) {
+		registro_dice(LOG_STARTUP, "⛔ --network-side: SO_PEERCRED on fd %d failed (%s).  Not starting.",
+		              FD_ROOT, strerror(errno));
+		return false;
+	}
+	if (peer.uid != 0) {
+		registro_dice(LOG_STARTUP,
+		              "⛔ --network-side: the other end of fd %d belongs to uid %ld, not to the root side (uid 0).  "
+		              "Not starting.", FD_ROOT, (long)peer.uid);
 		return false;
 	}
 	for (size_t i = 0; i < sizeof fds / sizeof fds[0]; i++) {
@@ -2718,6 +2766,7 @@ int main(int argc, char **argv)
 		}
 		if (!network_side_born_right())
 			return 1;
+		rediscover_refuse_here(); /* ⭐ 1.6 (R8): the root side searches for it; this side never does */
 		memset(&ready, 0, sizeof ready);
 		if (!rootside_attach(FD_ROOT, READY_WAIT_MS, &ready)) {
 			registro_dice(LOG_STARTUP,

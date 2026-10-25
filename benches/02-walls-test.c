@@ -45,6 +45,7 @@
 #include <poll.h>
 #include <sys/un.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 static int passed, failed;
 
@@ -526,6 +527,128 @@ static void case_landlock(void)
 }
 
 /* 0 = blind, else the walls were applied and checked */
+static void term_exit(int sig)
+{
+	(void)sig;
+	_exit(0);
+}
+
+/* ⭐ 1.6 (R8 B): what a PID 1 is, in the kernel — the semantics the network side lives with.  Needs CAP_SYS_ADMIN. */
+static void case_pidns(const struct passwd *nb)
+{
+	struct { int ok; } r = { 0 };
+	int up[2], st;
+	pid_t k;
+	char c;
+
+	(void)nb;
+	/* (a) no handler: SIGTERM from the namespace's parent is IGNORED, SIGKILL is not */
+	if (pipe(up) != 0)
+		return;
+	k = walls_fork_pidns();
+	if (k == 0) {
+		close(up[0]);
+		if (write(up[1], "r", 1) < 0) /* «ready»: it is pid 1 and about to pause */
+			_exit(2);
+		for (;;)
+			pause();
+	}
+	close(up[1]);
+	CHECK(read(up[0], &c, 1) == 1, "pid 1 with no handler is up");
+	kill(k, SIGTERM);
+	/* a SIGTERM that was going to be ignored is not seen by waiting: the child is asked to say what it did — it must still be
+	 * running a moment later, and the next signal (SIGKILL) is the one that ends it */
+	{
+		struct pollfd pw = { up[0], POLLIN | POLLHUP, 0 };
+
+		r.ok = poll(&pw, 1, 300) == 0 && waitpid(k, &st, WNOHANG) == 0; /* nothing written, not dead */
+	}
+	CHECK(r.ok, "pid 1 with no SIGTERM handler: SIGTERM from outside is ignored (main.c installs its handler first)");
+	kill(k, SIGKILL);
+	CHECK(waitpid(k, &st, 0) == k && WIFSIGNALED(st) && WTERMSIG(st) == SIGKILL, "...and SIGKILL kills it");
+	close(up[0]);
+
+	/* (b) with a handler: SIGTERM ends it */
+	if (pipe(up) != 0)
+		return;
+	k = walls_fork_pidns();
+	if (k == 0) {
+		struct sigaction sa;
+
+		close(up[0]);
+		memset(&sa, 0, sizeof sa);
+		sa.sa_handler = term_exit;
+		sigaction(SIGTERM, &sa, NULL);
+		if (write(up[1], "r", 1) < 0)
+			_exit(2);
+		for (;;)
+			pause();
+	}
+	close(up[1]);
+	CHECK(read(up[0], &c, 1) == 1, "pid 1 with a handler is up");
+	kill(k, SIGTERM);
+	CHECK(waitpid(k, &st, 0) == k && WIFEXITED(st), "...SIGTERM from outside ends it");
+	close(up[0]);
+
+	/* (c) when pid 1 dies, everything it started dies with it */
+	if (pipe(up) != 0)
+		return;
+	k = walls_fork_pidns();
+	if (k == 0) {
+		pid_t g = fork();
+
+		close(up[0]);
+		if (g == 0) {
+			for (;;)
+				pause();
+		}
+		if (write(up[1], "r", 1) < 0)
+			_exit(2);
+		for (;;)
+			pause();
+	}
+	close(up[1]);
+	CHECK(read(up[0], &c, 1) == 1, "pid 1 and its child are up");
+	kill(k, SIGKILL);
+	waitpid(k, &st, 0);
+	{
+		struct pollfd p = { up[0], POLLIN | POLLHUP, 0 };
+		int n = poll(&p, 1, 3000);
+
+		CHECK(n == 1 && read(up[0], &c, 1) == 0, "pid 1 killed: the process it started is gone too (its end of the pipe closed)");
+	}
+	close(up[0]);
+
+	/* (d) walls_apply refuses a process that is not pid 1 */
+	{
+		struct rootside_options o;
+		char why[300] = "";
+		char base[] = "/var/tmp/remotix-walls-pid.XXXXXX";
+		char s2[600], r2[600];
+		pid_t f;
+
+		if (mkdtemp(base)) {
+			snprintf(s2, sizeof s2, "%s/state", base);
+			snprintf(r2, sizeof r2, "%s/run", base);
+			chmod(base, 0755);
+			if (make_dir(s2, nb->pw_uid, nb->pw_gid, 0700) && make_dir(r2, nb->pw_uid, nb->pw_gid, 0700)) {
+				o = opts(nb->pw_uid, nb->pw_gid, s2, r2);
+				f = fork();
+				if (f == 0) {
+					int rc = walls_apply(&o, why, sizeof why);
+
+					_exit(rc == -1 && strstr(why, "PID 1") ? 0 : 1);
+				}
+				CHECK(waitpid(f, &st, 0) == f && WIFEXITED(st) && WEXITSTATUS(st) == 0,
+				      "walls_apply in a process that is not pid 1: refused, said");
+			}
+			rmdir(s2);
+			rmdir(r2);
+			rmdir(base);
+		}
+	}
+}
+
 static int case_root(const struct passwd *nb)
 {
 	char base[] = "/var/tmp/remotix-walls-test.XXXXXX";
@@ -582,7 +705,8 @@ static int case_root(const struct passwd *nb)
 	char cwd0[4096] = "";
 	(void)!getcwd(cwd0, sizeof cwd0);
 	fflush(stdout);
-	pid_t pid = fork();
+	pid_t host_pid = getpid();
+	pid_t pid = walls_fork_pidns(); /* ⭐ 1.6 (R8 B): as the root side forks the network side */
 	if (pid == 0) {
 		int bad = 0;
 		close(up[0]);
@@ -597,6 +721,31 @@ static int case_root(const struct passwd *nb)
 #define CC(cond, ...) do { if (!(cond)) bad++; printf((cond) ? "  ok   " : "  FAIL "); \
 	printf(__VA_ARGS__); printf("\n"); } while (0)
 		CC(mnt_ns() != ns0, "child: a mount namespace of its own");
+		/* ⭐ 1.6 (R8 B): a PID namespace of its own and a /proc that shows nothing else */
+		CC(getpid() == 1 && getppid() == 0, "child: pid %ld, parent %ld (PID 1 of its own namespace)", (long)getpid(),
+		   (long)getppid());
+		{
+			DIR *pd = opendir("/proc");
+			struct dirent *pe;
+			int numeric = 0;
+			char path[64], buf[256];
+
+			while (pd && (pe = readdir(pd)) != NULL)
+				numeric += pe->d_name[0] >= '1' && pe->d_name[0] <= '9';
+			if (pd)
+				closedir(pd);
+			CC(numeric == 1, "child: /proc lists %d process (itself only)", numeric);
+			snprintf(path, sizeof path, "/proc/%ld/environ", (long)host_pid);
+			errno = 0;
+			CC(open(path, O_RDONLY) < 0 && errno == ENOENT, "child: the root side's /proc/<pid>/environ is not there (%s)",
+			   strerror(errno));
+			errno = 0;
+			CC(host_pid == 1 || (kill(host_pid, 0) == -1 && errno == ESRCH), "child: the root side's pid does not exist here");
+			CC(readlink("/proc/self/exe", buf, sizeof buf) > 0, "child: /proc/self/exe is readable");
+			CC(access("/proc/self/status", R_OK) == 0 && status_value("NoNewPrivs:") == 1,
+			   "child: /proc/self/status is readable");
+			CC(strstr(walls_in_force(), "PID 1 of its own PID namespace") != NULL, "child: the walls' line says so");
+		}
 		CC(getuid() == nb->pw_uid && geteuid() == nb->pw_uid && getgid() == nb->pw_gid &&
 		       getegid() == nb->pw_gid,
 		   "child: uid/gid %ld/%ld (nobody)", (long)getuid(), (long)getgid());
@@ -877,6 +1026,8 @@ int main(void)
 	case_landlock();
 	case_families();
 	case_network();
+	if (geteuid() == 0 && nb)
+		case_pidns(nb);
 	if (geteuid() == 0) {
 		if (!nb) {
 			printf("  BLIND: no user nobody to wall in\n");

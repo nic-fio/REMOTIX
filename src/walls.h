@@ -31,6 +31,11 @@
  *      userfaultfd, perf_event_open, bpf, keyctl/add_key/request_key, ptrace
  *      and ioctl TIOCSTI/TIOCLINUX (EPERM) — none used by the network side.
  *
+ *   7. ⭐ 1.6 (R8 B): the network side is PID 1 of a PID namespace of its own
+ *      (`walls_fork_pidns()`) with a /proc of its own: it sees no other process
+ *      (no desktop, no root-side process, no other server), and when it dies the
+ *      kernel kills everything it started.
+ *
  * ⛔ Any step that fails ⇒ -1 and the reason in `why`: the root side does NOT
  *    start the network side.  A network side without its walls is the 1.0
  *    server with extra steps, and that must never happen silently.
@@ -53,6 +58,9 @@
  * wall and why.  Uses `o->remotix_uid`/`remotix_gid`, `o->net_state_dir`,
  * `o->net_run_dir` (the last two added by lane 2 to lane 1's struct). */
 int walls_apply(const struct rootside_options *o, char *why, size_t why_len);
+/* ⭐ 1.6 (R8 B): `fork()` whose child is PID 1 of a NEW PID namespace; `walls_apply()` refuses a process that is not pid 1.  The root
+ * side forks the network side with it.  -1 and errno as fork(). */
+pid_t walls_fork_pidns(void);
 /* (also declared in rootside.h) What the last walls_apply() put in place (SELinux context or «off», the
  * folder, the limits), for ONE line the caller writes before the `execve`. */
 const char *walls_in_force(void);

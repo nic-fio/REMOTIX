@@ -147,6 +147,12 @@ bool child_render_node(const char *n) { (void)n; NEVER("child_render_node"); }
 bool child_video_capabilities(char *o, size_t a, char *e, size_t b)
 { (void)o; (void)a; (void)e; (void)b; NEVER("child_video_capabilities"); }
 void render_grant_sweep(void) { NEVER("render_grant_sweep"); }
+/* ⭐ 1.6 (R8): net_start() looks for the desktops found again and watches their stages — never reached (the harness does not
+ * start a network side; it only resets a generation) */
+int rediscover_search_files(RediscoveredDesktop *v, int cap, char *why, size_t n)
+{ (void)v; (void)cap; (void)why; (void)n; NEVER("rediscover_search_files"); }
+bool rediscover_starttime(const char *r, pid_t p, unsigned long long *o)
+{ (void)r; (void)p; (void)o; NEVER("rediscover_starttime"); }
 /* the journal (676af717: net_start closes and reopens it around the fd moves) — never reached
  * here either, and stubs_log.c has no journal */
 bool log_to_journal(void) { NEVER("log_to_journal"); }

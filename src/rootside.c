@@ -28,6 +28,7 @@
 #include "helper.h"
 #include "log.h"
 #include "render_grant.h"
+#include "rediscover.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -44,6 +45,7 @@
 #include <sys/prctl.h>
 #include <sys/random.h>
 #include <sys/socket.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -81,6 +83,12 @@ __attribute__((weak)) int walls_apply(const struct rootside_options *o, char *wh
 {
 	(void)o;
 	snprintf(why, why_len, "walls.c is not linked into this binary");
+	return -1;
+}
+/* ⭐ 1.6 (R8 B): without walls.c the fork is refused too (the stub above refuses the walls anyway) */
+__attribute__((weak)) pid_t walls_fork_pidns(void)
+{
+	errno = ENOSYS;
 	return -1;
 }
 __attribute__((weak)) const char *walls_in_force(void)
@@ -171,6 +179,56 @@ int rootside_check_packet(const struct rootside_peer *p, const void *buf,
 		}
 	}
 	return h.kind;
+}
+
+int rootside_found_step(struct rootside_found_seq *s, int kind, uint32_t end_count, uint8_t end_outcome, char *why,
+                        size_t why_len)
+{
+	switch (kind) {
+	case RXR_READY:
+		if (s->phase != RXR_SEQ_BEFORE_READY) {
+			snprintf(why, why_len, "a second READY");
+			return -1;
+		}
+		s->phase = RXR_SEQ_LISTING;
+		s->seen = 0;
+		return 0;
+	case RXR_FOUND_AGAIN:
+		if (s->phase != RXR_SEQ_LISTING) {
+			snprintf(why, why_len, "FOUND_AGAIN %s", s->phase == RXR_SEQ_LISTED ? "after FOUND_END" : "before READY");
+			return -1;
+		}
+		if (s->seen >= RXR_FOUND_MAX) {
+			snprintf(why, why_len, "more than %d FOUND_AGAIN", RXR_FOUND_MAX);
+			return -1;
+		}
+		s->seen++;
+		return 0;
+	case RXR_FOUND_END:
+		if (s->phase != RXR_SEQ_LISTING) {
+			snprintf(why, why_len, "FOUND_END %s", s->phase == RXR_SEQ_LISTED ? "twice" : "before READY");
+			return -1;
+		}
+		if (end_outcome != RXR_FOUND_OK && end_outcome != RXR_FOUND_UNKNOWN) {
+			snprintf(why, why_len, "FOUND_END with outcome %u", end_outcome);
+			return -1;
+		}
+		if (end_count != s->seen || (end_outcome == RXR_FOUND_UNKNOWN && s->seen != 0)) {
+			snprintf(why, why_len, "FOUND_END says %u (outcome %u) after %u FOUND_AGAIN", end_count, end_outcome, s->seen);
+			return -1;
+		}
+		s->phase = RXR_SEQ_LISTED;
+		return 0;
+	case RXR_FOUND_GONE:
+		if (s->phase != RXR_SEQ_LISTED) {
+			snprintf(why, why_len, "FOUND_GONE before FOUND_END");
+			return -1;
+		}
+		return 0;
+	default:
+		snprintf(why, why_len, "kind %d is not about desktops found again", kind);
+		return -1;
+	}
 }
 
 void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms)
@@ -716,9 +774,34 @@ struct pending_auth {
 	char rhost[RXR_RHOST_MAX];         /*   to give the attempt back to the counters */
 };
 
+/* ⭐ 1.6 (R8): a desktop found again, as the ROOT side keeps it.  `pidfd` watches the stage (-1 = the kernel gave none: the
+ *    start time is read again every FOUND_POLL_MS); `pending` = not yet announced to the current network side. */
+#define FOUND_POLL_MS 10000
+struct found_slot {
+	bool used, pending;
+	int pidfd;
+	pid_t stage;
+	unsigned long long starttime;
+	uid_t uid;
+	unsigned sessions;
+	char user[RXR_USER_MAX];
+	char session[RXR_SESSION_MAX];
+	char comm[RXR_COMM_MAX];
+};
+struct found_gone_note {
+	uid_t uid;
+	char user[RXR_USER_MAX];
+};
+enum { FOUND_IDLE = 0, FOUND_SENDING = 1, FOUND_LISTED = 2 };
+
 static struct {
 	const struct rootside_options *o;
 	struct birth_opts birth;
+	struct found_slot *found;        /* RXR_FOUND_MAX */
+	struct found_gone_note *gone;    /* RXR_FOUND_MAX: deaths to announce after FOUND_END */
+	int ngone, found_phase, found_promised;
+	uint8_t found_outcome;
+	uint64_t found_poll_ms;
 	char my_path[512];
 	int chan;
 	pid_t net_pid;
@@ -1586,7 +1669,10 @@ static bool cgroup_of(pid_t pid, char *out, size_t cap)
 	return true;
 }
 
-/* ⛔ Review 2, L1: what a dead network side forked is still uid `remotix`,
+/* ⭐ 1.6 (R8 B): the network side is PID 1 of a PID namespace of its own, and when it dies the kernel kills every process in it:
+ *    nothing it forked survives, nothing keeps fds 4/5 or the TLS key.  What follows stays as a net for a leftover that is NOT in
+ *    that namespace (a network side of an older root side, left by an upgrade).
+ * ⛔ Review 2, L1: what a dead network side forked is still uid `remotix`,
  *    and keeps fds 4/5 (the port) and the TLS key across the restart —
  *    `reap_net()` waited only for its pid.  ⇒ Before each start, every
  *    process of uid `remotix` that lives in THIS root side's own cgroup is
@@ -1659,6 +1745,213 @@ static void net_generation_reset(void)
 		explicit_bzero(&R.bounds.grants[i], sizeof R.bounds.grants[i]);
 }
 
+
+/* ======================================================================= */
+/* ⭐ 1.6 (R8) — THE DESKTOPS FOUND AGAIN, ASKED BY THE ROOT SIDE            */
+/*
+ * The network side no longer reads /proc: THIS side looks, before it forks the network side (every start, so a restarted network
+ * side learns the desktops of the children that died with the old one, as its own search did in 1.5), and tells it over the
+ * channel — FOUND_AGAIN × N, FOUND_END(N), and later FOUND_GONE.  ⛔ No GDBus here (the root side stays single-threaded):
+ * logind's own files, `rediscover_search_files()`.  ⭐ The later sweep of 1.5 (the whole question every 10 s) is gone: each
+ * stage is watched by a pidfd, and its start time (field 22 of /proc/<pid>/stat) says it is the same process the search saw —
+ * a reused pid is another process.  Where `pidfd_open` is missing the start time is read again every FOUND_POLL_MS.
+ * ⚠ `birth()` does NOT take an entry out of this table: a desktop whose user now has a child stays listed until its stage dies (the
+ *   network side removes it from ITS table when the child is born, and acts on FOUND_GONE only for an entry still there); a
+ *   restarted network side is told the table as it is, which is what 1.5's own search at its start would have found.
+ * ⚠ A desktop that dies BEFORE it was announced is simply not announced (and not counted in FOUND_END); one that dies after
+ *   is announced with FOUND_GONE, which can only follow FOUND_END (`found_pump()`).
+ */
+#ifndef SYS_pidfd_open
+#define SYS_pidfd_open 434
+#endif
+
+static void found_clear(void)
+{
+	if (R.found)
+		for (int i = 0; i < RXR_FOUND_MAX; i++) {
+			if (R.found[i].used && R.found[i].pidfd >= 0)
+				close(R.found[i].pidfd);
+			memset(&R.found[i], 0, sizeof R.found[i]);
+			R.found[i].pidfd = -1;
+		}
+	R.ngone = 0;
+	R.found_promised = 0;
+	R.found_phase = FOUND_IDLE;
+	R.found_outcome = RXR_FOUND_OK;
+}
+
+/* The stage is watched by pidfd; false = it is gone already, or the pid now belongs to another process.  The pidfd is opened
+ * BEFORE the start time is read: a pid reused in between shows a different start time, one reused after is not what the
+ * pidfd points at. */
+static bool found_watch(struct found_slot *s, const char *proc_root)
+{
+	unsigned long long st;
+	int fd = (int)syscall(SYS_pidfd_open, s->stage, 0);
+
+	if (fd < 0 && errno == ESRCH)
+		return false;
+	s->pidfd = fd < 0 ? -1 : fd;
+	if (!rediscover_starttime(proc_root, s->stage, &st) || st != s->starttime) {
+		if (s->pidfd >= 0)
+			close(s->pidfd);
+		s->pidfd = -1;
+		return false;
+	}
+	return true;
+}
+
+/* The table from a search (`ok` false = the root side could not look: the table is empty and FOUND_END says UNKNOWN). */
+static void found_install(const RediscoveredDesktop *v, int n, bool ok, const char *proc_root)
+{
+	found_clear();
+	R.found_outcome = ok ? RXR_FOUND_OK : RXR_FOUND_UNKNOWN;
+	for (int i = 0; ok && v && i < n && i < RXR_FOUND_MAX; i++) {
+		struct found_slot *s = &R.found[i];
+
+		s->stage = v[i].stage;
+		s->starttime = v[i].starttime;
+		if (!found_watch(s, proc_root)) {
+			registro_dice(LOG_ROOT, "⚠ the stage of «%s» (pid %ld) was gone before it could be watched: "
+			              "not announced", v[i].user, (long)v[i].stage);
+			memset(s, 0, sizeof *s);
+			s->pidfd = -1;
+			continue;
+		}
+		s->used = s->pending = true;
+		s->uid = v[i].uid;
+		s->sessions = v[i].sessions;
+		snprintf(s->user, sizeof s->user, "%s", v[i].user);
+		snprintf(s->session, sizeof s->session, "%s", v[i].session);
+		snprintf(s->comm, sizeof s->comm, "%s", v[i].comm);
+		R.found_promised++;
+	}
+	R.found_phase = FOUND_SENDING;
+}
+
+static void found_look(void)
+{
+	RediscoveredDesktop *v = R.found ? calloc(RXR_FOUND_MAX, sizeof *v) : NULL;
+	char why[256] = "";
+	int n;
+
+	if (!v) {
+		found_install(NULL, 0, false, "/proc");
+		return;
+	}
+	n = rediscover_search_files(v, RXR_FOUND_MAX, why, sizeof why);
+	if (n < 0) {
+		registro_dice(LOG_ROOT, "⛔ PHASE 17 T7: could not look for live REMOTIX desktops (%s): the network "
+		              "side is told, and counts none", why);
+		found_install(NULL, 0, false, "/proc");
+	} else {
+		found_install(v, n, true, "/proc");
+		registro_dice(LOG_ROOT, "⭐ live REMOTIX desktops no child holds: %d (watched by pidfd, told to the "
+		              "network side at its start)", R.found_promised);
+	}
+	free(v);
+}
+
+static void found_note_gone(struct found_slot *s)
+{
+	registro_dice(LOG_ROOT, "⚠ the desktop found again of «%s» is gone (the stage pid %ld «%s» vanished)%s",
+	              s->user, (long)s->stage, s->comm, s->pending ? ": it was not announced yet" : "");
+	if (s->pending) {
+		R.found_promised--;
+	} else if (R.ngone < RXR_FOUND_MAX) {
+		R.gone[R.ngone].uid = s->uid;
+		snprintf(R.gone[R.ngone].user, sizeof R.gone[R.ngone].user, "%s", s->user);
+		R.ngone++;
+	}
+	if (s->pidfd >= 0)
+		close(s->pidfd);
+	memset(s, 0, sizeof *s);
+	s->pidfd = -1;
+}
+
+/* Which stages are gone — every turn of the loop (it wakes at least once a second); the pidfds are polled with no wait. */
+static void found_check(uint64_t now)
+{
+	bool reread = now >= R.found_poll_ms + FOUND_POLL_MS;
+
+	if (!R.found)
+		return;
+	if (reread)
+		R.found_poll_ms = now;
+	for (int i = 0; i < RXR_FOUND_MAX; i++) {
+		struct found_slot *s = &R.found[i];
+		bool dead = false;
+
+		if (!s->used)
+			continue;
+		if (s->pidfd >= 0) {
+			struct pollfd pf = { s->pidfd, POLLIN, 0 };
+
+			dead = poll(&pf, 1, 0) > 0;
+		} else if (reread) {
+			unsigned long long st;
+
+			dead = !rediscover_starttime("/proc", s->stage, &st) || st != s->starttime;
+		}
+		if (dead)
+			found_note_gone(s);
+	}
+}
+
+/* Sends what is owed to the current network side, in order, as far as the channel takes it; what did not leave goes next turn
+ * (POLLOUT).  READY first (net_start), then FOUND_AGAIN for each slot still pending, then FOUND_END with the number of
+ * FOUND_AGAIN promised (a slot that died unannounced was taken out of it), then the FOUND_GONE notes. */
+static void found_pump(void)
+{
+	if (R.chan < 0 || !R.found)
+		return;
+	if (R.found_phase == FOUND_SENDING) {
+		struct rxr_found_end e;
+
+		for (int i = 0; i < RXR_FOUND_MAX; i++) {
+			struct found_slot *s = &R.found[i];
+			struct rxr_found_again m;
+
+			if (!s->used || !s->pending)
+				continue;
+			memset(&m, 0, sizeof m);
+			head_fill(&m.h, RXR_FOUND_AGAIN, 0);
+			m.uid = (uint32_t)s->uid;
+			m.stage = (int32_t)s->stage;
+			m.sessions = s->sessions;
+			memcpy(m.user, s->user, sizeof m.user);
+			memcpy(m.session, s->session, sizeof m.session);
+			memcpy(m.comm, s->comm, sizeof m.comm);
+			if (!chan_try(&m, sizeof m, -1))
+				return;
+			s->pending = false;
+		}
+		memset(&e, 0, sizeof e);
+		head_fill(&e.h, RXR_FOUND_END, 0);
+		e.count = (uint32_t)R.found_promised;
+		e.outcome = R.found_outcome;
+		if (!chan_try(&e, sizeof e, -1))
+			return;
+		R.found_phase = FOUND_LISTED;
+	}
+	while (R.found_phase == FOUND_LISTED && R.ngone > 0) {
+		struct rxr_found_gone g;
+
+		memset(&g, 0, sizeof g);
+		head_fill(&g.h, RXR_FOUND_GONE, 0);
+		g.uid = (uint32_t)R.gone[0].uid;
+		memcpy(g.user, R.gone[0].user, sizeof g.user);
+		if (!chan_try(&g, sizeof g, -1))
+			return;
+		memmove(R.gone, R.gone + 1, (size_t)(R.ngone - 1) * sizeof R.gone[0]);
+		R.ngone--;
+	}
+}
+
+static bool found_wants_out(void)
+{
+	return R.chan >= 0 && (R.found_phase == FOUND_SENDING || (R.found_phase == FOUND_LISTED && R.ngone > 0));
+}
+
 /* ⛔ The network side's environment, from an ALLOW-LIST (lane 4's review, M4):
  *    the root side's whole `environ` crossed the exec before — anything the
  *    unit, a drop-in or an administrator's shell put there.  Kept: a fixed PATH,
@@ -1691,13 +1984,14 @@ static char **net_environment(void)
 static void net_start(uint64_t now)
 {
 	int sv[2], one = 1;
-	pid_t me = getpid(), p;
+	pid_t p;
 	struct rxr_ready r;
 	sigset_t all, before;
 
 	R.restart_at = 0;
 	net_generation_reset();
 	net_leftovers_kill();
+	found_look(); /* ⭐ 1.6 (R8): before the fork, so the list is ready when the network side asks */
 	if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, sv) != 0) {
 		registro_dice(LOG_ROOT, "⛔ no channel for the network side (socketpair: %s): "
 		              "retried in %d s", strerror(errno), NET_RESTART_CAP_MS / 1000);
@@ -1722,7 +2016,8 @@ static void net_start(uint64_t now)
 	 *    (review of §11.50, finding 3). */
 	sigfillset(&all);
 	sigprocmask(SIG_SETMASK, &all, &before);
-	p = fork();
+	/* ⭐ 1.6 (R8 B): a fork whose child is PID 1 of a PID namespace of its own (walls.c); `p` is its pid as THIS side sees it */
+	p = walls_fork_pidns();
 	if (p != 0)
 		sigprocmask(SIG_SETMASK, &before, NULL);
 	if (p < 0) {
@@ -1779,14 +2074,10 @@ static void net_start(uint64_t now)
 		}
 		/* ⭐ review 4 B, finding 6: which walls, said once per birth */
 		registro_dice(LOG_ROOT, "⭐ the network side's walls in force: %s", walls_in_force());
-		/* ⚠ After the uid change, which clears it; and checked against a
-		 *   root side that died in between. */
+		/* ⚠ After the uid change, which clears it.  ⭐ 1.6 (R8 B): the old «getppid() != me» check is gone — in its own PID
+		 *   namespace the parent is not visible (getppid() says 0) — a root side that died in between is seen by the network
+		 *   side at its first read of fd 3 (EOF, `rootside_attach`), and PR_SET_PDEATHSIG is armed again there. */
 		prctl(PR_SET_PDEATHSIG, SIGTERM);
-		if (getppid() != me) {
-			registro_dice(LOG_ROOT, "⛔⛔ the root side died while its network side was "
-			              "being born: it is NOT started");
-			_exit(127);
-		}
 		execve("/proc/self/exe", R.o->net_argv, net_environment());
 		registro_dice(LOG_ROOT, "⛔⛔ execve of the network side failed (%s): it is NOT "
 		              "started", strerror(errno));
@@ -1811,6 +2102,7 @@ static void net_start(uint64_t now)
 	snprintf(r.offered, sizeof r.offered, "%s", R.offered);
 	snprintf(r.explanation, sizeof r.explanation, "%s", R.explanation);
 	(void)chan_send(&r, sizeof r, -1);
+	found_pump(); /* READY first, then the desktops found again */
 	registro_dice(LOG_ROOT, "⭐ network side started: pid %ld, uid %ld (remotix), fd 3 "
 	              "the channel, 4 UDP, 5 TCP", (long)p, (long)R.o->remotix_uid);
 }
@@ -1852,8 +2144,11 @@ int rootside_main(const struct rootside_options *o)
 	R.cap = o->cap;
 	R.kids = (struct own_child *)calloc((size_t)R.cap, sizeof *R.kids);
 	R.outbox = (struct rxr_child_exited *)calloc((size_t)R.cap * 4, sizeof *R.outbox);
+	R.found = (struct found_slot *)calloc(RXR_FOUND_MAX, sizeof *R.found);
+	R.gone = (struct found_gone_note *)calloc(RXR_FOUND_MAX, sizeof *R.gone);
+	found_clear();
 	/* review 4 B, finding 9: rootside.h promises «the reason is logged» */
-	if (!R.kids || !R.outbox) {
+	if (!R.kids || !R.outbox || !R.found || !R.gone) {
 		registro_dice(LOG_ROOT, "⛔ the root side does not start: no memory for its tables "
 		              "(%d children, %d CHILD_EXITED outbox)", R.cap, R.cap * 4);
 		return 1;
@@ -1926,7 +2221,7 @@ int rootside_main(const struct rootside_options *o)
 		if (R.chan >= 0) {
 			i_chan = np;
 			p[np].fd = R.chan;
-			p[np++].events = POLLIN | (R.nout > 0 ? POLLOUT : 0);
+			p[np++].events = POLLIN | ((R.nout > 0 || found_wants_out()) ? POLLOUT : 0);
 		}
 		if (helper_descriptor(R.pam) >= 0) {
 			i_pam = np;
@@ -1976,6 +2271,8 @@ int rootside_main(const struct rootside_options *o)
 			outbox_flush();
 		reap_kids();
 		reap_net(now);
+		found_check(now);
+		found_pump();
 		kids_hurry(now);
 		tables_minute(now);
 		if (i_pam >= 0 && (p[i_pam].revents & (POLLIN | POLLHUP | POLLERR)))
@@ -2022,6 +2319,9 @@ union rpk {
 	struct rxr_spawned s;
 	struct rxr_spawn_refused r;
 	struct rxr_child_exited e;
+	struct rxr_found_again fa;
+	struct rxr_found_end fe;
+	struct rxr_found_gone fg;
 };
 
 #define CLIENT_AUTHS 32
@@ -2052,6 +2352,16 @@ static struct {
 	RootsideChildExited on_exited;
 	void *exited_ctx;
 	uint32_t last_wait_ms; /* R1: the TOO_SOON answer's wait */
+	/* ⭐ 1.6 (R8): what the root side said about the desktops found again */
+	struct rootside_found_seq fseq;
+	struct {
+		int n;
+		bool ended;
+		uint8_t outcome;
+		struct rxr_found_again v[RXR_FOUND_MAX];
+	} found;
+	RootsideFoundGone on_gone;
+	void *gone_ctx;
 	struct {
 		bool used;
 		uint64_t request;
@@ -2078,6 +2388,9 @@ static size_t size_of_event(int kind)
 	case RXR_SPAWNED:       return sizeof(struct rxr_spawned);
 	case RXR_SPAWN_REFUSED: return sizeof(struct rxr_spawn_refused);
 	case RXR_CHILD_EXITED:  return sizeof(struct rxr_child_exited);
+	case RXR_FOUND_AGAIN:   return sizeof(struct rxr_found_again);
+	case RXR_FOUND_END:     return sizeof(struct rxr_found_end);
+	case RXR_FOUND_GONE:    return sizeof(struct rxr_found_gone);
 	default:                return 0;
 	}
 }
@@ -2226,6 +2539,31 @@ static void dispatch(union rpk *pk, int fd)
 		if (C.on_exited)
 			C.on_exited(C.exited_ctx, pk->e.serial, pk->e.wait_status);
 		break;
+	case RXR_FOUND_AGAIN:
+	case RXR_FOUND_END:
+	case RXR_FOUND_GONE: {
+		char why[160];
+
+		/* ⛔ the order and the count are the root side's promise: broken ⇒ the channel is */
+		if (rootside_found_step(&C.fseq, pk->h.kind, pk->fe.count, pk->fe.outcome, why, sizeof why) != 0) {
+			client_lost(why);
+			break;
+		}
+		if (pk->h.kind == RXR_FOUND_AGAIN) {
+			pk->fa.user[sizeof pk->fa.user - 1] = 0;
+			pk->fa.session[sizeof pk->fa.session - 1] = 0;
+			pk->fa.comm[sizeof pk->fa.comm - 1] = 0;
+			C.found.v[C.found.n++] = pk->fa;
+		} else if (pk->h.kind == RXR_FOUND_END) {
+			C.found.ended = true;
+			C.found.outcome = pk->fe.outcome;
+		} else {
+			pk->fg.user[sizeof pk->fg.user - 1] = 0;
+			if (C.on_gone)
+				C.on_gone(C.gone_ctx, (uid_t)pk->fg.uid, pk->fg.user);
+		}
+		break;
+	}
 	case RXR_SPAWNED:
 		/* ⛔ An answer nobody waits for any more (its wait timed out): a
 		 *    child nobody holds is not left alive. */
@@ -2292,7 +2630,7 @@ bool rootside_attach(int fd, int timeout_ms, struct rxr_ready *ready)
 	uint64_t until = log_now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
 
 	C.fd = fd;
-	C.root_pid = getppid();
+	C.root_pid = getppid(); /* ⭐ 1.6 (R8 B): 0 — the root side is outside this PID namespace; the kernel stamps its packets with pid 0 too */
 	/* ⛔ review 4 B, finding 15: each one checked — without SO_PASSCRED no
 	 *    packet from the root side would carry its stamp, and the line would
 	 *    have been a misleading «no READY» */
@@ -2318,6 +2656,14 @@ bool rootside_attach(int fd, int timeout_ms, struct rxr_ready *ready)
 			if (ready)
 				*ready = pk.ready;
 			C.attached = true;
+			{
+				char w[64];
+
+				memset(&C.fseq, 0, sizeof C.fseq);
+				C.found.n = 0;
+				C.found.ended = false;
+				(void)rootside_found_step(&C.fseq, RXR_READY, 0, 0, w, sizeof w);
+			}
 			registro_dice(LOG_ROOT, "⭐ attached to the root side (pid %ld): this is the "
 			              "NETWORK SIDE, uid %ld", (long)C.root_pid, (long)getuid());
 			return true;
@@ -2347,6 +2693,57 @@ void rootside_hook_child_exited(RootsideChildExited fn, void *ctx)
 {
 	C.on_exited = fn;
 	C.exited_ctx = ctx;
+}
+
+void rootside_hook_found_gone(RootsideFoundGone fn, void *ctx)
+{
+	C.on_gone = fn;
+	C.gone_ctx = ctx;
+}
+
+int rootside_wait_found(RediscoveredDesktop *v, int cap, int timeout_ms, char *why, size_t why_len)
+{
+	uint64_t until = log_now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
+
+	if (why && why_len)
+		why[0] = '\0';
+	while (!C.found.ended) {
+		uint64_t now = log_now_ms();
+		union rpk pk;
+		int d, got;
+
+		if (C.fd < 0) {
+			snprintf(why, why_len, "the channel to the root side is lost");
+			return -1;
+		}
+		if (now >= until) {
+			snprintf(why, why_len, "the root side did not finish its list within %d ms", timeout_ms);
+			return -1;
+		}
+		got = client_recv((int)(until - now), &pk, &d);
+		if (got < 0) {
+			snprintf(why, why_len, "the channel to the root side is lost");
+			return -1;
+		}
+		if (got == 1)
+			aside_or_dispatch(&pk, d);
+	}
+	if (C.found.outcome != RXR_FOUND_OK) {
+		snprintf(why, why_len, "the root side could not look (see its log)");
+		return -1;
+	}
+	for (int i = 0; i < C.found.n && i < cap; i++) {
+		const struct rxr_found_again *f = &C.found.v[i];
+
+		memset(&v[i], 0, sizeof v[i]);
+		v[i].uid = (uid_t)f->uid;
+		v[i].stage = (pid_t)f->stage;
+		v[i].sessions = f->sessions;
+		snprintf(v[i].user, sizeof v[i].user, "%s", f->user);
+		snprintf(v[i].session, sizeof v[i].session, "%s", f->session);
+		snprintf(v[i].comm, sizeof v[i].comm, "%s", f->comm);
+	}
+	return C.found.n < cap ? C.found.n : cap;
 }
 
 void rootside_move(void)
