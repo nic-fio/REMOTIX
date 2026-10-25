@@ -10,7 +10,7 @@
  *
  *   cd src && make test-tls-groups        (needs `openssl` on the PATH, to make a P-256 certificate)
  *
- * Exit 0 all passed · 1 a check failed · 3 could not look.  Last line: «N passed, M failed».
+ * Exit 0 all passed · 1 a check failed · 3 could not look (a client group unknown to this OpenSSL).  Last line: «N passed, M failed».
  */
 #include "tls.c"
 
@@ -46,8 +46,9 @@ static int passed, failed;
 		printf("\n");                                              \
 	} while (0)
 
-/* true = the handshake completed on both sides */
-static bool shake(SSL_CTX *server_ctx, const char *client_group, const unsigned char *alpn,
+/* 1 = the handshake completed on both sides, 0 = it did not, -1 = could not look (the
+ * client itself does not know the group, or no memory): never counted as a refusal */
+static int shake(SSL_CTX *server_ctx, const char *client_group, const unsigned char *alpn,
                   unsigned int alpnlen)
 {
 	SSL_CTX *cc = SSL_CTX_new(TLS_client_method());
@@ -57,19 +58,24 @@ static bool shake(SSL_CTX *server_ctx, const char *client_group, const unsigned 
 	int i;
 
 	if (!cc)
-		return false;
+		return -1;
 	SSL_CTX_set_min_proto_version(cc, TLS1_3_VERSION);
 	if (SSL_CTX_set1_groups_list(cc, client_group) != 1) {
 		ERR_clear_error();
 		SSL_CTX_free(cc);
-		return false;	/* the client itself does not know the group */
+		return -1;	/* the client itself does not know the group */
 	}
 	c = SSL_new(cc);
 	SSL_set_alpn_protos(c, alpn, alpnlen);
 	s = SSL_new(server_ctx);
 	/* a BIO pair: what the client writes the server reads, and the other way round */
-	if (BIO_new_bio_pair(&cb, 0, &sb, 0) != 1)
-		return false;
+	if (BIO_new_bio_pair(&cb, 0, &sb, 0) != 1) {
+		ERR_clear_error();
+		SSL_free(c);
+		SSL_free(s);
+		SSL_CTX_free(cc);
+		return -1;
+	}
 	SSL_set_bio(c, cb, cb);
 	SSL_set_bio(s, sb, sb);
 	SSL_set_connect_state(c);
@@ -89,8 +95,15 @@ static bool shake(SSL_CTX *server_ctx, const char *client_group, const unsigned 
 	SSL_free(c);
 	SSL_free(s);
 	SSL_CTX_free(cc);
-	return done;
+	return done ? 1 : 0;
 }
+
+static int could_not_look;
+
+/* wraps shake(): -1 is remembered and reads as «not what was expected» */
+#define SERVED(r)  ((r) == 1)
+#define REFUSED(r) ((r) == 0)
+#define LOOK(expr) ({ int r_ = (expr); if (r_ < 0) could_not_look++; r_; })
 
 int main(void)
 {
@@ -121,12 +134,28 @@ int main(void)
 	CHECK(ctxs[0] && ctxs[1], "both contexts are made");
 	for (k = 0; k < 2 && ctxs[0] && ctxs[1]; k++) {
 		for (i = 0; i < sizeof ok / sizeof *ok; i++)
-			CHECK(shake(ctxs[k], ok[i], alpn[k], alpnlen[k]), "%s context: a client offering only %s is served",
+			CHECK(SERVED(LOOK(shake(ctxs[k], ok[i], alpn[k], alpnlen[k]))), "%s context: a client offering only %s is served",
 			      names[k], ok[i]);
 		for (i = 0; i < sizeof no / sizeof *no; i++)
-			CHECK(!shake(ctxs[k], no[i], alpn[k], alpnlen[k]), "%s context: a client offering only %s is REFUSED",
+			CHECK(REFUSED(LOOK(shake(ctxs[k], no[i], alpn[k], alpnlen[k]))), "%s context: a client offering only %s is REFUSED",
 			      names[k], no[i]);
 	}
+	/* HelloRetryRequest: the client's first key share is X448 (the «*»), which the server does
+	 * not accept; it asks for X25519, which the client also lists */
+	for (k = 0; k < 2 && ctxs[0] && ctxs[1]; k++)
+		CHECK(SERVED(LOOK(shake(ctxs[k], "*X448:X25519", alpn[k], alpnlen[k]))),
+		      "%s context: a client whose first share is X448 gets a HelloRetryRequest and is served",
+		      names[k]);
+	/* the contrast: the same certificate with OpenSSL's DEFAULT groups serves a client that
+	 * offers only ffdhe3072 — so the refusals above are the doing of TLS_GROUPS, not of the harness */
+	x = SSL_CTX_new(TLS_server_method());
+	if (x && SSL_CTX_use_certificate_chain_file(x, pem) == 1 &&
+	    SSL_CTX_use_PrivateKey_file(x, key, SSL_FILETYPE_PEM) == 1)
+		CHECK(SERVED(LOOK(shake(x, "ffdhe3072", alpn[0], alpnlen[0]))),
+		      "control: a context with the default groups serves a client offering only ffdhe3072");
+	else
+		could_not_look++;
+	SSL_CTX_free(x);
 	/* the fallback: an unknown name in the wanted list */
 	x = SSL_CTX_new(TLS_server_method());
 	CHECK(set_groups(x, "NOSUCHKEM:X25519", "X25519:P-256"),
@@ -139,5 +168,10 @@ int main(void)
 	if (system(cmd) != 0)
 		printf("  (could not remove %s)\n", dir);
 	printf("%d passed, %d failed, of %d\n", passed, failed, passed + failed);
+	if (could_not_look) {
+		printf("%d case(s) could not be looked at (a group this OpenSSL does not know, or no memory)\n",
+		       could_not_look);
+		return 3;
+	}
 	return failed ? 1 : 0;
 }
