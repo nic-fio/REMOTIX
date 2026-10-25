@@ -1809,7 +1809,7 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 
 	/* ⭐ `cid-firmati`: does the destination id carry a valid tag (cid.h)?  If it does not, it is not an id this
 	 *   server issued — except those few bound to a connection that came in with a Retry token of the previous binary
-	 *   (`plain_bound`, 0 in steady state) — so the search of the map is skipped: a packet that cannot belong to any
+	 *   (`cids.plain_n`, 0 in steady state) — so the search of the map is skipped: a packet that cannot belong to any
 	 *   connection does not cost a scan of the map, and (below) does not spend the Resets of the signed ids.
 	 *   The first Initial of a client (random destination id, before our Retry) and every packet after the Retry
 	 *   (our signed ids) are routed exactly as before. */

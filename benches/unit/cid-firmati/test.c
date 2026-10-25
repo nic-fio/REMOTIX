@@ -15,9 +15,10 @@
  *   errors      NULL key, NULL / empty secret; a failing HMAC (the context loses its key) counts in cidkey_errors(), makes ok/make say false, and does not
  *               count a plain forgery
  *
- * BUILD AND RUN (a second; from the root of the tree):
- *   gcc -std=gnu11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Isrc \
- *       benches/unit/cid-firmati/test.c -lcrypto -o /tmp/cid-test && /tmp/cid-test
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && gcc -std=gnu11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -Wall -Wextra -I/albero/src \
+ *        /albero/benches/unit/cid-firmati/test.c -lcrypto -o test && ./test'
  * Exit code 0 = every check passed.
  */
 #include "cid.c" /* the module itself, to reach its struct (errors) */
