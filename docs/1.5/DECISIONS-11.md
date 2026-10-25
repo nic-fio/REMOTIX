@@ -1645,6 +1645,20 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
 
 > ⚠ In the branch `finale`, NOT in `integrazione2` (25 Oct 2026): the whole section is merged from `rootside-completo` (`ae8cae45`; D1-D7 plus installer and packages), OFF by default (the server stays one process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`). Whether it is ON or OFF in 1.5 waits for the user's decision D1; see CHANGES-1.5.md.
+>
+> ⭐ **D3 / D4b, from `port-rootside-D3`; approved on `rootside-completo` and merged in `finale` (`verifica-rami` on `finale` is queued). Active even with the split OFF:**
+> - The PAM dispatcher is **re-executed** (`/proc/self/exe --pam-helper`, fresh memory image, descriptors above 3 closed) and
+>   **restarted with a doubling pause** (1 s … 60 s; loud after 5 deaths in a row) by `helper_expired()`, the watchdog.
+>   While it is down the logins are refused as ours.
+> - **Root form** (`helper_turn_on_root`, `helper_ask_bare`, `HelperOutcome`): every request ends in ONE callback: 1 admitted, 0
+>   refused, 2 refused while `pam_faillock` held the account, **3 not checked** (the dispatcher's cap of 2×16, a failed `fork`
+>   there, the dispatcher dead or down — our defect, never counted), **4 expired** (no answer in 8 s: it COUNTS as a failed
+>   attempt, the 24 Oct 2026 decision).
+> - **The synchronous PAM fallback is GONE** (a deliberate change): with no helper, or its hook missing, the login is refused
+>   `0x0E`, not counted, booking released (`login_release`); `hook_verify`/`rcp_hooks.verify` removed, and `rcp_refusal_unchecked(ticket)`
+>   brackets the delivery of «not checked» so `rcp.c` turns it into `refusal_is_ours` (same road as `rcp_verdict_lost`).
+>   In the single-process product «not checked» also travels as `lost=true`.
+> 🔸 Phase F (packaging) from `port-rootside-pacch`; approved on `rootside-completo`, merged in `finale` (queued for `verifica-rami`), **OFF by default behind one switch** (debian: `REMOTIX_SPLIT=1`, passed through by `build-deb.sh`; rpm: `--with split`, `build-rpm.sh` with `RX_SPLIT=1`; Arch: `REMOTIX_SPLIT=1`, passed by `packaging/arch/build.sh`; any other value, or none, leaves the pieces OFF): the system user `remotix` (`sysusers`), `remotix-net-move` (the 1.0 → 1.5 move of `certificates/` and `ban` into `/var/lib/remotix/net`), the split units and tmpfiles (`*.split`), the rpm SELinux domain (`remotix.{te,fc}.split`), the Arch install script. **Inert today** (no build installs them without the switch; the install scripts' blocks run only if `remotix-net-move` is in the package): the new files, the guards in `postinst` / `%post` / `remotix.install`, the extra `rm`/`rmdir` of `net/` at purge. **Would change today's behaviour, therefore behind the switch**: creating the user, moving the certificates and the ban file (today's 1.5 server reads the old paths and would regenerate its certificate and `quic-secret`), the units' `--certificates` / `--ban-file` on `net/`, `/var/lib/remotix` 0755 (0700 today), the SELinux domain `remotix_net_t`, `daemon-reload` and `tmpfiles --create` in the scripts. No hardening in the units by design (the desktops inherit what the unit restricts): the network side hardens itself with `walls.c` (phase C, `walls.c`, in this tree). `remotix-net-move --back` (the reverse, for a downgrade or removal) leaves the service STOPPED after a downgrade: the marker `/run/remotix/was-running` (written if the unit was active or activating) says whether it was running, so whoever does the downgrade (or the installer engine, later) can start it again; Arch calls it only from `pre_remove`, on a downgrade the administrator runs it by hand.
 
 - **The user's rulings** (16 Oct 2026, to the questions put after the inventory of the root operations — seven
   reports, one per area: network side, PAM, desktop birth, the per-session child, cards and input, packaging,

@@ -36,6 +36,10 @@
 - **Installer and uninstaller**: the install plan states the port before «Proceed? [y/N]» (`29a4a7ce`); the uninstall removes
   what upgrades added (§11.6, under verification; `84fdf573`, `b4f0776e`). The site says «Download 1.0.0» (`b2f8161e`).
 - **`/diary` is gone** from the installed product and from test builds (§11.10, under verification; `8a46c9c9`, `9af7b82e`).
+- **ACTIVE by default, even with the split OFF (§11.50 D3/D4b, from `rootside-completo`)**: the PAM dispatcher is **re-executed** (`/proc/self/exe --pam-helper`, a fresh memory image, `src/helper.c:170-187`)
+  and **restarted by the watchdog** `helper_expired()` with a pause that doubles from 1 s to 60 s (loud after 5 deaths in a row). Every PAM request ends in one outcome (`HelperOutcome`, `src/helper.h:187-193`):
+  1 admitted, 0 refused, 2 refused while `pam_faillock` held the account, **3 not checked** (the dispatcher's cap, a failed `fork`, the dispatcher dead or down: our defect, **not counted** towards the ban),
+  **4 expired** (no answer in 8 s: it **counts** as a failed attempt). **The synchronous PAM fallback is gone**: with the helper down, or no helper object, the login is refused with `0x0E`, not counted (`src/main.c:2985`).
 
 ## 2. Behaviour changes
 ### Login ban — SPEC CHANGE from 1.0 (§11.53; built on `login-difese`, not yet run on the boxes)
@@ -156,7 +160,12 @@ These are approved and are **not** in the range above; `finale` has them, merged
 ## 7. What is OFF by default
 - **Root-side / network-side split (§11.50)**: written, reviewed, packaged (service user `remotix`, installer, distro packages, SELinux, seccomp,
   `remotix-net-move --back` with its Arch marker), in `finale` (from `rootside-completo`); the server stays ONE process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`,
-  and `--split` is refused otherwise. Measured on the discarded attempt (16 Oct; `benches/24-privsep-cost.sh`, run 20261016-113915); not re-measured on `rootside-completo`. Cost against 1.0 (4 interleaved rounds, one box): login to first frame −98 ms warm /
+  and `--split` is refused otherwise.
+  **Build switches of the packages (all OFF unless asked)**: Debian: `REMOTIX_SPLIT=1` (`packaging/debian/rules:30`, passed by `src/build-targets/build-deb.sh`); Arch: `REMOTIX_SPLIT=1`
+  (`packaging/arch/build.sh`); rpm: `--with split` (`%bcond_with split`, `packaging/rpm/remotix.spec:37-39`) or `RX_SPLIT=1` for `build-rpm.sh`; any other value leaves the pieces OFF.
+  **Inert without the switch**: the system user `remotix` (sysusers), `remotix-net-move`, the `*.split` units and tmpfiles, the rpm SELinux domain, the Arch install script, and their guards in `postinst` / `%post` / `remotix.install`.
+  **Would change today's behaviour, therefore behind the switch**: creating the user, moving `certificates/` and `ban` into `/var/lib/remotix/net`, the units' `--certificates` / `--ban-file`, `/var/lib/remotix` 0755.
+  Measured on the discarded attempt (16 Oct; `benches/24-privsep-cost.sh`, run 20261016-113915); not re-measured on `rootside-completo`. Cost against 1.0 (4 interleaved rounds, one box): login to first frame −98 ms warm /
   −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. Needs decision D1.
 - **Decoder `PACE` (§11.32)**: present (`4895f2ad`, `c7bfef17`), enabled with `--decoder-pace`; the page declares `video.pace` only then. The measures
   of the first attempt favoured ON (slow decoder: 26 → 61 photos/min on Firefox 4K), but the default is a change seen by the browser. Needs decision D3.
