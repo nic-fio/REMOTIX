@@ -3,7 +3,7 @@
  *   2. a failing helper: the status is passed through (exit 3);
  *   3. a helper that never ends (`sleep 60`): after max_ms it is KILLED and run_wait() returns 2 (reaped) well before 60 s — the old waitpid(p,..,0) waited the whole time;
  *   4. the time: the stuck helper costs max_ms plus a little, not more;
- *   5. descriptors: a fork+exec built like the child of run_as_root() (close_range(3, ~0U) before the exec) shows ONLY 0, 1, 2 (+ the one `ls` opens itself) in /proc/self/fd, while
+ *   5. descriptors: a fork+exec built like the child of run_as_root() (close_range(3, ~0U) before the exec, as in sessione-e) shows ONLY 0, 1, 2 (+ the one `ls` opens itself) in /proc/self/fd, while
  *      a socket the parent holds open is NOT among them; the same fork without the close_range DOES inherit it (contrast);
  *   6. source reading of src/child.c: run_as_root() uses close_range and run_wait.
  * Build: cc -std=gnu11 -D_GNU_SOURCE -fsanitize=address,undefined -fno-sanitize-recover=undefined -I src benches/unit/run-wait/test.c -o t && ./t  (from the root of the tree) */
