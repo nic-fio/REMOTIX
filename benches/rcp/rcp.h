@@ -1471,6 +1471,9 @@ bool rcp_verdict_lost(rcp_session *s, uint64_t ticket);
  * `true` = `out` holds the name of the system (it may be the same as `typed`); `false` = the system could not say (the name stays as
  * it was).  ⚠ `getpwnam_r` may ask NSS: it is called only for a login that PAM has already admitted. */
 bool rcp_canonical_user(const char *typed, char *out, size_t cap);
+/* ⭐ rilettura-fix M1: in the split the NETWORK SIDE must not ask NSS (a stalled sssd would stop the loop that serves everybody): main.c installs a lookup that answers from the root
+ * side's verdict, and rcp_canonical_user() then answers ONLY from it (no entry = false = the typed name stays).  NULL (the default, the single-process server) = the getpwnam_r lookup. */
+void rcp_canonical_hook(bool (*fn)(const char *typed, char *out, size_t cap));
 
 /* ⛔ The secret of the tags `unknown user [hmac6]` of the log (§4.4-bis D):
  * `<dir>/log-secret`, 0600, next to the QUIC token secret.  Returns 1 = read,

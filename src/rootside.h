@@ -174,6 +174,8 @@ bool rootside_auth(uint64_t request, const char *user, const char *password,
                    const char *rhost);
 typedef void (*RootsideVerdict)(void *ctx, uint64_t request, int outcome);
 void rootside_hook_verdict(RootsideVerdict fn, void *ctx);
+/* ⭐ rilettura-fix M1: the SYSTEM's name for a typed one, taken from the VERDICT of its login (the root side resolved it): no NSS in the network side.  false = none live. */
+bool rootside_canonical(const char *typed, char *out, size_t cap);
 
 /* What `rootside_spawn()` / `rootside_close_orphan()` hand back. */
 struct rootside_born {

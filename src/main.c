@@ -2853,6 +2853,8 @@ int main(int argc, char **argv)
 			              READY_WAIT_MS);
 			return 1;
 		}
+		/* ⭐ rilettura-fix M1: from here on the system's name for a typed one comes from the root side's VERDICT, not from NSS in this loop */
+		rcp_canonical_hook(rootside_canonical);
 		me = getpwuid(getuid());
 		registro_dice(LOG_STARTUP,
 		              "⭐ network side: uid %ld (%s), parent pid %ld (the root side is outside this PID namespace) — this process talks to the network and holds the "

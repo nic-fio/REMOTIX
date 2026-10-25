@@ -9835,6 +9835,13 @@ void rcp_channel_closed(rcp_session *s)
  *
  * ⚠ And it sends nothing on the wire: `rcp_time()` takes care of that, when
  *   the fixed second of §4.4-bis has passed too. */
+static bool (*canonical_hook)(const char *typed, char *out, size_t cap);
+
+void rcp_canonical_hook(bool (*fn)(const char *typed, char *out, size_t cap))
+{
+	canonical_hook = fn;
+}
+
 bool rcp_canonical_user(const char *typed, char *out, size_t cap)
 {
 	struct passwd pw, *res = NULL;
@@ -9842,6 +9849,8 @@ bool rcp_canonical_user(const char *typed, char *out, size_t cap)
 
 	if (!typed || !*typed || !out || cap == 0)
 		return false;
+	if (canonical_hook)   /* the split's network side: the answer is the root side's, never NSS */
+		return canonical_hook(typed, out, cap);
 	if (getpwnam_r(typed, &pw, spare, sizeof spare, &res) != 0 || !res || !res->pw_name || !res->pw_name[0])
 		return false;
 	if (strlen(res->pw_name) >= cap)
