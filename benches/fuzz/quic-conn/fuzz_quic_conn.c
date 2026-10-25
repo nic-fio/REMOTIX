@@ -1118,8 +1118,9 @@ static void op_new(const uint8_t *a, size_t n)
 			if (T->how_many > before)
 				DIE("a refused connection was born anyway");
 			/* ⭐ rilettura M2: refused for lack of PLACES (not for the rate), it has not paid the global handshake token (the clock
-			 *    does not move inside a delivery: the bucket can only have been refilled, never emptied) */
-			if (all_used0 && T->hs.all.used && T->hs.all.milli < all0)
+			 *    does not move inside a delivery: the bucket can only have been refilled, never emptied; unless op 12 has just LOWERED the
+			 *    limits under what the bucket held: the refill then cuts it to the new burst, and that is not a charge) */
+			if (all_used0 && T->hs.all.used && all0 <= (uint64_t)T->hs_lim.all_burst * 1000u && T->hs.all.milli < all0)
 				DIE("a newcomer refused for lack of places took a global handshake token (%llu -> %llu thousandths)",
 				    (unsigned long long)all0, (unsigned long long)T->hs.all.milli);
 		}
