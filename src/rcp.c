@@ -3268,7 +3268,9 @@ static enum msg_class input_class(uint16_t kind)
 }
 
 /* The control requests of an ACTIVE session that can be dropped without harm: a REQUEST_KEY or a PACE that does not arrive is the
- * same as one the client never sent; a LAYOUT, VIEW or FIT_CANVAS over the rate is a client that is not a person. */
+ * same as one the client never sent; a LAYOUT or VIEW over the rate is a client that is not a person.  ⛔ NOT FIT_CANVAS: §7.1 wants
+ * one `CANVAS` answer for each, the client counts the unanswered ones, and a request consumed in silence would hold its frames back
+ * for ever — that one is gated in its own handler, and answered. */
 static enum msg_class control_class(uint16_t kind)
 {
 	switch (kind) {
@@ -3276,7 +3278,6 @@ static enum msg_class control_class(uint16_t kind)
 	case T_PACE:         return MC_PACE;
 	case T_VIEW:         return MC_VIEW;
 	case T_LAYOUT:       return MC_LAYOUT;
-	case T_FIT_CANVAS:   return MC_FIT_CANVAS;
 	default:             return MC_COUNT;
 	}
 }
@@ -9262,6 +9263,15 @@ static bool drain(rcp_session *s, uint64_t now)
 				break;
 			}
 
+			/* ⛔ THE FREQUENCY CEILING (msgrate.h, audit P-R3/Q-R3/E-R5): every request that CHANGES the size makes the stage of the child
+			 *    be rebuilt (up to 3 s) and reopens the encoders; the one for the size already in force (the most frequent) does
+			 *    not, and comes before this point.  Over the rate it is NOT consumed in silence: §7.1 wants one
+			 *    `CANVAS` for each `FIT_CANVAS` and the client keeps count, so it is answered NOT_NOW, with the canvas in force.
+			 *    The rate is far above what a hand dragging an edge does (twenty a second, the comment above). */
+			if (!msg_admit(s, MC_FIT_CANVAS, now)) {
+				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
+				break;
+			}
 			/* ⛔ NO HOOK = COMPOSITOR_UNABLE, and it is the TRUE answer for
 			 *    whoever hosts us without a stage: the in-process benches of phase 1
 			 *    and the harness of `benches/01-b3-graft-rcp.py`.  §7.1: «if the

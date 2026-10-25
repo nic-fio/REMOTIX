@@ -10,7 +10,7 @@
  *
  * ⚠ Only for messages that can be dropped without leaving the protocol in a state the client does not expect: the five input types
  *    (the id of an input only has to GROW, so a gap is legitimate, RCP.md §7.3) and the control requests REQUEST_KEY, PACE, VIEW,
- *    LAYOUT, FIT_CANVAS.  NOT the clipboard (a lost ANNOUNCE would make the next ASK a violation) and NOT the handshake.
+ *    LAYOUT, and FIT_CANVAS (this one is ANSWERED NOT_NOW instead of dropped: §7.1 wants a CANVAS for each).  NOT the clipboard (a lost ANNOUNCE would make the next ASK a violation) and NOT the handshake.
  *
  * A header with static inline functions and no dependency (no log, no clock): the caller passes `now_ms`, so that
  * `benches/unit/msg-rate` tests the logic alone. */
@@ -67,7 +67,7 @@ static inline void msg_class_rate(enum msg_class c, unsigned *per_s, unsigned *b
 	case MC_PACE:         *per_s = 100;  *burst = 200;  break;
 	case MC_VIEW:         *per_s = 100;  *burst = 200;  break;
 	case MC_LAYOUT:       *per_s = 5;    *burst = 20;   break;
-	case MC_FIT_CANVAS:   *per_s = 20;   *burst = 40;   break;
+	case MC_FIT_CANVAS:   *per_s = 60;   *burst = 180;  break;
 	default:              *per_s = 100;  *burst = 200;  break;
 	}
 }

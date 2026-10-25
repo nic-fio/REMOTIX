@@ -20,7 +20,7 @@
  *
  * BUILD AND RUN (a second; run from the root of the tree):
  *   gcc -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
- *      -Isrc benches/unit/msg-rate/test.c -o /tmp/msg-rate-test && /tmp/msg-rate-test src/rcp.c
+ *      -Isrc benches/unit/msg-rate/test.c -o /tmp/msg-rate-test && /tmp/msg-rate-test src/rcp.c src/main.c
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "msgrate.h"
@@ -204,6 +204,8 @@ int main(int argc, char **argv)
 		msg_class_rate(MC_LAYOUT, &p, &b);
 		CHECK(p >= 2 && b >= 10, "7b: LAYOUT allows at least 2 a second and a burst of 10");
 		CHECK(p <= 10, "7b: and no more than 10 a second sustained");
+		msg_class_rate(MC_FIT_CANVAS, &p, &b);
+		CHECK(p >= 30, "7b: FIT_CANVAS allows more than the twenty a second of a hand dragging an edge");
 	}
 	/* 8: a person never meets the limit */
 	{
@@ -263,7 +265,54 @@ int main(int argc, char **argv)
 				CHECK(memmem(p, n, "strcmp(new_one, s->layout_unknown) == 0 ||", strlen("strcmp(new_one, s->layout_unknown) == 0 ||")) != NULL,
 				      "9: LAYOUT: a layout already found unknown is not compiled again");
 			}
+			{
+				const char *cc = body_of(src, "static enum msg_class control_class(uint16_t kind)", &n);
+				const char *dr = body_of(src, "static bool drain(rcp_session *s, uint64_t now)", &n);
+				size_t nd = n;
+				const char *shortcut, *gate, *hook;
+
+				CHECK(cc != NULL, "9: control_class found");
+				CHECK(cc && !memmem(cc, 400, "T_FIT_CANVAS", strlen("T_FIT_CANVAS")),
+				      "9: FIT_CANVAS is NOT dropped in silence (§7.1: one CANVAS answer for each)");
+				shortcut = dr ? memmem(dr, nd, "rcp_canvas_adapted_now(s, good_w, good_h, now);", 47) : NULL;
+				gate = dr ? memmem(dr, nd, "msg_admit(s, MC_FIT_CANVAS, now)", strlen("msg_admit(s, MC_FIT_CANVAS, now)")) : NULL;
+				hook = dr ? memmem(dr, nd, "if (!s->g.recanvas) {", strlen("if (!s->g.recanvas) {")) : NULL;
+				CHECK(gate != NULL, "9: FIT_CANVAS has its gate in its handler");
+				CHECK(shortcut && gate && hook && shortcut < gate && gate < hook,
+				      "9: FIT_CANVAS: after the same-size shortcut (which rebuilds nothing), before the stage hook");
+				CHECK(gate && memmem(gate, 300, "NOT_NOW", strlen("NOT_NOW")) != NULL, "9: and over the rate it is ANSWERED NOT_NOW");
+			}
 			free(src);
+		}
+	}
+	/* 10: the budget and a canvas that grows (src/main.c, argv[2], optional) */
+	if (argc > 2) {
+		char *m = slurp(argv[2]);
+		size_t n;
+		const char *p;
+
+		CHECK(m != NULL, "10: src/main.c readable");
+		if (m) {
+			p = body_of(m, "static bool recanvas_to_child(", &n);
+			CHECK(p != NULL, "10: recanvas_to_child found");
+			if (p) {
+				const char *fit = memmem(p, n, "recanvas_fits_budget(p, user, width, height)", strlen("recanvas_fits_budget(p, user, width, height)"));
+				const char *go = memmem(p, n, "children_recanvas(", strlen("children_recanvas("));
+
+				CHECK(fit && go && fit < go, "10: a growing canvas is judged by the budget BEFORE it leaves for the stage");
+			}
+			p = body_of(m, "static bool recanvas_fits_budget(", &n);
+			CHECK(p != NULL, "10: recanvas_fits_budget found");
+			if (p) {
+				CHECK(memmem(p, n, "!budget_on()", strlen("!budget_on()")) != NULL, "10: budget OFF: it passes");
+				CHECK(memmem(p, n, "<= (uint64_t)CANVAS_W * CANVAS_H", strlen("<= (uint64_t)CANVAS_W * CANVAS_H")) != NULL,
+				      "10: within what the admission counted: it passes");
+				CHECK(count_in(p, n, "strcmp(chi, user) != 0") + count_in(p, n, "strcmp(found_again[i].user, user) != 0") == 2,
+				      "10: the user's own stage is left out of the sum");
+				CHECK(memmem(p, n, "e != BUDGET_DOES_NOT_HOLD", strlen("e != BUDGET_DOES_NOT_HOLD")) != NULL,
+				      "10: «I could not measure» passes, only a clear no refuses");
+			}
+			free(m);
 		}
 	}
 	printf("%d checks, %d failed\n", checks, bad);
