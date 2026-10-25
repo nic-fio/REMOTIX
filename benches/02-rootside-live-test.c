@@ -406,20 +406,11 @@ static int net_nologind(void)
 		pause();
 }
 
-/* ⭐ The dead root side reaches this process TWICE, in no fixed order: PR_SET_PDEATHSIG (armed in the fork before the exec by rootside.c, and it
- *    survives an exec of a normal binary) delivers SIGTERM, and the channel's other end closing is an EOF on fd 3.  The product stops on either
- *    (main.c's SIGTERM handler; rootside_lost()); this stand-in notes the signal and goes on to see the EOF — the EOF is what the case proves. */
-static volatile sig_atomic_t rd_term_seen;
-static int rd_term_fd = -1;
-static void rd_term(int sig)
-{
-	static const char m[] = "SIGTERM_SEEN (the PDEATHSIG of the dead root side)\n";
-
-	(void)sig;
-	rd_term_seen = 1;
-	if (rd_term_fd >= 0)
-		(void)!write(rd_term_fd, m, sizeof m - 1);
-}
+/* ⭐ The dead root side reaches this process TWICE, a few microseconds apart: the channel's other end closing is an EOF on fd 3 (the file table is
+ *    released first), and PR_SET_PDEATHSIG (armed in the fork before the exec by rootside.c; it survives the exec of a normal binary) sends SIGTERM
+ *    when the parent's exit is announced.  The product stops on either (main.c's SIGTERM handler; rootside_lost()).  The EOF is what this case
+ *    proves, so SIGTERM is BLOCKED here — it stays pending, and `sigpending()` tells afterwards whether the second route also fired: no race
+ *    between the two decides the case. */
 
 static int net_rootdeath(void)
 {
@@ -429,8 +420,13 @@ static int net_rootdeath(void)
 	out = fopen(DIR_ "/net.txt", "w");
 	if (!out)
 		return 2;
-	rd_term_fd = fileno(out);
-	signal(SIGTERM, rd_term);
+	{
+		sigset_t only_term;
+
+		sigemptyset(&only_term);
+		sigaddset(&only_term, SIGTERM);
+		sigprocmask(SIG_BLOCK, &only_term, NULL);
+	}
 	check(rootside_attach(3, 30000, &r), "attached: READY from the root side");
 	fprintf(out, "ATTACHED\n");
 	fflush(out);
@@ -438,6 +434,12 @@ static int net_rootdeath(void)
 	while (!rootside_lost() && log_now_ms() - t0 < 30000)
 		wait_events(200);
 	fprintf(out, "%s after %llu ms\n", rootside_lost() ? "ROOT_EOF" : "ROOT_EOF_NOT_SEEN", (unsigned long long)(log_now_ms() - t0));
+	{
+		sigset_t pend;
+
+		sigpending(&pend);
+		fprintf(out, "SIGTERM_PENDING=%d (PDEATHSIG of the dead root side)\n", sigismember(&pend, SIGTERM) == 1);
+	}
 	fflush(out);
 	return rootside_lost() ? 0 : 1;
 }
