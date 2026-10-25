@@ -616,9 +616,9 @@ void render_grant_remove(const char *user, uid_t uid, gid_t gid)
 	            user, (long)gid);
 }
 
-/* ⭐ phase D2: added here and NOT yet used by `render_grant_sweep()` below,
- *    which still asks `rediscover_alive()` (the single-process server may use
- *    GDBus).  The sweep switches to this function when the root side exists. */
+/* ⭐ phase D2: the function below is PREPARED and not yet used by `render_grant_sweep()`, which still asks
+ *    `rediscover_alive()` (the single-process server may use GDBus).  Today only the root side's CLOSE_ORPHAN check
+ *    (`rootside.c`) calls it; the sweep switches to it when the root side owns the sweep. */
 /* ⭐⭐ 1.5 (DECISIONS.md §11.50) — logind's own files, not its bus.  The sweep
  *     runs in the ROOT SIDE, which forks the children and must stay
  *     single-threaded: `rediscover_alive()` opens the system bus with GDBus,

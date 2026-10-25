@@ -72,8 +72,10 @@ extern char **environ;
 #define KIDS_EOF_GRACE_MS 5000
 #define KIDS_TERM_GRACE_MS 3000
 
-/* ⭐ The weak stub: until `walls.c` is linked, the network side is NOT started
- *    — no silent fallback to a network side without walls (§11.50). */
+/* ⭐ The weak stubs: `walls.c` is linked into the server (src/Makefile, SORGENTI) and its strong definitions
+ *    replace these.  They remain for the binaries that link `rootside.c` WITHOUT `walls.c` (the validator desk test
+ *    `make test-rootside`, the fuzz harnesses): there the network side is NOT started — no silent fallback to a
+ *    network side without walls (§11.50). */
 __attribute__((weak)) int walls_apply(const struct rootside_options *o, char *why,
                                       size_t why_len)
 {
@@ -1251,7 +1253,7 @@ static bool cgroup_of(pid_t pid, char *out, size_t cap)
  *    or the container's), whatever it does.
  * ⛔⛔ And ONLY those (16 Oct 2026, the coordinator's decision, option a): the
  *    first form became `remotix` and `kill(-1, SIGKILL)`ed EVERY process of that
- *    uid — in a box the rehearsal's rxp-privsep and rete11-server killed each
+ *    uid — in a test box two rehearsals (the privsep one and the server one) killed each
  *    other's network sides in a loop (privsep red on three boxes,
  *    20261016-122655).  Another REMOTIX server's network side runs as the same
  *    uid but in ANOTHER cgroup (its own unit): it is not ours, and is left

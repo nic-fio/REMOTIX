@@ -2516,7 +2516,7 @@ void capture_probe_pointer(Capture *capture, uint32_t x, uint32_t y)
  * encoding of ~10 ms (`[M]` «encoding 9.7 ms» median) AND a 4K decode on the
  * client: a look of 3–10 ms is still worth it when it holds frames back, and
  * the ceiling alone (3 ms until 15 Oct 2026) switched it off 19 times in
- * 50 minutes of rete11-kde's log, F-003 kde/firefox among them (`unchanged.h`).  On a discrete card a
+ * 50 minutes of a KDE test box's log, F-003 kde/firefox among them (`unchanged.h`).  On a discrete card a
  * mapped read is far slower (`[M]` the full pass: 63.7 s, see
  * `look_dmabuf_pixels`): there the hard ceiling switches it off. */
 
