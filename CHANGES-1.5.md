@@ -99,9 +99,10 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   journal lines no longer doubled, FAREWELL reason 0x10 accepted (`84fdf573`).
 - **The card grant could call a group private without having seen all of it** (audit R-4, 25 Oct 2026, branch `gruppo-privato`): `group_is_private()` read `/etc/group` and
   `/etc/passwd` with a 4096-byte `fgets`, so the members of a long group line after the first 4095 bytes (and a later account with the same gid behind a long line) were never seen.
-  Lines are now read whole (up to 1 MiB); a line that is too long, or too short to be a record, makes the group NOT private. NSS (`getgrgid_r`, `getpwent`) was weighed and not added:
+  Lines are now read whole with `getline()` (up to 1 MiB). NOT private: a line that is too long, with a zero byte inside, with too few fields, any `+` line (NIS compat: other accounts with the gid
+  cannot be excluded), or a read error; skipped: blank lines, `#` lines and `-name` lines. NSS (`getgrgid_r`, `getpwent`) was weighed and not added:
   the code runs in the parent as root and must not block on sssd/LDAP, and enumeration is off by default so it would prove nothing; a gid absent from `/etc/group` stays refused.
-  Test `benches/unit/render-grant`, checks 35-40.
+  Test `benches/unit/render-grant`, checks 35-51.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
