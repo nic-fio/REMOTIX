@@ -2481,7 +2481,9 @@ int main(int argc, char **argv)
 	signal(SIGINT, on_signal);
 	signal(SIGTERM, on_signal);
 	signal(SIGPIPE, SIG_IGN);
-	{
+	/* ⭐ sigchld.h: only the process that runs the main loop: the single-process server (no --split) or the network side.  The root side
+	 *    of a split (`split && !network_side`) has its own SIGCHLD handler and loop (rootside.c) and is not touched. */
+	if (!split || network_side) {
 		/* ⭐ sigchld.h: SA_RESTART (the calls that can restart do), SA_NOCLDSTOP (a stopped child is not a death).  The handler is reset
 		 *    to the default by every `execve()`: the children and the PAM dispatcher start clean.  If it cannot be installed the gate
 		 *    stays off and every round reaps, as before. */

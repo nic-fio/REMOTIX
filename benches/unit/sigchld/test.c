@@ -247,7 +247,6 @@ int main(int argc, char **argv)
 
 	/* 8. the sources (argv[1] = the src directory) */
 	if (argc > 1) {
-		static char buf[8 << 20];
 		char path[512];
 		const char *files[] = {"main.c", "child.c", "helper.c"};
 		static char txt[3][2 << 20];
@@ -259,7 +258,6 @@ int main(int argc, char **argv)
 			txt[k][got] = 0;
 			CHECK(got > 0, "cannot read %s", path);
 		}
-		(void)buf;
 		const char *m = txt[0], *c = txt[1], *h = txt[2];
 		const char *a = strstr(m, "if (sigchld_gate_pending(&sigchld_gate))");
 		const char *b = a ? strstr(a, "wait_ns = 0;") : NULL;
@@ -277,6 +275,18 @@ int main(int argc, char **argv)
 		b = a ? strstr(a, "if (a->reap_hold)") : NULL;
 		w = a ? strstr(a, "waitpid(a->child, status, WNOHANG)") : NULL;
 		CHECK(a && b && w && b < w, "helper.c: reap() does not skip waitpid() when told");
+		a = strstr(m, "if (!split || network_side) {");
+		b = a ? strstr(a, "sigaction(SIGCHLD, &sc, NULL)") : NULL;
+		CHECK(a && b && b - a < 1500, "main.c: the handler is not installed only for the process that runs the loop (!split || network_side)");
+		a = strstr(c, "static void become_and_exec(");
+		b = a ? strstr(a, "signal(SIGCHLD, SIG_DFL);") : NULL;
+		w = a ? strstr(a, "execve(") : NULL;
+		CHECK(a && b && (!w || b < w), "child.c: become_and_exec() does not reset SIGCHLD to the default");
+		{
+			const char *kill_line = strstr(c, "did not die within 3 s");
+			const char *late = kill_line ? strstr(c + (kill_line - c > 1200 ? (kill_line - c) - 1200 : 0), "waitpid(g->pid, &late, WNOHANG) == g->pid") : NULL;
+			CHECK(kill_line && late && late < kill_line, "child.c: no waitpid before the \"did not die within 3 s\" line");
+		}
 		CHECK(strstr(c, "bool reap_hold;") != NULL && strstr(h, "bool reap_hold;") != NULL, "the hold flags are missing in the structs");
 	}
 
