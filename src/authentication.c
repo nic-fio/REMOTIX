@@ -41,6 +41,7 @@
  *    ⚠ Together with it came the distinction between «PAM refused» and «PAM
  *      could not judge», which did not exist before: they were the same `false`.
  */
+#include <pwd.h>
 #include <security/pam_appl.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -191,17 +192,58 @@ static int conversation(int n, const struct pam_message **questions,
  *   on TWO hosts (the product and the graft of `benches/01-b3-graft-rcp.py`),
  *   and only one of the two has our log.  Both have `stderr`, and it is where
  *   both write. */
+/* ⛔ R3 (audit of 25 Oct 2026): the NAME that goes to the log.  `why_no()` wrote the raw name the client typed: someone who types the
+ *    password in the user field left it in clear in a file that is kept, and control characters (a newline, an escape) went through
+ *    untouched — this line does not pass `log.c`'s cleaning.  The rule of the 1.5 (DECISIONS §11.1, §4.4-bis D) is that a name that is
+ *    not a user of this machine never reaches a log.  So:
+ *      · a user of this machine (`getpwnam_r`)  → `user «name»`, control characters turned into «?», at most 64 bytes;
+ *      · anything else                          → `unknown user [a1b2c3]`, the 6 hex of the HMAC the SERVER computed (`rcp_log_tag()`
+ *        of rcp.c, under its `log-secret`) and handed down in the environment of this process as REMOTIX_PAM_LOG_TAG by the helper
+ *        that forks us (`helper.c`).  ⚠ This file cannot ask rcp.c itself: the helper is the same binary re-executed with a fresh
+ *        memory image (the secret is not loaded there, and it is not for this process to read the secret file), and this file is
+ *        also mounted on the graft of `benches/01-b3-graft-rcp.py`.  No tag (root side, bench, graft) → `unknown user [??????]`:
+ *        the name still never leaves. */
+static void name_for_log(const char *user, char *out, size_t cap)
+{
+	struct passwd pw, *res = NULL;
+	char spare[2048];
+
+	if (user && *user && getpwnam_r(user, &pw, spare, sizeof spare, &res) == 0 && res) {
+		size_t j = 0;
+		const char *p = "user «";
+		snprintf(out, cap, "%s", p);
+		j = strlen(out);
+		for (size_t i = 0; user[i] && i < 64 && j + 4 < cap; i++) {
+			unsigned char c = (unsigned char)user[i];
+			out[j++] = (c < 0x20 || c == 0x7f) ? '?' : (char)c;
+		}
+		out[j] = 0;
+		snprintf(out + j, cap - j, "»");
+		return;
+	}
+	{
+		const char *t = getenv("REMOTIX_PAM_LOG_TAG");
+		bool ok = t && strlen(t) == 6;
+		for (size_t i = 0; ok && i < 6; i++)
+			ok = (t[i] >= '0' && t[i] <= '9') || (t[i] >= 'a' && t[i] <= 'f');
+		snprintf(out, cap, "unknown user [%s]", ok ? t : "??????");
+	}
+}
+
 static void why_no(const char *user, const char *step, pam_handle_t *pam,
                       int rv, bool locked)
 {
+	char who[160];
+
+	name_for_log(user, who, sizeof who);
 	if (rv == PAM_AUTH_ERR || rv == PAM_USER_UNKNOWN ||
 	    rv == PAM_PERM_DENIED || rv == PAM_CRED_INSUFFICIENT ||
 	    rv == PAM_ACCT_EXPIRED || rv == PAM_NEW_AUTHTOK_REQD ||
 	    rv == PAM_MAXTRIES) {
 		fprintf(stderr,
-		        "RCP: PAM REFUSED user «%s» in %s: %s (service "
+		        "RCP: PAM REFUSED %s in %s: %s (service "
 		        "«%s»)%s\n",
-		        user, step, pam_strerror(pam, rv), SERVICE_PAM,
+		        who, step, pam_strerror(pam, rv), SERVICE_PAM,
 		        locked ? " — pam_faillock had the account LOCKED (it said "
 		                 "so before the password was asked): even the right "
 		                 "password is refused until it unlocks, or until "
@@ -209,13 +251,13 @@ static void why_no(const char *user, const char *step, pam_handle_t *pam,
 		               : "");
 	} else {
 		fprintf(stderr,
-		        "RCP: ⛔ PAM COULD NOT JUDGE user «%s» in %s: %s "
+		        "RCP: ⛔ PAM COULD NOT JUDGE %s in %s: %s "
 		        "(service «%s») — it is NOT «wrong password».  Check that "
 		        "/etc/pam.d/%s (or /usr/lib/pam.d/%s on openSUSE) and "
 		        "/etc/remotix/denied-users exist: without the first Linux-PAM "
 		        "falls back to «other» (pam_deny on Fedora and Arch), without the "
 		        "second pam_listfile refuses everyone.\n",
-		        user, step, pam_strerror(pam, rv), SERVICE_PAM,
+		        who, step, pam_strerror(pam, rv), SERVICE_PAM,
 		        SERVICE_PAM, SERVICE_PAM);
 	}
 	fflush(stderr);

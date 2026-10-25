@@ -1462,6 +1462,10 @@ bool rcp_verdict_lost(rcp_session *s, uint64_t ticket);
  * every restart), -2 = no secret (the tags are «??????»; never the name). */
 int rcp_log_secret_load(const char *dir);
 
+/* The same 6-hex tag as `unknown user [hmac6]`, for a line written outside rcp.c (the PAM helper, R3 of 25 Oct 2026).  `out` is 8
+ * bytes: 6 hex and the zero, or `??????` when there is no secret.  Never the name. */
+void rcp_log_tag(const char *user, char out[8]);
+
 #ifdef __cplusplus
 }
 #endif
