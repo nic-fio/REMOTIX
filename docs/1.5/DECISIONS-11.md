@@ -2,20 +2,21 @@
 
 > Reference only: the decisions and the list of 1.5 points. The code they mention is NOT in this repository.
 
-## 0. ⚠ READ FIRST — this file comes from the abandoned attempt (status of 24 Oct 2026)
+## 0. ⚠ READ FIRST — this file comes from the abandoned attempt (status of 25 Oct 2026)
 
 This file was copied from the discarded first attempt (tag `1.5-scartata`) and then extended. The review of 24 Oct 2026 found
 that it cites **117 commit hashes that are not in this tree** (`git cat-file -e` fails), and that many items marked ✅ / DONE
-describe code that exists only in the abandoned attempt. Every such entry now carries a line starting with «⚠ NOT in this
-tree». Two kinds:
-- **«NOT in this tree (abandoned attempt, commit …); being ported on port-pagina / port-rcp»** — the seven urgent ones: §11.4
-  (no more `terminate-user`), §11.29 LXQt repair, §11.39 `0x0E`, §11.43 the 30-minute clock, §11.44 the page's TCP listener,
-  §11.48 the 320×240 probe, and the rpm `%ghost` of §11.33;
-- **«Ported on port-varie (<hash>), to be built and tested»** — §11.32 `PACE` (`4895f2ad`, `c7bfef17`), §11.45 encoder padding
-  (`19749144`), and in §11.33 the key receipts (`8a2c3faa`, `6217b6dd`, `267068d4`, `cbe4534b`);
-- **«NOT in this tree; still to port»** — §11.36 Firefox worker (a PROPOSAL, not decided), §11.37 / §11.38 render nodes,
-  §11.47 `refusal_uncounted`, §11.50 (the whole root-side split); the KDE «unchanged» filter, the nested `remotix-capture` name
-  and the nested KWin size are ported on `port-kde`, to be built and tested.
+describe code that exists only in the abandoned attempt. Every such entry carried a line starting with «⚠ NOT in this
+tree». Status of 25 Oct 2026, after the ports:
+- **Ported and merged into `integrazione2`** (the markers of these sections now say so; the hashes they cite are still those of the
+  abandoned attempt, the ports have their own): §11.4 (no more `terminate-user`; `port-sessioni`), §11.29 LXQt repair, §11.39 `0x0E`,
+  §11.43 the 30-minute clock, §11.47 `refusal_uncounted` (`port-rcp`), §11.44 the page's TCP listener, §11.48 the 320×240 probe
+  (`port-pagina`), §11.33 rpm `%ghost` (`port-pacchetti`), §11.32 `PACE` (OFF by default), §11.45 encoder padding, §11.33 key receipts
+  (`port-varie`), §11.37 / §11.38 render nodes (`port-scheda`), the KDE «unchanged» filter, the nested `remotix-capture` name and the nested
+  KWin size (`port-kde`). All of them built and unit-tested there (`verifica-rami` 28/28); the live checks are listed in CHANGES-1.5.md.
+- **NOT in `integrazione2`**: §11.36 the Firefox worker (a proposal, not decided, nothing built: user decision D2) and §11.50 the
+  root-side split, which is written, reviewed and packaged on the branch `rootside-completo` (OFF by default behind
+  `REMOTIX_SPLIT_EXPERIMENTAL=1`) and waits for the user's decision D1 and for its merge.
 What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
 An entry without the marker may still cite hashes of the discarded attempt; read the hash against `git log` before trusting it.
 
@@ -55,7 +56,7 @@ not apply (the user is the Author). What follows is what the user decided on eac
 
 ### 11.4 ✅ The first enrolment in the card groups must stop closing the user's other sessions
 
-> ⚠ NOT in this tree (abandoned attempt, commit none recorded: the enrolment code of the first attempt («`loginctl terminate-user` is gone», `src/render_grant.c`) — here `terminate-user` is still in `enroll_in_card_groups()`); being ported on port-pagina / port-rcp
+> ⚠ Ported (25 Oct 2026): the enrolment code of the first attempt («`loginctl terminate-user` is gone», `src/render_grant.c`) is merged into `integrazione2` from `port-sessioni` (`6349f4f2`); `child.c` no longer calls `terminate-user`. verification 28/28 on `4be3a981`, 24 Oct 2026; the live check with real browsers is still due (CHANGES-1.5.md, «Still open»).
 
 - **The ruling** (verbatim): *«Il punto 2 mi sembra che vada contro le specifiche del progetto. Un utente puo' avere
   contemporaneamente un a sessione locale/remota testuale e un a sessione grafica remota»*; and *«e' quello su cui
@@ -565,7 +566,7 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
   - §11.9: the Retry token is handed to ngtcp2 after our Retry (no 3× limit after validation, no silent drop of a
     reordered ClientHello); a timer error other than idle closes with one CONNECTION_CLOSE (§8.1).
   - `[M]` 14 Oct, fuzz quic and quic-conn 5 min × 2 jobs clean, the grafted fault seen.
-- ⚠ NOT in this tree (abandoned attempt, commit `8124e05c`, `4c79c59c` — the LXQt trace repair); being ported on port-pagina / port-rcp
+- ⚠ Ported (25 Oct 2026): the LXQt trace repair (abandoned-attempt commits `8124e05c`, `4c79c59c`) is merged into `integrazione2` from `port-rcp` (`src/session.c`). verification 28/28 on `4be3a981`, 24 Oct 2026; the live check with real browsers is still due (CHANGES-1.5.md, «Still open»).
 - **LXQt black desktop after a reboot** (`8124e05c`, `src/session.c`): `[M]` T10 debian13-lxqt reboot FAIL 3/3
   with 1.0.0-1. At shutdown pcmanfm-qt dies while saving (the compositor is gone first) and leaves an empty
   `~/.config/pcmanfm-qt/lxqt/`; pcmanfm-qt 2.1.0 then skips the system profile and every later session is black.
@@ -714,7 +715,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 - **LXQt** — `4c79c59c`: the orphan pcmanfm-qt profile cure (§11.29) uses `g_lstat` and no longer follows a
   symlink out of HOME; a `settings.conf` link counts as the user's file. `[T]` `benches/21-session-orphan-test.c`
   (`ac82c60d`, `make -C src test-session`) 28/28 on the test server's build container (8124e05c's body 24/28).
-- ⚠ NOT in this tree (abandoned attempt, commit `ee0a692e` — `quic-secret` as `%ghost` in the rpm spec); being ported on port-pagina / port-rcp
+- ⚠ Ported (25 Oct 2026): `quic-secret` as `%ghost` in the rpm spec (abandoned-attempt commit `ee0a692e`) is merged into `integrazione2` from `port-pacchetti` (`c89a1163`).
 - **Packaging** — `ee0a692e`: `certificates/quic-secret` is `%ghost` in `remotix.spec`, so `uninstall --purge`
   on Fedora/AlmaLinux/openSUSE removes it and `/var/lib/remotix`; T10 now excuses only the engine's history.
   ⚠ Not yet seen on an rpm box.
@@ -737,7 +738,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
      and to what (e.g. 15 s: every reboot may take up to that much longer, for every holder of a delay lock).
 - ✅ **Decided 15 Oct 2026, decisione dell'utente** (*«fai quello che c'è da fare»*: the proposal's own timing,
   «after the release»). ⇒ **Postponed until after 1.5**: nothing is built for 1.5.0; the trace repair
-  (`8124e05c`, `4c79c59c`) was in the abandoned attempt and is **NOT in this tree** (still to port); the Known issue stays. The three questions above are asked again after the release.
+  (`8124e05c`, `4c79c59c`) was in the abandoned attempt; it has since been ported (see the entry of the LXQt repair above, 25 Oct 2026) and is merged into `integrazione2`; the Known issue of 1.0.0-1 stays for the installations that still run it. The three questions above are asked again after the release.
 
 ### 11.35 ✅ The installer's preflight does not check that systemd-logind runs (15 Oct 2026)
 
@@ -750,7 +751,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.36 ✅ Firefox at 4K with video: what to change (15 Oct 2026) — DECIDED D
 
-> ⚠ NOT in this tree; still to port: `728acd22`, the Firefox worker default
+> ⚠ NOT in this tree (25 Oct 2026): `728acd22`, the Firefox worker default, is not built and not decided (user decision D2); no branch exists yet. Chrome does not need it.
 
 - `[M]` §11.31: the page's main thread stalls 55–64 % of the time (gaps in the sound); §11.32: the decoder queue
   ≥ 5 for 80 % of the frames, decode delay median 1.35 s, the picture 1.4 s old or more. Chrome is fine.
@@ -922,7 +923,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.39 ✅ When the server could not check the password, the page no longer says «wrong password»: `0x0E` (15 Oct 2026)
 
-> ⚠ NOT in this tree (abandoned attempt, commit `24f99518` — the `0x0E SESSION_UNSERVABLE` refusal); being ported on port-pagina / port-rcp
+> ⚠ Ported (25 Oct 2026): the `0x0E SESSION_UNSERVABLE` refusal (abandoned-attempt commit `24f99518`) is merged into `integrazione2` from `port-rcp`. verification 28/28 on `4be3a981`, 24 Oct 2026; the live check with real browsers is still due (CHANGES-1.5.md, «Still open»).
 
 - **The problem, in plain words.** Sometimes the server cannot check a password at all: the helper process that
   asks PAM has died or is restarting (`c7e86ead`), PAM hangs and the 12 s net gives up (`VERDICT_CAP`,
@@ -1219,7 +1220,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.43 ✅ Someone who only watches is detached after 30 minutes — keep it, or give the page a «still here» (15 Oct 2026) — DECIDED A
 
-> ⚠ NOT in this tree (abandoned attempt, commit `496b6dbd` — the 30-minute watcher clock); being ported on port-pagina / port-rcp
+> ⚠ Ported (25 Oct 2026): the 30-minute watcher clock (abandoned-attempt commit `496b6dbd`) is merged into `integrazione2` from `port-rcp`. verification 28/28 on `4be3a981`, 24 Oct 2026; the live check with real browsers is still due (CHANGES-1.5.md, «Still open»).
 
 > **Decision (user, 15 Oct 2026): A, keep it as specified.** «la password serve sempre, più che altro una sessione rimasta aperta consuma risorse»: asking for the password again is expected, and the point of the clocks is to free the resources of a session nobody uses. No «still here» signal, no grace after a reconnection (a reconnection past 30 minutes simply asks for the password). The 30- and 60-minute clocks stay as in 496b6dbd/24f99518.
 
@@ -1295,7 +1296,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.44 🔸 The page's TCP listener: deadlines and a per-address cap (15 Oct 2026) — built, not yet on the boxes
 
-> ⚠ NOT in this tree (abandoned attempt, commit `3ed5091f` — the page's TCP listener, deadlines and per-address cap); being ported on port-pagina / port-rcp
+> ⚠ Ported (25 Oct 2026): the page's TCP listener, deadlines and per-address cap (abandoned-attempt commit `3ed5091f`) are merged into `integrazione2` from `port-pagina` (`69843995`, with the child-flood test `f4837c27`). verification 28/28 on `4be3a981`, 24 Oct 2026; the live check with real browsers is still due (CHANGES-1.5.md, «Still open»).
 
 - **The defect** (pre-login denial of service): `src/page.c` has 32 client slots and freed one only on activity
   of its socket — no deadline, no idle timeout, no keepalive, no per-address limit. 32 TCP connections that send
@@ -1378,7 +1379,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.45 ✅ The encoder's padding on AMD: edge copies, or the encoder's own colour conversion (15 Oct 2026) — decided: A
 
-> ⚠ Ported on port-varie (`19749144`, from `ceaf026f`; the bench case 5 of `benches/23-colors709-edge-test.c` is not ported, that file is not in this tree), to be built and tested: the encoder padding (edge copies past the canvas)
+> ⚠ Ported on port-varie (`19749144`, from `ceaf026f`; the bench case 5 of `benches/23-colors709-edge-test.c` is not ported, that file is not in this tree) and merged into `integrazione2` (`3614a853`), built and unit-tested there (25 Oct 2026): the encoder padding (edge copies past the canvas)
 
 - **What padding is, in plain words.** The card encodes a picture a little bigger than the screen: the width and
   height are rounded up (H.264: to 16; HEVC on AMD: to 64 wide and 16 high). A 1080-row screen is encoded with
@@ -1464,7 +1465,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.47 ✅ A stranger locks the account with `pam_faillock`, and then the owner bans themselves (15 Oct 2026) — DECIDED B
 
-> ⚠ NOT in this tree; still to port: `rcp.c` `refusal_uncounted()`
+> ⚠ Ported (25 Oct 2026): `rcp.c` `refusal_uncounted()` is merged into `integrazione2` from `port-rcp` (`a560aabf`, with `rcp_orphan_verdict`); the ban counters it feeds are those of §11.53 (`login-difese`). verification 28/28 on `4be3a981`, 24 Oct 2026; the live check with real browsers is still due (CHANGES-1.5.md, «Still open»).
 
 *15 Oct 2026, from the holistic security review. Established by reading the code and `pam_faillock`'s documented
 behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]` until a bench measures it.*
@@ -1569,7 +1570,7 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 ### 11.48 ✅ The stress bench's client browsers do not share the boxes' card (16 Oct 2026) — DECIDED B
 
-> ⚠ NOT in this tree (abandoned attempt, commit `4cfdd4a8` — the page probe that retries at 320×240); being ported on port-pagina / port-rcp
+> ⚠ Ported (25 Oct 2026): the page probe that retries at 320×240 (abandoned-attempt commit `4cfdd4a8`) is merged into `integrazione2` from `port-pagina` (`ba4c6204`). verification 28/28 on `4be3a981`, 24 Oct 2026; the live check with real browsers is still due (CHANGES-1.5.md, «Still open»).
 
 - **The problem, in plain words.** The stress bench runs the fake users' browsers (Firefox, Chrome) and their small
   desktop (labwc) on the test server itself. Since `fd8ada94` (15 Oct) they were pinned to the **Intel** card — the
@@ -1644,7 +1645,7 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
 
-> ⚠ NOT in this tree; still to port: the whole section — no root side / network side split exists in this code
+> ⚠ NOT in `integrazione2` (25 Oct 2026): the whole section is written, reviewed and packaged on the branch `rootside-completo` (`d09a6738`; D1-D7 plus installer and packages), OFF by default (the server stays one process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`). It is merged only after the user's decision D1 (ON or OFF in 1.5) and after `pktinfo`; see CHANGES-1.5.md.
 
 - **The user's rulings** (16 Oct 2026, to the questions put after the inventory of the root operations — seven
   reports, one per area: network side, PAM, desktop birth, the per-session child, cards and input, packaging,
