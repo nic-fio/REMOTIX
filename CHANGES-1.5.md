@@ -174,6 +174,7 @@ These are approved and are **not** in the range above; `finale` has them, merged
 - Already in `integrazione2` since the 24 Oct run: `61ea9a6c` (the 429 for a second session counted as chatter), `879cf5fa` (a name clash of `rcp_logged_in`),
   `549a9e06` (the product build declared five capabilities in HERE_I_AM and wrote four), `0b4d3bda`/`4be3a981` (tests of the six failing units),
   `c2766ea1`/`8a7f5247` (F-027 rewritten to the new ban rules), `a4b9cb1f` (test client `--rebind` with QUIC PING).
+- TLS key-exchange groups restricted to X25519MLKEM768, X25519, P-256, P-384 (`src/tls.c`, both the QUIC and the TCP context; audit R4). Present since 1.0: no group was set, so a client could offer only `ffdhe3072` and make each handshake cost about 6 ms of CPU instead of 1.2. Needs a try with Chrome, Firefox and Android before it is merged.
 
 ## 7. What is OFF by default
 - **Root-side / network-side split (§11.50)**: written, reviewed, packaged (service user `remotix`, installer, distro packages, SELinux, seccomp,

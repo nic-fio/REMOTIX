@@ -332,7 +332,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-rootside test-walls FORCE
+.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-rootside test-walls test-tls-groups FORCE
 
 all: fingerprints $(NOME)
 
@@ -472,6 +472,14 @@ test-walls: ../benches/02-walls-test.c walls.c walls.h
 	$(CC) $(CFLAGS) -I. -o "$$d/test" ../benches/02-walls-test.c $(DL_LIBS); \
 	"$$d/test"
 
+
+# ⭐ 1.5 (audit R4) — the TLS contexts accept only X25519MLKEM768/X25519/P-256/P-384
+#    (`tls.c` included; in-memory handshakes; `benches/02-tls-groups-test.c`, header).
+test-tls-groups: ../benches/02-tls-groups-test.c tls.c tls.h log.h
+	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-tls-groups.XXXXXX"); \
+	trap 'rm -rf "$$d"' EXIT; \
+	$(CC) $(CFLAGS) -I. -o "$$d/test" ../benches/02-tls-groups-test.c -lssl -lcrypto; \
+	"$$d/test"
 
 %-client-protocol.h: protocols/%.xml
 	$(SCANNER) client-header $< $@
