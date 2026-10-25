@@ -55,7 +55,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 11
+#define EXPECTED_CHECKS 17
 
 static void require(int cond, const char *desc)
 {
@@ -261,6 +261,34 @@ int main(void)
 		network_cycle(a, 7000);
 		require(says == 0 && a->network_logged_ms == 0, "no control channel: no quic-net line and nothing armed");
 		a->conn = NULL;
+	}
+
+	printf("  W5. wt_logged_in() is not a latch\n");
+	{
+		ngtcp2_ccerr e;
+		wt *a;
+
+		memset(&e, 0, sizeof e);
+		a = wt_new(NULL, &e, "[192.0.2.35]:4001", NULL);
+		a->session = 0;
+		a->rcp_stream = 4;
+		a->rcp = session("[192.0.2.35]:4001", "anna", "1920x1080", true, fake_now);
+		require(a->rcp && wt_logged_in(a), "logged in");
+		says = 0;
+		for (int k = 0; k < 30; k++)
+			hook_log(a, "a line of a logged-in connection");
+		require(says == 30, "it writes every line");
+		(void)wt_stream_closed(a, 4, 0, false);                                    /* the control channel closes */
+		require(a->rcp == NULL && !wt_logged_in(a), "the control channel closed: the connection is «before the login» again");
+		says = 0;
+		for (int k = 0; k < 100; k++)
+			hook_log(a, "a line after the channel closed");
+		require(says <= WT_PRELOGIN_BURST + 1, "and its lines are held back by the budget again (100 -> at most WT_PRELOGIN_BURST)");
+		a->rcp = session("[192.0.2.36]:4001", "anna", "1920x1080", true, fake_now);
+		a->session = 8;
+		require(wt_logged_in(a), "a new login earns it back");
+		(void)wt_stream_closed(a, 8, 0, false);                                    /* the session stream closes (no control channel stream id matches) */
+		require(!wt_logged_in(a), "the session closed: before the login again");
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);

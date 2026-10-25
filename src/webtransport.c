@@ -8855,10 +8855,14 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 		rcp_free(w->rcp);
 		w->rcp = NULL;
 		w->rcp_stream = -1;
+		/* ⭐ rilettura-wt W5: `was_logged_in` was a latch for the whole life of the connection; the control channel is gone, so the connection is «before the login» again (its next one will earn it back) */
+		w->was_logged_in = false;
 		rule_heartbeat(w);
 	}
-	if (stream_id == w->session)
+	if (stream_id == w->session) {
 		w->session = -1;
+		w->was_logged_in = false;   /* ⭐ rilettura-wt W5: the session is gone too */
+	}
 
 	r = request_find(w, stream_id, false);
 	if (r)
