@@ -158,9 +158,27 @@ int main(void)
 		}
 	}
 
+	{
+		/* B4: SIGCHLD in the window ends the wait at once; and a flag already up means no sleep at all */
+		int r;
+
+		signal(SIGCHLD, on_chld);
+		chld_flag = 0;
+		inject = SIGCHLD;
+		clock_gettime(CLOCK_MONOTONIC, &t0);
+		r = wait_like_main(fds, &five);
+		CHECK(r < 0 && errno == EINTR && ms_since(&t0) < 500 && chld_flag, "3e. SIGCHLD in the window is delivered by the ppoll: the 5 s wait ends at once");
+		chld_flag = 1;
+		clock_gettime(CLOCK_MONOTONIC, &t0);
+		r = wait_like_main(fds, &five);
+		CHECK(r == 0 && ms_since(&t0) < 500, "3f. the gate flag already up: ppoll with a zero wait, no sleep");
+		chld_flag = 0;
+	}
+
 	CHECK(has("src/main.c", "old_hup.sa_handler != SIG_IGN") && has("src/main.c", "signal(SIGHUP, on_signal);") && has("src/main.c", "signal(SIGQUIT, on_signal);"), "4. main.c handles SIGHUP (unless inherited ignored) and SIGQUIT");
 	CHECK(has("src/main.c", "nchildren, &wait_ts, &original)") && !has("src/main.c", "nchildren, &wait_ts, NULL)"), "4b. the main ppoll takes the original mask, not NULL");
 	CHECK(has("src/main.c", "sigprocmask(SIG_BLOCK, &stops, &original);") && has("src/main.c", "sigprocmask(SIG_SETMASK, &original, NULL);"), "4c. blocked and restored around it");
+	CHECK(has("src/main.c", "sigaddset(&stops, SIGCHLD);") && has("src/main.c", "if (sigchld_gate_pending(&sigchld_gate)) {\n				wait_ts.tv_sec = 0;"), "4d. main.c: SIGCHLD is in the blocked set and a pending gate means a zero wait (B4)");
 	CHECK(has("src/rootside.c", "sigaction(SIGQUIT, &sa, NULL);") && has("src/rootside.c", "sigs[k] == SIGTERM || sigs[k] == SIGINT || sigs[k] == SIGQUIT"), "4e. rootside.c: SIGQUIT goes through the self-pipe and stops like SIGTERM (B1)");
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
 	return bad ? 1 : 0;

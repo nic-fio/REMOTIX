@@ -3463,10 +3463,16 @@ int main(int argc, char **argv)
 			sigaddset(&stops, SIGTERM);
 			sigaddset(&stops, SIGHUP);
 			sigaddset(&stops, SIGQUIT);
+			sigaddset(&stops, SIGCHLD);   /* ⭐ rilettura-fix B4: a death between the top-of-loop test and the ppoll is delivered BY the ppoll (atomic unblock), no longer waited out */
 			sigprocmask(SIG_BLOCK, &stops, &original);
 			if (stop_requested) {
 				sigprocmask(SIG_SETMASK, &original, NULL);
 				break;
+			}
+			/* ... and one whose handler ran BEFORE the block (after the zero-wait test above) is seen here: no sleep */
+			if (sigchld_gate_pending(&sigchld_gate)) {
+				wait_ts.tv_sec = 0;
+				wait_ts.tv_nsec = 0;
 			}
 			outcome = ppoll(fds, n + npage + ncommand + nhelp + nchildren, &wait_ts, &original);
 			saved = errno;
