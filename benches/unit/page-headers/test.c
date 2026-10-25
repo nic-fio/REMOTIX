@@ -188,7 +188,7 @@ static void longest_state_kind(const char *src, char *state, size_t scap, char *
 
 		while ((p = strstr(p, names[k])) != NULL) {
 			const char *q = p + nl;
-			char st[128], kd[128];
+			char st[2048], kd[2048];
 
 			/* skip the longer name that contains this one (compose_tail( does not contain compose( , but be safe) */
 			if (p > src && (p[-1] == '_' || (p[-1] >= 'a' && p[-1] <= 'z')))
@@ -341,7 +341,7 @@ int main(int argc, char **argv)
 
 	/* 4. the longest head, built like compose_build() and measured; its pieces come from the source */
 	{
-		char head[8192], state[128], kind[128], extra_pre[1024];
+		char head[16384], state[2048], kind[2048], extra_pre[1024];
 		int calls = 0, uses = 0;
 
 		longest_state_kind(src, state, sizeof state, kind, sizeof kind, &calls);
