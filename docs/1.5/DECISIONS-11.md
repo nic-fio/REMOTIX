@@ -14,9 +14,9 @@ tree». Status of 25 Oct 2026, after the ports:
   (`port-pagina`), §11.33 rpm `%ghost` (`port-pacchetti`), §11.32 `PACE` (OFF by default), §11.45 encoder padding, §11.33 key receipts
   (`port-varie`), §11.37 / §11.38 render nodes (`port-scheda`), the KDE «unchanged» filter, the nested `remotix-capture` name and the nested
   KWin size (`port-kde`). All of them built and unit-tested there (`verifica-rami` 28/28); the live checks are listed in CHANGES-1.5.md.
-- **NOT in `integrazione2`**: §11.36 the Firefox worker (written on the branch `ff-worker`, in review, merged only if the user chooses D2 = A) and §11.50 the
-  root-side split, which is written, reviewed and packaged on the branch `rootside-completo` (OFF by default behind
-  `REMOTIX_SPLIT_EXPERIMENTAL=1`) and waits for the user's decision D1 and for its merge.
+- **In the branch `finale`, not in `integrazione2`**: §11.50 the root-side split (merged from `rootside-completo`, OFF by default behind
+  `REMOTIX_SPLIT_EXPERIMENTAL=1`; it still waits for the user's decision D1), `pktinfo` (replies leave from the address the client wrote to), and `rifiniture` (CSP `connect-src 'self'`; the decoder rebuilt by a keyframe after an error).
+- **In neither**: §11.36 the Firefox worker (written on the branch `ff-worker`, in review, merged only if the user chooses D2 = A).
 What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
 An entry without the marker may still cite hashes of the discarded attempt; read the hash against `git log` before trusting it.
 
@@ -1644,7 +1644,7 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
 
-> ⚠ NOT in `integrazione2` (25 Oct 2026): the whole section is written, reviewed and packaged on the branch `rootside-completo` (`d09a6738`; D1-D7 plus installer and packages), OFF by default (the server stays one process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`). It is merged only after the user's decision D1 (ON or OFF in 1.5) and after `pktinfo`; see CHANGES-1.5.md.
+> ⚠ In the branch `finale`, NOT in `integrazione2` (25 Oct 2026): the whole section is merged from `rootside-completo` (`ae8cae45`; D1-D7 plus installer and packages), OFF by default (the server stays one process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`). Whether it is ON or OFF in 1.5 waits for the user's decision D1; see CHANGES-1.5.md.
 
 - **The user's rulings** (16 Oct 2026, to the questions put after the inventory of the root operations — seven
   reports, one per area: network side, PAM, desktop birth, the per-session child, cards and input, packaging,

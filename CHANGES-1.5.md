@@ -1,5 +1,6 @@
 # REMOTIX 1.5 — release notes (draft, 25 Oct 2026)
 
+> ⭐ This file describes the branch `finale` = `integrazione2` (`a4b9cb1f`) + `pktinfo` + `rootside-completo` (the split, OFF by default) + `rifiniture` (CSP and decoder correction) + `doc-chiusura`. `ff-worker` (§11.36) is NOT in it: it waits for the user's decision D2. Sections 5-7 say what is inside and what is not.
 > Range: `git log 5cf8ca10..a4b9cb1f` on branch `integrazione2` (package 1b, audit, login defences, and the ports from the abandoned
 > attempt: sessions, packages, RCP, page, card, KDE, misc) over package 1 (`git log 04f6aa18..5cf8ca10`). Every line cites a commit or a
 > section of `docs/1.5/DECISIONS-11.md` (written «§11.x»).
@@ -14,7 +15,7 @@
 3. Defects of 1.0 fixed (security and robustness)
 4. Requirements that changed
 5. Still open
-6. Fixes of 25 Oct 2026 on branches not yet merged
+6. Fixes of 25 Oct 2026 merged in `finale` (not in `integrazione2`)
 7. What is OFF by default
 
 ## 1. What is new for the user
@@ -103,8 +104,8 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
   better on Chrome; xfce+firefox memory +6..+17 % is a fixed offset of the box, `srv_rss` and `ses_rss` are equal to 1.0, so noise);
   F-011 cure (c) on the four desktops with Chrome and Firefox; F-014E on KDE; `pacing-ab` RTT at rest +5.8 % (limit 15 %).
 - **Queued, not yet run**: F-027/F-028/N-1 on four desktops with Chrome and Firefox; A/B gnome+chrome (one run showed CPU +9.5 % at
-  4 users and +14.8 % at 6: two more runs) and xfce+firefox (two more runs); `stream-churn` and `pam-tempi` on `integrazione2`;
-  fuzz `rcp-msg` and `child-msg` (900 s each); `verifica-rami` on `pktinfo` and `rootside-completo`; B10 (caps 16/4/8) on `pktinfo`;
+  4 users and +14.8 % at 6: two more runs) and xfce+firefox (two more runs); `stream-churn` and `pam-tempi` on `finale`;
+  fuzz `rcp-msg` and `child-msg` (900 s each); `verifica-rami` and B10 (caps 16/4/8) on `finale` (which holds `pktinfo`, `rootside-completo` and `rifiniture`);
   the «text» scene for 1.0 (8-user check); the 1.0 measures on the Radeon; `pacing-ab` bulk/burst/loss and the live migration, whose test
   clients were fixed on 25 Oct (the ATTACH layout, QUIC PING instead of raw bytes).
 - **Not provable on the test server, due by hand or on other machines**: Stateless Reset with real Chrome and Firefox (§11.9); a real
@@ -115,10 +116,11 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
   `PIANO.md` and on `f031-a-p1b`, to be tested on the phone) and NVIDIA (a rented server, `PIANO.md`): both excluded from this release's closing.
 - **Three decisions of the user** (opinions collected from Argon, gpt-oss and Laguna in `tmp/dom5.txt`, none taken): **D1** the root-side
   split ON or OFF in 1.5 (§11.50); **D2** the Firefox worker as default (§11.36); **D3** decoder `PACE` ON by default (§11.32). Without
-  a decision the release is the safe one: D1 OFF, D2 `ff-worker` not merged, D3 OFF (section 7).
-- **Written, in review, not merged**: branch `rifiniture`: `connect-src` of the CSP narrowed to `'self'` (now `'self' https:` in `page.c`; the WebTransport behaviour on Chrome
-  and Firefox is to be measured before the merge). Branch `ff-worker`: the port of §11.36 D, the worker route as default **only on desktop Firefox**, with
-  automatic fallback to the main-thread route; merged only if the user chooses D2 = A.
+  a decision the release is the safe one: D1 OFF, D2 `ff-worker` not merged (it is not in `finale`), D3 OFF (section 7).
+- **In `finale` (merged, to be measured)**: branch `rifiniture`: `connect-src` of the CSP narrowed to `'self'` (it was `'self' https:` in `page.c`; the WebTransport behaviour on Chrome
+  and Firefox is still to be measured), and the correction of the decoder in `page.html` (`7e49f5b1`, from `b1dea604`): a keyframe rebuilds a decoder that an error closed, also at the
+  same size (before, the picture stayed frozen for the rest of the session). **Not in `finale`**: branch `ff-worker`, the port of §11.36 D, the worker route as default **only on desktop Firefox**, with
+  automatic fallback to the main-thread route; written, in review; merged only if the user chooses D2 = A.
 - **Not done, optional**: the
   zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
   login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
@@ -126,16 +128,16 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
 - **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).
 
-## 6. Fixes of 25 Oct 2026 on branches not yet merged
-These are approved (or built) and are **not** in the range above; they will be merged in this order. Each has its queue run listed in section 5.
-- **Branch `pktinfo` (a few commits over `integrazione2`, in review; the minor remarks `errno` after the fallback and `ENODEV` are corrected on it, and its fallback log line follows the `quic-conn` fuzz oracle):
+## 6. Fixes of 25 Oct 2026 merged in `finale` (not in `integrazione2`)
+These are approved and are **not** in the range above; `finale` has them, merged in this order: `pktinfo`, `rootside-completo`, `rifiniture`, `doc-chiusura`. Each has its queue run listed in section 5 (`coda-finale.txt` runs them on `finale`).
+- **Branch `pktinfo` (head `8760f5bc`, approved; merged in `finale`; the `errno` after the fallback and `ENODEV` are corrected on it, and its fallback log line follows the `quic-conn` fuzz oracle):
   replies leave from the address the client wrote to** (`IP_PKTINFO` / `IPV6_PKTINFO`). The UDP socket is bound to the wildcard and every
   reply was a plain `sendto()`, so the kernel chose the source address; on a host with several addresses (global + ULA + temporary IPv6, or
   multi-homed IPv4) the reply may come from another address, a QUIC client does not accept it and the handshake never completes. **A defect
   of 1.0 as well** (`read_packet` used `c->local` as the path's local address, `transport.c` ~1547): found by the `quic-conn` fuzz on 24 Oct and
   seen by B10 (`c-48`: 0 of 3 rounds green on `integrazione2`, the /48 cap never reached). The stateless replies use the arrival address only while
   the datagram is handled and fall back without the source when the kernel refuses it (`5601b8e3`).
-- **Branch `rootside-completo` (head `d09a6738`; approved)**: besides the split (section 7), two corrections of today.
+- **Branch `rootside-completo` (head `ae8cae45`, with `026f15d1`; approved; merged in `finale`)**: besides the split (section 7, OFF by default), two corrections of today, and fixes of the `quic-conn` fuzz harness after the review.
   - The `quic-conn` fuzz harness (`1a25d20a`): an unlogged connection logged in through `transport_verdict()` before `op_wt` gave it a post-credentials
     state, a state the product cannot be in since the synchronous PAM fallback is gone (D4b); the age close then hit a «logged-in»
     connection and the oracle aborted (`verifica-rami`, replay rc=77, crash-5e4ce06f). Harness only, identical in both trees; `integrazione2`
@@ -143,16 +145,17 @@ These are approved (or built) and are **not** in the range above; they will be m
   - Arch packaging (`d09a6738`, manual ch17 `32eb4667`): `post_remove` removed `/var/lib/remotix/net` whatever `remotix-net-move --back`
     had achieved, losing the files a half-done `--back` had refused to move. `net_back()` now writes the marker `/run/remotix/back-incomplete`
     when `--back` fails or leaves `certificates/`, `ban` or `ban.new` in `net/`; `post_remove` then keeps `net/` and says so. Test `benches/02-arch-install-back.sh`.
-- **Merge order**: `pktinfo` first (small; it also repairs a defect of 1.0), then `rootside-completo` (conflict in `src/transport.c` with
-  `pktinfo`, to be resolved at that merge; then `verifica-rami` again), then, only if the user chooses D2 = A, the branch `ff-worker` (below). The branch `rifiniture` (CSP `connect-src 'self'`, in review) is independent and can go at any point after the runs.
-  `integrazione2` itself is measured at the moment and receives no commit until the runs of section 5 are read.
+- **Merge order, done in `finale`**: `pktinfo` first (small; it also repairs a defect of 1.0), then `rootside-completo` (one conflict in `src/transport.c`, in
+  `transport_open_fd()`: the family and `bound_any` now come from the socket's own `getsockname`, as the split needs), then `rifiniture`, then `doc-chiusura`
+  (conflict in `DECISIONS-11.md`, the status paragraph: the one of `doc-chiusura` kept, then rewritten for `finale`). `verifica-rami` and the runs of section 5 are to be done on `finale`.
+  `ff-worker` is **not** merged. `integrazione2` itself is not touched.
 - Already in `integrazione2` since the 24 Oct run: `61ea9a6c` (the 429 for a second session counted as chatter), `879cf5fa` (a name clash of `rcp_logged_in`),
   `549a9e06` (the product build declared five capabilities in HERE_I_AM and wrote four), `0b4d3bda`/`4be3a981` (tests of the six failing units),
   `c2766ea1`/`8a7f5247` (F-027 rewritten to the new ban rules), `a4b9cb1f` (test client `--rebind` with QUIC PING).
 
 ## 7. What is OFF by default
 - **Root-side / network-side split (§11.50)**: written, reviewed, packaged (service user `remotix`, installer, distro packages, SELinux, seccomp,
-  `remotix-net-move --back` with its Arch marker) on `rootside-completo`; the server stays ONE process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`,
+  `remotix-net-move --back` with its Arch marker), in `finale` (from `rootside-completo`); the server stays ONE process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`,
   and `--split` is refused otherwise. Measured cost against 1.0 (4 interleaved rounds, one box): login to first frame −98 ms warm /
   −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. Needs decision D1.
 - **Decoder `PACE` (§11.32)**: present (`4895f2ad`, `c7bfef17`), enabled with `--decoder-pace`; the page declares `video.pace` only then. The measures
