@@ -641,7 +641,7 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 {
 	ssize_t n;
 	union pktinfo_ctl ctl;
-	bool fell_back;
+	int refused_errno, err;
 	size_t ctllen = pktinfo_cmsg(t->family, t->bound_any, local, locallen, &ctl);
 	struct iovec iov = {(void *)data, len};
 	struct msghdr mh;
@@ -654,13 +654,16 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 		mh.msg_control = &ctl;
 		mh.msg_controllen = ctllen;
 	}
-	n = pktinfo_sendmsg(t->fd, &mh, ctllen, &fell_back);
-	if (fell_back) {
+	n = pktinfo_sendmsg(t->fd, &mh, ctllen, &refused_errno);
+	err = errno;   /* the last attempt's, before registro_dice() can change it */
+	/* ⛔ `err` is the LAST attempt's errno (the one the «NOT sent» line below names);
+	 *    the first one's is `refused_errno`. */
+	if (refused_errno) {
 		/* one line at the first fall-back and then every 1024th: not one per packet */
 		if (t->pktinfo_fallbacks++ % 1024 == 0)
 			registro_dice(REG_QUIC, "the kernel refused the reply's source address (%s): "
 			              "sent without fixing it (%u times so far) — an address just "
-			              "removed from the interface?", strerror(errno), t->pktinfo_fallbacks);
+			              "removed from the interface?", strerror(refused_errno), t->pktinfo_fallbacks);
 	}
 	if (n < 0) {
 		/* ⚠ DECLARED FALLBACK (`CODER.md` §4.2): if the socket is full the
@@ -669,7 +672,7 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 		 *   the line below is what tells «the network loses» from «the
 		 *   server throws away». */
 		registro_dice(REG_QUIC, "packet of %zu bytes NOT sent: %s", len,
-		              strerror(errno));
+		              strerror(err));
 	}
 }
 

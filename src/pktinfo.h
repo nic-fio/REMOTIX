@@ -87,22 +87,30 @@ static inline size_t pktinfo_cmsg(int sock_family, bool bound_any, const struct 
 }
 
 
+/* The errors with which the kernel refuses the SOURCE we asked for, and not the datagram: EINVAL, EADDRNOTAVAIL,
+ * ENETUNREACH, ENODEV (the address was just taken off the interface — a temporary IPv6 address expiring —, the
+ * interface went away, or the address is not local any more). */
+static inline bool pktinfo_refusal(int err)
+{
+	return err == EINVAL || err == EADDRNOTAVAIL || err == ENETUNREACH || err == ENODEV;
+}
+
 /* sendmsg() with the control message of pktinfo_cmsg() (`ctllen` > 0), and ONE retry without it when the kernel
- * refuses the source: EINVAL / EADDRNOTAVAIL / ENETUNREACH (the address was just taken off the interface — a temporary
- * IPv6 address expiring —, or is not local any more).  Otherwise that connection would stay mute for ever, where before
- * this file the kernel chose a source.  `*fell_back` says the retry happened (the caller writes ONE log line, rate limited).
- * Returns the sendmsg() result (errno as sendmsg left it). */
-static inline ssize_t pktinfo_sendmsg(int fd, struct msghdr *mh, size_t ctllen, bool *fell_back)
+ * refuses the source (pktinfo_refusal()).  Otherwise that connection would stay mute for ever, where before this file
+ * the kernel chose a source.  `*refused_errno` is 0, or the errno of the FIRST attempt when the retry happened (the
+ * caller writes ONE log line, rate limited, with it).  Returns the result of the last sendmsg(); errno is that
+ * attempt's. */
+static inline ssize_t pktinfo_sendmsg(int fd, struct msghdr *mh, size_t ctllen, int *refused_errno)
 {
 	ssize_t n;
-	*fell_back = false;
+	*refused_errno = 0;
 	do {
 		n = sendmsg(fd, mh, 0);
 	} while (n < 0 && errno == EINTR);
-	if (n < 0 && ctllen && (errno == EINVAL || errno == EADDRNOTAVAIL || errno == ENETUNREACH)) {
+	if (n < 0 && ctllen && pktinfo_refusal(errno)) {
+		*refused_errno = errno;
 		mh->msg_control = NULL;
 		mh->msg_controllen = 0;
-		*fell_back = true;
 		do {
 			n = sendmsg(fd, mh, 0);
 		} while (n < 0 && errno == EINTR);

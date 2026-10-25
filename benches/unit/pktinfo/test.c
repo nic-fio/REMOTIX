@@ -14,7 +14,7 @@
  *   6. the cmsg is well formed (CMSG_FIRSTHDR/CMSG_DATA, cmsg_len = CMSG_LEN, controllen = CMSG_SPACE);
  *   8. the fall-back (pktinfo_sendmsg()): a source the kernel refuses (192.0.2.1 is not local: sendmsg gives EINVAL on a socket
  *      on 0.0.0.0) is retried ONCE without the cmsg and the datagram arrives, from the kernel's own source; a plain error with
- *      no cmsg (ctllen 0) is NOT retried; an error that is not one of EINVAL / EADDRNOTAVAIL / ENETUNREACH is not retried;
+ *      no cmsg (ctllen 0) is NOT retried; an error that is not one of EINVAL / EADDRNOTAVAIL / ENETUNREACH / ENODEV is not retried (ENODEV: pktinfo_refusal() by itself, no network needed);
  *   9. by reading src/transport.c (argv[1], optional): read_packet() clears `rx_local` after handling the datagram
  *      (`rx_locallen = 0` after the call to read_packet_1), and send_on() — what every connection uses — never goes
  *      through `rx_local`.
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 		for (c = 0; c < 3 && rx >= 0 && tx >= 0; c++) {
 			struct iovec iov = {(void *)"ping", 4};
 			struct msghdr mh;
-			bool fb = true;
+			int fb = -1;
 			ssize_t r;
 			memset(&mh, 0, sizeof mh);
 			mh.msg_name = &rxa;
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
 			mh.msg_controllen = n;
 			if (c == 0) {          /* refused source: one retry, the datagram arrives */
 				r = pktinfo_sendmsg(tx, &mh, n, &fb);
-				CHECK(r == 4 && fb, "refused source: result %zd, fell_back %d (%m)", r, fb);
+				CHECK(r == 4 && pktinfo_refusal(fb), "refused source: result %zd, first errno %d (%m)", r, fb);   /* the kernel says ENETUNREACH here */
 				fl = sizeof from;
 				CHECK(recvfrom(rx, buf, sizeof buf, MSG_DONTWAIT, (struct sockaddr *)&from, &fl) == 4,
 				      "the retried datagram did not arrive: %m");
@@ -224,14 +224,14 @@ int main(int argc, char **argv)
 				close(tx);
 				tx = socket(AF_INET, SOCK_DGRAM, 0);
 				r = pktinfo_sendmsg(tx, &mh, 0, &fb);
-				CHECK(!fb, "retried with no cmsg asked");
+				CHECK(fb == 0, "retried with no cmsg asked");
 				(void)r;
 			} else {               /* an error that is not about the source: not retried (EMSGSIZE) */
 				static char big[70000];
 				struct iovec iovb = {big, sizeof big};
 				mh.msg_iov = &iovb;
 				r = pktinfo_sendmsg(tx, &mh, n, &fb);
-				CHECK(r < 0 && !fb && errno == EMSGSIZE, "EMSGSIZE: result %zd, fell_back %d, errno %d", r, fb, errno);
+				CHECK(r < 0 && fb == 0 && errno == EMSGSIZE, "EMSGSIZE: result %zd, first errno %d, errno %d", r, fb, errno);
 			}
 		}
 		if (rx >= 0)
@@ -239,6 +239,11 @@ int main(int argc, char **argv)
 		if (tx >= 0)
 			close(tx);
 	}
+	/* 8b. which errors are a refused source (no network needed) */
+	CHECK(pktinfo_refusal(EINVAL) && pktinfo_refusal(EADDRNOTAVAIL) && pktinfo_refusal(ENETUNREACH) && pktinfo_refusal(ENODEV),
+	      "a refused-source errno is not recognised");
+	CHECK(!pktinfo_refusal(0) && !pktinfo_refusal(EMSGSIZE) && !pktinfo_refusal(EAGAIN) && !pktinfo_refusal(ECONNREFUSED) &&
+	      !pktinfo_refusal(EPERM) && !pktinfo_refusal(ENOBUFS), "an ordinary send error is taken for a refused source");
 	/* 9. reading the code */
 	if (argc > 1) {
 		FILE *f = fopen(argv[1], "r");
