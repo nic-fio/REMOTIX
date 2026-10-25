@@ -832,13 +832,13 @@ static ssize_t receive_with_credentials_pidfd(int fd, void *buf, size_t cap,
 	/* ⛔ The control data was cut by the kernel (`MSG_CTRUNC`): something was attached that does not fit what this wall expects (credentials and
 	 *    at most the sender's pidfd) — descriptors the kernel then closes itself.  Same verdict as descriptors that arrived: the child does not do
 	 *    that (as `chan_read()` in rootside.c:1109 does for the root channel). */
-	if (carried_descriptors)
+	/* ⛔ `MSG_CTRUNC` is a violation, with or without a descriptor in sight (rilettura-fix M3 looked at this and KEPT it).  VERIFIED on kernel 7.3 (probe, 25 Oct 2026): when THIS process is out of
+	 *    descriptors (EMFILE) the kernel does not cut the control data for the sender's pidfd — it hands over SCM_PIDFD with the value -EMFILE and no MSG_CTRUNC — so an honest child never
+	 *    arrives here for that; whereas a child that sends SCM_RIGHTS at EMFILE gets MSG_CTRUNC and NO SCM_RIGHTS cmsg (nothing could be installed): this branch is the only place that sees
+	 *    it.  A "discard, do not kill" for MSG_CTRUNC alone would let exactly that child through.  The SCM_PIDFD with a negative value is harmless: `sender_pidfd` is closed only if >= 0
+	 *    and pidfd_compare() says UNKNOWN. */
+	if (carried_descriptors || (m.msg_flags & MSG_CTRUNC))
 		return -3;
-	/* ⭐ rilettura-fix M3: the control data was cut (`MSG_CTRUNC`) but NO SCM_RIGHTS was seen.  The usual cause is this process being out of descriptors: the kernel could not install the sender's pidfd
-	 *    (SO_PASSPIDFD hands one over with every message) and says so with MSG_CTRUNC.  That is a fact of OURS, not a violation of the child: the message is dropped (the credentials may be
-	 *    missing, so it could not pass the wall anyway) and the child is NOT killed.  A child that really sent descriptors installs them (the room is there) or is counted as before. */
-	if (m.msg_flags & MSG_CTRUNC)
-		return -4;
 	/* ⚠ A message truncated by the kernel (`MSG_TRUNC`) is a message that is
 	 *   not what it says it is: it is dropped.  With SEQPACKET this happens
 	 *   only if the sender wrote more than our buffer, that is if it is not
@@ -854,7 +854,7 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
 	ssize_t r = receive_with_credentials_pidfd(fd, buf, cap, chi, credentials, -1, NULL);
 
 	/* the child side reading its PARENT: descriptors are not a wall matter there, the message is just dropped */
-	return r == -3 || r == -4 ? -2 : r;
+	return r == -3 ? -2 : r;
 }
 
 /* ⛔⭐ THE WALL, AND THERE IS ONLY ONE — invariant I3.
@@ -3681,18 +3681,6 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 					child_signal(f, g, SIGKILL);
 				child_dismiss(f, g, "it sent descriptors on its socket");
 				break;
-			}
-			if (readings == -4) {
-				/* ⭐ rilettura-fix M3: control data cut without descriptors: out of descriptors in THIS process (or an odd cmsg), not the child's fault.  The message is
-				 *    discarded with a rate-limited line and counted like any refused message (a child that does it all the time still ends); nobody is killed here. */
-				if (refused(f, g))
-					registro_dice(LOG_CHILD,
-					              "⚠ a message from «%s» arrived with its control data cut (MSG_CTRUNC) and no descriptors: "
-					              "probably this process is out of descriptors (the pidfd could not be installed).  DISCARDED, the child is not touched",
-					              g->user);
-				if (!refused_too_many(f, g))
-					break;
-				continue;
 			}
 			if (readings == -2) {
 				/* ⛔ Before `errno`, and not after: `-2` is a fact of OURS

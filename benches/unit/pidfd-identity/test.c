@@ -19,7 +19,7 @@
  *   4b. a message that carries DESCRIPTORS (SCM_RIGHTS: the child never sends any) is a violation of the wall: -3, every descriptor the kernel
  *      installed is closed (the open descriptors do not grow) — with and without SO_PASSPIDFD on the socket, one descriptor or four (the control data
  *      does not fit: MSG_CTRUNC), and a plain message after it is read normally; the child-side wrapper just drops it (-2);
- *   4c. (rilettura-fix M3) THIS process out of descriptors: the kernel cannot install the sender's pidfd and may cut the control data (MSG_CTRUNC) with NO descriptor sent: never -3 (the child is not killed), -4 or a normal read;
+ *   4c. (rilettura-fix M3) THIS process out of descriptors: (a) a plain message is read normally with identity UNKNOWN (kernel 7.3: SCM_PIDFD = -EMFILE, no MSG_CTRUNC); (b) one or two SCM_RIGHTS are still -3;
  *   5. by reading the sources (argv[1] = src/rootside.c, argv[2] = src/child.c): SPAWNED carries at most TWO descriptors (socket, then
  *      pidfd) and the client claims the second for the born child; the network side asks for SO_PASSPIDFD on the socket it received, and
  *      closes the pidfd with the socket (reaped, dismissed, turned off).
@@ -300,8 +300,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* 4c (rilettura-fix M3): THIS process out of descriptors.  With SO_PASSPIDFD the kernel hands over a pidfd with every message; if it cannot install it, the control data is cut
-	 * (MSG_CTRUNC) although the child sent NO descriptor.  That is not the child's violation: -4 (or, if a kernel just leaves the pidfd out, a normal read) — NEVER -3, so the child is not killed. */
+	/* 4c (rilettura-fix M3): THIS process out of descriptors (RLIMIT_NOFILE at the highest open fd).  VERIFIED on kernel 7.3 with a probe: the kernel does not cut the control data for the
+	 * sender's pidfd — SCM_PIDFD arrives with the value -EMFILE and no MSG_CTRUNC.  So (a) a plain message of an honest child is read normally and the identity is UNKNOWN (never
+	 * "different"); (b) a child that sends one or two SCM_RIGHTS gets MSG_CTRUNC and no SCM_RIGHTS cmsg: still -3, the wall; no descriptor stays open. */
 	{
 		int sv[2], one = 1, maxfd = 0, before;
 		struct rlimit old, low;
@@ -317,8 +318,6 @@ int main(int argc, char **argv)
 		socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, sv);
 		setsockopt(sv[0], SOL_SOCKET, SO_PASSCRED, &one, sizeof one);
 		setsockopt(sv[0], SOL_SOCKET, SO_PASSPIDFD, &one, sizeof one);
-		w = writer(sv[1]);
-		usleep(30000);
 		d = opendir("/proc/self/fd");
 		while (d && (e = readdir(d)) != NULL)
 			if (e->d_name[0] != '.' && atoi(e->d_name) > maxfd)
@@ -327,23 +326,30 @@ int main(int argc, char **argv)
 			closedir(d);
 		getrlimit(RLIMIT_NOFILE, &old);
 		low = old;
-		low.rlim_cur = (rlim_t)maxfd + 1;      /* the next descriptor the kernel would install is over the limit */
-		setrlimit(RLIMIT_NOFILE, &low);
+		low.rlim_cur = (rlim_t)maxfd;      /* what the kernel would install next is over the limit (opendir's own fd is gone) */
+
+		/* (a) a plain message */
+		w = writer(sv[1]);
+		usleep(30000);
 		before = open_fds();
+		setrlimit(RLIMIT_NOFILE, &low);
 		r = receive_with_credentials_pidfd(sv[0], buf, sizeof buf, &chi, &c_e, pfs_other, &same);
 		setrlimit(RLIMIT_NOFILE, &old);
-		printf("  (4c: out of descriptors, the kernel gave %zd — %s)\n", r, r == -4 ? "MSG_CTRUNC without descriptors" : r > 0 ? "a normal read, the pidfd just left out" : "something else");
-		CHECK(r == -4 || r > 0, "4c: out of descriptors is NEVER a violation (-3): the child is not killed");
-		CHECK(open_fds() == before, "4c: and no descriptor is left open");
+		CHECK(r > 0 && c_e, "4c(a): out of descriptors, a plain message is read normally");
+		CHECK(same == PIDFD_UNKNOWN, "4c(a): and its identity is UNKNOWN (the pidfd could not be installed), never DIFFERENT");
+		CHECK(open_fds() == before, "4c(a): no descriptor left open");
 		waitpid(w, NULL, 0);
-		{
-			/* the child-side wrapper treats it as dropped (-2) or reads it, never as a wall matter */
-			w = writer(sv[1]);
+
+		/* (b) one and two SCM_RIGHTS */
+		for (int n = 1; n <= 2; n++) {
+			w = writer_with_fds(sv[1], n);
 			usleep(30000);
+			before = open_fds();
 			setrlimit(RLIMIT_NOFILE, &low);
-			r = receive_with_credentials(sv[0], buf, sizeof buf, &chi, &c_e);
+			r = receive_with_credentials_pidfd(sv[0], buf, sizeof buf, &chi, &c_e, pfs_other, &same);
 			setrlimit(RLIMIT_NOFILE, &old);
-			CHECK(r == -2 || r > 0, "4c: the child-side wrapper drops it (-2) or reads it");
+			CHECK(r == -3, n == 1 ? "4c(b): out of descriptors, ONE SCM_RIGHTS is still -3 (the wall)" : "4c(b): out of descriptors, TWO SCM_RIGHTS are still -3 (the wall)");
+			CHECK(open_fds() == before, "4c(b): and no descriptor stays open");
 			waitpid(w, NULL, 0);
 		}
 		close(sv[0]);
@@ -399,15 +405,7 @@ int main(int argc, char **argv)
 			}
 			CHECK(strstr(c, "exact via pidfd (pidfs)") != NULL && strstr(c, "the socket's rule") != NULL,
 			      "5: one log line per child says whether its identity is exact via pidfd or the socket's rule");
-			CHECK(strstr(c, "(m.msg_flags & MSG_CTRUNC)") != NULL && strstr(c, "return -4;") != NULL,
-			      "5: MSG_CTRUNC WITHOUT SCM_RIGHTS is -4, not the violation (rilettura-fix M3)");
-			{
-				const char *mv = strstr(c, "if (readings == -4) {");
-				const char *kill_ = mv ? strstr(mv, "child_signal(f, g, SIGKILL);") : NULL;
-				const char *end = mv ? strstr(mv, "if (readings == -2) {") : NULL;
-
-				CHECK(mv && end && (!kill_ || kill_ > end), "5: children_move discards a -4 message with a line and does NOT kill the child");
-			}
+			CHECK(strstr(c, "if (carried_descriptors || (m.msg_flags & MSG_CTRUNC))") != NULL && strstr(c, "return -4;") == NULL, "5: MSG_CTRUNC is the same violation as SCM_RIGHTS (-3), no -4 branch");
 			CHECK(strstr(c, "g->pidfd = b.pidfd;") != NULL, "5: and keeps the pidfd in the child");
 			{
 				int closes = 0;
