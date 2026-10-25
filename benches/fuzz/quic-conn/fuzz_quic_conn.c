@@ -1411,6 +1411,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	T = calloc(1, sizeof *T);
 	T->fd = -1;
 	T->family = v6 ? AF_INET6 : AF_INET;
+	/* ⭐ the real socket is bound to the wildcard (transport_open_fd sets this from getsockname()); this T is made by hand, so it must say so, or
+	 *    send_from() never fixes the source address (pktinfo_cmsg(): !bound_any = no control message) and the oracle below would find every reply
+	 *    "without its source address" (the crash of verifica-rami on finale, 25 Oct 2026: 01 0d 09 05 87) */
+	T->bound_any = true;
 	for (size_t i = 0; i < sizeof T->secret; i++)
 		T->secret[i] = (uint8_t)(0x5a ^ i);
 	places_agree();
