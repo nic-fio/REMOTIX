@@ -644,6 +644,8 @@ struct children {
 	 *    only the loop LIMITS change, going from a `#define` to `f->cap`. */
 	struct child *v;
 	int cap;
+	/* ⭐ sigchld.h: true = the loop says nobody died since the last scan, skip `waitpid()` this round (false = always reap) */
+	bool reap_hold;
 	uint64_t next_serial;
 	uint32_t canvas_w, canvas_h;
 	char dir_survey[256];
@@ -1118,7 +1120,17 @@ static pid_t child_reap(struct children *f, struct child *g, int *state)
 		*state = g->reaped_status;
 		return g->pid;
 	}
+	/* ⭐ sigchld.h: no SIGCHLD since the last scan (and no safety scan due) = nobody to reap this round; the slot is looked at again
+	 *    at the next scan (a signal, or one second at most). */
+	if (f->reap_hold)
+		return 0;
 	return waitpid(g->pid, state, WNOHANG);
+}
+
+void children_reap_hold(children *f, bool hold)
+{
+	if (f)
+		f->reap_hold = hold;
 }
 
 static void child_exited_event(void *ctx, uint64_t serial, int wait_status)

@@ -192,6 +192,7 @@ struct flight {
 struct helper {
 	int fd;         /* -1 when the dispatcher is dead or was never born */
 	pid_t child;    /* 0 when there is no process to reap */
+	bool reap_hold; /* sigchld.h: true = no SIGCHLD since the last scan: skip `waitpid()` this round (false = always) */
 	uint64_t next_case;
 	struct flight flight[MAX_IN_FLIGHT];
 	int nflight;
@@ -789,6 +790,9 @@ static bool reap(helper *a, int *status)
 	*status = -1;
 	if (a->child <= 0)
 		return true;
+	/* ⭐ sigchld.h: «not looked at» is not «alive» nor «dead»: false, and the next scan (a SIGCHLD, or a second at most) looks. */
+	if (a->reap_hold)
+		return false;
 	pid_t r = waitpid(a->child, status, WNOHANG);
 	if (r == a->child || (r < 0 && errno == ECHILD)) {
 		a->child = 0;
@@ -900,6 +904,8 @@ static void recover(helper *a, uint64_t now_ms)
 	 *       If it is still alive (the socket broke but it did not exit) it is
 	 *       killed once, and reaped at a following round. */
 	if (!reap(a, &status)) {
+		if (a->reap_hold)
+			return;      /* not looked at this round: no kill on a guess, the next scan decides */
 		if (!a->killed) {
 			kill(a->child, SIGKILL);
 			a->killed = true;
@@ -1089,6 +1095,12 @@ void helper_move(helper *a, HelperVerdict delivery, void *ctx)
 		else
 			deliver_outcome(a, ri.ticket, ri.outcome, chi, da, delivery, ctx);
 	}
+}
+
+void helper_reap_hold(helper *a, bool hold)
+{
+	if (a)
+		a->reap_hold = hold;
 }
 
 void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,

@@ -176,6 +176,10 @@ void helper_move(helper *a, HelperVerdict delivery, void *ctx);
 void helper_expired(helper *a, uint64_t now_ms, HelperVerdict delivery,
                       void *ctx);
 
+/* ⭐ The loop's tell (sigchld.h): `hold` true = no SIGCHLD since the last scan, so the dispatcher is not looked at with `waitpid()` this
+ * round.  Default false = at every round, as before. */
+void helper_reap_hold(helper *a, bool hold);
+
 /* How many requests are in flight.  For the log. */
 int helper_in_flight(const helper *a);
 

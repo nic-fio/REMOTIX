@@ -415,6 +415,10 @@ size_t children_descriptors(children *f, struct pollfd *fds, size_t max);
  * paid on 11 August with B6 and paid again by the helper. */
 void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms);
 
+/* ⭐ The loop's tell: `hold` true = «no SIGCHLD since the last scan» (sigchld.h): this round `children_move()` does NOT call
+ * `waitpid()` for the children.  Default false (reap at every round, as before): whoever never calls this changes nothing. */
+void children_reap_hold(children *f, bool hold);
+
 /* How many children are alive now.  For the log and for the bench. */
 int children_count(const children *f);
 
