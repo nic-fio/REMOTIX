@@ -106,7 +106,7 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   Lines are now read whole with `getline()` (up to 1 MiB). NOT private: a line that is too long, with a zero byte inside, with too few fields, any `+` line (NIS compat: other accounts with the gid
   cannot be excluded), or a read error; skipped: blank lines, `#` lines and `-name` lines. NSS (`getgrgid_r`, `getpwent`) was weighed and not added:
   the code runs in the parent as root and must not block on sssd/LDAP, and enumeration is off by default so it would prove nothing; a gid absent from `/etc/group` stays refused.
-  Test `benches/unit/render-grant`, checks 35-51.
+  Test `benches/unit/render-grant`, checks 41-57 (35-40 are the package removal).
 - **A stranger could fill the journal before any login** (audit R8 and R12, 25 Oct 2026, branch `log-tetti`): the line `packet … NOT sent` of `send_from()` had no limit (one source flooding Initials against a full
   socket buffer wrote one line per failed reply, at the packet rate), and the pre-login budgets of `webtransport.c` are per address (20 lines every 10 s for each of 128 addresses): whoever has many addresses, or
   rotates an IPv6 /48, gets a fresh budget for each. Both now also go through a GLOBAL budget per 10 s window (`src/linebudget.h`, the idea of `BIRTH_LINES`): 5 `NOT sent` lines and 100 pre-login lines for the whole
