@@ -17,8 +17,14 @@
  *   rotation    IPv6: five addresses of one /64 are one key; another /64 is another key
  *   in flight   at most 2 per (key,user); failed + in flight at the limit refuses and is NOT a failure; release gives back
  *   orphan      a verdict whose connection is gone is counted all the same (failure, success, same key as the session's)
- *   table       full of bans or of bookings: the new entry is refused and counted, no ban is erased; full of
- *               non-banned entries: the oldest is evicted and declared
+ *   table       full of bookings: the new entry is refused and counted; full of non-banned entries: the oldest is
+ *               evicted and declared; over the ban quota (hand-made): one ban is dropped, the least valuable
+ *   quota       (R1 of the audit of 25 Oct 2026) 300 addresses that fail their way to a ban never fill the table: at most
+ *               BAN_QUOTA bans, a new key always gets in and can log in; attempts and sub-threshold failures from
+ *               thousands of keys erase NO ban; an attacker cannot unblock himself (his ban is dropped only after BAN_QUOTA
+ *               newer bans, nearest-to-expiry and lowest-level first, a 1-hour ban outlives every 15-minute one); a key that
+ *               logged in lately never gets LV_FULL, the realistic worst case (16 bookings) never does; a ban file with more
+ *               bans than the quota keeps the most valuable; the drop is declared in the log
  *   unblock     removes every level of the address (user, key, /48) and the recidivism
  *   file        the old format is converted, the new one round-trips (ban, user with spaces, recidivism), -1 on a bad path
  *   log         `unknown user [hmac6]` (never the name); a real user is named; RFC 4231 vectors; the secret file is 0600
@@ -468,23 +474,25 @@ static void test_table(void)
 	login_resolve("[10.1.0.1]", "u", true, at(2), &r);
 	CHECK(login_reserve("[9.9.9.9]", "u", at(3), &info) == LV_OK, "room again once a booking is resolved");
 
-	/* full of BANS (written by hand: the entries of a real flood are the same): nothing is erased, the new is refused */
+	/* OVER THE QUOTA (written by hand: the ban sites keep the quota, so this is a file loaded with more, a constant lowered, a bug
+	 * to come): the table repairs itself — the new key gets in and the least valuable ban (the nearest to its expiry) is dropped */
 	fresh();
 	for (int i = 0; i < MAX_ATTEMPTS; i++) {
 		snprintf(k, sizeof k, "[10.2.%d.%d]", i / 200, i % 200 + 1);
-		int s = lcreate(LK_KEY, k, NULL, at(0), NULL, NULL, 0);
+		int s = lcreate(LK_KEY, k, NULL, at(0), NULL, NULL, 0, false);
 		CHECK(s == i, "slot %d", s);
-		attempts[s].banned_until = at(3600);
+		attempts[s].banned_until = at(3600 + i);
 		attempts[s].level = 1;
 	}
 	before = login_refused_full;
-	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_FULL, "all banned: the new entry is refused");
-	login_resolve("[9.9.9.9]", "u", false, at(1), &r);
-	CHECK(r.refused_full > 0 && login_refused_full > before, "and a failure that cannot be counted is counted as refused");
-	int still = 0;
-	for (int i = 0; i < MAX_ATTEMPTS; i++) if (attempts[i].used && is_banned(&attempts[i], at(1))) still++;
-	CHECK(still == MAX_ATTEMPTS, "no ban was erased (%d of %d)", still, MAX_ATTEMPTS);
-	CHECK(lfind(LK_KEY, "[10.2.0.1]", NULL) >= 0 && peek("[10.2.0.1]", "u", at(2), NULL) == LV_BANNED, "and the first ban still bans");
+	unsigned dropped0 = login_bans_dropped;
+	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_OK, "over the quota: the new key gets in");
+	CHECK(login_refused_full == before, "and nothing was refused");
+	CHECK(login_bans_dropped == dropped0 + 2 && strncmp(info.evicted, "BAN of", 6) == 0,
+	      "one ban dropped for each entry the key needs (user and key), and said: «%s»", info.evicted);
+	CHECK(lfind(LK_KEY, "[10.2.0.1]", NULL) < 0 && lfind(LK_KEY, "[10.2.0.2]", NULL) < 0, "the ones dropped are the nearest to their expiry");
+	CHECK(lfind(LK_KEY, "[10.2.1.56]", NULL) >= 0 && peek("[10.2.1.56]", "u", at(2), NULL) == LV_BANNED, "and the last ban still bans");
+	login_release("[9.9.9.9]", "u");
 
 	/* full of FAILURES (not banned): the oldest is evicted, and it is declared */
 	fresh();
@@ -501,6 +509,206 @@ static void test_table(void)
 		fail(k, "u", at(0));
 	}
 	CHECK(login_reserve("[9.9.9.9]", "u", at(1000), &info) == LV_OK && info.evicted[0] == 0, "idle entries are reclaimed silently");
+}
+
+/* ------------------------------------------------------------------------ */
+/* R1 of the audit of 25 Oct 2026: the table can never be all bans. */
+
+static int banned_now(uint64_t now)
+{
+	int n = 0;
+	for (int i = 0; i < MAX_ATTEMPTS; i++)
+		if (attempts[i].used && is_banned(&attempts[i], now))
+			n++;
+	return n;
+}
+
+/* an address that fails its way to THREE banned entries (the most one address can get): user "a" 5 times, user "b" 5 times,
+ * user "c" twice = 12 failures of the key.  Returns the failures spent. */
+static int burn(const char *key, uint64_t t)
+{
+	int spent = 0;
+	for (int i = 0; i < 5; i++, spent++) fail(key, "a", t + (uint64_t)i);
+	for (int i = 0; i < 5; i++, spent++) fail(key, "b", t + 10u + (uint64_t)i);
+	for (int i = 0; i < 2; i++, spent++) fail(key, "c", t + 20u + (uint64_t)i);
+	return spent;
+}
+
+static void v4(char *out, int n) { snprintf(out, 64, "[10.%d.%d.%d]", 100 + n / 65000, (n / 250) % 250, n % 250 + 1); }
+
+static void test_quota(void)
+{
+	printf("quota\n");
+	struct login_info info;
+	struct login_result r;
+	char k[64];
+
+	/* 1. a flood of addresses that fail 12 times does not lock the server */
+	fresh();
+	int max_banned = 0;
+	for (int i = 0; i < 300; i++) {
+		v4(k, i);
+		burn(k, at(i * 0.01));
+		int b = banned_now(at(i * 0.01 + 1));
+		if (b > max_banned) max_banned = b;
+	}
+	CHECK(max_banned <= BAN_QUOTA, "never more than BAN_QUOTA bans (max %d, quota %d)", max_banned, BAN_QUOTA);
+	CHECK(banned_now(at(5)) == BAN_QUOTA, "and the quota is what it settles at (%d)", banned_now(at(5)));
+	CHECK(login_bans_dropped > 0, "bans were dropped to keep it (%u)", login_bans_dropped);
+	unsigned refused = login_refused_full;
+	CHECK(login_reserve("[203.0.113.77]", "alice", at(6), &info) == LV_OK, "a NEW key gets in: never LV_FULL");
+	login_release("[203.0.113.77]", "alice");
+	CHECK(attempt("[203.0.113.77]", "alice", true, at(7)) == LV_OK, "and its login goes through to PAM");
+	CHECK(login_refused_full == refused, "nothing was refused for a full table");
+	CHECK(login_reserve("[2001:db8:aa:1::5]", "alice", at(8), &info) == LV_OK, "also an IPv6 key (user + key + /48 entries)");
+	login_release("[2001:db8:aa:1::5]", "alice");
+
+	/* 2. attempts and failures BELOW a ban erase no ban, however many keys they come from */
+	int before_set[MAX_ATTEMPTS], nb = 0;
+	for (int i = 0; i < MAX_ATTEMPTS; i++)
+		if (attempts[i].used && is_banned(&attempts[i], at(9))) before_set[nb++] = i;
+	unsigned dropped0 = login_bans_dropped;
+	for (int i = 0; i < 4000; i++) {
+		snprintf(k, sizeof k, "[172.16.%d.%d]", i / 250, i % 250 + 1);
+		if (i % 2) peek(k, "x", at(10 + i * 0.001), NULL);
+		else fail(k, "x", at(10 + i * 0.001));          /* one failure: far below any threshold */
+	}
+	int still = 0;
+	for (int j = 0; j < nb; j++) if (is_banned(&attempts[before_set[j]], at(20))) still++;
+	CHECK(still == nb, "4000 keys of attempts and single failures erased no ban (%d of %d)", still, nb);
+	CHECK(login_bans_dropped == dropped0, "and dropped none");
+
+	/* 3. an attacker cannot unblock himself: his ban A is dropped only after BAN_QUOTA newer bans */
+	fresh();
+	const char *A = "[198.51.100.1]";
+	int spent = burn(A, at(0));
+	CHECK(peek(A, "a", at(1), NULL) == LV_BANNED, "A is banned");
+	int a_dropped_at = -1, bans_made = 0;
+	for (int i = 0; i < 300; i++) {
+		v4(k, i);
+		spent += burn(k, at(100 + i * 0.01));
+		bans_made = banned_now(at(105)) + (int)login_bans_dropped;
+		if (a_dropped_at < 0 && peek(A, "a", at(110 + i * 0.01), NULL) != LV_BANNED) {
+			a_dropped_at = i;
+			break;
+		}
+	}
+	CHECK(a_dropped_at >= 0, "after enough newer bans A is dropped (it is the nearest to its expiry)");
+	CHECK(bans_made >= BAN_QUOTA, "...but only once the quota is full of NEWER bans (%d made, quota %d)", bans_made, BAN_QUOTA);
+	/* the best an attacker can do is 12 failures for 3 bans (two user bans of 5, and the address ban of 12) = 4 per ban */
+	CHECK(spent >= 4 * (BAN_QUOTA - 3), "...which cost the attacker %d failed PAM checks (>= %d)", spent, 4 * (BAN_QUOTA - 3));
+	/* attempts alone (no failure) never do it */
+	fresh();
+	burn(A, at(0));
+	for (int i = 0; i < 5000; i++) {
+		snprintf(k, sizeof k, "[192.0.%d.%d]", i / 250, i % 250 + 1);
+		peek(k, "a", at(100 + i * 0.001), NULL);
+	}
+	CHECK(peek(A, "a", at(200), NULL) == LV_BANNED, "5000 fresh keys of plain attempts leave A banned");
+
+	/* 4. a 1-hour ban outlives every 15-minute one */
+	fresh();
+	const char *B = "[198.51.100.2]";
+	burn(B, at(0));                                       /* first ban: 15 min, level 1 */
+	CHECK(peek(B, "a", at(1), NULL) == LV_BANNED, "B banned (15 min)");
+	burn(B, at(16 * 60));                                 /* the ban has ended; a second round: 1 h, level 2 */
+	int ib = lfind(LK_KEY, B, NULL);
+	CHECK(ib >= 0 && attempts[ib].level == 2 && is_banned(&attempts[ib], at(16 * 60 + 100)), "B is now at level 2 (1 hour)");
+	for (int i = 0; i < 400; i++) {
+		v4(k, i);
+		burn(k, at(16 * 60 + 200 + i * 0.01));
+	}
+	CHECK(banned_now(at(16 * 60 + 300)) <= BAN_QUOTA, "the quota held (%d)", banned_now(at(16 * 60 + 300)));
+	CHECK(peek(B, "a", at(16 * 60 + 300), NULL) == LV_BANNED, "and the 1-hour ban of B survived 400 newer 15-minute bans");
+
+	/* 5. a key that logged in lately never gets LV_FULL, even where an unknown one would */
+	fresh();
+	const char *G = "[198.51.100.9]";
+	CHECK(attempt(G, "alice", true, at(0)) == LV_OK, "alice logs in from G");
+	/* worst case WITHIN the bound: BOOKINGS_MAX attempts in flight + a full quota of bans */
+	for (int i = 0; i < 300; i++) {
+		v4(k, i);
+		burn(k, at(10 + i * 0.01));
+	}
+	for (int i = 0; i < BOOKINGS_MAX; i++) {
+		snprintf(k, sizeof k, "[10.200.0.%d]", i + 1);
+		CHECK(login_reserve(k, "u", at(20), &info) == LV_OK, "booking %d", i);
+	}
+	CHECK(login_reserve("[203.0.113.99]", "bob", at(21), &info) == LV_OK, "16 bookings + full quota: an unknown key still gets in");
+	login_release("[203.0.113.99]", "bob");
+	CHECK(login_reserve(G, "alice", at(22), &info) == LV_OK, "and so does the known one");
+	login_release(G, "alice");
+	/* PATHOLOGICAL (not reachable: the helper holds 16): every non-ban entry pinned by a booking.  An unknown key is refused
+	 * and counted; the known key drops the least valuable ban and gets in. */
+	fresh();
+	attempt(G, "alice", true, at(0));
+	for (int i = 0; i < 300; i++) {
+		v4(k, i);
+		burn(k, at(10 + i * 0.01));
+	}
+	int pinned = 0;
+	for (int i = 0; pinned < MAX_ATTEMPTS - BAN_QUOTA - 4; i++) {
+		snprintf(k, sizeof k, "[10.201.%d.%d]", i / 250, i % 250 + 1);
+		if (login_reserve(k, "u", at(30), &info) == LV_OK) pinned += 2;
+		else break;
+	}
+	unsigned full0 = login_refused_full;
+	enum login_verdict vu = login_reserve("[203.0.113.50]", "bob", at(31), &info);
+	CHECK(vu == LV_FULL || vu == LV_OK, "an unknown key in the pathological state: either answer is lawful (%d)", (int)vu);
+	if (vu == LV_FULL)
+		CHECK(login_refused_full == full0 + 1, "and the refusal is counted");
+	else
+		login_release("[203.0.113.50]", "bob");
+	unsigned d0 = login_bans_dropped;
+	CHECK(login_reserve(G, "alice", at(32), &info) == LV_OK, "the known key is never LV_FULL");
+	login_release(G, "alice");
+	(void)d0;
+
+	/* 6. the drop is declared in the log, and counted */
+	fresh();
+	char log[8192];
+	(void)log;
+	for (int i = 0; i < BAN_QUOTA / 3 + 2; i++) {
+		v4(k, i);
+		burn(k, at(i * 0.01));
+	}
+	captured[0] = 0;
+	{
+		struct sink sk = {NULL, capture, NULL};
+		struct login_result rr;
+		memset(&rr, 0, sizeof rr);
+		snprintf(rr.dropped, sizeof rr.dropped, "BAN of the address [1.2.3.4] (level 1, 3 s left)");
+		login_report(&sk, "[1.2.3.4]", "alice", false, &rr, at(1));
+	}
+	CHECK(strstr(captured, "bans at their quota") != NULL && strstr(captured, "[1.2.3.4]") != NULL, "the line names what was dropped: %s", captured);
+	(void)r;
+
+	/* 7. a ban file with more bans than the quota keeps the most valuable (the farthest expiry) */
+	fresh();
+	char dir[] = "/tmp/lg-quota-XXXXXX";
+	CHECK(mkdtemp(dir) != NULL, "mkdtemp");
+	char path[128];
+	snprintf(path, sizeof path, "%s/ban", dir);
+	time_t t_now = time(NULL);
+	FILE *f = fopen(path, "w");
+	for (int i = 0; i < 300; i++)
+		fprintf(f, "B2 K 1 %lld [10.9.%d.%d]\n", (long long)t_now + 600 + i, i / 250, i % 250 + 1);
+	fclose(f);
+	int loaded = rcp_ban_load(path, at(0));
+	CHECK(banned_now(at(0)) == BAN_QUOTA, "300 bans in the file, %d in force after the load (quota %d), load said %d", banned_now(at(0)), BAN_QUOTA, loaded);
+	CHECK(lfind(LK_KEY, "[10.9.0.1]", NULL) < 0, "the nearest to its expiry was dropped");
+	CHECK(lfind(LK_KEY, "[10.9.1.50]", NULL) >= 0 && peek("[10.9.1.50]", "u", at(1), NULL) == LV_BANNED, "the farthest is kept and bans");
+	/* and a level-2 line outlives the level-1 ones */
+	fresh();
+	f = fopen(path, "w");
+	fprintf(f, "B2 K 2 %lld [10.8.0.1]\n", (long long)t_now + 300);
+	for (int i = 0; i < 300; i++)
+		fprintf(f, "B2 K 1 %lld [10.9.%d.%d]\n", (long long)t_now + 900 + i, i / 250, i % 250 + 1);
+	fclose(f);
+	rcp_ban_load(path, at(0));
+	CHECK(banned_now(at(0)) == BAN_QUOTA && lfind(LK_KEY, "[10.8.0.1]", NULL) >= 0, "a level-2 ban with the NEAREST expiry is kept over level-1 ones");
+	unlink(path);
+	rmdir(dir);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -987,6 +1195,7 @@ int main(void)
 	test_verdict_paths();
 	test_extreme_expiries();
 	test_table();
+	test_quota();
 	test_unblock();
 	test_file();
 	test_log();
