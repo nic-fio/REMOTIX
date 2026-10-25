@@ -1168,9 +1168,13 @@ static void op_wt(uint8_t sel, const uint8_t *a, size_t n)
 			}
 			r->wt_ticket = tk;
 			(void)transport_verdict(T, tk, true, false);
-			if (c->unlogged)
-				DIE("connection #%td: an admitted verdict (ticket %llu) left it unlogged: the harness "
-				    "or transport_verdict() lost the login", r - rxq_conns, (unsigned long long)tk);
+			/* ⛔ `c` may be GONE here: transport_write() inside the verdict reaps a connection whose
+			 *    write failed (wt_write_fail).  Look it up again by its registry entry: still there
+			 *    and still unlogged is the incoherence; gone means it logged in and was closed. */
+			for (connection *x = T->prime; x; x = x->upcoming)
+				if (rxq_reg_of(x->conn) == r && !x->dead_run && x->unlogged)
+					DIE("connection #%td: an admitted verdict (ticket %llu) left it unlogged: the harness "
+					    "or transport_verdict() lost the login", r - rxq_conns, (unsigned long long)tk);
 			r->wt_state = want;
 			break;
 		}
