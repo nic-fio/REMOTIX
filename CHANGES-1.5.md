@@ -160,6 +160,9 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   (The ceilings on input and LAYOUT themselves are those of `src/msgrate.h`.)
 - **A client cannot flood clipboard ANNOUNCE / ASK** (audit of the session, S-R7, 25 Oct 2026): every ASK sent the whole text (up to the clipboard ceiling) back and every ANNOUNCE made the parent take the desktop selection, with no limit. Now one
   bucket per session for both (10 a second, burst 20, same gate as `msgrate.h`): the rest is ignored and the window summary says how many. Test `benches/unit/session-caps`.
+- **A key pressed twice is sent once, and a letter gesture releases only what it pressed** (audit of the session, S-R4 for the keys, 25 Oct 2026): `send_key()` on the libei path resent the state already known (an orphan still goes through), before asking the receipt;
+  the skip is only a counter under `--verbose`, no code, no time. The gestures that press several keys (letter with Shift, the labwc recovery combination, the letter on wlroots) now release only the keys THEY pressed, so a Shift the user holds is not released.
+  Auto-repeat is not affected: the page discards the browser's repeats. Test `benches/unit/key-dedupe` (the real input.c and keyboard.c, libei interposed).
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
