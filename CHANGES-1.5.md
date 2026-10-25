@@ -76,6 +76,9 @@
 - One write burst is at most the send quantum, and the loop timeout is rounded up (§11.52 A; `643e9a40`, `3a6d128c`). `pacing-ab`
   then measured +1 ms of RTT at rest from that round-up (24 Oct), so the main loop now waits on the exact deadline with `ppoll`
   (`1b447d3c`, `de5ebdfa`); to be measured again (see Still open).
+- **One address cannot use up the Stateless Resets** (audit R9, 25 Oct 2026, branch `reset-per-indirizzo`): the cap of 100 Stateless Resets a second was for everybody, so one address sending short packets for unknown connection ids
+  took it all, and the clients that had really lost their connection (a restarted server) got no Reset and waited out their 30 s of idle time. Now one address (IPv4, or IPv6 /64) may have 5 of the 100 in a second (`src/resetcap.h`),
+  and the ones it is refused do not count against the others; one line per second says so. Declared limit: about 20 addresses at 5 a second still use up the global cap. Test `benches/unit/reset-cap`.
 - «Connection closed» log lines of connections that never logged in are limited per window, the rest in a summary (`6368c6a8`).
 
 ## 3. Defects of 1.0 fixed (all «present since 1.0»)

@@ -5,6 +5,7 @@
 
 #include "log.h"
 #include "pktinfo.h"
+#include "resetcap.h"
 #include "rcp.h" /* rcp_orphan_verdict(): a verdict whose connection is gone is still counted (§4.4-bis B) */
 #include "webtransport.h"
 
@@ -270,6 +271,11 @@ struct transport {
 	uint64_t reset_second;
 	unsigned reset_count;
 	bool reset_capped_said;
+	/* ⭐ R9: and the cap PER ADDRESS in front of it (resetcap.h): the Resets refused to an address in this second, and whether it was said */
+	struct reset_addr reset_addr;
+	unsigned reset_per_address; /* 0 = RESET_PER_ADDRESS; the fuzz harness raises it (op 13) to reach the global cap from a few addresses */
+	unsigned reset_addr_refused;
+	bool reset_addr_said;
 
 	/* ⭐ The PAM helper (`DECISIONS.md` §1.10): it is not this module's, it is
 	 *    passed in by `main.c`.  It only serves to hand it to every `wt` that
@@ -1596,6 +1602,26 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 		t->reset_second = second;
 		t->reset_count = 0;
 		t->reset_capped_said = false;
+		t->reset_addr_refused = 0;
+		t->reset_addr_said = false;
+	}
+	/* ⭐ R9: one address may have RESET_PER_ADDRESS of the RESET_PER_SECOND; what it is refused is not counted against the others */
+	{
+		uint8_t key[16], key48[16];
+
+		address_key(remote, key, key48);
+		if (!reset_addr_take(&t->reset_addr, key, second, t->reset_per_address ? t->reset_per_address : RESET_PER_ADDRESS)) {
+			t->reset_addr_refused++;
+			if (!t->reset_addr_said) {
+				char who[64];
+
+				key_text(key, 64, who, sizeof who);
+				registro_dice(REG_QUIC, "more than %d Stateless Resets in a second to one address (%s): the rest "
+				              "to it are ignored", RESET_PER_ADDRESS, who);
+				t->reset_addr_said = true;
+			}
+			return;
+		}
 	}
 	if (t->reset_count >= RESET_PER_SECOND) {
 		/* ⚠ DECLARED FALLBACK: over the cap the packet is ignored, as before

@@ -77,7 +77,8 @@
  *               a2 ms of clock between two of them, a3 bit 0 the first RAND_bytes fails, bit 1
  *               long headers of a version not ours (1200 bytes: version negotiation) instead
  *               of short headers for an unknown dcid (Stateless Resets: the 100 per second),
- *               a4 extra length of the short ones (a4 % 64)
+ *               a4 extra length of the short ones (a4 % 64); a3 bit 2 raises the Stateless Resets PER ADDRESS (resetcap.h, 5 a
+ *               second in the product) to 1000, so that the global cap of 100 stays reachable from the 4 addresses of the harness
  *   14 FLOOD    Retry-validated Initials, each with its own token, each connection dying at once
  *               (DRAINING in its first packet) and its slot of the harness's table given back,
  *               one loop pass (wait, read, expired) each: a0-1 how many (+ 1; at most
@@ -1322,6 +1323,8 @@ static void op_burst(const uint8_t *a, size_t n)
 		 * age oracle: a connection 90.1 s old «alive» after the burst's last step) */
 		if (k > 0 && a2)
 			advance_ms(a2);
+		if (k == 0)
+			T->reset_per_address = (a3 & 4) ? 1000u : 0u;
 		if (k == 0 && (a3 & 1))
 			rxq_fail_next = RXQ_FAIL_RAND;
 		/* ⛔ the loop's pass, as `main.c` runs it (wait, read, expired): a burst that moved
