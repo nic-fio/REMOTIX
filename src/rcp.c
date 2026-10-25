@@ -894,6 +894,10 @@ struct rcp_session {
 	 * harm but writes two lines that say different things about the same
 	 * fact. */
 	bool inp_released;
+	/* ⛔ THE PRESSES THE RATE LIMIT LET THROUGH (see `input_admit()`): one bit per key code and per button code below 0x300 (the
+	 *    compositor takes nothing above).  The RELEASE of a press that is marked here is never dropped, so that the ceiling can
+	 *    never leave a key or a button pressed.  Emptied with everything else when the input is released on detach. */
+	uint8_t inp_down_key[96], inp_down_btn[96];
 
 	/* ⛔⭐⭐ THE `FIT_CANVAS` PASSED TO THE STAGE AND NOT YET ANSWERED — §7.1,
 	 *     and the chain `children_recanvas()` → `capture_resize()`
@@ -3266,6 +3270,40 @@ static enum msg_class input_class(uint16_t kind)
 	case T_LETTER:       return MC_LETTER;
 	default:             return MC_KEY_POSITION;
 	}
+}
+
+#define INP_TRACK_CODES 0x300u /* the codes the compositor takes; 96 bytes of bits */
+
+/* ⛔⭐ MAY THIS INPUT MESSAGE GO ON?  (msgrate.h, audit P-R2/Q-R4, and the rule «the ceiling never leaves a key pressed»).
+ *     A message over the rate of its kind is dropped — EXCEPT the RELEASE of a key or a button whose press we let through: dropping that
+ *     one would leave the key down in the compositor until the detach (RCP.md §11: «a Ctrl left down makes the desktop unusable»).
+ *     So: a press that is admitted is marked; its release is admitted whatever the rate and clears the mark; a press that is dropped is
+ *     not marked, and its release (which finds no mark) is just an ordinary message for the bucket — a release of a key that is not down
+ *     is harmless (the injector clears a bit that is already clear), so dropping it leaves nothing pressed.  The marks are bounded
+ *     (768 bits per kind), so the exception cannot be used to flood: an attacker can only release what he pressed within the rate.
+ *     The body of these two kinds is fixed (RCP.md §7.3), big-endian: id u32, instant u64, code u16, pressed u8. */
+static bool input_admit(rcp_session *s, uint16_t kind, const uint8_t *body, uint32_t lung, uint64_t now)
+{
+	enum msg_class c = input_class(kind);
+
+	if ((kind == T_BUTTON || kind == T_KEY_POSITION) && lung >= 15) {
+		uint16_t code = (uint16_t)((body[12] << 8) | body[13]); /* big-endian, as every field of RCP */
+		uint8_t pressed = body[14];
+		uint8_t *marks = kind == T_BUTTON ? s->inp_down_btn : s->inp_down_key;
+
+		if (code < INP_TRACK_CODES) {
+			if (pressed == 0 && (marks[code >> 3] & (1u << (code & 7)))) {
+				marks[code >> 3] &= (uint8_t)~(1u << (code & 7));
+				return true; /* the release of a press we let through: never dropped */
+			}
+			if (!msg_admit(s, c, now))
+				return false;
+			if (pressed == 1)
+				marks[code >> 3] |= (uint8_t)(1u << (code & 7));
+			return true;
+		}
+	}
+	return msg_admit(s, c, now);
 }
 
 /* The control requests of an ACTIVE session that can be dropped without harm: a REQUEST_KEY or a PACE that does not arrive is the
@@ -6292,6 +6330,8 @@ static void release_on_detach(rcp_session *s, const char *why)
 	if (!s || s->inp_released)
 		return;
 	s->inp_released = true;
+	memset(s->inp_down_key, 0, sizeof s->inp_down_key);
+	memset(s->inp_down_btn, 0, sizeof s->inp_down_btn);
 	if (!s->g.input_release_all) {
 		/* ⛔ It is written ONLY if this channel has seen something pass: on a
 		 * session without input — the in-process benches, the ngtcp2 harness —
@@ -6548,7 +6588,7 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
                          uint32_t lung, uint64_t now)
 {
 	/* ⛔ Over the rate of its kind: consumed, not executed, counted.  An input id only has to GROW (§7.3), so a gap is legitimate. */
-	if (!msg_admit(s, input_class(kind), now))
+	if (!input_admit(s, kind, body, lung, now))
 		return true;
 	reader l = {body, lung, 0, false};
 	uint32_t id = le_u32(&l);

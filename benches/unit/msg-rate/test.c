@@ -240,10 +240,10 @@ int main(int argc, char **argv)
 			p = body_of(src, "static bool handle_input(rcp_session *s, uint16_t kind", &n);
 			CHECK(p != NULL, "9: handle_input found");
 			if (p) {
-				const char *adm = memmem(p, n, "msg_admit(s, input_class(kind), now)", strlen("msg_admit(s, input_class(kind), now)"));
+				const char *adm = memmem(p, n, "input_admit(s, kind, body, lung, now)", strlen("input_admit(s, kind, body, lung, now)"));
 				const char *id = memmem(p, n, "le_u32(&l)", strlen("le_u32(&l)"));
 
-				CHECK(adm != NULL, "9: handle_input asks msg_admit() for its kind");
+				CHECK(adm != NULL, "9: handle_input asks input_admit() (the bucket of its kind, with the rule for releases)");
 				CHECK(adm && id && adm < id, "9: and before it reads the id");
 				CHECK(count_in(p, n, "msg_line(s, input_class(kind))") == 2, "9: both log lines are behind msg_line()");
 			}
