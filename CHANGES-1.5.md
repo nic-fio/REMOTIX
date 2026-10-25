@@ -137,7 +137,7 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
   zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
   login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
   `RCP_SESSION_CAP` 10 in `src/rcp.h:94` is the configurable administrative ceiling (`--session-cap`); the maximum of 8 of §4 is the test target (decided 25 Oct 2026: the ceiling stays at 10).
-- **Declared limits**: with about 50 addresses at 4 handshakes a second each, an attacker uses up the global bucket (200 a second) and the NEW logins are refused for as long as it lasts; the sessions already open are not touched. Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
+- **Declared limits**: with about 50 addresses at 4 handshakes a second each, an attacker uses up the global bucket (200 a second) and the NEW logins are refused for as long as it lasts (in IPv6 about 13 /48s are enough: 13 × 16 a second);  the sessions already open are not touched. Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).
 
 ## 6. Fixes of 25 Oct 2026 merged in `finale` (not in `integrazione2`)

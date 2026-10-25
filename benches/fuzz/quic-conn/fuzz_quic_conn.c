@@ -1050,6 +1050,9 @@ static void op_new(const uint8_t *a, size_t n)
 			if (T->how_many > before)
 				DIE("a refused connection was born anyway");
 		}
+		/* ...also a connection refused for the RATE is not born (the rest of the caps oracle does not apply to it) */
+		if (alone && caps_exact && rate_refused && rxq_last_close_code == NGTCP2_CONNECTION_REFUSED && T->how_many > before)
+			DIE("a connection refused for the handshake rate was born anyway");
 	}
 	rxq_fail_next = 0; /* a failure that was not consumed is not left armed */
 }
@@ -1428,6 +1431,9 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	T->max_pending = 5;
 	T->per_address = 3;
 	T->per_48 = 4;
+	/* ⭐ R4: this T is made by hand, not by transport_open_fd(): without the product's rate limits every NEW would be refused for rate (zero
+	 *    tokens) and the harness would stop exercising the births, silently */
+	T->hs_lim = (struct hs_limits)HS_LIMITS_DEFAULT;
 	caps_exact = true;
 
 	o.d = data + 1;
