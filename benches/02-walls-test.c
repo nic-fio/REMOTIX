@@ -548,14 +548,21 @@ static void case_pidns(const struct passwd *nb)
 	k = walls_fork_pidns();
 	if (k == 0) {
 		close(up[0]);
+		if (write(up[1], "r", 1) < 0) /* «ready»: it is pid 1 and about to pause */
+			_exit(2);
 		for (;;)
 			pause();
 	}
 	close(up[1]);
-	usleep(200000);
+	CHECK(read(up[0], &c, 1) == 1, "pid 1 with no handler is up");
 	kill(k, SIGTERM);
-	usleep(300000);
-	r.ok = waitpid(k, &st, WNOHANG) == 0;
+	/* a SIGTERM that was going to be ignored is not seen by waiting: the child is asked to say what it did — it must still be
+	 * running a moment later, and the next signal (SIGKILL) is the one that ends it */
+	{
+		struct pollfd pw = { up[0], POLLIN | POLLHUP, 0 };
+
+		r.ok = poll(&pw, 1, 300) == 0 && waitpid(k, &st, WNOHANG) == 0; /* nothing written, not dead */
+	}
 	CHECK(r.ok, "pid 1 with no SIGTERM handler: SIGTERM from outside is ignored (main.c installs its handler first)");
 	kill(k, SIGKILL);
 	CHECK(waitpid(k, &st, 0) == k && WIFSIGNALED(st) && WTERMSIG(st) == SIGKILL, "...and SIGKILL kills it");

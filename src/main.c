@@ -1989,10 +1989,15 @@ static bool network_side_born_right(void)
 		return false;
 	}
 	/* ⭐ The root channel's other end belongs to uid 0 (the root side); its pid is not visible from here (SO_PEERCRED says 0) */
-	if (getsockopt(FD_ROOT, SOL_SOCKET, SO_PEERCRED, &peer, &peer_len) != 0 || peer.uid != 0) {
+	if (getsockopt(FD_ROOT, SOL_SOCKET, SO_PEERCRED, &peer, &peer_len) != 0) {
+		registro_dice(LOG_STARTUP, "⛔ --network-side: SO_PEERCRED on fd %d failed (%s).  Not starting.",
+		              FD_ROOT, strerror(errno));
+		return false;
+	}
+	if (peer.uid != 0) {
 		registro_dice(LOG_STARTUP,
-		              "⛔ --network-side: the other end of fd %d is not uid 0 (%s).  Not starting.",
-		              FD_ROOT, peer_len == sizeof peer ? "SO_PEERCRED says another uid" : strerror(errno));
+		              "⛔ --network-side: the other end of fd %d belongs to uid %ld, not to the root side (uid 0).  "
+		              "Not starting.", FD_ROOT, (long)peer.uid);
 		return false;
 	}
 	for (size_t i = 0; i < sizeof fds / sizeof fds[0]; i++) {

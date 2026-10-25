@@ -110,7 +110,9 @@ struct walls_landlock_attr {
 /* ⭐ 1.6 (R8 B): `fork()` with CLONE_NEWPID.  The child is PID 1 of a new PID namespace (the root side sees it by its real pid and
  *    can signal and wait for it as for any child); everything it starts in that namespace dies with it, and the kernel kills them
  *    when it exits.  The raw system call, flags + SIGCHLD and the rest zero: the arguments after the flags differ between x86_64
- *    and aarch64 and none is used. */
+ *    and aarch64 and none is used.
+ * ⛔ The caller must stay SINGLE-THREADED (the root side is: no GDBus, no worker thread): this is a fork, and the child runs the walls,
+ *    PAM-free but with malloc/stdio, in a copy whose locks a thread that is not there could hold. */
 pid_t walls_fork_pidns(void)
 {
 	return (pid_t)syscall(SYS_clone, CLONE_NEWPID | SIGCHLD, 0, 0, 0, 0);
@@ -556,6 +558,7 @@ static int private_proc(char *why, size_t n)
 	struct dirent *e;
 	DIR *d;
 	int pids = 0;
+	bool only_one = false;
 
 	if (mount("proc", "/proc", "proc", fl, "hidepid=invisible") != 0 &&
 	    (errno != EINVAL || mount("proc", "/proc", "proc", fl, NULL) != 0))
@@ -564,12 +567,14 @@ static int private_proc(char *why, size_t n)
 	if (!d)
 		return say(why, n, "the private /proc cannot be listed (%s)", strerror(errno));
 	while ((e = readdir(d)) != NULL)
-		if (e->d_name[0] >= '1' && e->d_name[0] <= '9')
+		if (e->d_name[0] >= '1' && e->d_name[0] <= '9') {
 			pids++;
+			only_one = strcmp(e->d_name, "1") == 0;
+		}
 	closedir(d);
-	if (pids != 1)
-		return say(why, n, "the private /proc lists %d processes, not 1: this process is not alone "
-		           "in its PID namespace", pids);
+	if (pids != 1 || !only_one)
+		return say(why, n, "the private /proc lists %d processes%s, not just «1»: this process is not alone "
+		           "in its PID namespace", pids, pids == 1 ? " (the one is not pid 1)" : "");
 	return 0;
 }
 
