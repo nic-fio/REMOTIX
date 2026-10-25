@@ -1200,36 +1200,51 @@ static void slot_leave(const char *user)
  *   recidivism, declared in the log.
  *
  * ⛔⭐ THE BANS HAVE A QUOTA, SO THE TABLE CAN NEVER BE ALL BANS — audit of
- *    25 Oct 2026 (R1).  Until then a table full of banned entries (3 per IPv4
- *    address that fails 12 times: ~86 addresses; ~8 per IPv6 /48: ~32 prefixes)
- *    made `lcreate()` fail for EVERY new key: `LV_FULL`, every login refused
- *    without asking PAM, the owner's included, for as long as the bans lasted.
- *    The 1.0 erased the bans instead (the opposite fault).  Now:
- *      · at most `BAN_QUOTA` entries are banned at once.  The entry that is
- *        about to be banned makes room BEFORE (`ban_make_room()`): it drops the
- *        banned entry that is worth LEAST — the lowest level (a first, 15-minute
- *        ban before a 1-hour or a 12-hour one), then the nearest to its expiry —
- *        never one with an attempt in flight or one the caller holds;
- *      · what is left (MAX_ATTEMPTS - BAN_QUOTA) is for the counters and the
- *        bookings, and bookings are bounded (`BOOKINGS_MAX` attempts at once, each
- *        holding `LEVELS` entries): so there is ALWAYS an entry an ordinary
- *        creation may take, whoever the key is;
- *      · belt and braces: a key that logged in lately (`good_recent()`) may
- *        also take the least valuable ban if nothing else is left, and so does
- *        any key when the bans are over the quota (a file loaded with more, a
- *        constant lowered): `lcreate()` repairs it.
- *    ⭐ WHY THIS CANNOT BE USED TO UNBLOCK ONESELF.  Attempts and failures that
- *    stay below a ban never touch a ban: they take counters, which are a
- *    separate part of the table.  Only a NEW BAN drops an old one, and a new
- *    ban costs about 4 failed PAM checks at the very best (12 failures of one
- *    address buy 3 bans: two user bans of 5 and the address ban of 12; a /48
- *    gives ~7 for 30), each with the fixed second plus PAM's own delay —
- *    ~7 per second for the whole server.  What the attacker gains
- *    is the dropped ban's remaining time — the nearest to its expiry, in the
- *    lowest level, so seconds to minutes and never beyond 15 minutes while any
- *    first ban exists — and the loss of that one entry's recidivism.  To get
- *    one of his own bans dropped he must first create `BAN_QUOTA` of them.
- *    A 1-hour or a 12-hour ban is dropped only when no 15-minute one is left.
+ *    25 Oct 2026 (R1), and the rule the user decided the same day.  Until then
+ *    a table full of banned entries (3 per IPv4 address that fails 12 times:
+ *    ~86 addresses; ~8 per IPv6 /48: ~32 prefixes) made `lcreate()` fail for
+ *    EVERY new key: `LV_FULL`, every login refused without asking PAM, the
+ *    owner's included, for as long as the bans lasted.  The 1.0 erased the
+ *    bans instead (the opposite fault).  Now:
+ *      · `BAN_QUOTA` entries are the bans the table is sized for; what is left
+ *        (MAX_ATTEMPTS - BAN_QUOTA) is for the counters and the bookings, and
+ *        bookings are bounded (`BOOKINGS_MAX` attempts at once, each holding
+ *        `LEVELS` entries): so there is ALWAYS an entry an ordinary creation
+ *        may take, whoever the key is;
+ *      · ⛔ A NEW BAN NEVER TAKES AWAY ANOTHER'S.  A first version dropped the
+ *        least valuable ban to make room for the new one, and a botnet of ~54
+ *        addresses taking turns made its own bans fall after ~90 s — and with
+ *        the entry its recidivism, so the ladder 15 min / 1 h / 12 h never
+ *        climbed.  Dropping bans is exactly what the attacker wants, so no
+ *        new ban drops one;
+ *      · ⭐ the keys that logged in lately (`good_recent()`) always find a
+ *        place, as before: they are not asked anything more, their bans are
+ *        given even over the quota (they are 64 at most, and a spoofed one
+ *        cannot be: it is a TCP address);
+ *      · ⭐ the UNKNOWN keys, when `BAN_QUOTA` bans are in force, go through a
+ *        COMMON COUNTER: `UNKNOWN_LIMIT` failures (5) in `UNKNOWN_WINDOW_MS`
+ *        (5 min) for ALL of them together.  At the limit they are refused with
+ *        `0x08` before PAM (`LV_QUOTA`, not a failure, nothing booked, nothing
+ *        evicted) until the counter goes down.  So once the quota is full the
+ *        whole botnet gets ~1 ban per 5 minutes, which is bounded, while the
+ *        bans it already has run to their end and the ladder climbs for the
+ *        ones that come back (the entry, and its level, stay);
+ *      · what the common counter costs, honestly: while the quota is full AND
+ *        the counter is full, a legitimate NEW user from an address that never
+ *        logged in is refused too (0x08).  It ends when the counter goes down
+ *        or a ban expires; the owner's key, and anyone who logged in within
+ *        30 days, is not touched.  `[?]` 5 in 5 min is the user's number, not
+ *        measured;
+ *      · the bans that do exceed the quota (the keys above) are repaired only
+ *        when the table has no other place (`lcreate()`): then the least
+ *        valuable ban goes, and ALL that go in one outcome are named in the
+ *        log.  That entry's recidivism goes with it: it is the last resort,
+ *        not a road that can be asked for.  A ban file with more bans than
+ *        the quota keeps the most valuable ones, in whatever order the lines
+ *        come (`rcp_ban_load()`); the one displaced keeps its recidivism;
+ *      · "the least valuable": the lowest level, then the nearest to its
+ *        expiry, then the older touch, then the name (so the choice does not
+ *        depend on the order).
  *    `[?]` That 256 slots are enough is not measured.
  *
  * ⛔ AND THERE IS NO EXPIRY FOR QUIET other than what is written above: the
@@ -1246,6 +1261,9 @@ static void slot_leave(const char *user)
 #define BOOKINGS_MAX 16
 _Static_assert(BAN_QUOTA + LEVELS * BOOKINGS_MAX + LEVELS < MAX_ATTEMPTS,
                "the counters need room: bans + bookings + held entries must stay below the table");
+/* ⭐ The common counter of the unknown keys, used only while `BAN_QUOTA` bans are in force (the box above). */
+#define UNKNOWN_LIMIT 5
+#define UNKNOWN_WINDOW_MS 300000u
 
 /* The three levels of counters.  The ORDER is the order of the arrays below. */
 enum { LK_USER = 0, LK_KEY = 1, LK_NET48 = 2 };
@@ -1329,7 +1347,10 @@ bool rcp_asking_for_known_key(void)
 	return asking_for_known_key;
 }
 static unsigned login_refused_full; /* refusals because of a full table, since the start */
-static unsigned login_bans_dropped;  /* bans dropped to keep the quota, since the start */
+static unsigned login_bans_dropped;  /* bans dropped as a last resort for a place, since the start */
+static unsigned login_refused_quota; /* unknown keys refused at the quota by the common counter, since the start */
+static uint64_t unknown_times[UNKNOWN_LIMIT]; /* the failures of the unknown keys while the quota was full */
+static int unknown_amount;
 
 static char ban_path[512]; /* empty = not persisted (the bench, usually) */
 /* ⛔⭐ THE ADDRESS WITHOUT THE PORT — found by B5 on 10 Aug 2026
@@ -1845,14 +1866,20 @@ static int lfind(int kind, const char *address, const char *user)
 }
 
 /* Which of two BANNED entries is worth less (the one to drop first): the lower level, then the nearer to its
- * expiry, then the older touch.  Both are banned, so `banned_until > now`. */
+ * expiry, then the older touch, then the name (a total order: the choice does not depend on the order in which
+ * the entries arrived).  Both are banned, so `banned_until > now`. */
 static bool ban_worth_less(const struct lentry *a, const struct lentry *b, uint64_t now)
 {
 	if (a->level != b->level)
 		return a->level < b->level;
 	if (a->banned_until != b->banned_until)
 		return a->banned_until - now < b->banned_until - now;
-	return a->last_touch < b->last_touch;
+	if (a->last_touch != b->last_touch)
+		return a->last_touch < b->last_touch;
+	int c = strcmp(a->address, b->address);
+	if (c)
+		return c < 0;
+	return strcmp(a->user, b->user) < 0;
 }
 
 static void ban_text(const struct lentry *e, uint64_t now, char *out, size_t cap)
@@ -1861,14 +1888,70 @@ static void ban_text(const struct lentry *e, uint64_t now, char *out, size_t cap
 	         (int)e->level, (unsigned long long)((e->banned_until - now) / 1000u));
 }
 
+/* Appends `text` to what the log will say, separated by «; »: ⭐ EVERY entry or ban thrown away in one outcome is
+ * named, not only the last (three levels can each take a place). */
+static void say_append(char *buf, size_t cap, const char *text)
+{
+	size_t n = strlen(buf);
+	if (!cap || n + 1 >= cap)
+		return;
+	snprintf(buf + n, cap - n, "%s%s", n ? "; " : "", text);
+}
+
+/* How many entries are banned, and (if `cand`) the least valuable one that may be touched: not one the caller
+ * holds (`avoid`) and not one with an attempt in flight; -1 if none. */
+static int ban_candidate(uint64_t now, const int avoid[LEVELS], int *count)
+{
+	int n = 0, bv = -1;
+	for (int k = 0; k < MAX_ATTEMPTS; k++) {
+		const struct lentry *e = &attempts[k];
+		bool held = false;
+		if (!e->used || !is_banned(e, now))
+			continue;
+		n++;
+		for (int j = 0; j < LEVELS; j++)
+			if (avoid && avoid[j] == k)
+				held = true;
+		if (held || e->in_flight > 0)
+			continue;
+		if (bv < 0 || ban_worth_less(e, &attempts[bv], now))
+			bv = k;
+	}
+	if (count)
+		*count = n;
+	return bv;
+}
+
+/* ⭐ The common counter of the unknown keys (the box above `MAX_ATTEMPTS`). */
+static int unknown_inside(uint64_t now)
+{
+	int n = 0;
+	for (int k = 0; k < unknown_amount; k++)
+		if (unknown_times[k] >= now || now - unknown_times[k] <= UNKNOWN_WINDOW_MS)
+			n++;
+	return n;
+}
+
+static void unknown_note(uint64_t now)
+{
+	if (unknown_amount < UNKNOWN_LIMIT) {
+		unknown_times[unknown_amount++] = now;
+	} else {
+		memmove(unknown_times, unknown_times + 1, (UNKNOWN_LIMIT - 1) * sizeof unknown_times[0]);
+		unknown_times[UNKNOWN_LIMIT - 1] = now;
+	}
+}
+
 /* Creates an entry, or returns -1 if the table has nothing that may be thrown away.  ⛔ NEVER a banned
  * entry — except as the box above says (`may_drop_ban`, or bans over the quota) — and never one with an attempt
  * in flight nor one of `avoid`, the entries the caller is holding: if there is nothing else, -1 and the caller
  * REFUSES the attempt and counts the refusal.  Order of preference: free slot, entry with nothing to remember,
  * oldest entry without recidivism, oldest one with it, and only then the least valuable ban.  The last three
- * are declared in `evicted` (empty if nothing was thrown away that held something). */
+ * are declared: the entries in `evicted`, the bans in `dropped` (both APPENDED, empty if nothing was thrown
+ * away that held something). */
 static int lcreate(int kind, const char *address, const char *user, uint64_t now,
-                   const int avoid[LEVELS], char *evicted, size_t evcap, bool may_drop_ban)
+                   const int avoid[LEVELS], char *evicted, size_t evcap, char *dropped, size_t dpcap,
+                   bool may_drop_ban)
 {
 	int slot = -1, victim = -1, victim_class = 99, bvictim = -1, nbanned = 0;
 	for (int k = 0; k < MAX_ATTEMPTS; k++) {
@@ -1900,15 +1983,20 @@ static int lcreate(int kind, const char *address, const char *user, uint64_t now
 	if (slot < 0) {
 		if (victim >= 0) {
 			slot = victim;
-			if (victim_class > 0 && evicted && evcap)
-				snprintf(evicted, evcap, "%s %s", LEVEL_NAME[attempts[slot].kind],
-				         attempts[slot].address);
+			if (victim_class > 0 && evicted && evcap) {
+				char t[128];
+				snprintf(t, sizeof t, "%s %s", LEVEL_NAME[attempts[slot].kind], attempts[slot].address);
+				say_append(evicted, evcap, t);
+			}
 		} else if (bvictim >= 0 && (may_drop_ban || nbanned > BAN_QUOTA)) {
-			/* nothing but bans and bookings: the least valuable ban goes, said in the log */
+			/* nothing but bans and bookings: the least valuable ban goes, named in the log */
 			slot = bvictim;
 			login_bans_dropped++;
-			if (evicted && evcap)
-				ban_text(&attempts[slot], now, evicted, evcap);
+			if (dropped && dpcap) {
+				char t[160];
+				ban_text(&attempts[slot], now, t, sizeof t);
+				say_append(dropped, dpcap, t);
+			}
 		} else {
 			return -1;
 		}
@@ -1923,47 +2011,19 @@ static int lcreate(int kind, const char *address, const char *user, uint64_t now
 	return slot;
 }
 
-/* ⛔⭐ Called BEFORE an entry is banned (the box above `MAX_ATTEMPTS`): if `BAN_QUOTA` entries are banned
- * already, the one worth least is dropped to make room, and `dropped` says which.  ⚠ O(table), but only
- * when a ban is born or loaded — never per attempt.  An entry with an attempt in flight, or one of `avoid`
- * (the entries of the verdict being resolved), is never the one; if there is no other, the quota is exceeded
- * by one rather than the ban not being given (the protection first; `lcreate()` repairs the excess). */
-static void ban_make_room(uint64_t now, const int avoid[LEVELS], char *dropped, size_t cap)
-{
-	int nbanned = 0, bv = -1;
-	for (int k = 0; k < MAX_ATTEMPTS; k++) {
-		const struct lentry *e = &attempts[k];
-		bool held = false;
-		if (!e->used || !is_banned(e, now))
-			continue;
-		nbanned++;
-		for (int j = 0; j < LEVELS; j++)
-			if (avoid && avoid[j] == k)
-				held = true;
-		if (held || e->in_flight > 0)
-			continue;
-		if (bv < 0 || ban_worth_less(e, &attempts[bv], now))
-			bv = k;
-	}
-	if (nbanned < BAN_QUOTA || bv < 0)
-		return;
-	if (dropped && cap)
-		ban_text(&attempts[bv], now, dropped, cap);
-	memset(&attempts[bv], 0, sizeof attempts[bv]);
-	login_bans_dropped++;
-}
-
 enum login_verdict {
 	LV_OK,     /* booked: ask PAM */
 	LV_BANNED, /* a level is banned: do not ask PAM */
 	LV_BUSY,   /* the counters (failed + in flight) are at the limit: do not ask PAM */
-	LV_FULL    /* the table has no place for the entry: do not ask PAM, counted */
+	LV_FULL,   /* the table has no place for the entry: do not ask PAM, counted */
+	LV_QUOTA   /* bans at their quota and the unknown keys at their common limit: do not ask PAM, counted */
 };
 
 struct login_info {
 	int kind;          /* the level that decided (LK_*) */
 	uint64_t remain;   /* LV_BANNED: ms left */
-	char evicted[96];  /* an entry with something in it was thrown away to make room */
+	char evicted[384]; /* entries with something in them thrown away to make room (all named) */
+	char dropped[384]; /* bans thrown away as a last resort (all named) */
 };
 
 /* B — THE CHECK AND THE BOOKING IN ONE STEP.  Called at `CREDENTIALS`, before
@@ -1990,11 +2050,23 @@ static enum login_verdict login_reserve(const char *key, const char *user,
 			info->remain = attempts[idx[j]].banned_until - now;
 			return LV_BANNED;
 		}
+	/* ⭐ Bans at their quota: the unknown keys share a small counter (the box above `MAX_ATTEMPTS`).  Refused
+	 *   BEFORE anything is created or booked, so it evicts nothing and it is not a failure. */
+	if (!good_recent(key, now) && unknown_inside(now) >= UNKNOWN_LIMIT) {
+		int nb;
+		ban_candidate(now, NULL, &nb);
+		if (nb >= BAN_QUOTA) {
+			login_refused_quota++;
+			info->kind = LK_KEY;
+			return LV_QUOTA;
+		}
+	}
 	for (int j = 0; j < LEVELS; j++) {
 		if ((j == LK_NET48 && !has48) || idx[j] >= 0)
 			continue;
 		idx[j] = lcreate(j, j == LK_NET48 ? key48 : key, user, now, idx,
-		                 info->evicted, sizeof info->evicted, good_recent(key, now));
+		                 info->evicted, sizeof info->evicted, info->dropped, sizeof info->dropped,
+		                 good_recent(key, now));
 		if (idx[j] < 0) {
 			login_refused_full++;
 			info->kind = j;
@@ -2045,8 +2117,8 @@ struct login_result {
 	int ban_number[LEVELS];   /* 1, 2, 3.. (the ladder stops at the third duration) */
 	int reset_amount;         /* success: how many failures of (key, user) were wiped */
 	int refused_full;         /* levels that could not be counted: the table is full */
-	char evicted[96];
-	char dropped[96];         /* a ban dropped to keep the quota when this one was born */
+	char evicted[384];        /* entries thrown away to make room (all named) */
+	char dropped[384];        /* bans thrown away as a last resort (all named) */
 };
 
 /* The VERDICT: the booking is resolved.  `admitted` resets ONLY the failures
@@ -2068,12 +2140,20 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 	idx[LK_USER] = lfind(LK_USER, key, user);
 	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
 	idx[LK_NET48] = has48 ? lfind(LK_NET48, key48, NULL) : -1;
+	if (!admitted && !good_recent(key, now)) {
+		/* ⭐ a failure of an unknown key while the quota is full goes into the common counter */
+		int nb;
+		ban_candidate(now, NULL, &nb);
+		if (nb >= BAN_QUOTA)
+			unknown_note(now);
+	}
 	if (!admitted)
 		for (int j = 0; j < LEVELS; j++) {
 			if ((j == LK_NET48 && !has48) || idx[j] >= 0)
 				continue;
 			idx[j] = lcreate(j, j == LK_NET48 ? key48 : key, user, now, idx,
-			                 r->evicted, sizeof r->evicted, good_recent(key, now));
+			                 r->evicted, sizeof r->evicted, r->dropped, sizeof r->dropped,
+			                 good_recent(key, now));
 			if (idx[j] < 0) {
 				login_refused_full++;
 				r->refused_full++;
@@ -2109,7 +2189,7 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 		r->inside[j] = failed_inside(e, now);
 		if (r->inside[j] >= LIMIT[j]) {
 			uint8_t lv = level_now(e, now);
-			ban_make_room(now, idx, r->dropped, sizeof r->dropped);
+			/* ⛔ no room is made: a new ban never takes away another's (the box above `MAX_ATTEMPTS`) */
 			e->banned_until = now + LADDER_MS[lv];
 			e->level = lv < 2 ? (uint8_t)(lv + 1) : 2;
 			e->amount = 0; /* the count restarts after the ban */
@@ -2202,8 +2282,8 @@ static void login_report(const struct sink *k, const char *key, const char *user
 		       "make room — §4.4-bis",
 		    MAX_ATTEMPTS, r->evicted);
 	if (r->dropped[0])
-		say(k, "⚠ bans at their quota (%d): the %s was dropped to make room for the new one (the "
-		       "lowest level and the nearest to its expiry go first; %u dropped so far) — §4.4-bis",
+		say(k, "⚠ attempt table without a place and bans over their quota (%d): dropped as a last resort — %s "
+		       "(the lowest level and the nearest to its expiry go first; %u dropped so far) — §4.4-bis",
 		    BAN_QUOTA, r->dropped, login_bans_dropped);
 	if (r->refused_full)
 		say(k, "⛔ attempt table full and without a place that can be freed "
@@ -2484,15 +2564,31 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 			until = ago < now ? now - ago : 1;
 		}
 		int i = lfind(kind, norm, user);
+		/* ⭐ the quota holds for a loaded file too, whatever the order of its lines: the line that comes is
+		 *   compared with the least valuable ban already loaded, and the one worth less stays out.  The one
+		 *   displaced is lifted but KEEPS its level (the recidivism), as an ordinary entry. */
+		if (until > now && (i < 0 || !is_banned(&attempts[i], now))) {
+			int nb, cand = ban_candidate(now, none, &nb);
+			if (nb >= BAN_QUOTA && cand >= 0) {
+				struct lentry inc;
+				memset(&inc, 0, sizeof inc);
+				inc.kind = (uint8_t)kind;
+				inc.level = (uint8_t)(level > 0 ? level : 1);
+				inc.banned_until = until;
+				inc.last_touch = now;
+				snprintf(inc.address, sizeof inc.address, "%s", norm);
+				snprintf(inc.user, sizeof inc.user, "%s", user);
+				if (!ban_worth_less(&attempts[cand], &inc, now))
+					continue;
+				attempts[cand].banned_until = now;
+				if (amount > 0)
+					amount--;
+			}
+		}
 		if (i < 0)
-			i = lcreate(kind, norm, user, now, none, NULL, 0, false);
+			i = lcreate(kind, norm, user, now, none, NULL, 0, NULL, 0, false);
 		if (i < 0)
 			continue; /* the table is full of bans: nothing to evict */
-		/* ⭐ the quota holds for a loaded file too: a file with more bans than `BAN_QUOTA` keeps the most valuable */
-		if (until > now && !is_banned(&attempts[i], now)) {
-			const int mine[LEVELS] = {i, -1, -1};
-			ban_make_room(now, mine, NULL, 0);
-		}
 		if (until > attempts[i].banned_until)
 			attempts[i].banned_until = until;
 		if (level > attempts[i].level)
@@ -2568,6 +2664,8 @@ void rcp_reset_session_log(void)
 	memset(attempts, 0, sizeof attempts);
 	login_refused_full = 0;
 	login_bans_dropped = 0;
+	login_refused_quota = 0;
+	unknown_amount = 0;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -3587,6 +3685,10 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		reg(s, "⚠ attempt table full (%d entries): evicted the entry «%s» to "
 		       "make room — §4.4-bis",
 		    MAX_ATTEMPTS, linfo.evicted);
+	if (linfo.dropped[0])
+		reg(s, "⚠ attempt table without a place and bans over their quota (%d): dropped as a last resort — %s "
+		       "(%u dropped so far) — §4.4-bis",
+		    BAN_QUOTA, linfo.dropped, login_bans_dropped);
 	if (lv != LV_OK) {
 		/* ⛔ The limiter refuses WITHOUT querying PAM, and it must be known from
 		 * reading the reason on the wire: `TOO_MANY_ATTEMPTS` and
@@ -3607,6 +3709,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 			       "of %s: PAM is not queried, and the refusal is NOT a failed "
 			       "attempt (§4.4-bis B)",
 			    LEVEL_NAME[linfo.kind], s->address);
+		else if (lv == LV_QUOTA)
+			reg(s, "⛔ %d bans in force (their quota) and the unknown keys together have already failed %d times "
+			       "in %u minutes: %s has never logged in, so it is refused (0x08), PAM is not queried, nothing "
+			       "is evicted and the refusal is NOT a failed attempt.  Refusals for this reason so far: %u "
+			       "(§4.4-bis)",
+			    BAN_QUOTA, UNKNOWN_LIMIT, UNKNOWN_WINDOW_MS / 60000u, s->address, login_refused_quota);
 		else
 			reg(s, "⛔ attempt table full and nothing in it can be freed "
 			       "(banned or in flight): refused, PAM is not queried.  "
