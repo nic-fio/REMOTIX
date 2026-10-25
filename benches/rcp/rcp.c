@@ -938,6 +938,8 @@ struct rcp_session {
 	uint64_t canvas_mismatch_wait;
 	/* ⛔ One token bucket per kind of message that can be dropped (msgrate.h): see `msg_admit()`. */
 	struct msg_gate gate[MC_COUNT];
+	/* ⭐ S-R7: the ceiling on clipboard ANNOUNCE / ASK (not among the classes of msgrate.h: the clipboard is not input) */
+	struct msg_gate clip_gate;
 };
 
 /* Declared here because the attempt limiter, below, MUST be able to
@@ -7563,8 +7565,25 @@ static void clipboard_serve_pending(rcp_session *s, const char *text,
 }
 
 /* A whole message of the clipboard channel.  `false` = the session is over. */
+/* ⭐ S-R7 (audit of the session, 25 Oct 2026): ANNOUNCE and ASK were unlimited.  An ASK sends the whole text (up to RCP_CLIPBOARD_CAP) back and an ANNOUNCE makes the parent
+ *   take the desktop selection (a round trip with the child): a client repeating either at link speed kept the loop and the uplink busy.  One bucket per session for both,
+ *   of the same kind as those of msgrate.h: CLIPBOARD_PER_SECOND, burst CLIPBOARD_BURST; the rest is ignored (session kept), counted, and the window summary says how many. */
+#define CLIPBOARD_PER_SECOND 10u
+#define CLIPBOARD_BURST 20u
+
+static bool clipboard_over_rate(rcp_session *s, uint64_t now)
+{
+	struct msg_gate_closed cl;
+	bool ok = msg_gate_admit(&s->clip_gate, now, CLIPBOARD_PER_SECOND, CLIPBOARD_BURST, &cl);
+
+	if (cl.dropped)
+		reg(s, "⚠ CLIPBOARD: in the last %u s %u ANNOUNCE/ASK over %u a second (burst %u) were IGNORED", MSG_WINDOW_MS / 1000u, cl.dropped,
+		    CLIPBOARD_PER_SECOND, CLIPBOARD_BURST);
+	return !ok;
+}
+
 static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
-                           uint32_t lung)
+                           uint32_t lung, uint64_t now)
 {
 	reader l = {body, lung, 0, false};
 	uint32_t xform;
@@ -7577,6 +7596,8 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 		amount = le_u32(&l);
 		if (l.too_short)
 			return true; /* the fixed size has already been validated */
+		if (clipboard_over_rate(s, now))
+			return true;
 
 		/* ⛔ §7.4: transfers are numbered «from 1 upwards», and zero is
 		 *    reserved.  An announcement with `transfer = 0` is not a poor
@@ -7659,6 +7680,8 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 	case T_CLIPBOARD_ASK: {
 		xform = le_u32(&l);
 		if (l.too_short)
+			return true;
+		if (clipboard_over_rate(s, now))
 			return true;
 
 		/* ⛔ §7.4: «an `CLIPBOARD_ASK` with an identifier that does not
@@ -8020,7 +8043,7 @@ bool rcp_receive_clipboard(rcp_session *s, int64_t stream, const uint8_t *data,
 			s->app_in[i].head_n = 0;
 			s->app_in[i].lung = 0;
 
-			alive = handle_clipboard(s, kind, body, lung);
+			alive = handle_clipboard(s, kind, body, lung, now);
 			if (body)
 				explicit_bzero(body, lung);
 			free(body);

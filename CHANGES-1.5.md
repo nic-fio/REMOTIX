@@ -156,6 +156,10 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **`usermod` at the first connection no longer blocks the spawner or inherits the service's sockets** (audit of the session, E-R9, 25 Oct 2026): `run_as_root()` did a blocking `waitpid` (if `/etc/passwd` or `/etc/group` were locked, tens of seconds
   with every spawn and confirmation stopped) and `usermod` started with every descriptor of the service open. Now the wait is limited to 10 s, then SIGKILL (`src/runwait.h`), and the child closes everything above stderr before the exec.
   The sockets themselves were not changed to `SOCK_CLOEXEC`: the `close_range` covers this spawn, and the other spawns already do it. Test `benches/unit/run-wait`.
+- **The keyboard line «a character is not producible» has a budget** (audit of the session, S-R1, 25 Oct 2026): a flood of LETTER U+10FFFF wrote one line each in the child's log. Now 5 per 10 s, the rest counted and said at the end of the window.
+  (The ceilings on input and LAYOUT themselves are those of `src/msgrate.h`.)
+- **A client cannot flood clipboard ANNOUNCE / ASK** (audit of the session, S-R7, 25 Oct 2026): every ASK sent the whole text (up to the clipboard ceiling) back and every ANNOUNCE made the parent take the desktop selection, with no limit. Now one
+  bucket per session for both (10 a second, burst 20, same gate as `msgrate.h`): the rest is ignored and the window summary says how many. Test `benches/unit/session-caps`.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
