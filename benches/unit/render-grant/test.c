@@ -25,7 +25,11 @@
  *                an empty ACL.  ⚠ These check the OUTCOME: that no byte past the returned length is read would take
  *                MemorySanitizer, which this recipe does not use;
  *   (7) 34     the record folder is not root's (uid 1000), or is writable by others (mode 0777): render_grant_add()
- *                returns false and no node carries an ACL at the end — grants_load() fails before any ACL is written.
+ *                returns false and no node carries an ACL at the end — grants_load() fails before any ACL is written;
+ *   (8) 35-40  R-4 (25 Oct 2026), the files are read WHOLE (they were cut at 4096 bytes by fgets): a group line of more than 4096 bytes whose
+ *                other member comes after the limit is seen (35); a long line of its own members, with blank lines around, stays private (36);
+ *                a line over 1 MiB is «too long to be judged», not private (37); a malformed line of /etc/group (38); a long line of
+ *                /etc/passwd followed by another account with the same gid is seen (39); a malformed line of /etc/passwd (40).
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -91,7 +95,7 @@ int fake_fstat(int fd, struct stat *st);
 #undef fstat
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 34
+#define EXPECTED_CHECKS 40
 
 static void require(int cond, const char *desc)
 {
@@ -462,6 +466,79 @@ int main(void)
 		fstat_uid = -1;
 		fstat_mode_or = 0;
 		require(refused && stray == 0, "34. folder owned by uid 1000, or mode 0777: false, no ACL on any node");
+	}
+
+	printf("  (8) the files are read whole\n");
+	{
+		size_t cap = 2 * 1024 * 1024;
+		char *big = malloc(cap);
+		size_t n;
+
+		if (!big) {
+			perror("malloc");
+			return 1;
+		}
+		/* 35. «anna» and 1000 more «anna» (about 5 KB), then another member after the old 4096-byte limit */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "anna:x:1001:anna");
+		for (int i = 0; i < 1000; i++)
+			n += (size_t)snprintf(big + n, cap - n, ",anna");
+		n += (size_t)snprintf(big + n, cap - n, ",mallory\n");
+		if (n <= 4096 + 7) {
+			fprintf(stderr, "setup: the long group line is not longer than 4096 bytes\n");
+			free(big);
+			return 1;
+		}
+		put(group_path, big);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "mallory"),
+		        "35. another member AFTER the first 4096 bytes of a long line: seen, not private");
+		/* 36. the same long line with only the user's own name, blank lines around it, and a long line of another group first */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "\nbig:x:2000:");
+		for (int i = 0; i < 1500; i++)
+			n += (size_t)snprintf(big + n, cap - n, "other%d,", i);
+		n += (size_t)snprintf(big + n, cap - n, "x\n\n\nanna:x:1001:anna");
+		for (int i = 0; i < 1000; i++)
+			n += (size_t)snprintf(big + n, cap - n, ",anna");
+		n += (size_t)snprintf(big + n, cap - n, "\n\n");
+		put(group_path, big);
+		require(group_is_private("anna", 1001, why, sizeof why),
+		        "36. long lines of its own members, a long line of another group, blank lines: still private");
+		/* 37. a line over 1 MiB */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "anna:x:1001:");
+		memset(big + n, 'a', 1200 * 1024);
+		n += 1200 * 1024;
+		big[n++] = '\n';
+		big[n] = 0;
+		put(group_path, big);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "too long"),
+		        "37. a line over 1 MiB: not private («too long to be judged»)");
+		/* 38. a malformed line in /etc/group */
+		reset_world();
+		put(group_path, "root:x:0:\nthis is not a record\nanna:x:1001:\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "malformed"),
+		        "38. a malformed line in /etc/group: not private");
+		/* 39. /etc/passwd: a long line (5000-byte comment field) of anna, then another account with the same gid */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "anna:x:1001:1001:");
+		memset(big + n, 'c', 5000);
+		n += 5000;
+		n += (size_t)snprintf(big + n, cap - n, ":/home/anna:/bin/sh\nmallory:x:1003:1001::/home/mallory:/bin/sh\n");
+		put(passwd_path, big);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "mallory"),
+		        "39. a long /etc/passwd line, then another account with the gid: seen, not private");
+		/* 40. a malformed line in /etc/passwd */
+		reset_world();
+		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\nnot a record\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "malformed"),
+		        "40. a malformed line in /etc/passwd: not private");
+		free(big);
 	}
 
 	{

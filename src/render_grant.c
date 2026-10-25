@@ -194,11 +194,58 @@ static bool same_id(const char *s, unsigned long id)
 	return errno == 0 && *end == '\0' && v == id;
 }
 
+/* ⛔ R-4 (audit of 25 Oct 2026): the two files used to be read with `fgets(line, 4096)`.  A line longer than that was cut in two, and the
+ *    second half was parsed as a line of its own (fewer than three fields ⇒ skipped): the members of a long group AFTER the first 4095
+ *    bytes were never seen, and a private group looked private.  Now a line is read WHOLE, in a buffer that grows up to `MAX_LINE`; a line
+ *    that does not end by then is not something to guess about: the group is declared NOT private («too long to be judged»).  Same for a
+ *    line that has too few fields to be a record (it could be the very line that matters).
+ *
+ *    ⚠ NSS was weighed and NOT added (25 Oct 2026): this code runs in the PARENT, as root, and talks to nobody (see the top of the file); a
+ *      `getgrgid_r()` / `getpwent()` there is a blocking call into sssd / LDAP in the serving process, enumeration is off by default so it
+ *      would prove nothing about «nobody else has this gid», and the first one only repeats the local line (files come first in
+ *      nsswitch).  The rule that already refuses a gid that is not in /etc/group (a network account) stays the safe answer. */
+#define MAX_LINE (1024 * 1024)
+
+/* One line of `fp`, whole, into `*buf` (grown with realloc, never above MAX_LINE).  1 = a line; 0 = end of file; -1 = too long or no memory. */
+static int read_line(FILE *fp, char **buf, size_t *cap)
+{
+	size_t len = 0;
+
+	for (;;) {
+		if (*cap - len < 2) {
+			size_t ncap = *cap ? *cap * 2 : 4096;
+			char *nb;
+
+			if (ncap > MAX_LINE + 2)
+				return -1;
+			nb = realloc(*buf, ncap);
+			if (!nb)
+				return -1;
+			*buf = nb;
+			*cap = ncap;
+		}
+		if (!fgets(*buf + len, (int)(*cap - len), fp))
+			return len ? 1 : 0;
+		len += strlen(*buf + len);
+		if (len && (*buf)[len - 1] == '\n')
+			return 1;
+		if (len > MAX_LINE)
+			return -1;
+	}
+}
+
+static bool blank_line(const char *s)
+{
+	return s[strspn(s, " \t\r\n")] == '\0';
+}
+
 static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_much)
 {
-	char line[4096];
+	char *line = NULL;
+	size_t cap = 0;
 	FILE *fp;
-	int found = 0;
+	int found = 0, r;
+	long nline = 0;
 	bool ok = true;
 
 	if (gid == 0) {
@@ -210,10 +257,23 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 		snprintf(why, how_much, "/etc/group: %s", strerror(errno));
 		return false;
 	}
-	while (ok && fgets(line, sizeof line, fp)) {
+	while (ok && (r = read_line(fp, &line, &cap)) != 0) {
 		char *f[4];
 
-		if (fields(line, f, 4) < 3 || !same_id(f[2], gid))
+		nline++;
+		if (r < 0) {
+			snprintf(why, how_much, "/etc/group line %ld is too long to be judged", nline);
+			ok = false;
+			break;
+		}
+		if (blank_line(line))
+			continue;
+		if (fields(line, f, 4) < 3) {
+			snprintf(why, how_much, "/etc/group line %ld is malformed", nline);
+			ok = false;
+			break;
+		}
+		if (!same_id(f[2], gid))
 			continue;
 		found++;
 		if (strcmp(f[0], user) != 0) {
@@ -228,9 +288,12 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 		}
 	}
 	fclose(fp);
-	if (!ok)
+	if (!ok) {
+		free(line);
 		return false;
+	}
 	if (found != 1) {
+		free(line);
 		snprintf(why, how_much,
 		         found ? "gid %ld appears %d times in /etc/group"
 		               : "gid %ld is not in /etc/group (a network account?): its being private cannot be proved",
@@ -239,19 +302,37 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 	}
 	fp = fopen("/etc/passwd", "re");
 	if (!fp) {
+		free(line);
 		snprintf(why, how_much, "/etc/passwd: %s", strerror(errno));
 		return false;
 	}
-	while (ok && fgets(line, sizeof line, fp)) {
+	nline = 0;
+	while (ok && (r = read_line(fp, &line, &cap)) != 0) {
 		char *f[5];
+		int k;
 
-		if (fields(line, f, 5) == 5 && same_id(f[3], gid) && strcmp(f[0], user) != 0) {
+		nline++;
+		if (r < 0) {
+			snprintf(why, how_much, "/etc/passwd line %ld is too long to be judged", nline);
+			ok = false;
+			break;
+		}
+		if (blank_line(line))
+			continue;
+		k = fields(line, f, 5);
+		if (k < 4) {
+			snprintf(why, how_much, "/etc/passwd line %ld is malformed", nline);
+			ok = false;
+			break;
+		}
+		if (same_id(f[3], gid) && strcmp(f[0], user) != 0) {
 			snprintf(why, how_much, "the account «%s» too has gid %ld as primary group", f[0],
 			         (long)gid);
 			ok = false;
 		}
 	}
 	fclose(fp);
+	free(line);
 	return ok;
 }
 

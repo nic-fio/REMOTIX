@@ -97,6 +97,11 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **Clipboard on KDE**: a zero byte cut the text and the fallback read past the copy (§11.6; `8031958d`).
 - **Small fixes of the manual's table** (§11.6): retired RX codes no longer raised, BENCH_MARK out of the installed binary,
   journal lines no longer doubled, FAREWELL reason 0x10 accepted (`84fdf573`).
+- **The card grant could call a group private without having seen all of it** (audit R-4, 25 Oct 2026, branch `gruppo-privato`): `group_is_private()` read `/etc/group` and
+  `/etc/passwd` with a 4096-byte `fgets`, so the members of a long group line after the first 4095 bytes (and a later account with the same gid behind a long line) were never seen.
+  Lines are now read whole (up to 1 MiB); a line that is too long, or too short to be a record, makes the group NOT private. NSS (`getgrgid_r`, `getpwent`) was weighed and not added:
+  the code runs in the parent as root and must not block on sssd/LDAP, and enumeration is off by default so it would prove nothing; a gid absent from `/etc/group` stays refused.
+  Test `benches/unit/render-grant`, checks 35-40.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
