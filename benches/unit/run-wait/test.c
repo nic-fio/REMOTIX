@@ -115,6 +115,7 @@ int main(void)
 	      "6. child.c: run_as_root closes the descriptors and waits with a limit");
 	CHECK(has("src/child.c", "if (ran == RUN_NOT_STARTED)\n		ran = run_as_root(\"/sbin/usermod\"") && has("src/child.c", "if (ran == RUN_TIMED_OUT)") && has("src/child.c", "user_in_group_now(user, primary, seen_items[placed[j]])"),
 	      "7. enrolment: /sbin/usermod only if the first did not start; after a timeout the groups are read again");
+	CHECK(has("src/child.c", "#define RUN_AS_ROOT_MAX_MS 5000") && has("src/child.c", "_Static_assert(RUN_AS_ROOT_MAX_MS * 2 <= SPAWN_WAIT_MS"), "7c. usermod's limit is 5 s and tied to SPAWN_WAIT_MS by a _Static_assert (rilettura-fix M2)");
 	CHECK(has("src/child.c", "WEXITSTATUS(state) == 127)\n		return RUN_NOT_STARTED"), "7b. exit 127 is 'not started'");
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
 	return bad ? 1 : 0;

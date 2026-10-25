@@ -2209,7 +2209,7 @@ static bool card_groups(const char *user, gid_t primary,
  * Returns `true` if it changed something (and then the groups must be read
  * again).
  */
-#define RUN_AS_ROOT_MAX_MS 10000
+#define RUN_AS_ROOT_MAX_MS 5000   /* (rilettura-fix M2) tied to SPAWN_WAIT_MS below by a _Static_assert: the birth that waits for usermod must still fit in the wait of the network side */
 
 /* How run_as_root() ended (review of 19eef4c3): the caller must tell "the program is not there" (try the next path) from "it started and ran out of time" (do NOT start a second
  * one on top of the first: look at the groups instead) from "it ran and failed". */
@@ -2703,6 +2703,10 @@ static void birth_opts_of(const struct children *f, struct birth_opts *b)
 }
 
 #define SPAWN_WAIT_MS 15000
+/* ⭐ rilettura-fix M2: the network side waits SPAWN_WAIT_MS for the root side's birth; at a user's first connection the birth includes `usermod` (up to RUN_AS_ROOT_MAX_MS) and the rest
+ *    (render grant, fork, exec).  With usermod's 10 s the sum could pass 15 s: the network side gave up, the child born late was killed and the user saw a generic failure. The rest of the birth
+ *    gets at least as much room as usermod itself. */
+_Static_assert(RUN_AS_ROOT_MAX_MS * 2 <= SPAWN_WAIT_MS, "usermod's limit must leave room for the rest of the birth inside the network side's SPAWN wait");
 
 static const char *refusal_text(int r)
 {
