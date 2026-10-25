@@ -10,6 +10,7 @@
  *   W4  network_cycle() writes nothing for a connection without a control channel (it returns before touching the QUIC connection);
  *   W5  wt_logged_in() is false again once the control channel / the session has closed (wt_stream_closed());
  *   W6  close_now() with the session stream already closed (session == -1) queues nothing.
+ *   W6b a closure pending when the session stream closes is dropped with it, with the channel deadline: the next session of the connection stays open;
  *   W5b three login/logout cycles on one connection: the pre-login counters (sessions_opened, stray_requests) start again each time, the real user is never closed;
  *
  * BUILD AND RUN (a full build of the product first, about as long as `make`: the test links every object but main.o and webtransport.o; run from the root of the tree):
@@ -56,7 +57,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 22
+#define EXPECTED_CHECKS 25
 
 static void require(int cond, const char *desc)
 {
@@ -334,6 +335,26 @@ int main(void)
 		/* the cap itself still holds for a connection that never logs in */
 		a = wt_new(NULL, &e, "[192.0.2.42]:4001", NULL);
 		require(!prelogin_excess(a, true) && !prelogin_excess(a, true) && prelogin_excess(a, true), "(control) a stranger's THIRD session is still closed");
+	}
+
+	printf("  W6. a closure pending when the session stream closes does not close the next session\n");
+	{
+		ngtcp2_ccerr e;
+		wt *a;
+
+		memset(&e, 0, sizeof e);
+		a = wt_new(NULL, &e, "[192.0.2.43]:4001", NULL);
+		a->session = 0;
+		close_session(a, 5);                                                       /* a closure is pending (3 s deadline) ... */
+		a->channel_deadline = ts_ns + 5ULL * NGTCP2_SECONDS;                       /* ... and so is the 5 s of the control channel */
+		require(a->closing == 5 && a->closing_deadline != 0, "(control) a closure is pending");
+		(void)wt_stream_closed(a, 0, 0, false);                                    /* the client RESETs the session stream */
+		require(a->closing < 0 && a->closing_since == 0 && a->closing_deadline == 0 && a->channel_deadline == 0,
+		        "the session stream closed: the pending closure and the channel deadline go with it");
+		a->session = 4;                                                            /* the user opens a NEW session on the same connection */
+		ts_ns += 20ULL * NGTCP2_SECONDS;                                           /* the old deadlines would have expired long ago */
+		wt_beat(a, ts_ns);
+		require(a->session == 4 && a->closing < 0 && queue_empty(a), "20 s later the new session is open: no closing capsule queued, no timeout fired");
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);

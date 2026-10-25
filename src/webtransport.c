@@ -8876,6 +8876,12 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 	if (stream_id == w->session) {
 		w->session = -1;
 		forget_login(w);   /* ⭐ rilettura-wt W5: the session is gone too */
+		/* ⭐ rilettura-wt W6: a closure still pending belonged to THIS session. Left armed, its deadline would close the NEXT session of the same connection (and a stale channel_deadline would
+		 *    time out the new one before it has had its 5 s): they go with the session they were for. */
+		w->closing = -1;
+		w->closing_since = 0;
+		w->closing_deadline = 0;
+		w->channel_deadline = 0;
 	}
 
 	r = request_find(w, stream_id, false);
