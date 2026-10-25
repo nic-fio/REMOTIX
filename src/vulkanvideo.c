@@ -1967,7 +1967,10 @@ static void barriers(VkCommandBuffer cb, const VkImageMemoryBarrier2 *b, uint32_
 }
 
 /* ⭐ E-R2: how long a GPU wait may last.  A frame takes milliseconds; ten seconds is a hang, not slowness (`UINT64_MAX` used to hold the child
- * of ONE user forever, with nobody noticing). */
+ * of ONE user forever, with nobody noticing).
+ * ⚠ ONLY THIS WAIT is bounded.  `vkDeviceWaitIdle()` in `vulkanvideo_close()` and in `prepare_rgb()` still waits WITHOUT a limit: on a truly hung
+ *    GPU a lost context is dropped by the owner (E-R1) but its CLOSE can still block the child until the driver resets the device.  Only a real
+ *    GPU hang can show whether that happens; there is no bounded equivalent that also makes destroying the objects safe. */
 #define GPU_WAIT_NS 10000000000ull
 
 bool vulkanvideo_lost(const VulkanVideo *v)

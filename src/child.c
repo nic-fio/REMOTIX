@@ -97,6 +97,7 @@
 #include "sound.h"
 #include "encoder.h"
 #include "dimcheck.h"
+#include "encbackoff.h"
 #include "input.h"
 #include "mutter.h"
 #include "kwin.h"
@@ -7358,18 +7359,25 @@ static void stretches_count(const CaptureStopped *fo, const EncoderFrame *fg,
  * It is dropped here, the next frame is a key (`key_debt`), and `encoder_of()` makes a new one with the backoff that already
  * exists for a failed opening (500 ms, doubling up to 10 s: no context opened and closed sixty times a second).  A frame that
  * fails while the encoder is still alive (a transient error) does NOT drop it. */
+static uint8_t enc_death[CODEC_MAX]; /* consecutive deaths per codec; cleared when a frame is sent */
+
 static void encoder_drop_if_dead(uint8_t nr, CodecVideo codec)
 {
 	if (nr >= CODEC_MAX || !enc[nr] || !codificatore_e_morto(enc[nr]))
 		return;
-	enc_wait_ms[nr] = enc_wait_ms[nr] ? enc_wait_ms[nr] * 2 : ENC_RETRY_MIN_MS;
-	if (enc_wait_ms[nr] > ENC_RETRY_MAX_MS)
-		enc_wait_ms[nr] = ENC_RETRY_MAX_MS;
-	enc_retry_ms[nr] = log_now_ms() + enc_wait_ms[nr];
+	/* ⛔ A count of deaths APART from `enc_wait_ms`: that one is reset by every successful creation, and a permanent cause (VRAM taken, a driver
+	 *    that always fails the reopening) makes the creation succeed and the first quality change kill it — it would have been made again every
+	 *    500 ms for the whole session.  This count doubles the wait up to ENC_RETRY_MAX_MS and goes back to zero only after a frame was SENT. */
+	uint64_t wait;
+
+	if (enc_death[nr] < 255)
+		enc_death[nr]++;
+	wait = enc_death_wait_ms(enc_death[nr], ENC_RETRY_MIN_MS, ENC_RETRY_MAX_MS);
+	enc_retry_ms[nr] = log_now_ms() + wait;
 	registro_dice(LOG_CHILD,
-	              "⛔⛔ encoder %u (codec %d) is DEAD after a failure (no card context any more): dropping it, "
+	              "⛔⛔ encoder %u (codec %d) is DEAD after a failure (no card context any more; death number %u in a row): dropping it, "
 	              "the next frame will be a KEYFRAME, and it is made again in %llu ms — not frame after frame",
-	              nr, (int)codec, (unsigned long long)enc_wait_ms[nr]);
+	              nr, (int)codec, (unsigned)enc_death[nr], (unsigned long long)wait);
 	codificatore_libera(enc[nr]);
 	enc[nr] = NULL;
 	enc_profile[nr] = 0;
@@ -7513,6 +7521,8 @@ static bool encode_and_send(const CaptureStopped *fo, CodecVideo codec,
 		encoder_drop_if_dead(nr, codec);
 		return false;
 	}
+	if (nr < CODEC_MAX)
+		enc_death[nr] = 0; /* a frame came out: the encoder lives, the next death starts again from the shortest wait */
 	c = codificatore_confessione(cod);
 	/* ⛔ The first is stated, the following go to chatter: at sixty per second
 	 *    this line would make the whole rest of the log unreadable — and that

@@ -1387,7 +1387,9 @@ static bool read_output(VaDirect *v, char *error, size_t error_byte)
 
 /* ⭐ E-R2 (audit of 25 Oct 2026): `vaSyncBuffer` with a deadline instead of VA_TIMEOUT_INFINITE (nanoseconds).  A frame takes milliseconds; ten seconds is a hang.
  * ⚠ `vaSyncSurface` (drivers without `vaSyncBuffer`) takes no timeout: that wait stays unbounded there, and only a real GPU can show whether any driver in use
- *    takes that road. */
+ *    takes that road.
+ * ⚠ And the CLOSE of a context is not bounded either: `vkDeviceWaitIdle()` in `vulkanvideo_close()` / `prepare_rgb()` (the Vulkan route) and the destruction of
+ *    the VA objects wait for the GPU without a limit, so on a truly hung device dropping the lost encoder (E-R1) can still block the child until the driver resets it. */
 #define SYNC_WAIT_NS 10000000000ull
 
 bool vadirect_lost(const VaDirect *v)
