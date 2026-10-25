@@ -284,6 +284,10 @@ struct transport {
 	unsigned births_in_window, births_quiet;
 	/* the «packet … NOT sent» lines (SEND_FAIL_LINES per window, linebudget.h) */
 	struct line_budget send_fail;
+	/* ⛔ rilettura (25 Oct 2026): the lines that a stranger can provoke BEFORE any login have a budget each (`noise_take()`): the first
+	 *    NOISE_LINES of every REFUSAL_LOG_S window are written, the rest counted in one line at its end.  Version Negotiation and
+	 *    INVALID_TOKEN here; the path validations and the discarded datagrams of the connections, further down. */
+	struct line_budget noise_nego, noise_invtok, noise_path, noise_dgram;
 	/* the «connection … closed» lines of connections that NEVER logged in (BIRTH_LINES too) */
 	ngtcp2_tstamp close_window_ns;
 	unsigned closes_in_window, closes_quiet;
@@ -406,6 +410,43 @@ static void cid_unbind_all(transport *t, connection *c)
 
 /* ------------------------------------------------------------------------ */
 /* The ngtcp2 callbacks.                                                     */
+
+/* ⛔ rilettura (25 Oct 2026): ONE budget of log lines for each thing a stranger can make us write at the rate of his packets
+ *    (`registro_dice()` always writes: the journal of root is the same for everybody).  Same idea as `send_fail` (R12) and
+ *    BIRTH_LINES: the first NOISE_LINES of every REFUSAL_LOG_S window are written, the rest are counted and ONE line says how
+ *    many when the window ends — at the next line of that kind or, with none asking, from `transport_expired()`
+ *    (`noise_flush()`, armed by `transport_wait_ns()`). */
+#define NOISE_LINES 5
+
+static void noise_say(const char *what, const struct line_budget_closed *c)
+{
+	if (c->hidden)
+		registro_dice(REG_QUIC, "%u more %s in the last %d s, not written one by one (%u written)", c->hidden, what,
+		              REFUSAL_LOG_S, c->written);
+}
+
+/* true = this line may be written (the summary of the window that has just closed, if any, is written first) */
+static bool noise_take(struct line_budget *b, unsigned burst, const char *what)
+{
+	struct line_budget_closed c;
+	bool ok = line_budget_take(b, now_ns(), REFUSAL_LOG_S * NGTCP2_SECONDS, burst, &c);
+
+	noise_say(what, &c);
+	return ok;
+}
+
+static void noise_flush(struct line_budget *b, const char *what, ngtcp2_tstamp now)
+{
+	struct line_budget_closed c;
+
+	line_budget_flush(b, now, REFUSAL_LOG_S * NGTCP2_SECONDS, &c);
+	noise_say(what, &c);
+}
+
+#define NOISE_NEGO "QUIC version negotiations"
+#define NOISE_INVTOK "Initials with an old token (INVALID_TOKEN)"
+#define NOISE_PATH "path validations"
+#define NOISE_DGRAM "datagrams discarded"
 
 static ngtcp2_conn *give_me_conn(ngtcp2_crypto_conn_ref *ref)
 {
@@ -1606,8 +1647,12 @@ static void nego_version(transport *t, const ngtcp2_version_cid *vc,
 		vc->dcidlen, versions, 1);
 	if (n < 0)
 		return;
-	registro_dice(REG_QUIC, "QUIC version not ours: negotiation towards %s",
-	              "the client");
+	/* ⛔ rilettura: one line per datagram of 21 bytes with a version that is not ours was a way to fill the journal */
+	if (noise_take(&t->noise_nego, NOISE_LINES, NOISE_NEGO))
+		registro_dice(REG_QUIC, "QUIC version not ours: negotiation towards %s",
+		              "the client");
+	else
+		log_detail(REG_QUIC, "QUIC version not ours: negotiation towards %s", "the client");
 	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
@@ -1662,8 +1707,12 @@ static void send_invalid_token(transport *t, const ngtcp2_pkt_hd *hd,
 		NGTCP2_INVALID_TOKEN, NULL, 0);
 	if (n < 0)
 		return;
-	registro_dice(REG_QUIC, "Initial with a token that is old or not for this "
-	              "address: INVALID_TOKEN");
+	/* ⛔ rilettura: one old valid token, replayed, was one journal line per datagram */
+	if (noise_take(&t->noise_invtok, NOISE_LINES, NOISE_INVTOK))
+		registro_dice(REG_QUIC, "Initial with a token that is old or not for this "
+		              "address: INVALID_TOKEN");
+	else
+		log_detail(REG_QUIC, "Initial with a token that is old or not for this address: INVALID_TOKEN");
 	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
@@ -2176,6 +2225,14 @@ int64_t transport_wait_ns(const transport *t)
 	/* ⭐ R12: «NOT sent» lines counted and not yet written (the window of `send_fail`) wake the loop for their line */
 	if (t->send_fail.hidden && t->send_fail.start + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->send_fail.start + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	/* ⛔ rilettura: and the windows of the lines a stranger can provoke (`noise_*`) */
+	{
+		const struct line_budget *nb[] = {&t->noise_nego, &t->noise_invtok, &t->noise_path, &t->noise_dgram};
+
+		for (size_t i = 0; i < sizeof nb / sizeof nb[0]; i++)
+			if (nb[i]->hidden && nb[i]->start + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
+				before = nb[i]->start + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	}
 	/* ⭐ R8: the same for the pre-login lines of ALL addresses (webtransport.c counts in ms; both clocks are CLOCK_MONOTONIC) */
 	{
 		uint64_t pl = wt_prelogin_expiry_ms();
@@ -2383,6 +2440,10 @@ void transport_expired(transport *t)
 	if (t->closes_quiet)
 		closes_report(t, now);
 	send_fail_report(t, now);
+	noise_flush(&t->noise_nego, NOISE_NEGO, now);
+	noise_flush(&t->noise_invtok, NOISE_INVTOK, now);
+	noise_flush(&t->noise_path, NOISE_PATH, now);
+	noise_flush(&t->noise_dgram, NOISE_DGRAM, now);
 	wt_prelogin_flush(now / 1000000ull);
 	transport_write(t);
 }

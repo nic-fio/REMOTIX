@@ -16,7 +16,9 @@
  *   7. the units are the caller's: the same logic in nanoseconds (transport.c) and milliseconds (webtransport.c);
  *   8. by reading the sources (argv[1] = src/transport.c, argv[2] = src/webtransport.c, optional): send_from() writes the «NOT sent»
  *      line only through line_budget_take(); prelogin_may_log() takes from the global budget before it allows a line, and the
- *      evicted keys' summaries go through it too.
+ *      evicted keys' summaries go through it too;
+ *   9. (rilettura, 25 Oct 2026) the other lines a stranger can provoke before any login — Version Negotiation and INVALID_TOKEN — are
+ *      written only through noise_take(), and the four noise windows are armed by transport_wait_ns() and closed by transport_expired().
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -135,6 +137,16 @@ int main(int argc, char **argv)
 			      "8c2. transport_wait_ns() arms the timer for the send_fail window");
 			CHECK(strstr(t, "wt_prelogin_flush(now / 1000000ull);") && strstr(t, "wt_prelogin_expiry_ms()"),
 			      "8c3. transport_expired() flushes the pre-login budget and transport_wait_ns() waits for it");
+			p = strstr(t, "static void nego_version(");
+			CHECK(p && strstr(p, "noise_take(&t->noise_nego"), "9a. nego_version() takes from the noise_nego budget");
+			p = strstr(t, "static void send_invalid_token(");
+			CHECK(p && strstr(p, "noise_take(&t->noise_invtok"), "9b. send_invalid_token() takes from the noise_invtok budget");
+			CHECK(!strstr(t, "registro_dice(REG_QUIC, \"QUIC version not ours: negotiation towards %s\",\n\t              \"the client\");"),
+			      "9c. no bare, unlimited Version Negotiation line is left");
+			CHECK(strstr(t, "noise_flush(&t->noise_nego, NOISE_NEGO, now);") && strstr(t, "noise_flush(&t->noise_invtok, NOISE_INVTOK, now);"),
+			      "9d. transport_expired() closes the windows of the two lines");
+			CHECK(strstr(t, "const struct line_budget *nb[] = {&t->noise_nego, &t->noise_invtok, &t->noise_path, &t->noise_dgram};"),
+			      "9e. transport_wait_ns() arms the timer for every noise window");
 			free(t);
 		}
 	}
