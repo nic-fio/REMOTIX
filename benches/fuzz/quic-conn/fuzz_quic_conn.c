@@ -76,9 +76,11 @@
  *   13 BURST    datagrams for no connection, each read alone: a0 how many (a0 + 1), a1 address,
  *               a2 ms of clock between two of them, a3 bit 0 the first RAND_bytes fails, bit 1
  *               long headers of a version not ours (1200 bytes: version negotiation) instead
- *               of short headers for an unknown dcid (Stateless Resets: the 100 per second),
- *               a4 extra length of the short ones (a4 % 64); a3 bit 2 raises the Stateless Resets PER ADDRESS (resetcap.h, 5 a
- *               second in the product) to 1000, so that the global cap of 100 stays reachable from the 4 addresses of the harness
+ *               of short headers for an unknown dcid (Stateless Resets: the 100 per second for ids that carry a valid
+ *               tag, 10 for the others — `cid-firmati`), a4 extra length of the short ones (a4 % 64); a3 bit 2 raises the
+ *               Stateless Resets PER ADDRESS (resetcap.h, 5 a second in the product) to 1000, so that the global cap of 100 stays
+ *               reachable from the 4 addresses of the harness; a3 bit 3 (`cid-firmati`): the unknown dcid CARRIES a valid tag
+ *               (oracle: its Reset is owed while the signed budget has room and the address has not used up its own)
  *   14 FLOOD    Retry-validated Initials, each with its own token, each connection dying at once
  *               (DRAINING in its first packet) and its slot of the harness's table given back,
  *               one loop pass (wait, read, expired) each: a0-1 how many (+ 1; at most
@@ -1299,6 +1301,7 @@ static void op_burst(const uint8_t *a, size_t n)
 	        a4 = n > 4 ? a[4] : 0;
 	for (unsigned k = 0; k < count; k++) {
 		size_t len;
+		bool signed_unknown = false, signed_owed = false;
 		if (a3 & 2) {
 			/* a long header of a version not ours, ≥ 1200 bytes (RFC 9000 §6) */
 			memset(b, 0, sizeof b);
@@ -1317,6 +1320,11 @@ static void op_burst(const uint8_t *a, size_t n)
 			b[2] = (uint8_t)(k >> 8);
 			len = 24 + a4 % 64;
 			memset(b + 19, 0x5c, len - 19);
+			/* ⭐ `cid-firmati` (a3 bit 3; bit 2 is the cap per address of reset-per-indirizzo): the id nobody has CARRIES A VALID TAG (an id this server could have issued and
+			 *   lost, e.g. in a restart): it spends the signed budget, and is owed its Reset while that has room */
+			signed_unknown = (a3 & 8) != 0;
+			if (signed_unknown)
+				rxq_cid_make(b + 1);
 		}
 		/* the clock moves BEFORE the pass, never after the last one: a clock moved with no
 		 * `transport_expired()` behind it is not the loop's either (15 Oct 2026, the
@@ -1327,6 +1335,11 @@ static void op_burst(const uint8_t *a, size_t n)
 			T->reset_per_address = (a3 & 4) ? 1000u : 0u;
 		if (k == 0 && (a3 & 1))
 			rxq_fail_next = RXQ_FAIL_RAND;
+		/* owed only when nothing else can stop the Reset: no armed failure (token, RNG), the queue empty (a held datagram
+		 * could push this one past the 64 of a read round) and no recvmsg error pending */
+		signed_owed = signed_unknown && (a3 & 4) /* the cap per address is out of the way */ && !(a3 & 2) && rxq_fail_next == 0 && qhead == qtail && !recv_eintr && !recv_err &&
+		              rxq_resets_signed_now() < RXQ_RESETS_PER_SECOND;
+		rxq_expect_signed_reset(signed_owed);
 		/* ⛔ the loop's pass, as `main.c` runs it (wait, read, expired): a burst that moved
 		 *    the clock through reads alone would age connections the product never leaves
 		 *    unexpired (the first 5-minute run, 15 Oct 2026: a harness artifact) */
@@ -1334,6 +1347,12 @@ static void op_burst(const uint8_t *a, size_t n)
 		enqueue(b, len, a1 % 4, 0);
 		transport_read(T);
 		rxq_fail_next = 0;
+		/* ⭐ `cid-firmati`: the Reset a signed unknown id is owed — the packet is ≥ 24 bytes, the signed budget had room, no
+		 *    failure was armed: a flood of ids that do not verify (the other BURSTs of this input) must not have taken it */
+		if (signed_owed && !rxq_signed_reset_seen())
+			DIE("a short header for a signed id nobody has got no Stateless Reset (%u of %d used)",
+			    rxq_resets_signed_now(), RXQ_RESETS_PER_SECOND);
+		rxq_expect_signed_reset(false);
 		transport_expired(T);
 		summary_oracle(true);
 	}
@@ -1414,8 +1433,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	T = calloc(1, sizeof *T);
 	T->fd = -1;
 	T->family = v6 ? AF_INET6 : AF_INET;
+	T->bound_any = true; /* the product binds the wildcard (`transport_open_fd()`); the oracle of the forced source assumes it */
 	for (size_t i = 0; i < sizeof T->secret; i++)
 		T->secret[i] = (uint8_t)(0x5a ^ i);
+	T->cidk = cidkey_new(T->secret, sizeof T->secret);   /* as transport_open_fd() does, after secret_load() */
+	if (!T->cidk)
+		DIE("cidkey_new failed");
 	places_agree();
 	T->max_conns = 6;
 	T->max_pending = 5;
