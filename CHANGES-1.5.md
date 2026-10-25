@@ -76,6 +76,10 @@
 - One write burst is at most the send quantum, and the loop timeout is rounded up (§11.52 A; `643e9a40`, `3a6d128c`). `pacing-ab`
   then measured +1 ms of RTT at rest from that round-up (24 Oct), so the main loop now waits on the exact deadline with `ppoll`
   (`1b447d3c`, `de5ebdfa`); to be measured again (see Still open).
+- **The RATE of new handshakes is limited** (audit R4, 25 Oct 2026, branch `handshake-ritmo`): the connection caps bound how many are open, not how fast they come, so one address could make
+  hundreds of handshakes a second (0.3-1.2 ms of the single thread each). After the Retry token is verified and before `accept_conn()`, three token buckets (`src/hsrate.h`): 4 a second per address
+  (IPv4 or IPv6 /64, burst 16), 16 a second per IPv6 /48 (burst 32), 200 a second for all (burst 32). Over the limit the newcomer gets the stateless `CONNECTION_REFUSED` (the address is proved by
+  the token, so no amplification: the browser fails at once, and the USER has to press the button again — the page does not retry by itself) and the token is not used up; one line per 10 s counts them (`⚠ HANDSHAKE RATE`). The tables are fixed (256 + 128 entries, least recently seen evicted). Test `benches/unit/hs-rate`. The `quic-conn` fuzz harness ignores the refusals for rate in its caps oracle and RAISES the limits in op 14 (flood) and in op 12 (a4 bit 0), so the branch of the early-forgotten Retry tokens stays covered; `01-b10-flood.py` has `--flood-gap` (B10_FLOOD_GAP) because its default worker pause (0.2-0.5 s) is faster than 4 births a second per address.
 - «Connection closed» log lines of connections that never logged in are limited per window, the rest in a summary (`6368c6a8`).
 
 ## 3. Defects of 1.0 fixed (all «present since 1.0»)
@@ -147,7 +151,7 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
   zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
   login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
   `RCP_SESSION_CAP` 10 in `src/rcp.h:94` is the configurable administrative ceiling (`--session-cap`); the maximum of 8 of §4 is the test target (decided 25 Oct 2026: the ceiling stays at 10).
-- **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
+- **Declared limits**: with about 50 addresses at 4 handshakes a second each, an attacker uses up the global bucket (200 a second) and the NEW logins are refused for as long as it lasts (in IPv6 about 13 /48s are enough: 13 × 16 a second);  the sessions already open are not touched. Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).
 
 ## 6. Fixes of 25 Oct 2026 merged in `finale` (not in `integrazione2`)

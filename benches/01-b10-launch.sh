@@ -41,6 +41,8 @@ PORT=7451
 CARD=${B10_CARD:-/dev/dri/renderD128}
 # ⭐ The caps under test: SMALL by default (16 / 4 / 8: quick, and the numbers are ours); the DEFAULTS of the product are
 #   128 / 8 / 32 and can be tried live with B10_PENDING=128 B10_ADDRESS=8 B10_48=32.  Without the variables nothing changes.
+#   B10_FLOOD_GAP  seconds a flood worker waits between two births (the server limits new handshakes to 4 a second per address, burst 16:
+#                  the default 0.2-0.5 s is faster, and the excess is refused for RATE; see --flood-gap of 01-b10-flood.py)
 #   B10_NFLOOD   flood addresses (default: enough for 1.5 workers per pending place, at least 10: 10 for 16/4, 24 for 128/8)
 #   B10_CLIENT_MEM  the memory of the client container (default 2g; 4g for the defaults: ~190 aioquic connections)
 #   B10_DRYRUN=1 prints the plan (caps, sources, /64s, workers, memory) and exits, touching no container.
@@ -121,7 +123,7 @@ P run --name $CLI --cpus 2 --memory "$CLIMEM" --cap-add NET_ADMIN \
 	exec nice -n 19 python3 -u /benches/01-b10-flood.py --address 127.0.0.1 --address6 ::1 --port $PORT \
 	  --user rxflood --password-file /flood/password --v4-sources $V4RANGE \
 	  --legit-source 127.0.0.50 --v6-prefix $V6 --cap-pending $PEND --cap-address $ADDR --cap-48 $P48 --n-flood $NFLOOD \
-	  --server-log /flood/server.log --output /flood/b10.jsonl" 2>&1 | tee "$OUT/client.log"
+	  ${B10_FLOOD_GAP:+--flood-gap $B10_FLOOD_GAP} --server-log /flood/server.log --output /flood/b10.jsonl" 2>&1 | tee "$OUT/client.log"
 rc=${PIPESTATUS[0]}
 echo "b10: exit $rc — $OUT"
 exit $rc
