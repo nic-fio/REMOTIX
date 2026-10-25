@@ -38,6 +38,8 @@ GRUPPI = [
         (S + "rootside_proto.h", "The closed list of messages between the two sides (AUTH, SPAWN, CLOSE_ORPHAN, SIGNAL and the events): fixed sizes, magic and version"),
         (S + "walls.h", "The network side's walls, in plain words: private read-only mount namespace, no privileges, seccomp, SELinux domain"),
         (S + "walls.c", "Applies the walls in the fork, in the order that matters, and refuses to start the network side if one fails"),
+        (S + "linebudget.h", "A budget of log lines per time window for the whole process: the first lines are written, the rest counted in one line at the end (audit R8, R12)"),
+        (S + "lookup.h", "The CID map and the ring of used Retry tokens of the transport, hashed instead of scanned for every packet"),
         (S + "sigchld.h", "When the main loop reaps its children: on SIGCHLD (a flag set by a handler) plus a safety scan every second, not a waitpid per child per round"),
         (S + "render_grant.h", "The card for a user manager started before the card groups, without closing the user's sessions (§11.4), with the measurements"),
         (S + "render_grant.c", "Gives and takes back the ACL on the render nodes, with its record file; runs in the parent as root"),
