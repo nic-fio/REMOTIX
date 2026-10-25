@@ -307,7 +307,7 @@ struct transport {
 	/* ⭐ R9: and the cap PER ADDRESS in front of it (resetcap.h): the Resets refused to an address in this second, and whether it was said */
 	struct reset_addr reset_addr;
 	unsigned reset_per_address; /* 0 = RESET_PER_ADDRESS; the fuzz harness raises it (op 13) to reach the global cap from a few addresses */
-	unsigned reset_addr_refused;
+	unsigned reset_addr_refused; /* rilettura B4: counted until `refusals_report()` writes it (it was zeroed every second and never said) */
 	bool reset_addr_said;
 	/* ⭐ `cid-firmati`: the Resets for ids that do not verify have their own count in the same second */
 	unsigned reset_unverified_count;
@@ -1282,7 +1282,7 @@ static void births_report(transport *t, ngtcp2_tstamp now)
 static void refusals_report(transport *t, ngtcp2_tstamp now)
 {
 	if (!t->refused_full && !t->refused_address && !t->refused_48 && !t->evicted &&
-	    !t->aged && !t->token_replayed && !t->token_forgotten)
+	    !t->aged && !t->token_replayed && !t->token_forgotten && !t->reset_addr_refused)
 		return;
 	if (t->refused_ever && now - t->refused_line_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
 		return;
@@ -1293,15 +1293,17 @@ static void refusals_report(transport *t, ngtcp2_tstamp now)
 	              "with nobody to evict (%zu in all / %zu pending), %u over %zu pending "
 	              "from one address, %u over %zu pending from one IPv6 /48; the last "
 	              "refused from %s; %u Retry tokens used again (INVALID_TOKEN each), %u "
-	              "forgotten early (more than %d connections in %d s)",
+	              "forgotten early (more than %d connections in %d s); %u Stateless Resets refused to addresses that already had their %d in a second",
 	              t->refused_ever ? " in the last seconds" : "", t->aged, UNLOGGED_MAX_S,
 	              t->evicted,
 	              t->refused_full, cap_conns(t), cap_pending(t), t->refused_address,
 	              cap_per_address(t), t->refused_48, cap_per_48(t),
 	              t->refused_last[0] ? t->refused_last : "-", t->token_replayed,
-	              t->token_forgotten, TOKENS_KEPT, (int)(RETRY_TOKEN_TIMEOUT / NGTCP2_SECONDS));
+	              t->token_forgotten, TOKENS_KEPT, (int)(RETRY_TOKEN_TIMEOUT / NGTCP2_SECONDS), t->reset_addr_refused,
+	              RESET_PER_ADDRESS);
 	t->refused_full = t->refused_address = t->refused_48 = t->evicted = t->aged = 0;
 	t->token_replayed = t->token_forgotten = 0;
+	t->reset_addr_refused = 0;
 	t->refused_last[0] = 0;
 	t->refused_ever = true;
 	t->refused_line_ns = now;
@@ -1780,7 +1782,6 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 		t->reset_capped_said = false;
 		t->reset_unverified_count = 0;
 		t->reset_unverified_capped_said = false;
-		t->reset_addr_refused = 0;
 		t->reset_addr_said = false;
 	}
 	/* ⭐ R9: one address may have RESET_PER_ADDRESS of the RESET_PER_SECOND; what it is refused is not counted against the others.
@@ -2236,7 +2237,7 @@ int64_t transport_wait_ns(const transport *t)
 	}
 	/* ⭐ 1.5: refusals counted and not yet written wake the loop for their line */
 	if ((t->refused_full || t->refused_address || t->refused_48 || t->evicted ||
-	     t->aged || t->token_replayed || t->token_forgotten) &&
+	     t->aged || t->token_replayed || t->token_forgotten || t->reset_addr_refused) &&
 	    t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
 	if ((t->hs_over_address || t->hs_over_net || t->hs_over_all) &&
