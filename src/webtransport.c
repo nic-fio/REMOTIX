@@ -1003,18 +1003,23 @@ static struct {
 /* The connection has logged in (now, or once: a closed session keeps it). */
 static bool wt_logged_in(wt *w)
 {
-	if (w && w->rcp && rcp_logged_in(w->rcp))
+	if (w && w->rcp && rcp_logged_in(w->rcp)) {
+		/* ⭐ rilettura-wt W5: the pre-login caps count what a connection does BEFORE it earns the login; they start again at the moment it does (false -> true), never when it merely loses it:
+		 *    a stranger who opens and closes sessions without logging in must not get a fresh count each time. */
+		if (!w->was_logged_in) {
+			w->sessions_opened = 0;
+			w->stray_requests = 0;
+		}
 		w->was_logged_in = true;
+	}
 	return w && w->was_logged_in;
 }
 
-/* ⭐ rilettura-wt W5: the connection is «before the login» again — ALSO for the pre-login caps: sessions_opened and stray_requests count what a connection that has not logged in
- *    does, and they were left standing from the previous login's own session, so the real user's THIRD login on one QUIC connection was closed with H3_EXCESSIVE_LOAD. */
+/* ⭐ rilettura-wt W5: the connection is «before the login» again.  ONLY the flag: the pre-login counters (sessions_opened, stray_requests) are not touched here — they start again when a login
+ *    is EARNED (wt_logged_in(), false -> true), so the real user's third login is not closed, and a stranger cannot get a new count by opening and closing sessions. */
 static void forget_login(wt *w)
 {
 	w->was_logged_in = false;
-	w->sessions_opened = 0;
-	w->stray_requests = 0;
 }
 
 /* ⛔ R8 (audit of 25 Oct 2026): ONE budget for ALL addresses, over the per-address ones.  Those are 20 lines every 10 s for each of

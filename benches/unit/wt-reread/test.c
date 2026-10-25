@@ -12,7 +12,7 @@
  *   W6  close_now() with the session stream already closed (session == -1) queues nothing.
  *   W4b the quic-net line of a connection with the channel open but not yet logged in is behind prelogin_may_log().
  *   W6b a closure pending when the session stream closes is dropped with it, with the channel deadline: the next session of the connection stays open;
- *   W5b three login/logout cycles on one connection: the pre-login counters (sessions_opened, stray_requests) start again each time, the real user is never closed;
+ *   W5b three login/logout cycles on one connection: the pre-login counters start again when a login is EARNED, the real user is never closed, and a stranger who opens/closes sessions without logging in is still capped at 2;
  *
  * BUILD AND RUN (a full build of the product first, about as long as `make`: the test links every object but main.o and webtransport.o; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
@@ -58,7 +58,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 26
+#define EXPECTED_CHECKS 27
 
 static void require(int cond, const char *desc)
 {
@@ -332,10 +332,23 @@ int main(void)
 			a->session = -1;
 		}
 		require(!closed_early, "four login/logout cycles: the real user is never closed with H3_EXCESSIVE_LOAD (the pre-login counters start again each time)");
-		require(a->sessions_opened == 0 && a->stray_requests == 0, "and both counters are back to zero when the login is forgotten");
+		require(a->sessions_opened == 0 && a->stray_requests == 0, "and both counters are back to zero (they start again when a login is EARNED)");
 		/* the cap itself still holds for a connection that never logs in */
 		a = wt_new(NULL, &e, "[192.0.2.42]:4001", NULL);
 		require(!prelogin_excess(a, true) && !prelogin_excess(a, true) && prelogin_excess(a, true), "(control) a stranger's THIRD session is still closed");
+		/* ... and opening and CLOSING sessions in between does not give a stranger a fresh count (review of d8551b20) */
+		a = wt_new(NULL, &e, "[192.0.2.44]:4001", NULL);
+		{
+			bool third_closed = false;
+
+			for (int k = 0; k < 3; k++) {
+				if (prelogin_excess(a, true))
+					third_closed = (k == 2);
+				a->session = 8 * k;
+				(void)wt_stream_closed(a, 8 * k, 0, false);                       /* the stranger closes the session stream each time */
+			}
+			require(third_closed && a->sessions_opened == 3, "a stranger opens and closes 3 sessions in sequence (wt_stream_closed between): the THIRD is closed, the count was not reset");
+		}
 	}
 
 	printf("  W6. a closure pending when the session stream closes does not close the next session\n");
