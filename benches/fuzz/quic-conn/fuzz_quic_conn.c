@@ -1154,9 +1154,23 @@ static void op_wt(uint8_t sel, const uint8_t *a, size_t n)
 				continue;
 			uint8_t want = r->wt_state;
 			r->wt_state = RXQ_ST_VERDICT;
-			if (!r->wt_ticket)
-				r->wt_ticket = 1;
-			(void)transport_verdict(T, r->wt_ticket, true, false);
+			/* ⛔ transport_verdict() hands the verdict to the FIRST connection that has the ticket,
+			 *    and the stub compares only the number (it comes from the input): the ticket must be
+			 *    UNIQUE among all the connections, or another one logs in in place of `c`. */
+			uint64_t tk = r->wt_ticket ? r->wt_ticket : 1;
+			for (size_t k = 0; k < rxq_nconns;) {
+				if (&rxq_conns[k] != r && rxq_conns[k].wt_ticket == tk) {
+					tk++;
+					k = 0;
+				} else {
+					k++;
+				}
+			}
+			r->wt_ticket = tk;
+			(void)transport_verdict(T, tk, true, false);
+			if (c->unlogged)
+				DIE("connection #%td: an admitted verdict (ticket %llu) left it unlogged: the harness "
+				    "or transport_verdict() lost the login", r - rxq_conns, (unsigned long long)tk);
 			r->wt_state = want;
 			break;
 		}
