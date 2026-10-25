@@ -1,5 +1,10 @@
-/* test.c — audiochunk.h (audit of the session, S-R8).  Build: cc -std=gnu11 -fsanitize=address,undefined -fno-sanitize-recover=undefined -I src benches/unit/audio-chunk/test.c -o t && ./t
- * and src/sound.c must call audio_chunk_ok() with the chunk and piano->maxsize in the condition of the loop (source reading, last check). */
+/* test.c — audiochunk.h (audit of the session, S-R8).
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/audio-chunk/test.c -o /tmp/test && /tmp/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include "audiochunk.h"
 #include <stdio.h>
 #include <string.h>

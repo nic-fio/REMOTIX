@@ -18,9 +18,10 @@
  *      lines are behind msg_line(); drain() consumes an over-rate control message without running its handler, and only in S_ACTIVE;
  *      rcp_time() flushes the windows.
  *
- * BUILD AND RUN (a second; run from the root of the tree):
- *   gcc -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
- *      -Isrc benches/unit/msg-rate/test.c -o /tmp/msg-rate-test && /tmp/msg-rate-test src/rcp.c src/main.c src/webtransport.c src/main.c
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/msg-rate/test.c -o /tmp/test && /tmp/test src/rcp.c src/main.c src/webtransport.c src/main.c'
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "msgrate.h"

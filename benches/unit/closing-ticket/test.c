@@ -138,6 +138,12 @@ size_t fake_wt_dismiss_ticket(uint64_t ticket, uint8_t reason, const char *detai
 	return 1;
 }
 bool fake_budget_on(void) { return false; }
+/* rcp_canonical_user() (new with tetti-messaggi) lives in rcp.c, which this test does not link: a real stub, «the typed name has no other form» */
+bool rcp_canonical_user(const char *typed, char *out, size_t cap)
+{
+	(void)typed; (void)out; (void)cap;
+	return false;
+}
 int fake_rcp_cap(void) { return 8; }
 void fake_budget_verdict_line(const char *user, bool admitted, uint8_t reason, int session_cap, const char *why)
 {

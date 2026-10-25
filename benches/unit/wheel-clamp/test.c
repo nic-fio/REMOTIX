@@ -1,4 +1,10 @@
-/* test.c — wheelclamp.h (audit of the session, S-R9).  Build: cc -std=gnu11 -fsanitize=address,undefined -fno-sanitize-recover=undefined -I src benches/unit/wheel-clamp/test.c -o t && ./t */
+/* test.c — wheelclamp.h (audit of the session, S-R9).
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/wheel-clamp/test.c -o /tmp/test && /tmp/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include "wheelclamp.h"
 #include <stdio.h>
 #include <limits.h>

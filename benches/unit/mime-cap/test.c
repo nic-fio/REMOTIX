@@ -1,5 +1,10 @@
-/* test.c — mimecap.h (audit of the session, S-R10).  Build: cc -std=gnu11 -fsanitize=address,undefined -fno-sanitize-recover=undefined -I src benches/unit/mime-cap/test.c -o t && ./t
- * (from the root of the tree: the last checks read src/clipboard_kde.c and src/clipboard.c to see that the limits are used where the lists are built and logged). */
+/* test.c — mimecap.h (audit of the session, S-R10).
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/mime-cap/test.c -o /tmp/test && /tmp/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include "mimecap.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -5,8 +5,12 @@
  *   3. a writer into a pipe nobody reads (non-blocking, as the reply paths now do): gives up at the deadline, after the 64 KiB the pipe takes, and does not hang;
  *   4. a fast peer is not disturbed: 1 MB through a pipe with a reader draining it completes well before the deadline;
  *   5. the four users (clipboard.c: slurp_fd and the GNOME reply; clipboard_kde.c: ready() for read_type and the reply) are wired to xfertime.h (source reading).
- * Build: cc -std=gnu11 -fsanitize=address,undefined -fno-sanitize-recover=undefined -I src benches/unit/xfer-time/test.c -o t -lpthread && ./t   (from the root of the tree)
- * The test shortens the deadline by calling xfer_wait() with its own deadline value; XFER_TOTAL_MS itself is only checked to be set. */
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/xfer-time/test.c -o /tmp/test -lpthread && /tmp/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include "xfertime.h"
 #include <fcntl.h>
 #include <pthread.h>
