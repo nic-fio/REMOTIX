@@ -123,7 +123,29 @@ int main(void)
 		CHECK(r == 0 && ms_since(&t0) >= 90 && !stop_requested, "3b. without a signal it waits its time and returns 0");
 	}
 
-	CHECK(has("src/main.c", "signal(SIGHUP, on_signal);") && has("src/main.c", "signal(SIGQUIT, on_signal);"), "4. main.c handles SIGHUP and SIGQUIT");
+	{
+		/* the SIGHUP rule of main.c, in two real children: one that inherits SIG_IGN keeps it (nohup), the other gets the handler */
+		for (int ign = 0; ign < 2; ign++) {
+			pid_t k = fork();
+
+			if (k == 0) {
+				struct sigaction old_hup;
+
+				signal(SIGHUP, ign ? SIG_IGN : SIG_DFL);
+				if (sigaction(SIGHUP, NULL, &old_hup) != 0 || old_hup.sa_handler != SIG_IGN)
+					signal(SIGHUP, on_signal);
+				raise(SIGHUP);                                  /* an ignored one leaves us alive with the flag clear */
+				_exit(ign ? (stop_requested ? 1 : 0) : (stop_requested ? 0 : 1));
+			}
+			{
+				int st = 0;
+				waitpid(k, &st, 0);
+				CHECK(WIFEXITED(st) && WEXITSTATUS(st) == 0, ign ? "3c. SIGHUP inherited as ignored stays ignored" : "3d. SIGHUP not ignored becomes a stop request");
+			}
+		}
+	}
+
+	CHECK(has("src/main.c", "old_hup.sa_handler != SIG_IGN") && has("src/main.c", "signal(SIGHUP, on_signal);") && has("src/main.c", "signal(SIGQUIT, on_signal);"), "4. main.c handles SIGHUP (unless inherited ignored) and SIGQUIT");
 	CHECK(has("src/main.c", "nchildren, &wait_ts, &original)") && !has("src/main.c", "nchildren, &wait_ts, NULL)"), "4b. the main ppoll takes the original mask, not NULL");
 	CHECK(has("src/main.c", "sigprocmask(SIG_BLOCK, &stops, &original);") && has("src/main.c", "sigprocmask(SIG_SETMASK, &original, NULL);"), "4c. blocked and restored around it");
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");

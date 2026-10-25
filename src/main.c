@@ -2552,7 +2552,14 @@ int main(int argc, char **argv)
 	signal(SIGTERM, on_signal);
 	/* ⭐ E-R8 (audit of the session, 25 Oct 2026): SIGHUP and SIGQUIT had the default action (terminate / core) without going through the orderly close (command socket,
 	 *    FAREWELL to the clients, SIGTERM to the children).  They are a stop request like the other two.  Under systemd they do not arrive; from a shell or a script they do. */
-	signal(SIGHUP, on_signal);
+	/* ⚠ Review of e3de2871: a SIGHUP that was IGNORED when we started stays ignored — `nohup`, or a launcher that sets it, is how a service survives the shell that started it
+	 *    (the default action, which this replaces, respected that too).  Only when it is not ignored does it become a stop request. */
+	{
+		struct sigaction old_hup;
+
+		if (sigaction(SIGHUP, NULL, &old_hup) != 0 || old_hup.sa_handler != SIG_IGN)
+			signal(SIGHUP, on_signal);
+	}
 	signal(SIGQUIT, on_signal);
 	signal(SIGPIPE, SIG_IGN);
 	/* ⭐ sigchld.h: only the process that runs the main loop: the single-process server (no --split) or the network side.  The root side
