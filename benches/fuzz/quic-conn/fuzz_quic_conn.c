@@ -797,18 +797,19 @@ static void on_event_line(const char *text)
 		 * documented ones, written here apart */
 		static const char TAIL[] = " forgotten early (more than 4096 connections in 10 s)";
 		const char *p = strstr(text, TAIL), *q;
-		/* ⭐ rilettura B4/M1: after it the line now says, always, "; N Stateless Resets refused to addresses that already had their 5 in a
-		 *    second, M to a signed id already answered in that second" */
-		static const char RESETS[] = "; ", RESETS2[] = " Stateless Resets refused to addresses that already had their ",
-		                  RESETS3[] = " to a signed id already answered in that second";
-		const char *rest;
+		/* ⭐ rilettura B4/M1: after it the line now says, always and exactly, "; N Stateless Resets refused to addresses that already had their
+		 *    5 in a second, M to a signed id already answered in that second" (the 5 is RESET_PER_ADDRESS, the second number of the line) */
+		unsigned refused_addr = 0, per_address = 0, refused_id = 0;
+		int used = 0;
 		if (!p)
 			DIE("a summary line without «N forgotten early (more than 4096 connections in "
 			    "10 s)»: «%s»", text);
-		rest = p + sizeof TAIL - 1;
-		if (strncmp(rest, RESETS, sizeof RESETS - 1) != 0 || !strstr(rest, RESETS2) || strlen(rest) < sizeof RESETS3 - 1 ||
-		    strcmp(rest + strlen(rest) - (sizeof RESETS3 - 1), RESETS3) != 0)
-			DIE("a summary line whose end is not the Resets refused to an address / to a signed id: «%s»", text);
+		(void)sscanf(p + sizeof TAIL - 1,
+		             "; %u Stateless Resets refused to addresses that already had their %u in a second, %u to a signed id already answered in that second%n",
+		             &refused_addr, &per_address, &refused_id, &used);
+		if (!used || p[sizeof TAIL - 1 + used] != 0 || per_address != 5)
+			DIE("a summary line whose end is not exactly «; N Stateless Resets refused to addresses that already had their 5 in a "
+			    "second, M to a signed id already answered in that second»: «%s»", text);
 		for (q = p; q > text && q[-1] >= '0' && q[-1] <= '9'; q--)
 			;
 		if (q == p || q == text || q[-1] != ' ')
@@ -1120,7 +1121,8 @@ static void op_new(const uint8_t *a, size_t n)
 			/* ⭐ rilettura M2: refused for lack of PLACES (not for the rate), it has not paid the global handshake token (the clock
 			 *    does not move inside a delivery: the bucket can only have been refilled, never emptied; unless op 12 has just LOWERED the
 			 *    limits under what the bucket held: the refill then cuts it to the new burst, and that is not a charge) */
-			if (all_used0 && T->hs.all.used && all0 <= (uint64_t)T->hs_lim.all_burst * 1000u && T->hs.all.milli < all0)
+			if (all_used0 && T->hs.all.used &&
+			    T->hs.all.milli < (all0 < (uint64_t)T->hs_lim.all_burst * 1000u ? all0 : (uint64_t)T->hs_lim.all_burst * 1000u))
 				DIE("a newcomer refused for lack of places took a global handshake token (%llu -> %llu thousandths)",
 				    (unsigned long long)all0, (unsigned long long)T->hs.all.milli);
 		}
