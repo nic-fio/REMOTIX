@@ -44,7 +44,7 @@ export RX_LIVE_MODE=$LIVE_MODE REMOTIX_LIVE_MODE=$LIVE_MODE REMOTIX_LIVE_JOURNAL
 echo "── mode: $LIVE_MODE"
 cd /albero/src || exit 3
 [ "$(id -u)" = 0 ] || { echo "needs root (a privileged container)"; exit 3; }
-make TWIN=none -j2 >/tmp/rx-make.log 2>&1 || { tail -20 /tmp/rx-make.log; exit 3; }
+make TWIN=none -j${LIVE_JOBS:-2} >/tmp/rx-make.log 2>&1 || { tail -20 /tmp/rx-make.log; exit 3; }
 PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon wayland-client gbm"
 gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags $PK) -o /tmp/rx-live-bin \
 	../benches/02-rootside-live-test.c $(ls *.o | grep -v -e '^main.o$' -e '^walls.o$') \
@@ -52,7 +52,7 @@ gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags $PK) -o /tmp/rx-live-bin 
 	$(pkg-config --libs $PK) -ldl || exit 3
 chmod 755 /tmp/rx-live-bin
 # ⭐ 1.6 (R8 B): network_side_born_right() of main.c, case by case (main.c included, its main() renamed)
-gcc -std=gnu11 -Wall -Wextra -Wno-unused-function -D_GNU_SOURCE -I. $(pkg-config --cflags $PK) -o /tmp/rx-bornright \
+[ "$LIVE_MODE" = plain ] && gcc -std=gnu11 -Wall -Wextra -Wno-unused-function -D_GNU_SOURCE -I. $(pkg-config --cflags $PK) -o /tmp/rx-bornright \
 	../benches/02-bornright-test.c $(ls *.o | grep -v -e '^main.o$' -e '^walls.o$') \
 	-lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
 	$(pkg-config --libs $PK) -ldl || rm -f /tmp/rx-bornright
@@ -86,6 +86,10 @@ printf 'auth required pam_unix.so\naccount required pam_unix.so\nsession optiona
 rm -rf /tmp/rx-live && mkdir -m 1777 /tmp/rx-live
 printf '# denied\nbruno\n' > /tmp/rx-live/denied-users
 
+# ⭐ The network side is exec'd as /proc/self/exe: its COMMAND NAME (comm) reads «exe», and its argv[0] is «remotix-net» — it is found by that,
+# from outside its PID namespace (where it has a pid of this container's, not 1)
+count_net() { n=0; for c in /proc/[0-9]*/cmdline; do case "$(tr '\0' ' ' < "$c" 2>/dev/null)" in "remotix-net --net"*) n=$((n + 1)) ;; esac; done; echo $n; }
+ps_net() { ps -eo pid,ppid,user,stat,comm,args | grep -E 'PID|rx-live-bin|remotix-net|rx-leftover|rx-stage' | grep -v grep; }
 # a process by its name, whoever's it is, as the container sees it (a zombie is counted: `Z`)
 count_comm() { n=0; for c in /proc/[0-9]*/comm; do [ "$(cat "$c" 2>/dev/null)" = "$1" ] && n=$((n + 1)); done; echo $n; }
 zombies() { n=0; for s in /proc/[0-9]*/status; do grep -q '^State:[[:space:]]*Z' "$s" 2>/dev/null && n=$((n + 1)); done; echo $n; }
@@ -107,13 +111,14 @@ if [ "$LIVE_MODE" = nologind ] || [ "$LIVE_MODE" = rootdeath ]; then
 		[ "$RC" = 0 ] && [ $((T1 - T0)) -le 6 ] || { echo "NO the root side stopped with $RC in $((T1 - T0)) s"; red=1; }
 	else
 		echo "── ps outside (the container's view) before the root side dies"
-		ps -eo pid,ppid,user,stat,comm | grep -E 'PID|rx-live-bin'
+		ps_net
+		[ "$(count_net)" = 1 ] || { echo "NO the network side is not there to be seen before the root side dies"; red=1; }
 		kill -KILL $ROOT; wait $ROOT 2>/dev/null
 		i=0; while ! grep -q '^ROOT_EOF ' /tmp/rx-live/net.txt && [ $i -lt 50 ]; do sleep 0.2; i=$((i + 1)); done
 		grep -q '^ROOT_EOF ' /tmp/rx-live/net.txt || { echo "NO the network side did not see the EOF of the dead root side"; red=1; }
 		grep '^ROOT_EOF' /tmp/rx-live/net.txt
 		sleep 1
-		[ "$(count_comm rx-live-bin)" = 0 ] || { echo "NO a process of the live binary is still there after the root side's death"; ps -eo pid,ppid,user,stat,comm | grep rx-live-bin; red=1; }
+		[ "$(count_comm rx-live-bin)" = 0 ] && [ "$(count_net)" = 0 ] || { echo "NO a process of the live binary is still there after the root side's death"; ps_net; red=1; }
 	fi
 	[ "$(zombies)" = 0 ] || { echo "NO $(zombies) zombie(s) left"; red=1; }
 	echo "── mode $LIVE_MODE: $( [ $red = 0 ] && echo GREEN || echo RED)"
@@ -155,7 +160,7 @@ sleep 0.5
 # ⭐ 1.6 (R8 B): kill -9 of the network side ALONE (the third), the root side stays: a fourth is born, and finds the desktops again
 NP=$(grep -o 'network side started: pid [0-9]*' /tmp/rx-live/root.log | tail -1 | grep -o '[0-9]*$')
 echo "── ps outside (the container's view) with the third network side up"
-ps -eo pid,ppid,user,stat,comm | grep -E 'PID|rx-live-bin|rx-leftover|rx-stage'
+ps_net
 PSOUT=$(ps -o user= -p "$NP" 2>/dev/null | tr -d ' ')
 [ -n "$NP" ] && kill -KILL "$NP"
 i=0; while [ ! -f /tmp/rx-live/restarted3.txt ] && [ $i -lt 90 ]; do sleep 0.5; i=$((i + 1)); done
@@ -232,7 +237,7 @@ if [ "$LIVE_MODE" = journal ]; then
 	grep -q '^pid=1 ' /tmp/rx-live/journal.txt 2>/dev/null && { echo "NO a line with pid 1: the pid was not translated"; red=1; }
 fi
 [ "$(zombies)" = 0 ] || { echo "NO $(zombies) zombie(s) left after the stop"; ps -eo pid,ppid,stat,comm | grep ' Z'; red=1; }
-[ "$(count_comm rx-live-bin)" = 0 ] || { echo "NO a process of the live binary survived the stop"; ps -eo pid,ppid,user,stat,comm | grep rx-live-bin; red=1; }
+[ "$(count_comm rx-live-bin)" = 0 ] && [ "$(count_net)" = 0 ] || { echo "NO a process of the live binary survived the stop"; ps_net; red=1; }
 # review 2, L4: the root side writes how long a birth took
 grep -q 'the birth for «anna» took [0-9]* ms' /tmp/rx-live/root.log || { echo "NO no birth duration line"; red=1; }
 # review 2, M1: a second CLOSE_ORPHAN for carla within 30 s is refused without a birth

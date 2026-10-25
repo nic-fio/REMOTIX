@@ -406,6 +406,21 @@ static int net_nologind(void)
 		pause();
 }
 
+/* ⭐ The dead root side reaches this process TWICE, in no fixed order: PR_SET_PDEATHSIG (armed in the fork before the exec by rootside.c, and it
+ *    survives an exec of a normal binary) delivers SIGTERM, and the channel's other end closing is an EOF on fd 3.  The product stops on either
+ *    (main.c's SIGTERM handler; rootside_lost()); this stand-in notes the signal and goes on to see the EOF — the EOF is what the case proves. */
+static volatile sig_atomic_t rd_term_seen;
+static int rd_term_fd = -1;
+static void rd_term(int sig)
+{
+	static const char m[] = "SIGTERM_SEEN (the PDEATHSIG of the dead root side)\n";
+
+	(void)sig;
+	rd_term_seen = 1;
+	if (rd_term_fd >= 0)
+		(void)!write(rd_term_fd, m, sizeof m - 1);
+}
+
 static int net_rootdeath(void)
 {
 	struct rxr_ready r;
@@ -414,6 +429,8 @@ static int net_rootdeath(void)
 	out = fopen(DIR_ "/net.txt", "w");
 	if (!out)
 		return 2;
+	rd_term_fd = fileno(out);
+	signal(SIGTERM, rd_term);
 	check(rootside_attach(3, 30000, &r), "attached: READY from the root side");
 	fprintf(out, "ATTACHED\n");
 	fflush(out);
