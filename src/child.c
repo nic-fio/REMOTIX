@@ -97,7 +97,6 @@
 #include "sound.h"
 #include "encoder.h"
 #include "dimcheck.h"
-#include "reapwait.h"
 #include "input.h"
 #include "mutter.h"
 #include "kwin.h"
@@ -4157,12 +4156,8 @@ void children_turn_off(children *f)
 			 *    CHILD_EXITED, at most `TURN_OFF_WAIT_MS` per child. */
 			if (f->remote)
 				rootside_pump_until(child_reaped_now, g, TURN_OFF_WAIT_MS);
-			else if (!reap_or_kill(g->pid, TURN_OFF_WAIT_MS, TURN_OFF_WAIT_MS))
-				/* ⭐ E-R7 (audit of 25 Oct 2026): it used to be an unbounded blocking waitpid — a child in uninterruptible sleep
-				 *    (a GPU hang) held the service's shutdown until systemd's SIGKILL.  Now: TURN_OFF_WAIT_MS after the SIGTERM, then a
-				 *    SIGKILL and as long again; if it is STILL there, init takes it (the service is going down anyway). */
-				registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld) did not exit even after SIGKILL within %d ms: "
-				              "leaving it", g->user, (long)g->pid, 2 * TURN_OFF_WAIT_MS);
+			else
+				waitpid(g->pid, NULL, 0);
 		}
 		/* review 4 B, finding 17: «shut down» only when it is known */
 		if (f->remote && g->pid > 0 && !child_reaped_now(g))
