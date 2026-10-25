@@ -1141,6 +1141,26 @@ static void op_wt(uint8_t sel, const uint8_t *a, size_t n)
 		uint64_t back = (uint64_t)z[6] * 64;
 		r->wt_cred_from_ms = rx_now_ms > back ? rx_now_ms - back : 1;
 	}
+	/* ⛔ A state past the credentials is reached in the product ONLY through an admitted verdict
+	 *    (transport_verdict_from() -> note_login()): since 8d5629f3 transport_expired() no longer
+	 *    sees the login from the RCP state, as the synchronous PAM fallback it served is dead
+	 *    (D4b).  Decreeing ATTACH/ACTIVE/DETACHED on a connection still `unlogged` played a state
+	 *    the product cannot be in, and the age close of "not logged in in time" then hit a "logged
+	 *    in" connection (rootside-completo d283a02b, crash-5e4ce06f).  So such a connection logs in
+	 *    first, by the real road, and only then gets the state the input chose. */
+	if (r->wt_state == RXQ_ST_ATTACH || r->wt_state == RXQ_ST_ACTIVE || r->wt_state == RXQ_ST_DETACHED) {
+		for (connection *c = T->prime; c; c = c->upcoming) {
+			if (rxq_reg_of(c->conn) != r || c->dead_run || !c->unlogged)
+				continue;
+			uint8_t want = r->wt_state;
+			r->wt_state = RXQ_ST_VERDICT;
+			if (!r->wt_ticket)
+				r->wt_ticket = 1;
+			(void)transport_verdict(T, r->wt_ticket, true, false);
+			r->wt_state = want;
+			break;
+		}
+	}
 }
 
 static void op_ng(uint8_t sel, const uint8_t *a, size_t n)
