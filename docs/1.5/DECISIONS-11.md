@@ -750,7 +750,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.36 ✅ Firefox at 4K with video: what to change (15 Oct 2026) — DECIDED D
 
-> ⚠ NOT in this tree; still to port: `728acd22`, the Firefox worker default
+> 🔸 Ported on branch `ff-worker` (from `integrazione2`; NOT merged, waiting for the user): `5a16858f` + `d24a3683` + `728acd22`, the Firefox worker default, as one commit. Not run in a browser on this base.
 
 - `[M]` §11.31: the page's main thread stalls 55–64 % of the time (gaps in the sound); §11.32: the decoder queue
   ≥ 5 for 80 % of the frames, decode delay median 1.35 s, the picture 1.4 s old or more. Chrome is fine.
