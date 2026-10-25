@@ -26,7 +26,8 @@
  *               not used below the quota); attempts and single failures from 4000 keys erase no ban; 16 bookings never LV_FULL;
  *               the attempts IN FLIGHT count in the common counter, UNBLOCK zeroes it; the known keys are written to the ban file
  *               (G2 lines, skipped by the 1.0) and read back after a restart with the quota full; the last resort is for known
- *               keys only (an unknown one gets LV_FULL); the log names every ban dropped; a ban file with more bans than the quota keeps the most valuable in ANY order
+ *               keys only (an unknown one gets LV_FULL); a G2 line from the future is read as recent with its date brought back to now,
+ *               the newer date wins when a key is in the file twice (itself and its HMAC); the log names every ban dropped; a ban file with more bans than the quota keeps the most valuable in ANY order
  *               (ascending, descending, two shuffles) and the displaced ones keep their level
  *   unblock     removes every level of the address (user, key, /48) and the recidivism
  *   file        the old format is converted, the new one round-trips (ban, user with spaces, recidivism), -1 on a bad path
@@ -800,8 +801,54 @@ static void test_quota(void)
 		fresh();
 		memset(good_keys, 0, sizeof good_keys);
 		CHECK(rcp_ban_load(p2, at(0)) == 0, "G2 lines are not bans");
-		CHECK(!good_recent("[1.1.1.1]", at(1)) && !good_recent("[2.2.2.2]", at(1)) && !good_recent("[3.3.3.3]", at(1)) &&
-		      good_recent("[4.4.4.4]", at(1)), "only the line of an hour ago is read");
+		CHECK(!good_recent("[1.1.1.1]", at(1)) && !good_recent("[3.3.3.3]", at(1)) &&
+		      good_recent("[4.4.4.4]", at(1)), "the stale line and the nonsense are not read, the one of an hour ago is");
+		/* a line from the FUTURE (the clock was wrong) is read as recent, with its date brought back to now */
+		{
+			int g22 = good_find("[2.2.2.2]");
+			CHECK(good_recent("[2.2.2.2]", at(1)) && g22 >= 0 && good_keys[g22].epoch <= (long long)time(NULL),
+			      "a login dated in the future is read as recent (epoch %lld, now %lld)", g22 >= 0 ? good_keys[g22].epoch : -1LL,
+			      (long long)time(NULL));
+			save_ban(NULL, at(2));
+			CHECK(strstr(slurp(p2), "G2 ") != NULL && sscanf(strstr(slurp(p2), "G2 ") + 3, "%lld", &nowe) == 1 && nowe <= (long long)time(NULL) + 1,
+			      "and the file does not keep the date of the future");
+			f2 = fopen(p2, "w");
+			fprintf(f2, "G2 %lld [5.5.5.5]\nG2 %lld [6.6.6.6]\n", (long long)time(NULL) + 40LL * 86400, (long long)time(NULL) + 400LL * 86400);
+			fclose(f2);
+			fresh();
+			rcp_ban_load(p2, at(0));
+			CHECK(good_recent("[5.5.5.5]", at(1)) && good_recent("[6.6.6.6]", at(1)), "even far ahead: recent, but only from now");
+			int g6 = good_find("[6.6.6.6]");
+			CHECK(g6 >= 0 && good_keys[g6].epoch <= (long long)time(NULL), "the date is brought back to now, so the trust is 30 days from this start");
+			good_keys[g6].epoch -= 31 * 86400;
+			CHECK(!good_recent("[6.6.6.6]", at(2)), "and it expires 30 days after");
+		}
+		/* the same key twice in the file, as itself and as its HMAC: the NEWER date wins, in either order */
+		{
+			char mk[65];
+			good_mac("[8.8.4.4]", mk);
+			long long tn = (long long)time(NULL), newer = tn - 3600, older = tn - 5 * 86400;
+			for (int order = 0; order < 2; order++) {
+				f2 = fopen(p2, "w");
+				if (order == 0)
+					fprintf(f2, "G2 %lld [8.8.4.4]\nG2 %lld %s\n", newer, older, mk);
+				else
+					fprintf(f2, "G2 %lld %s\nG2 %lld [8.8.4.4]\n", older, mk, newer);
+				fclose(f2);
+				fresh();
+				rcp_ban_load(p2, at(0));
+				int entries = 0, ge = -1;
+				for (int i = 0; i < GOOD_KEYS; i++)
+					if (strcmp(good_keys[i].mac, mk) == 0) { entries++; ge = i; }
+				CHECK(entries == 1 && ge >= 0 && good_keys[ge].epoch == newer && good_recent("[8.8.4.4]", at(1)),
+				      "order %d: one entry, with the newer date (%d entries, epoch %lld, wanted %lld)", order, entries,
+				      ge >= 0 ? good_keys[ge].epoch : -1LL, newer);
+			}
+			/* an older login never ages a known key */
+			good_put("[8.8.4.4]", NULL, at(5), older);
+			int g = good_find("[8.8.4.4]");
+			CHECK(g >= 0 && good_keys[g].epoch == newer, "an older login given later does not make the entry older");
+		}
 		/* a ban dropped as a last resort rewrites the file (the report) */
 		captured[0] = 0;
 		{
