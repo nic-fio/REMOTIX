@@ -2550,6 +2550,10 @@ int main(int argc, char **argv)
 
 	signal(SIGINT, on_signal);
 	signal(SIGTERM, on_signal);
+	/* ⭐ E-R8 (audit of the session, 25 Oct 2026): SIGHUP and SIGQUIT had the default action (terminate / core) without going through the orderly close (command socket,
+	 *    FAREWELL to the clients, SIGTERM to the children).  They are a stop request like the other two.  Under systemd they do not arrive; from a shell or a script they do. */
+	signal(SIGHUP, on_signal);
+	signal(SIGQUIT, on_signal);
 	signal(SIGPIPE, SIG_IGN);
 	/* ⭐ sigchld.h: only the process that runs the main loop: the single-process server (no --split) or the network side.  The root side
 	 *    of a split (`split && !network_side`) has its own SIGCHLD handler and loop (rootside.c) and is not touched. */
@@ -3331,11 +3335,34 @@ int main(int argc, char **argv)
 
 		wait_ts.tv_sec = (time_t)(wait_ns / 1000000000LL);
 		wait_ts.tv_nsec = (long)(wait_ns % 1000000000LL);
-		if (ppoll(fds, n + npage + ncommand + nhelp + nchildren, &wait_ts, NULL) < 0) {
-			if (errno == EINTR)
-				continue;       /* SIGCHLD or another signal: the flag is read at the top of the next pass (zero wait if up) */
-			registro_dice(LOG_STARTUP, "⛔ ppoll: %s", strerror(errno));
-			break;
+		/* ⭐ E-R8: a stop signal that arrived AFTER the `while (!stop_requested)` above and BEFORE the `ppoll` did not interrupt the wait (up to a second of delay,
+		 *    ten milliseconds with the test tone).  The classic cure: the four stop signals are blocked only here, the flag is read again WITH them blocked, and the `ppoll`
+		 *    unblocks them atomically by taking the original mask.  ⚠ Blocked ONLY for these few lines: the mask is inherited by `fork`/`execve`, and the children and the PAM
+		 *    dispatcher must start with all signals open. */
+		{
+			sigset_t stops, original;
+			int outcome, saved;
+
+			sigemptyset(&stops);
+			sigaddset(&stops, SIGINT);
+			sigaddset(&stops, SIGTERM);
+			sigaddset(&stops, SIGHUP);
+			sigaddset(&stops, SIGQUIT);
+			sigprocmask(SIG_BLOCK, &stops, &original);
+			if (stop_requested) {
+				sigprocmask(SIG_SETMASK, &original, NULL);
+				break;
+			}
+			outcome = ppoll(fds, n + npage + ncommand + nhelp + nchildren, &wait_ts, &original);
+			saved = errno;
+			sigprocmask(SIG_SETMASK, &original, NULL);
+			errno = saved;
+			if (outcome < 0) {
+				if (errno == EINTR)
+					continue;       /* SIGCHLD or another signal: the flag is read at the top of the next pass (zero wait if up) */
+				registro_dice(LOG_STARTUP, "⛔ ppoll: %s", strerror(errno));
+				break;
+			}
 		}
 
 		if (fds[0].revents & POLLIN)

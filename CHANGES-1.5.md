@@ -150,6 +150,9 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **A clipboard transfer has a total time limit** (audit of the session, S-R5 and S-R6, 25 Oct 2026): the clipboard code waited at most 5 s for EACH step and had no limit on the sum, so a desktop program that wrote a byte every 4.9 s, or read a chunk
   every 4 s, held the clipboard thread for hours with 1 MB; on GNOME the reply `write` was also blocking and stopped the child's main loop for good. Now one deadline of 10 s per transfer (`src/xfertime.h`) for the reads (GNOME `slurp_fd`,
   KDE/wlroots `read_type`) and the replies, which are also non-blocking; at the end the transfer is closed and declared (GNOME: `SelectionWriteDone` false). Test `benches/unit/xfer-time`, with real pipes and a slow peer.
+- **The stop signals are handled without a race, and SIGHUP / SIGQUIT too** (audit of the session, E-R8, 25 Oct 2026): a SIGTERM arriving between the `stop_requested` test and the main `ppoll` did not interrupt the wait (up to a second of
+  delay), and SIGHUP / SIGQUIT killed the process without the orderly close (command socket, FAREWELL to the clients, SIGTERM to the children). Now the four stop signals are blocked only around the `ppoll`, the flag is read again with them
+  blocked and the `ppoll` takes the original mask; SIGHUP and SIGQUIT are stop requests like SIGINT and SIGTERM. The mask is restored right after, so children and the PAM dispatcher start with the signals open. Test `benches/unit/stop-signals`.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
