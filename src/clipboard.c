@@ -19,12 +19,15 @@
  *      · **the last text is remembered**, not the last list of types: it is what
  *        whoever reconnects needs, and it is already ready to send.
  */
+#include "xfertime.h"
 #include "mimecap.h"
 #include "clipboard.h"
 #include "clipboard_kde.h"
 
 #include <gio/gunixfdlist.h>
 #include <glib-unix.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -136,18 +139,18 @@ static GBytes *slurp_fd(int fd, GError **mistake)
 {
 	GByteArray *collected = g_byte_array_new();
 	guint8 piece[16384];
+	const uint64_t deadline = xfer_deadline();   /* ⭐ S-R6: a total limit as well, not only per step (see xfertime.h) */
 
 	while (TRUE)
 	{
-		GPollFD probe = { .fd = fd, .events = G_IO_IN | G_IO_HUP | G_IO_ERR };
 		gssize readings;
 
-		if (g_poll(&probe, 1, WAIT_READ_MS) <= 0)
+		if (!xfer_wait(fd, POLLIN, deadline, WAIT_READ_MS))
 		{
 			g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_TIMED_OUT,
-			            "whoever had to deliver the clipboard wrote "
-			            "nothing for %d ms",
-			            WAIT_READ_MS);
+			            "whoever had to deliver the clipboard wrote nothing for %d ms, "
+			            "or did not finish in %d ms",
+			            WAIT_READ_MS, XFER_TOTAL_MS);
 			explicit_bzero(piece, sizeof piece);
 			if (collected->data)
 				explicit_bzero(collected->data, collected->len);
@@ -864,12 +867,30 @@ void clipboard_reply(Clipboard *clipboard, uint32_t serial, const char *text,
 
 	{
 		size_t written = 0;
+		/* ⭐ S-R5: `fd` comes from D-Bus and was BLOCKING: a program of the desktop that asks to paste and does not read the pipe stopped the child's main loop with
+		 *    no limit.  Non-blocking, and one deadline for the whole answer (see xfertime.h); at the end `succeeded` is FALSE and SelectionWriteDone says so. */
+		const uint64_t deadline = xfer_deadline();
+		int flags = fcntl(fd, F_GETFL);
+
+		if (flags >= 0)
+			fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
 		succeeded = TRUE;
 		while (written < byte)
 		{
 			gssize t_now = write(fd, text + written, byte - written);
 
+			if (t_now < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+			{
+				if (xfer_wait(fd, POLLOUT, deadline, 1000))
+					continue;
+				registro_dice(LOG_CLIPBOARD,
+				              "⛔ whoever is pasting does not read: %zu bytes of %zu "
+				              "in %d ms, then I give up",
+				              written, byte, XFER_TOTAL_MS);
+				succeeded = FALSE;
+				break;
+			}
 			if (t_now < 0)
 			{
 				if (errno == EINTR)

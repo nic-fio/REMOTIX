@@ -2,6 +2,7 @@
  * appunti_kde — see `clipboard_kde.h`.  The comments citing `kde.md` and KWin's
  * files refer to v1's study, now in `STUDIES.md` §kde.
  */
+#include "xfertime.h"
 #include "mimecap.h"
 #include "clipboard_kde.h"
 
@@ -340,14 +341,17 @@ static void bind_ext_if_needed(ClipboardKde *clipboard)
 /* ⛔ `POLLHUP` on read counts as "ready": whoever writes and closes (the normal
  *    case) can make `poll` return with only `POLLHUP`, and the data is
  *    in the pipe (`[M]` v1, 8 August 2026). */
-static bool ready(int fd, short what)
+static bool ready(int fd, short what, uint64_t deadline)
 {
 	struct pollfd probe = { .fd = fd, .events = what, .revents = 0 };
 	int outcome;
+	int wait = xfer_left_ms(deadline, WAIT_TRANSFER_MS);   /* ⭐ S-R5/S-R6: the step, or what is left of the transfer's deadline */
 
+	if (wait <= 0)
+		return false;
 	do
-		outcome = poll(&probe, 1, WAIT_TRANSFER_MS);
-	while (outcome < 0 && errno == EINTR);
+		outcome = poll(&probe, 1, wait);
+	while (outcome < 0 && errno == EINTR && (wait = xfer_left_ms(deadline, WAIT_TRANSFER_MS)) > 0);
 	if (outcome <= 0)
 		return false;
 	if (probe.revents & what)
@@ -362,6 +366,7 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 {
 	int pipe_fd[2];
 	GByteArray *collection;
+	uint64_t deadline;
 
 	if (pipe2(pipe_fd, O_CLOEXEC) != 0) {
 		*why = "pipe not created";
@@ -374,17 +379,18 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 	close(pipe_fd[1]);
 
 	collection = g_byte_array_new();
+	deadline = xfer_deadline();   /* ⭐ S-R6: a total limit as well (see xfertime.h) */
 	for (;;) {
 		guint8 piece[16384];
 		ssize_t amount;
 
-		if (!ready(pipe_fd[0], POLLIN)) {
+		if (!ready(pipe_fd[0], POLLIN, deadline)) {
 			close(pipe_fd[0]);
 			explicit_bzero(piece, sizeof piece);
 			if (collection->data)
 				explicit_bzero(collection->data, collection->len);
 			g_byte_array_unref(collection);
-			*why = "whoever owns the clipboard wrote nothing for 5 s";
+			*why = "whoever owns the clipboard wrote nothing for 5 s, or did not finish in 10 s";
 			return NULL;
 		}
 		amount = read(pipe_fd[0], piece, sizeof piece);
@@ -842,6 +848,7 @@ void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *t
 	gpointer value;
 	char *fallback = NULL;
 	size_t written = 0;
+	uint64_t deadline;
 	int fd;
 
 	if (!clipboard)
@@ -881,10 +888,14 @@ void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *t
 	}
 
 	/* ⛔ It is ALWAYS closed, even without data: the end of the stream is the `close`. */
+	deadline = xfer_deadline();   /* ⭐ S-R5: one deadline for the whole answer (see xfertime.h) */
+	/* ⚠ and non-blocking: POLLOUT says there is room for SOME bytes, and a blocking `write` of the rest would wait for the reader with no limit */
+	if (text && fcntl(fd, F_GETFL) >= 0)
+		fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 	while (text && written < byte) {
 		ssize_t done_ones;
 
-		if (!ready(fd, POLLOUT)) {
+		if (!ready(fd, POLLOUT, deadline)) {
 			registro_dice(LOG_CLIPBOARD, "⛔ whoever is pasting does not read: %zu bytes of %zu, "
 			                           "then I give up", written, byte);
 			break;
