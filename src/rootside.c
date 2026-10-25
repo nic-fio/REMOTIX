@@ -2201,6 +2201,7 @@ int rootside_main(const struct rootside_options *o)
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGQUIT, &sa, NULL);   /* ⭐ rilettura-fix B1: main.c's e3de2871 gave SIGQUIT a handler that sets a flag THIS loop does not read: it would do nothing; same stop as SIGTERM */
 	sigaction(SIGUSR1, &sa, NULL);
 	sigaction(SIGUSR2, &sa, NULL);
 	sigaction(SIGCHLD, &sa, NULL);
@@ -2253,7 +2254,7 @@ int rootside_main(const struct rootside_options *o)
 
 		while ((n = read(R.pipe_r, sigs, sizeof sigs)) > 0)
 			for (ssize_t k = 0; k < n; k++) {
-				if ((sigs[k] == SIGTERM || sigs[k] == SIGINT) && !R.stopping) {
+				if ((sigs[k] == SIGTERM || sigs[k] == SIGINT || sigs[k] == SIGQUIT) && !R.stopping) {
 					R.stopping = true;
 					R.stop_deadline = now + STOP_WAIT_MS;
 					registro_dice(LOG_ROOT, "⭐ signal %d: the network side is asked "
