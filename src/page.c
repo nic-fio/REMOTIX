@@ -87,6 +87,8 @@
 /* ⭐ 1.5: 4 and 8 closed on the spot every connection past the fourth from one address — eight people behind a NAT who reload together are
  *   8 to 24 connections at once (`otto-utenti-nat`).  32 per address leaves room for 8 users with 3 connections each, 64 per IPv6 /48 keeps the
  *   old proportion; the fair-share eviction below still makes a crowd the first victim when the table is full. */
+/* ⭐ The cost, in IPv6: 64 of the 128 slots per /48 means that TWO /48s can fill the page table (it took sixteen with 8 each), and 32 per address that FOUR addresses can (it took
+ *   thirty-two with 4 each): the fair-share eviction below is what keeps a crowd from locking the table against a newcomer. */
 #define PAGE_PER_ADDRESS 32
 #define PAGE_PER_48 64
 #define PAGE_EVICT_AGE_MS 5000u

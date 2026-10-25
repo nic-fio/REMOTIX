@@ -154,6 +154,8 @@
  *   leaves one open for 2.5 s while the next is opened): 8 per address was exactly the target and a single try more was refused.  16 per address,
  *   64 per /48 (the old proportion); MAX_PENDING stays 128, so that at least 128 places remain for the connections that have logged in — the price
  *   is that 8 addresses (it was 16) can fill the pending room, and then the OLDEST not-yet-logged-in connection of the biggest group is the one closed. */
+/* ⭐ The cost, in IPv6: 64 of the 128 pending places per /48 means that TWO /48s can fill the pre-login room (it took four with 32 each), and 16 per address that EIGHT addresses
+ *   can (it took sixteen with 8): the proportion address : /48 is the old 1:4 (8:32, now 16:64). */
 #define PENDING_PER_ADDRESS 16
 #define PENDING_PER_48 64
 /* ⭐ The longest a login can honestly take: CAP_HELLO 5 s + CAP_CREDENTIALS 60 s +
