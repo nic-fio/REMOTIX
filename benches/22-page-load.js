@@ -7,10 +7,11 @@
 // answer anything).  Only the top level runs; timers are inert.  It exists because 22-page-decoder-sim.js fakes the
 // page's functions and cannot see a ReferenceError at load: `DIARY` (removed by 8a46c9c9) in VIDEO_FAULT broke the
 // login on every browser.  EXIT: 0 the top level ran (or died of a stub limit: said), 1 a ReferenceError.
-// `[M]` 25 Oct 2026: the page of ff-worker 0, the same with the old `if (!DIARY)` line 1 (ReferenceError: DIARY).
+// `[M]` 25 Oct 2026: the page of ff-worker: exit 0; the same page with the old `if (!DIARY)` line: exit 1 (ReferenceError: DIARY).
+// VIDEO_FAULT is only reported when the page has it (pages without the worker default do not).
 const fs=require("fs"),vm=require("vm");
 const html=fs.readFileSync(process.argv[2],"utf8");
-const m=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(x=>x[1]).sort((a,b)=>b.length-a.length)[0]+"\n;globalThis.__vf = VIDEO_FAULT;";
+const m=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(x=>x[1]).sort((a,b)=>b.length-a.length)[0]+"\n;globalThis.__vf = (typeof VIDEO_FAULT === 'undefined') ? '(no VIDEO_FAULT in this page)' : VIDEO_FAULT;";
 const seen=new Set();
 function stub(name){const f=function(){return stub(name+"()")};
   return new Proxy(f,{get(t,k){if(k===Symbol.toPrimitive)return()=>"";if(k==="then"||k==="catch"||k==="finally")return()=>stub(name+".then");if(k==="length")return 0;
