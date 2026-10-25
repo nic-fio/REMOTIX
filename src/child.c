@@ -55,6 +55,7 @@
 #include "rcp.h"
 #include "log.h"
 #include "rootside.h"
+#include "reapwait.h"
 /* ⭐ PHASE 17 T7: the PARENT's half asks logind and /proc whether a desktop
  *    is alive (nothing of the stage). */
 #include "rediscover.h"
@@ -126,6 +127,17 @@
  *   stage outlives the detach, and a child that is silent because nobody is
  *   asking it anything is doing its job. */
 #define SHOW_UP_DEADLINE_MS 15000
+/* ⭐ Audit of the session (25 Oct 2026): the once-a-minute «who are you» question (`children_recheck()`) is the only thing the parent ASKS of a child that
+ *   has already introduced itself.  If it stays unanswered this long the child's loop is stuck (a call that does not return), and nobody will ever notice:
+ *   it is killed — unless it has sent ANY message since the question: a child that is still delivering (frames, canvas, ...) but does not answer is not
+ *   killed, one line says so and the wait starts again.  This does not touch I4: the child is not silent because nobody asks it anything, it is being
+ *   asked, every minute. */
+#define WHOAMI_DEADLINE_MS 600000
+/* ⭐ Why 600 s and not 180 (review of c4cf6db2): the full answer waits for `getpwnam_r()` (the NAME check, in the child), which with sssd or LDAP down can
+ *   take 300 s or have no limit at all; with the answer alone as the sign of life every idle child would have been killed TOGETHER when the directory
+ *   stalled.  So the child now sends a LIGHT confirmation first (a MSG_INTRO with `name_check` NAME_NOT_ASKED, before any lookup): it proves the loop is
+ *   alive and clears the wait; the name verdict follows, whenever NSS lets it.  600 s is the margin on top of that, for a child whose loop is really stuck
+ *   — which no lookup can explain, since the confirmation comes before it. */
 
 /* ⛔ §6.2 of `RCP.md`: a legal frame reaches 16 MiB.  The cap is here because
  * the bytes pass through here, and a lower cap of OURS would bite in place of
@@ -567,6 +579,9 @@ struct child {
 	uint64_t serial;
 	uint64_t born_ms;
 	uint64_t last_recheck_ms;
+	/* ⭐ The «who are you» question that is still unanswered since this instant (0 = none), and the last instant ANY accepted message came from the child. */
+	uint64_t whoami_asked_ms;
+	uint64_t last_heard_ms;
 	/* ⭐ The last time the child answered «my name no longer resolves» and a line said so (see `handle()`, MSG_INTRO): a
 	 *    line at most every NAME_GONE_LOG_MS per child. */
 	uint64_t name_gone_logged_ms;
@@ -3034,6 +3049,7 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 			return refused_quietly(g);
 		memset(&s, 0, sizeof s);
 		memcpy(&s, body, byte < sizeof s ? byte : sizeof s);
+		g->whoami_asked_ms = 0; /* it answered: no question is waiting any more */
 		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0: the same lines are
 		 *   in 04f6aa18): the socket is UNTRUSTED, and `user` and `runtime` are fixed arrays
 		 *   that the log prints with %s.  Nothing guaranteed the final zero: a child that
@@ -3457,6 +3473,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 				continue;
 			}
 			g->refused_now = false;
+			g->last_heard_ms = f->round_ms; /* a message that passed every wall: the child is alive and delivering */
 			if (!handle(f, g, &t, envelope + sizeof t, t.byte))
 				break;
 			/* ⭐ An accepted message starts the streak again; a refused one
@@ -3566,9 +3583,31 @@ void children_recheck(children *f, uint64_t now_ms)
 		 *     the child looks its own name up and answers it in `body_whoami.name_check` (see `handle()`, MSG_INTRO). */
 		if (!g->showed_up)
 			continue;
+		/* ⭐ The question that nobody answers (see WHOAMI_DEADLINE_MS) */
+		if (g->whoami_asked_ms && now_ms >= g->whoami_asked_ms + WHOAMI_DEADLINE_MS) {
+			if (g->last_heard_ms > g->whoami_asked_ms) {
+				registro_dice(LOG_CHILD,
+				              "⚠ the child of «%s» (pid %ld) has not answered the «who are you» question for %d s but is still sending "
+				              "messages: it is NOT killed",
+				              g->user, (long)g->pid, WHOAMI_DEADLINE_MS / 1000);
+				g->whoami_asked_ms = now_ms;
+			} else {
+				registro_dice(LOG_CHILD,
+				              "⛔ the child of «%s» (pid %ld) has not answered the «who are you» question for %d s and sent nothing at all: "
+				              "its loop is stuck. SIGKILL",
+				              g->user, (long)g->pid, WHOAMI_DEADLINE_MS / 1000);
+				if (g->pid > 0)
+					child_signal(f, g, SIGKILL);
+				child_dismiss(f, g, "did not answer the «who are you» question");
+				continue;
+			}
+		}
 		if (now_ms < g->last_recheck_ms + RECHECK_MS)
 			continue;
 		g->last_recheck_ms = now_ms;
+		/* ⚠ The wait is armed when the question is ASKED, even if it does not go out: a child that does not even empty its socket is stuck too */
+		if (!g->whoami_asked_ms)
+			g->whoami_asked_ms = now_ms;
 
 		memset(&t, 0, sizeof t);
 		magic_write(&t);
@@ -4119,6 +4158,9 @@ bool children_video(children *f, const char *user, uint8_t codec,
 /* ⭐ 1.5: how long `children_turn_off()` waits for one child's CHILD_EXITED;
  *    the root side waits 5 s for the whole network side (§11.50). */
 #define TURN_OFF_WAIT_MS 1500
+/* ⭐ Audit of the session (25 Oct 2026): in single-process mode the wait was `waitpid(pid, NULL, 0)`, WITHOUT a limit; now SIGTERM, the same
+ *    TURN_OFF_WAIT_MS, then SIGKILL and TURN_OFF_KILL_WAIT_MS more (reapwait.h).  A child still not reaped after that is said and left to init. */
+#define TURN_OFF_KILL_WAIT_MS 1000
 
 static bool child_reaped_now(void *ctx)
 {
@@ -4131,6 +4173,7 @@ void children_turn_off(children *f)
 		return;
 	for (int i = 0; i < f->cap; i++) {
 		struct child *g = &f->v[i];
+		bool left_to_init = false;
 		if (!g->used)
 			continue;
 		/* ⛔ First the socket is closed — which is the most honest signal,
@@ -4149,13 +4192,24 @@ void children_turn_off(children *f)
 			 *   session.
 			 * ⭐ 1.5: in network mode the wait is for the root side's
 			 *    CHILD_EXITED, at most `TURN_OFF_WAIT_MS` per child. */
-			if (f->remote)
+			if (f->remote) {
 				rootside_pump_until(child_reaped_now, g, TURN_OFF_WAIT_MS);
-			else
-				waitpid(g->pid, NULL, 0);
+			} else if (!reap_within(g->pid, TURN_OFF_WAIT_MS)) {
+				registro_dice(LOG_CHILD, "⛔ the child of «%s» (pid %ld) did not die within %d ms of the SIGTERM: SIGKILL",
+				              g->user, (long)g->pid, TURN_OFF_WAIT_MS);
+				child_signal(f, g, SIGKILL);
+				if (!reap_within(g->pid, TURN_OFF_KILL_WAIT_MS)) {
+					registro_dice(LOG_CHILD, "⛔ the child of «%s» (pid %ld) is STILL not reaped %d ms after the SIGKILL "
+					              "(a call that does not return?): the shutdown goes on without it",
+					              g->user, (long)g->pid, TURN_OFF_KILL_WAIT_MS);
+					left_to_init = true; /* said below as «not shut down» */
+				}
+			}
 		}
 		/* review 4 B, finding 17: «shut down» only when it is known */
-		if (f->remote && g->pid > 0 && !child_reaped_now(g))
+		if (left_to_init)
+			registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld) is not confirmed shut down: left to init", g->user, (long)g->pid);
+		else if (f->remote && g->pid > 0 && !child_reaped_now(g))
 			registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld): no CHILD_EXITED "
 			              "within %d ms of the SIGTERM — this side leaves it to the "
 			              "root side", g->user, (long)g->pid, TURN_OFF_WAIT_MS);
@@ -10359,6 +10413,11 @@ void child_alive(int argc, char **argv)
 				s.sgid = sg;
 				s.ppid = (uint32_t)getppid();
 				s.descriptors = how_many_descriptors();
+				/* ⭐ FIRST a light confirmation (review of c4cf6db2): the parent's wait for the answer ends here; the NAME check below may wait a
+				 *    long time for NSS, and a child that is only waiting for sssd must not look like a child whose loop is stuck */
+				s.name_check = NAME_NOT_ASKED;
+				s.name_uid = 0;
+				send_msg(MSG_INTRO, &s, sizeof s, NULL, 0);
 				/* ⭐ the periodic NAME check, made HERE (it may wait for NSS; it stalls this stage only) */
 				{
 					uid_t other = 0;

@@ -127,6 +127,12 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   socket buffer wrote one line per failed reply, at the packet rate), and the pre-login budgets of `webtransport.c` are per address (20 lines every 10 s for each of 128 addresses): whoever has many addresses, or
   rotates an IPv6 /48, gets a fresh budget for each. Both now also go through a GLOBAL budget per 10 s window (`src/linebudget.h`, the idea of `BIRTH_LINES`): 5 `NOT sent` lines and 100 pre-login lines for the whole
   server, the rest counted in one line at the end of the window (with the last error for the first). The «BANNED» and «failed attempt» lines are exempt as before. Tests `benches/unit/line-budget` and `wt-prelogin` (7).
+- **The service can always stop** (audit of the session, 25 Oct 2026, branch `chiusure-figli`): `children_turn_off()` waited for every child with `waitpid(pid, NULL, 0)`, without a limit, after the SIGTERM; one child stuck in a call
+  that does not return kept the whole service from stopping until systemd's own timeout killed everything. Now SIGTERM, 1.5 s, SIGKILL, 1 s more (`src/reapwait.h`); a child still not reaped is said in the log and left to init.
+  Test `benches/unit/reap-wait`.
+- **A child that no longer answers is found** (audit of the session, 25 Oct 2026, branch `chiusure-figli`): a child that had introduced itself had no deadline at all (invariant I4: the stage outlives the detach, and an idle child is doing its job), so one
+  stuck in a call that does not return stayed for ever, with its slot and its session. The parent already asks every child «who are you» once a minute; if that question stays unanswered for 600 s and the child has sent
+  NOTHING else since, it is killed (SIGKILL; the desktop survives and is found again). A child that does not answer but still delivers messages is not killed: one line says so and the wait starts again. Test `benches/unit/child-flood` (12).
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
