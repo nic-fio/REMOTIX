@@ -395,7 +395,8 @@ def openssl_group(host, port, group):
     except Exception:                            # noqa: BLE001
         return None
     t = (r.stdout + r.stderr).decode("utf-8", "replace")
-    m = re.search(r"Negotiated TLS1\.3 group:\s*(\S+)", t) or re.search(r"Server Temp Key:\s*(\S+)", t)
+    # OpenSSL 3.5 says «Peer Temp Key» (older ones «Server Temp Key»), and «Negotiated TLS1.3 group: <NULL>» when NO group was agreed
+    m = re.search(r"Negotiated TLS1\.3 group:\s*([^<\s]\S*)", t) or re.search(r"(?:Server|Peer) Temp Key:\s*([^,\s]+)", t)
     if m:
         return m.group(1)
     if re.search(r"unsupported|unknown group|Error with command|bad group", t, re.I) and "alert" not in t:
