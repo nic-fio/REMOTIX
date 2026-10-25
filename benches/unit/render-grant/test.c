@@ -25,12 +25,20 @@
  *                an empty ACL.  ⚠ These check the OUTCOME: that no byte past the returned length is read would take
  *                MemorySanitizer, which this recipe does not use;
  *   (7) 34     the record folder is not root's (uid 1000), or is writable by others (mode 0777): render_grant_add()
- *                returns false and no node carries an ACL at the end — grants_load() fails before any ACL is written.
- *
+ *                returns false and no node carries an ACL at the end — grants_load() fails before any ACL is written;
  *   (8) 35-40  render_grant_drop_all() (the package removal, R-1 of the page audit): two grants, every ACL gone from every
  *                renderD* (card0 untouched) and the record empty; if one node refuses the write, it returns 1, the other node
  *                is cleaned and the record KEEPS both lines; a retry once the node answers returns 0 with an empty record; an empty
  *                record returns 0 and writes nothing.
+ *
+ *   (9) 41-46  R-4 (25 Oct 2026), the files are read WHOLE (they were cut at 4096 bytes by fgets): a group line of more than 4096 bytes whose
+ *                other member comes after the limit is seen (41); a long line of its own members, with blank lines around, stays private (42);
+ *                a line over 1 MiB is «too long to be judged», not private (43); a malformed line of /etc/group (44); a long line of
+ *                /etc/passwd followed by another account with the same gid is seen (45); a malformed line of /etc/passwd (46);
+ *   (10) 47-57  the rules of the review of 25 Oct 2026: a last line WITHOUT the final newline is read (47, 48); a legitimate line near
+ *                the 1 MiB cap is accepted (49); a «#» line and a «-name» line are skipped (50, 51); a «+» line, in any form («+»,
+ *                «+:::»), makes the group not private in both files, with the NIS-compat message (52-55); a line with a zero
+ *                byte inside is malformed, in both files (56, 57).
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -96,7 +104,7 @@ int fake_fstat(int fd, struct stat *st);
 #undef fstat
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 40
+#define EXPECTED_CHECKS 57
 
 static void require(int cond, const char *desc)
 {
@@ -265,6 +273,16 @@ int fake_fstat(int fd, struct stat *st)
 		st->st_mode |= (mode_t)fstat_mode_or;
 	}
 	return r;
+}
+
+static void putn(const char *path, const char *text, size_t n)
+{
+	FILE *fp = fopen(path, "w");
+
+	if (!fp || fwrite(text, 1, n, fp) != n || fclose(fp) != 0) {
+		perror(path);
+		exit(1);
+	}
 }
 
 static void put(const char *path, const char *text)
@@ -505,6 +523,139 @@ int main(void)
 		reset_world();
 		r = render_grant_drop_all();
 		require(r == 0 && total_sets() == 0, "40. an empty record: 0 and nothing written");
+	}
+
+	printf("  (9) the files are read whole\n");
+	{
+		size_t cap = 2 * 1024 * 1024;
+		char *big = malloc(cap);
+		size_t n;
+
+		if (!big) {
+			perror("malloc");
+			return 1;
+		}
+		/* 41. «anna» and 1000 more «anna» (about 5 KB), then another member after the old 4096-byte limit */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "anna:x:1001:anna");
+		for (int i = 0; i < 1000; i++)
+			n += (size_t)snprintf(big + n, cap - n, ",anna");
+		n += (size_t)snprintf(big + n, cap - n, ",mallory\n");
+		if (n <= 4096 + 7) {
+			fprintf(stderr, "setup: the long group line is not longer than 4096 bytes\n");
+			free(big);
+			return 1;
+		}
+		put(group_path, big);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "mallory"),
+		        "41. another member AFTER the first 4096 bytes of a long line: seen, not private");
+		/* 42. the same long line with only the user's own name, blank lines around it, and a long line of another group first */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "\nbig:x:2000:");
+		for (int i = 0; i < 1500; i++)
+			n += (size_t)snprintf(big + n, cap - n, "other%d,", i);
+		n += (size_t)snprintf(big + n, cap - n, "x\n\n\nanna:x:1001:anna");
+		for (int i = 0; i < 1000; i++)
+			n += (size_t)snprintf(big + n, cap - n, ",anna");
+		n += (size_t)snprintf(big + n, cap - n, "\n\n");
+		put(group_path, big);
+		require(group_is_private("anna", 1001, why, sizeof why),
+		        "42. long lines of its own members, a long line of another group, blank lines: still private");
+		/* 43. a line over 1 MiB */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "anna:x:1001:");
+		memset(big + n, 'a', 1200 * 1024);
+		n += 1200 * 1024;
+		big[n++] = '\n';
+		big[n] = 0;
+		put(group_path, big);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "too long"),
+		        "43. a line over 1 MiB: not private («too long to be judged»)");
+		/* 44. a malformed line in /etc/group */
+		reset_world();
+		put(group_path, "root:x:0:\nthis is not a record\nanna:x:1001:\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "malformed"),
+		        "44. a malformed line in /etc/group: not private");
+		/* 45. /etc/passwd: a long line (5000-byte comment field) of anna, then another account with the same gid */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "anna:x:1001:1001:");
+		memset(big + n, 'c', 5000);
+		n += 5000;
+		n += (size_t)snprintf(big + n, cap - n, ":/home/anna:/bin/sh\nmallory:x:1003:1001::/home/mallory:/bin/sh\n");
+		put(passwd_path, big);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "mallory"),
+		        "45. a long /etc/passwd line, then another account with the gid: seen, not private");
+		/* 46. a malformed line in /etc/passwd */
+		reset_world();
+		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\nnot a record\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "malformed"),
+		        "46. a malformed line in /etc/passwd: not private");
+		/* 47-48. the LAST line has no final newline (getline gives it like the others) */
+		reset_world();
+		put(group_path, "root:x:0:\nanna:x:1001:\nannas:x:1001:");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "annas"),
+		        "47. the last /etc/group line has no newline and the same gid: seen");
+		reset_world();
+		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\nmallory:x:1003:1001::/home/mallory:/bin/sh");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "mallory"),
+		        "48. the last /etc/passwd line has no newline and the same gid: seen");
+		/* 49. a legitimate line near the cap: 1 MiB - 100 bytes, another group's, is accepted */
+		reset_world();
+		n = (size_t)snprintf(big, cap, "big:x:2000:");
+		memset(big + n, 'x', 1024 * 1024 - 100 - n);
+		n = 1024 * 1024 - 100;
+		n += (size_t)snprintf(big + n, cap - n, "\nanna:x:1001:\n");
+		put(group_path, big);
+		require(group_is_private("anna", 1001, why, sizeof why),
+		        "49. a legitimate line near the 1 MiB cap: accepted, the group is private");
+		/* 50. a comment line is skipped (it names mallory with the gid, as a comment) */
+		reset_world();
+		put(group_path, "# anna:x:1001:mallory\nanna:x:1001:\n");
+		put(passwd_path, "# mallory:x:1003:1001::/home/mallory:/bin/sh\nanna:x:1001:1001::/home/anna:/bin/sh\n");
+		require(group_is_private("anna", 1001, why, sizeof why), "50. «#» lines in both files are skipped: still private");
+		/* 51. «-mallory» (NIS compat exclusion) is skipped */
+		reset_world();
+		put(group_path, "anna:x:1001:\n-mallory\n");
+		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\n-mallory\n");
+		require(group_is_private("anna", 1001, why, sizeof why), "51. «-name» lines in both files are skipped: still private");
+		/* 52-55. «+» in any form: NIS compat, other accounts cannot be excluded */
+		reset_world();
+		put(group_path, "anna:x:1001:\n+\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
+		        "52. a «+» line in /etc/group: not private (NIS compat)");
+		put(group_path, "anna:x:1001:\n+:::\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
+		        "53. a «+:::» line in /etc/group: not private (NIS compat)");
+		reset_world();
+		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\n+\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
+		        "54. a «+» line in /etc/passwd: not private (NIS compat)");
+		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\n+:::::::\n");
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
+		        "55. a «+:::::::» line in /etc/passwd: not private (NIS compat)");
+		/* 56-57. a zero byte inside a line: what follows it would not be read */
+		reset_world();
+		putn(group_path, "anna:x:1001:\nsneaky:x:1001:\0mallory\n", 36);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "zero byte"),
+		        "56. a zero byte inside a line of /etc/group: malformed, not private");
+		reset_world();
+		putn(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\nmallory:x:1003:\0" "1001::/h:/bin/sh\n", 70);
+		why[0] = 0;
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "zero byte"),
+		        "57. a zero byte inside a line of /etc/passwd: malformed, not private");
+		free(big);
 	}
 
 	{

@@ -194,11 +194,59 @@ static bool same_id(const char *s, unsigned long id)
 	return errno == 0 && *end == '\0' && v == id;
 }
 
+/* ⛔ R-4 (audit of 25 Oct 2026): the two files used to be read with `fgets(line, 4096)`.  A line longer than that was cut in two, and the
+ *    second half was parsed as a line of its own (fewer than three fields ⇒ skipped): the members of a long group AFTER the first 4095
+ *    bytes were never seen, and a private group looked private.  Now a line is read WHOLE with `getline()`, and what cannot be judged is
+ *    never guessed about — the group is declared NOT private:
+ *      · a line longer than `MAX_LINE` («too long to be judged»);
+ *      · a line with a zero byte inside (`strlen` ≠ what `getline` returned): the part after the zero would not be read;
+ *      · a `+` line, in any form (`+`, `+:::`, `+@netgroup`): NIS compat, it pulls in accounts from elsewhere, and «no other account has
+ *        this gid» cannot be proved («NIS compat line: other accounts with this gid cannot be excluded»);
+ *      · any other line with too few fields to be a record (it could be the very line that matters);
+ *      · a read error, or no more memory, at the end (`ferror`, or the stream not at its end: `getline()` with ENOMEM does not set the error flag).
+ *    Skipped: blank lines, lines that begin with `#`, and `-name` lines (NIS compat exclusions: they only take accounts away).
+ *    A last line without the final newline is read like the others.
+ *
+ *    ⚠ NSS was weighed and NOT added (25 Oct 2026): this code runs in the PARENT, as root, and talks to nobody (see the top of the file); a
+ *      `getgrgid_r()` / `getpwent()` there is a blocking call into sssd / LDAP in the serving process, enumeration is off by default so it
+ *      would prove nothing about «nobody else has this gid», and the first one only repeats the local line (files come first in
+ *      nsswitch).  The rule that already refuses a gid that is not in /etc/group (a network account) stays the safe answer.
+ *    ⚠ `getline()` allocates the whole line before the length can be checked: the files are root's own, and the cap is applied to what was
+ *      read; a pathological multi-gigabyte line is not defended against here. */
+#define MAX_LINE (1024 * 1024)
+
+enum { LINE_SKIP, LINE_RECORD, LINE_REFUSE };
+
+/* What to do with the line `line` (`n` bytes from getline) of `file`, number `nline`.  LINE_REFUSE fills `why`. */
+static int judge_line(char *line, ssize_t n, long nline, const char *file, char *why, size_t how_much)
+{
+	size_t lead = strspn(line, " \t\r\n");
+
+	if (n > MAX_LINE) {
+		snprintf(why, how_much, "%s line %ld is too long to be judged", file, nline);
+		return LINE_REFUSE;
+	}
+	if (strlen(line) != (size_t)n) {
+		snprintf(why, how_much, "%s line %ld is malformed (a zero byte inside)", file, nline);
+		return LINE_REFUSE;
+	}
+	if (line[lead] == '\0' || line[0] == '#' || line[0] == '-')
+		return LINE_SKIP;
+	if (line[0] == '+' || line[lead] == '+') {
+		snprintf(why, how_much, "%s line %ld: NIS compat line: other accounts with this gid cannot be excluded", file, nline);
+		return LINE_REFUSE;
+	}
+	return LINE_RECORD;
+}
+
 static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_much)
 {
-	char line[4096];
+	char *line = NULL;
+	size_t cap = 0;
+	ssize_t n;
 	FILE *fp;
-	int found = 0;
+	int found = 0, j;
+	long nline = 0;
 	bool ok = true;
 
 	if (gid == 0) {
@@ -210,10 +258,23 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 		snprintf(why, how_much, "/etc/group: %s", strerror(errno));
 		return false;
 	}
-	while (ok && fgets(line, sizeof line, fp)) {
+	while (ok && (n = getline(&line, &cap, fp)) >= 0) {
 		char *f[4];
 
-		if (fields(line, f, 4) < 3 || !same_id(f[2], gid))
+		nline++;
+		j = judge_line(line, n, nline, "/etc/group", why, how_much);
+		if (j == LINE_REFUSE) {
+			ok = false;
+			break;
+		}
+		if (j == LINE_SKIP)
+			continue;
+		if (fields(line, f, 4) < 3) {
+			snprintf(why, how_much, "/etc/group line %ld is malformed", nline);
+			ok = false;
+			break;
+		}
+		if (!same_id(f[2], gid))
 			continue;
 		found++;
 		if (strcmp(f[0], user) != 0) {
@@ -227,10 +288,17 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 			}
 		}
 	}
+	if (ok && (ferror(fp) || !feof(fp))) { /* getline() with ENOMEM does not set the error flag of the stream */
+		snprintf(why, how_much, "/etc/group: read error or out of memory");
+		ok = false;
+	}
 	fclose(fp);
-	if (!ok)
+	if (!ok) {
+		free(line);
 		return false;
+	}
 	if (found != 1) {
+		free(line);
 		snprintf(why, how_much,
 		         found ? "gid %ld appears %d times in /etc/group"
 		               : "gid %ld is not in /etc/group (a network account?): its being private cannot be proved",
@@ -239,19 +307,39 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 	}
 	fp = fopen("/etc/passwd", "re");
 	if (!fp) {
+		free(line);
 		snprintf(why, how_much, "/etc/passwd: %s", strerror(errno));
 		return false;
 	}
-	while (ok && fgets(line, sizeof line, fp)) {
+	nline = 0;
+	while (ok && (n = getline(&line, &cap, fp)) >= 0) {
 		char *f[5];
 
-		if (fields(line, f, 5) == 5 && same_id(f[3], gid) && strcmp(f[0], user) != 0) {
+		nline++;
+		j = judge_line(line, n, nline, "/etc/passwd", why, how_much);
+		if (j == LINE_REFUSE) {
+			ok = false;
+			break;
+		}
+		if (j == LINE_SKIP)
+			continue;
+		if (fields(line, f, 5) < 4) {
+			snprintf(why, how_much, "/etc/passwd line %ld is malformed", nline);
+			ok = false;
+			break;
+		}
+		if (same_id(f[3], gid) && strcmp(f[0], user) != 0) {
 			snprintf(why, how_much, "the account «%s» too has gid %ld as primary group", f[0],
 			         (long)gid);
 			ok = false;
 		}
 	}
+	if (ok && (ferror(fp) || !feof(fp))) { /* getline() with ENOMEM does not set the error flag of the stream */
+		snprintf(why, how_much, "/etc/passwd: read error or out of memory");
+		ok = false;
+	}
 	fclose(fp);
+	free(line);
 	return ok;
 }
 
