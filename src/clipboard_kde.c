@@ -2,6 +2,7 @@
  * appunti_kde — see `clipboard_kde.h`.  The comments citing `kde.md` and KWin's
  * files refer to v1's study, now in `STUDIES.md` §kde.
  */
+#include "mimecap.h"
 #include "clipboard_kde.h"
 
 #include <errno.h>
@@ -146,7 +147,8 @@ static void on_type_offered(void *data, struct zwlr_data_control_offer_v1 *proxy
 {
 	Offer *offer = data;
 
-	if (mime && *mime)
+	/* ⭐ S-R10: bounded in number and in length (see mimecap.h) */
+	if (mime_keep(offer->mime->len, mime))
 		g_ptr_array_add(offer->mime, g_strdup(mime));
 }
 
@@ -502,15 +504,20 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 	}
 
 	{
+		static uint64_t last_line;
 		GString *listing = g_string_new(NULL);
 
-		for (guint k = 0; k < types->len; k++)
+		/* ⭐ S-R10: at most MIME_LOG_TYPES names and one line per second (a program that copies in a loop wrote one line each time) */
+		for (guint k = 0; k < types->len && k < MIME_LOG_TYPES; k++)
 			g_string_append_printf(listing, "%s%s", k ? ", " : "",
 			                       (const char *)g_ptr_array_index(types, k));
-		registro_dice(LOG_CLIPBOARD,
-		              "the session copied something that is not text (%s): not "
-		              "announced.  ⚠ `DECISIONS.md` §5-ter.1 — text only",
-		              listing->str);
+		if (types->len > MIME_LOG_TYPES)
+			g_string_append_printf(listing, " … and %u more", types->len - MIME_LOG_TYPES);
+		if (mime_line_allowed(&last_line))
+			registro_dice(LOG_CLIPBOARD,
+			              "the session copied something that is not text (%s): not "
+			              "announced.  ⚠ `DECISIONS.md` §5-ter.1 — text only",
+			              listing->str);
 		g_string_free(listing, TRUE);
 	}
 	g_ptr_array_unref(types);

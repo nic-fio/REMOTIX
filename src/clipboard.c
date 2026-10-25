@@ -19,6 +19,7 @@
  *      · **the last text is remembered**, not the last list of types: it is what
  *        whoever reconnects needs, and it is already ready to send.
  */
+#include "mimecap.h"
 #include "clipboard.h"
 #include "clipboard_kde.h"
 
@@ -392,13 +393,22 @@ static void on_owner_changed(GDBusConnection *bus, const char *sender,
 			}
 	if (!has_text)
 	{
-		g_autofree char *listing = mime ? g_strjoinv(", ", (GStrv)mime) : NULL;
+		static uint64_t last_line;
+		g_autoptr(GString) listing = g_string_new(NULL);
+		guint total = 0;
 
-		registro_dice(LOG_CLIPBOARD,
-		              "the session copied something that is not text (%s): "
-		              "not announced.  ⚠ `DECISIONS.md` §5-ter.1 — text "
-		              "only, and it is a decision, not a technical limit",
-		              listing && *listing ? listing : "no type");
+		/* ⭐ S-R10: at most MIME_LOG_TYPES names, each cut to MIME_MAX_LEN, and one line per second (see mimecap.h) */
+		for (; mime && mime[total]; total++)
+			if (total < MIME_LOG_TYPES)
+				g_string_append_printf(listing, "%s%.*s", total ? ", " : "", MIME_MAX_LEN, mime[total]);
+		if (total > MIME_LOG_TYPES)
+			g_string_append_printf(listing, " … and %u more", total - MIME_LOG_TYPES);
+		if (mime_line_allowed(&last_line))
+			registro_dice(LOG_CLIPBOARD,
+			              "the session copied something that is not text (%s): "
+			              "not announced.  ⚠ `DECISIONS.md` §5-ter.1 — text "
+			              "only, and it is a decision, not a technical limit",
+			              listing->len ? listing->str : "no type");
 		return;
 	}
 

@@ -145,6 +145,8 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   fits in `maxsize` (64-bit sum) and the offset keeps the samples aligned (`src/audiochunk.h`, test `benches/unit/audio-chunk`).
 - **No use after free of the Wayland offer in the KDE/wlroots clipboard** (audit of the session, S-R9, 25 Oct 2026): `read_text()` copied the offer's `proxy` under the lock and used it after releasing it, for up to 5 s per type, while the
   pump thread (`on_selection`) could destroy it. The offers now have a reference count: the reader holds one for the whole read and the last drop destroys the proxy. Test `benches/unit/offer-refs`.
+- **The list of MIME types is bounded** (audit of the session, S-R10, 25 Oct 2026): a program of the user's desktop offering thousands of long type names made the child's memory grow (KDE/wlroots) and wrote one line with all of them at every
+  copy. Now at most 64 names of at most 127 bytes are kept, the log shows 8 and «and N more», and the «not text» line is written once per second (`src/mimecap.h`, test `benches/unit/mime-cap`). Log injection was checked and is excluded by `log.c`.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
