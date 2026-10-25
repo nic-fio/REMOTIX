@@ -16,8 +16,9 @@
  *   5. a miss costs far less than a scan: 2304 entries, 200000 lookups, timed against the scan (not a pass/fail on the clock: the
  *      numbers are printed; the check is that the hash is not slower).
  *
- * BUILD AND RUN (a second; no libraries; from the root of the tree):
- *   gcc -std=gnu11 -O2 -Wall -Wextra -Isrc benches/unit/transport-lookup/test.c -o /tmp/tl && /tmp/tl
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && gcc -std=gnu11 -O2 -Wall -Wextra -D_GNU_SOURCE -I/albero/src /albero/benches/unit/transport-lookup/test.c -o test && ./test'
  * Exit code 0 = every check passed.
  */
 #define _GNU_SOURCE
