@@ -797,9 +797,18 @@ static void on_event_line(const char *text)
 		 * documented ones, written here apart */
 		static const char TAIL[] = " forgotten early (more than 4096 connections in 10 s)";
 		const char *p = strstr(text, TAIL), *q;
-		if (!p || p[sizeof TAIL - 1] != 0)
+		/* ⭐ rilettura B4/M1: after it the line now says, always, "; N Stateless Resets refused to addresses that already had their 5 in a
+		 *    second, M to a signed id already answered in that second" */
+		static const char RESETS[] = "; ", RESETS2[] = " Stateless Resets refused to addresses that already had their ",
+		                  RESETS3[] = " to a signed id already answered in that second";
+		const char *rest;
+		if (!p)
 			DIE("a summary line without «N forgotten early (more than 4096 connections in "
-			    "10 s)» at its end: «%s»", text);
+			    "10 s)»: «%s»", text);
+		rest = p + sizeof TAIL - 1;
+		if (strncmp(rest, RESETS, sizeof RESETS - 1) != 0 || !strstr(rest, RESETS2) || strlen(rest) < sizeof RESETS3 - 1 ||
+		    strcmp(rest + strlen(rest) - (sizeof RESETS3 - 1), RESETS3) != 0)
+			DIE("a summary line whose end is not the Resets refused to an address / to a signed id: «%s»", text);
 		for (q = p; q > text && q[-1] >= '0' && q[-1] <= '9'; q--)
 			;
 		if (q == p || q == text || q[-1] != ' ')
