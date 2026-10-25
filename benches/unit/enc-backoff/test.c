@@ -10,9 +10,10 @@
  *   6. by reading src/child.c (argv[1], optional): encoder_drop_if_dead() uses enc_death_wait_ms() and a per-codec counter that is cleared only
  *      after a frame was sent (the old doubling of enc_wait_ms is gone from it).
  *
- * BUILD AND RUN (a second; run from the root of the tree):
- *   gcc -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
- *      -Isrc benches/unit/enc-backoff/test.c -o /tmp/enc-backoff && /tmp/enc-backoff src/child.c
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
+ *        -I/albero/src /albero/benches/unit/enc-backoff/test.c -o test && ./test /albero/src/child.c'
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "encbackoff.h"
