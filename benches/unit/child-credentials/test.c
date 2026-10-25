@@ -239,11 +239,44 @@ static int run(enum scenario sc)
 	return ok ? 0 : 1;
 }
 
+/* ⭐ 1.6 (R8 B): the pid rule where the wall stands inside the network side's PID namespace (`f->remote`): the child is outside it, the kernel
+ * shows it as pid 0 — `[M]` boxes on v15c: «written by pid 0, and the child is pid 94513», every login refused.  A pure test of the rules. */
+static int remote_rules(void)
+{
+	char why[256];
+	int bad = 0;
+	struct {
+		const char *what;
+		bool remote, have_cred, expect;
+		pid_t cpid;
+		uid_t cuid;
+		const char *must_say;
+	} t[] = {
+		{ "remote, pid 0 (outside the namespace), uid and gid right", true, true, true, 0, 1001, NULL },
+		{ "remote, pid 1 (a process INSIDE the namespace)", true, true, false, 1, 1001, "inside this PID namespace" },
+		{ "remote, the child's host pid (only possible if the namespace were shared)", true, true, false, 94513, 1001, "inside this PID namespace" },
+		{ "remote, pid 0 but another uid", true, true, false, 0, 1002, "uid" },
+		{ "remote, no credentials", true, false, false, 0, 1001, "did not attach" },
+		{ "single process, the child's own pid", false, true, true, 94513, 1001, NULL },
+		{ "single process, pid 0 (the old rule stays)", false, true, false, 0, 1001, "written by pid 0" },
+	};
+
+	for (size_t i = 0; i < sizeof t / sizeof t[0]; i++) {
+		bool r = child_credentials_ok(1001, 1001, 94513, 7, t[i].remote, t[i].have_cred, t[i].cpid, t[i].cuid, 1001, why, sizeof why);
+		bool ok = r == t[i].expect && (!t[i].must_say || strstr(why, t[i].must_say));
+
+		printf("  %s  %s%s%s\n", ok ? "ok  " : "FAIL", t[i].what, r ? "" : " — ", r ? "" : why);
+		bad += !ok;
+	}
+	return bad;
+}
+
 int main(void)
 {
-	int bad = 0;
+	int bad = 0, rbad;
 	for (int s = 0; s < S_N; s++)
 		bad += run((enum scenario)s);
-	printf("%s: %d of %d scenarios as expected\n", bad ? "FAILED" : "OK", S_N - bad, S_N);
-	return bad ? 1 : 0;
+	rbad = remote_rules();
+	printf("%s: %d of %d scenarios as expected, %d of 7 pid rules as expected\n", bad || rbad ? "FAILED" : "OK", S_N - bad, S_N, 7 - rbad);
+	return bad || rbad ? 1 : 0;
 }
