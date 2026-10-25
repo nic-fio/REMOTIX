@@ -57,6 +57,7 @@
   `unknown user [a1b2c3]`. Lines in the 1.0 format (`address expiry`) that have not expired are read and become a ban at the top step (the time left, at most 12 h); expired ones are dropped. `UNBLOCK <address>` clears every level.
 - The page's ban notice and the `0x08` text follow the rule, without a number of attempts (`546fe91c`); manuals and specs updated
   (`47eba75e`, `2cc1b424`, `be61b885`, `798a00a0`). Tests: `benches/unit/login-ban` (`8db14aaa`, `a9c48435`), B8 (`f3733e77`).
+- The attempt table has a ban quota of 160 of its 256 entries (`BAN_QUOTA`): a new ban over the quota drops the least valuable one (lowest level, nearest expiry, oldest), a plain attempt never evicts a ban, and a key that logged in in the last 30 days is never refused. Before, a table filled with bans (about 85 IPv4 addresses, or 36 IPv6 /48 prefixes) refused every login (audit R1; `14b12ab4`).
 
 ### Page headers and checks (page audit)
 - The HTML response carries a Content-Security-Policy, `Referrer-Policy: no-referrer` and a Permissions-Policy

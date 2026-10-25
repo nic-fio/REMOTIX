@@ -287,7 +287,7 @@ REJECTED
         ["Levels", "(key, user): 5 failed in 5 min · key: 12 in 5 min · IPv6 /48: 30 in 10 min; sliding windows", c("LIMIT") + ", " + c("WINDOW_MS")],
         ["Ban duration", "progressive per level: 15 min, then 1 h, then 12 h; forgotten after 24 h without a ban", c("LADDER_MS") + ", " + c("FORGET_MS")],
         ["Attempts in flight", "booked at " + c("CREDENTIALS") + "; at most 2 at once for the same (key, user)", c("login_reserve()") + ", " + c("MAX_PER_USER_IN_FLIGHT")],
-        ["Entries tracked", "256; a banned entry or one with an attempt in flight is never evicted", c("MAX_ATTEMPTS")],
+        ["Entries tracked", "256; at most 160 of them bans (a plain attempt never evicts a ban); an entry with an attempt in flight is never evicted", c("MAX_ATTEMPTS")],
         ["Key", "IPv4 whole; IPv6 the /64 (and the /48 aggregate), always in brackets, no port: " + c("[192.168.0.2]"), c("rcp_key_address()")],
         ["Reset", "a successful authentication resets only the failures of (key, user)", ""],
         ["Persistence", c("--ban-file") + ", default " + c("/var/lib/remotix/ban") + ", format " + c("B2") + ", no user name on disk (HMAC), absolute expiry times", c("rcp_ban_load()")],
