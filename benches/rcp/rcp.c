@@ -768,8 +768,8 @@ struct rcp_session {
 	 *   start from 1.  It is not an implicit sentinel (§6.0), it is the one
 	 *   declared by the protocol. */
 	uint32_t app_my_id;  /* the last one *I* announced */
-	uint32_t ask_id;     /* the transfer the client asked for last, and how many times in a row (CLIPBOARD_ASK_FREE) */
-	unsigned ask_n;
+	uint32_t ask_live_for; /* the `app_my_id` the counter below belongs to: it starts again when the announcement changes (CLIPBOARD_ASK_FREE) */
+	unsigned ask_live_n;   /* ASK received for the LIVE announcement */
 	/* ⛔ How many bytes the last text the SESSION gave us had: it serves to
 	 *    know whether the session has something to lose.  See the rule
 	 *    of the empty announcement, further below. */
@@ -7857,19 +7857,25 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 			              xform, s->app_my_id);
 			return false;
 		}
-		/* ⭐ The rate applies to the REPEATS (reading of rcp.c, B2): the first CLIPBOARD_ASK_FREE requests for a transfer are always served — the page asks
-		 *    once per announcement, and a token spent by ANNOUNCEs must never cost a paste.  Past them the bucket decides, and what it refuses is SAID
-		 *    (the protocol has no refusal to send back: see CLIPBOARD_ASK_FREE). */
-		if (xform == s->ask_id) {
-			s->ask_n++;
-		} else {
-			s->ask_id = xform;
-			s->ask_n = 1;
+		/* ⭐ The rate applies to the REPEATS (reading of rcp.c, B2): the first CLIPBOARD_ASK_FREE requests for the LIVE announcement (the one the client has just been
+		 *    told of) are always served — the page asks once per announcement, and a token spent by ANNOUNCEs must never cost a paste.  The counter starts again
+		 *    when `app_my_id` changes.  An ASK for a SUPERSEDED announcement is never free: it goes through the bucket, otherwise a client could alternate old
+		 *    and new ids and get two free texts every time (the amplification the bucket exists to bound).  What the bucket refuses is SAID (the protocol has no
+		 *    refusal to send back: see CLIPBOARD_ASK_FREE). */
+		bool free_ask = false;
+
+		if (xform == s->app_my_id) {
+			if (s->ask_live_for != s->app_my_id) {
+				s->ask_live_for = s->app_my_id;
+				s->ask_live_n = 0;
+			}
+			s->ask_live_n++;
+			free_ask = s->ask_live_n <= CLIPBOARD_ASK_FREE;
 		}
-		if (s->ask_n > CLIPBOARD_ASK_FREE && clipboard_over_rate(s, now)) {
+		if (!free_ask && clipboard_over_rate(s, now)) {
 			if (msg_gate_line(&s->clip_gate))
-				reg(s, "⚠ CLIPBOARD: the client asks for transfer %u the %uth time and the rate is over: this request is IGNORED (the first %u are always served)",
-				    xform, s->ask_n, CLIPBOARD_ASK_FREE);
+				reg(s, "⚠ CLIPBOARD: the client asks for transfer %u (the live one is %u) and the rate is over: this request is IGNORED (the first %u for the live announcement are always served)",
+				    xform, s->app_my_id, CLIPBOARD_ASK_FREE);
 			return true;
 		}
 		if (!s->app_text) {
@@ -7889,7 +7895,7 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 		 * ⚠ And one ANSWERS with the identifier ASKED FOR, not the current one:
 		 *   the client expects an answer to its question, and changing the
 		 *   number under it would be an answer it cannot pair. */
-		if (xform != s->app_my_id)
+		if (xform != s->app_my_id && msg_gate_line(&s->clip_gate))
 			reg(s, "⚠ CLIPBOARD §7.4: the client asks for transfer %u, which has "
 			       "already been superseded by %u: I serve it with the CURRENT text "
 			       "(%zu bytes).  It is the normal race between two people copying, "

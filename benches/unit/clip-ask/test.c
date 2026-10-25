@@ -9,7 +9,8 @@
  * The REAL rcp.c is #included (src/ or the twin, chosen by -I), a session has an announced text and the clipboard hooks count what is written on the stream.
  *   1. with the bucket EMPTY, the first ASK for a transfer is served (a TEXT leaves) and so is the second;
  *   2. the third (past CLIPBOARD_ASK_FREE) is ignored, and the line says so — the client's session is kept;
- *   3. another transfer, with the bucket still empty, is served again (the count is per transfer);
+ *   3. free only for the LIVE announcement (xform == app_my_id), counter restarted when app_my_id changes; an ASK for a SUPERSEDED announcement always goes through the bucket
+ *      (two ids alternating cannot get two free texts each time);
  *   4. with the bucket FULL the third is served too (the cap is for floods, not for a repeat);
  *   5. an ASK for an identifier that was never announced is still a violation (the session ends) even with the bucket empty — the cheap check comes first;
  *   6. a flood of 1000 ASK for ONE transfer with the bucket empty serves 2 and ignores the rest (the amplification is bounded), and logs a few lines, not 1000.
@@ -91,11 +92,24 @@ int main(void)
 	/* 1, 2, 3 */
 	s = fresh();
 	empty_the_bucket(s, t);
-	CHECK(ask(s, 3, t) && texts == 1, "1: with the bucket EMPTY the first ASK for transfer 3 is served");
+	CHECK(ask(s, 3, t) && texts == 1, "1: with the bucket EMPTY the first ASK for the live transfer 3 is served");
 	CHECK(ask(s, 3, t) && texts == 2, "1: and the second");
 	CHECK(ask(s, 3, t) && texts == 2 && ignored_lines == 1, "2: the third is ignored, and the log says so");
 	CHECK(closes == 0 && s->state == S_ACTIVE, "2: the session is kept");
-	CHECK(ask(s, 2, t) && texts == 3, "3: another transfer with the bucket still empty is served (the count is per transfer)");
+	CHECK(ask(s, 2, t) && texts == 2, "3: an ASK for a SUPERSEDED announcement (2, the live one is 3) is never free: with the bucket empty it is ignored");
+	s->app_my_id = 4; /* a new announcement of the server: the counter starts again */
+	CHECK(ask(s, 4, t) && texts == 3 && ask(s, 4, t) && texts == 4, "3: the new live announcement 4 has its own two free requests");
+	CHECK(ask(s, 4, t) && texts == 4, "3: …and then the third is ignored again");
+	rcp_free(s);
+
+	/* 3b: two ids alternating with the bucket empty: only the live one is ever served, twice */
+	s = fresh();
+	empty_the_bucket(s, t);
+	for (int i = 0; i < 50; i++) {
+		(void)ask(s, 3, t);
+		(void)ask(s, 2, t);
+	}
+	CHECK(texts == 2, "3b: alternating the live id and a superseded one 50 times with the bucket empty: 2 texts in all, not 100 (no free text per pair)");
 	rcp_free(s);
 
 	/* 4 */
