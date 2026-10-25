@@ -810,6 +810,16 @@ static int send_button(Input *in, uint16_t code, int pressed)
 		return -1;
 	}
 
+	/* ⭐ S-R4 (audit of the session, 25 Oct 2026): the SAME state already known is not sent again — the filter that `wlr_input_button()` has («the seat would
+	 *    count two presses»), and here it was missing: a press sent twice and released once leaves Mutter's seat count at 1, and from then on no click arrives
+	 *    until the EIS channel falls.  ⚠ NOT for an orphan: after a device replacement the bit is still set, but the NEW device never saw that press, so a
+	 *    press must go through. */
+	if ((pressed != 0) == bit_read(in->buttons, code) && !bit_read(in->orphan_buttons, code))
+	{
+		log_detail(AREA, "button 0x%X: already %s, not sent again", code, pressed ? "down" : "up");
+		return 0;
+	}
+
 	ei_device_button_button(in->pointer, code, pressed != 0);
 	beat_border(in, in->pointer);
 

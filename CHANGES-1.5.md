@@ -138,6 +138,9 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   bucket per session for both (10 a second, burst 20): the rest is ignored, counted, one line a second. Test `benches/unit/session-caps` (6).
 - **The wheel is bounded** (audit of the session, S-R9, 25 Oct 2026): the two wheel amounts of a client went unbounded to `input_wheel()`, where `-axis_y` overflows for INT32_MIN (undefined behaviour) and a huge value asked the compositor
   for millions of notches. Now both are brought into ±12000 (100 notches) before any negation (`src/wheelclamp.h`, test `benches/unit/wheel-clamp`).
+- **A button pressed twice is sent once** (audit of the session, S-R4, 25 Oct 2026): `send_button()` on Mutter/KWin resent the state already known (the wlroots path already filtered it: «the seat would count two presses»), so a press
+  sent twice and released once could leave the seat at 1 and the desktop without clicks until the EIS channel fell. Now the duplicate is not sent (an orphan after a device replacement still goes through). Test `benches/unit/button-dedupe`
+  (source reading: input.c cannot be linked without a compositor). Keys are left as they are: their path has the receipts of the latency measure, and a repeated key press may be a legitimate auto-repeat.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
