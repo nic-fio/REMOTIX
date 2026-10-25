@@ -7380,6 +7380,11 @@ static void close_now(wt *w, uint8_t reason)
 	uint8_t b[16];
 	size_t n = 0;
 
+	/* ⭐ rilettura-wt W6: the session stream is already closed (`wt_stream_closed()` put session back to -1): the capsule would go to stream -1 and stay in the queue for ever — never delivered, never
+	 *    killed — so `queue_empty()` stays false, the shutdown waits for this connection, and the new control channel of the same connection gets no answer behind it. */
+	if (w->session == -1)
+		return;
+
 	/* ⛔⭐ THE CAPSULE GOES INSIDE A `DATA` FRAME, AND IN THE GRAFT IT WENT OUT NAKED.
 	 *
 	 *    The body of an extended CONNECT is a stream of capsules (RFC 9297),

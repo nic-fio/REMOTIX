@@ -55,7 +55,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 17
+#define EXPECTED_CHECKS 19
 
 static void require(int cond, const char *desc)
 {
@@ -289,6 +289,22 @@ int main(void)
 		require(wt_logged_in(a), "a new login earns it back");
 		(void)wt_stream_closed(a, 8, 0, false);                                    /* the session stream closes (no control channel stream id matches) */
 		require(!wt_logged_in(a), "the session closed: before the login again");
+	}
+
+	printf("  W6. close_now() with the session already closed\n");
+	{
+		ngtcp2_ccerr e;
+		wt *a;
+
+		memset(&e, 0, sizeof e);
+		a = wt_new(NULL, &e, "[192.0.2.37]:4001", NULL);
+		a->session = 0;
+		close_now(a, 5);
+		require(!queue_empty(a), "(control) with the session open the closing capsule is queued");
+		a = wt_new(NULL, &e, "[192.0.2.38]:4001", NULL);
+		a->session = -1;
+		close_now(a, 5);
+		require(queue_empty(a) && queue_unsent(a) == 0, "session == -1: nothing is queued (an orphan element on stream -1 would never be sent nor killed)");
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);
