@@ -172,6 +172,9 @@ struct rxr_spawn_refused {
 	 * network side retries after that, a few times (main.c, `abandon_round`). */
 	uint32_t wait_ms;
 };
+/* the wire size: both sides are the same binary, but a field added or moved changes what a
+ * fuzz seed or a test packet has to be */
+_Static_assert(sizeof(struct rxr_spawn_refused) == 24, "rxr_spawn_refused changed size");
 
 struct rxr_child_exited {
 	struct rxr_head h;

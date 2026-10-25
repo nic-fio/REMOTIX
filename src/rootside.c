@@ -244,7 +244,8 @@ void rootside_exit_note(struct rootside_bounds *b, uid_t uid, uint64_t now_ms)
 		now_ms = 1;
 	for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++) {
 		if (b->exits[i].at_ms && b->exits[i].uid == uid) {
-			b->exits[i].at_ms = now_ms;
+			if (now_ms > b->exits[i].at_ms) /* the clock never goes back */
+				b->exits[i].at_ms = now_ms;
 			return;
 		}
 		if (!b->exits[i].at_ms) {
