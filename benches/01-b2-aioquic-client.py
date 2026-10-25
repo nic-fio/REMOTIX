@@ -195,14 +195,28 @@ async def rebind(client, verbose=False):
     print(f"   source port {before[1]} -> {after[1]}")
     if after[1] == before[1]:
         return old, False, "the source port did not change"
-    client.send_byte(b"rebind")
-    await asyncio.sleep(REBIND_WAIT_S)
+    # Keep the connection alive with QUIC PINGs, NOT with stream bytes: raw bytes on a new stream are read by
+    # the server as RCP (kind "re", huge length) -> dismiss "message over 1 MiB" -> connection closed before
+    # the path validation ends, so the migration would never be seen (false REBIND OK).
+    t_end = loop.time() + REBIND_WAIT_S
+    uid = 1
+    while loop.time() < t_end:
+        try:
+            client._quic.send_ping(uid)
+            client.transmit()
+        except Exception:  # noqa: BLE001
+            break
+        uid += 1
+        await asyncio.sleep(min(0.5, max(0.0, t_end - loop.time())))
     print(f"   datagrammi sul nuovo percorso: {counts['new']}, sul vecchio: {counts['old']}")
     ce = getattr(client._quic, "_close_event", None)
     if verbose:
         print(f"   close_event after {REBIND_WAIT_S:.0f} s: {ce!r}")
+    if counts["new"] > 0 and ce is None:
+        return old, True, f"{counts['new']} datagrams arrived on the new port, connection still alive"
     if counts["new"] > 0:
-        return old, True, f"{counts['new']} datagrams arrived on the new port"
+        return old, False, (f"{counts['new']} datagrams on the new port but the connection was closed"
+                            f" ({ce.error_code}: {ce.reason_phrase!r})")
     return old, False, (f"no datagram on the new port in {REBIND_WAIT_S:.0f} s (old port: {counts['old']})"
                         + (f"; the connection was closed ({ce.error_code}: {ce.reason_phrase!r})" if ce else ""))
 
