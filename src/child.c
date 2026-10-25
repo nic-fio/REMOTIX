@@ -94,6 +94,7 @@
 #include "vulkanvideo.h"
 #include <drm_fourcc.h>
 #include "sentinel.h"
+#include "pidfdid.h"
 #include "sound.h"
 #include "encoder.h"
 #include "input.h"
@@ -553,6 +554,10 @@ struct child {
 	 *    taken back when the child is reaped. */
 	bool render_grant;
 	pid_t pid;
+	/* ⭐ 1.5 (pidfd-figlio), network side only: a pidfd of the child that the root side handed over with its socket, to compare with the
+	 *    one the kernel attaches to each message (`SCM_PIDFD`).  `has_pidfd` false = none (old kernel, or not the split): the rule of today. */
+	int pidfd;
+	bool has_pidfd;
 	int fd;
 	uint64_t serial;
 	uint64_t born_ms;
@@ -711,19 +716,24 @@ static bool magic_ok(const struct head *t)
  *   message **without** credentials is not a message with the right
  *   credentials — "empty" and "forbidden" look the same (`LESSONS.md` §1.9),
  *   and here the common face would cost the isolation between users. */
-static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
-                                      struct ucred *chi, bool *credentials)
+static ssize_t receive_with_credentials_pidfd(int fd, void *buf, size_t cap,
+                                      struct ucred *chi, bool *credentials, int expected_pidfd,
+                                      enum pidfd_same *same)
 {
+	int sender_pidfd = -1;
+
 	struct msghdr m;
 	struct iovec io;
 	union {
 		struct cmsghdr align;
-		char space[CMSG_SPACE(sizeof(struct ucred))];
+		char space[CMSG_SPACE(sizeof(struct ucred)) + CMSG_SPACE(sizeof(int))];
 	} check;
 	struct cmsghdr *c;
 	ssize_t readings;
 
 	*credentials = false;
+	if (same)
+		*same = PIDFD_UNKNOWN;
 	memset(&m, 0, sizeof m);
 	memset(&check, 0, sizeof check);
 	io.iov_base = buf;
@@ -733,7 +743,7 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
 	m.msg_control = check.space;
 	m.msg_controllen = sizeof check.space;
 
-	readings = recvmsg(fd, &m, 0);
+	readings = recvmsg(fd, &m, MSG_CMSG_CLOEXEC);
 	if (readings <= 0)
 		return readings;
 
@@ -742,8 +752,24 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
 		    && c->cmsg_len == CMSG_LEN(sizeof(struct ucred))) {
 			memcpy(chi, CMSG_DATA(c), sizeof *chi);
 			*credentials = true;
+		} else if (c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_PIDFD
+		           && c->cmsg_len == CMSG_LEN(sizeof(int))) {
+			/* ⭐ the kernel's pidfd of the SENDER (SO_PASSPIDFD): ours to close, always */
+			int pf;
+
+			memcpy(&pf, CMSG_DATA(c), sizeof pf);
+			if (sender_pidfd < 0)
+				sender_pidfd = pf;
+			else
+				close(pf);
 		}
 	}
+	/* ⭐ The exact identity, where the kernel has pidfs: the sender's pidfd against the one the root side handed over.  Closed here,
+	 *    on every way out, so no caller has to remember it. */
+	if (same && expected_pidfd >= 0)
+		*same = pidfd_compare(expected_pidfd, sender_pidfd);
+	if (sender_pidfd >= 0)
+		close(sender_pidfd);
 	/* ⚠ A message truncated by the kernel (`MSG_TRUNC`) is a message that is
 	 *   not what it says it is: it is dropped.  With SEQPACKET this happens
 	 *   only if the sender wrote more than our buffer, that is if it is not
@@ -751,6 +777,12 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
 	if (m.msg_flags & MSG_TRUNC)
 		return -2;
 	return readings;
+}
+
+static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
+                                      struct ucred *chi, bool *credentials)
+{
+	return receive_with_credentials_pidfd(fd, buf, cap, chi, credentials, -1, NULL);
 }
 
 /* ⛔⭐ THE WALL, AND THERE IS ONLY ONE — invariant I3.
@@ -781,7 +813,7 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
  * ⛔ There is no path that delivers a byte to someone who does not pass here. */
 static bool credentials_match(const struct child *g, const struct head *t,
                                    bool c_e, const struct ucred *chi, bool remote,
-                                   char *why_no, size_t cap_why)
+                                   enum pidfd_same same, char *why_no, size_t cap_why)
 {
 	if (!c_e) {
 		snprintf(why_no, cap_why,
@@ -804,6 +836,14 @@ static bool credentials_match(const struct child *g, const struct head *t,
 		snprintf(why_no, cap_why,
 		         "written by pid %ld, and the child of «%s» is pid %ld",
 		         (long)chi->pid, g->user, (long)g->pid);
+		return false;
+	}
+	/* ⭐ 1.5 (pidfd-figlio): where the kernel gave both pidfds and has pidfs, the sender must be EXACTLY the child (the inode of its
+	 *    pidfd).  PIDFD_UNKNOWN (an old kernel, no pidfd handed over, or not the split) is no error: the rules of today decide. */
+	if (same == PIDFD_DIFFERENT) {
+		snprintf(why_no, cap_why,
+		         "the pidfd the kernel attached to the message is NOT the pidfd of the child of «%s»: another process wrote on its socket",
+		         g->user);
 		return false;
 	}
 	if (chi->uid != g->uid || chi->gid != g->gid) {
@@ -848,7 +888,30 @@ bool child_credentials_ok(uid_t uid, gid_t gid, pid_t pid, uint64_t serial, bool
 	t.declared_uid = (uint32_t)uid;
 	if (why && why_len)
 		why[0] = '\0';
-	return credentials_match(&g, &t, have_cred, &chi, remote, why, why_len);
+	return credentials_match(&g, &t, have_cred, &chi, remote, PIDFD_UNKNOWN, why, why_len);
+}
+
+/* The same with the exact identity: `expected_pidfd` is the pidfd the root side handed over (-1 = none), `sender_pidfd` the one the kernel
+ * attached to the message (-1 = none); both are compared as the receiving path does. */
+bool child_credentials_pidfd_ok(uid_t uid, gid_t gid, pid_t pid, uint64_t serial, bool remote, bool have_cred, pid_t cred_pid,
+                                uid_t cred_uid, gid_t cred_gid, int expected_pidfd, int sender_pidfd, char *why, size_t why_len)
+{
+	struct ucred chi = { cred_pid, cred_uid, cred_gid };
+	struct child g;
+	struct head t;
+
+	memset(&g, 0, sizeof g);
+	memset(&t, 0, sizeof t);
+	g.uid = uid;
+	g.gid = gid;
+	g.pid = pid;
+	g.serial = serial;
+	snprintf(g.user, sizeof g.user, "live");
+	t.serial = serial;
+	t.declared_uid = (uint32_t)uid;
+	if (why && why_len)
+		why[0] = '\0';
+	return credentials_match(&g, &t, have_cred, &chi, remote, pidfd_compare(expected_pidfd, sender_pidfd), why, why_len);
 }
 
 /* ⛔⭐ THE NAME STILL RESOLVES TO THE CHILD'S UID — the fifth fact of the wall
@@ -1011,6 +1074,15 @@ static bool refused_quietly(struct child *g)
 /* The second half: the kernel has confirmed, the slot is freed. */
 static void child_signal(struct children *f, struct child *g, int sig);
 
+/* ⭐ The pidfd of the child (network side, 1.5 pidfd-figlio): closed whenever the socket is. */
+static void child_pidfd_close(struct child *g)
+{
+	if (g->has_pidfd)
+		close(g->pidfd);
+	g->has_pidfd = false;
+	g->pidfd = 0;
+}
+
 static void child_free(struct children *f, struct child *g, const char *why)
 {
 	if (!g->used)
@@ -1023,6 +1095,7 @@ static void child_free(struct children *f, struct child *g, const char *why)
 	              g->user, (long)g->uid, why);
 	if (g->fd >= 0)
 		close(g->fd);
+	child_pidfd_close(g);
 	if (g->app_mount)
 		explicit_bzero(g->app_mount, g->app_total);
 	free(g->app_mount);
@@ -1057,6 +1130,7 @@ static void child_dismiss(struct children *f, struct child *g, const char *why)
 		close(g->fd);
 		g->fd = -1;
 	}
+	child_pidfd_close(g);
 	/* ⛔ The closed socket is already a farewell — the child reads EOF and
 	 *    exits — but "it would be enough" is not "I did it": the signal makes
 	 *    the shutdown a fact instead of a race. */
@@ -2502,6 +2576,8 @@ static child_outcome ensure_remote(struct children *f, struct child *g,
 		(void)rootside_signal(b.serial, SIGKILL);
 		if (b.fd >= 0)
 			close(b.fd);
+		if (b.pidfd >= 0)
+			close(b.pidfd);
 		return CHILD_FAILED;
 	}
 	/* ⛔ `SO_PASSCRED` is per socket: set again on the end received. */
@@ -2512,7 +2588,16 @@ static child_outcome ensure_remote(struct children *f, struct child *g,
 		              user, strerror(errno));
 		(void)rootside_signal(b.serial, SIGKILL);
 		close(b.fd);
+		if (b.pidfd >= 0)
+			close(b.pidfd);
 		return CHILD_FAILED;
+	}
+	/* ⭐ 1.5 (pidfd-figlio): the kernel attaches to each message a pidfd of its SENDER where it can (SO_PASSPIDFD, 6.5; pidfs, 6.9).  Without
+	 *    the option (an older kernel) the pidfd handed over is of no use and the rule of today stays — NOT an error. */
+	bool use_pidfd = b.pidfd >= 0 && setsockopt(b.fd, SOL_SOCKET, SO_PASSPIDFD, &one, sizeof one) == 0;
+	if (b.pidfd >= 0 && !use_pidfd) {
+		close(b.pidfd);
+		b.pidfd = -1;
 	}
 	fcntl(b.fd, F_SETFL, O_NONBLOCK);
 	fcntl(b.fd, F_SETFD, FD_CLOEXEC);
@@ -2529,6 +2614,10 @@ static child_outcome ensure_remote(struct children *f, struct child *g,
 	g->used = true;
 	g->pid = b.pid;
 	g->fd = b.fd;
+	if (use_pidfd) {
+		g->pidfd = b.pidfd;
+		g->has_pidfd = true;
+	}
 	g->born_ms = log_now_ms();
 	g->last_recheck_ms = g->born_ms;
 	g->name_checked_ms = g->born_ms;
@@ -3314,8 +3403,9 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 			struct ucred chi;
 			bool c_e = false;
 			char why[256];
-			ssize_t readings = receive_with_credentials(g->fd, envelope, sizeof envelope,
-			                                       &chi, &c_e);
+			enum pidfd_same same = PIDFD_UNKNOWN;
+			ssize_t readings = receive_with_credentials_pidfd(g->fd, envelope, sizeof envelope,
+			                                       &chi, &c_e, g->has_pidfd ? g->pidfd : -1, &same);
 
 			if (readings == 0) {
 				child_dismiss(f, g, "closed the socket (or died)");
@@ -3365,7 +3455,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 			}
 			/* ⛔⭐ AND HERE, BEFORE LOOKING AT A SINGLE BYTE OF THE BODY. */
 			why[0] = 0;
-			if (!credentials_match(g, &t, c_e, &chi, f->remote, why,
+			if (!credentials_match(g, &t, c_e, &chi, f->remote, same, why,
 			                            sizeof why)) {
 				registro_dice(LOG_CHILD,
 				              "⛔⛔ MESSAGE REFUSED from «%s»: %s.  ⚠ It is not "
@@ -4094,6 +4184,7 @@ void children_turn_off(children *f)
 			close(g->fd);
 			g->fd = -1;
 		}
+		child_pidfd_close(g);
 		if (g->pid > 0) {
 			child_signal(f, g, SIGTERM);
 			/* ⚠ It WAITS, and it is outside the `poll` loop: `CODER.md` §4.4
