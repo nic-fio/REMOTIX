@@ -14,19 +14,26 @@ set -u
 # ⭐ Both modes, one after the other: the root side without and WITH --journal (RX_LIVE_JOURNAL=1,
 #   the package units' shape — 676af717: under --journal the network side's fork wrote into the
 #   root channel).  LIVE_MODE=plain|journal runs one only.
+# ⭐ 1.6 (R8 B): four modes — plain, journal (a stand-in journald; the _PID of the network side's lines), nologind (no
+#   /run/systemd/sessions: the list is «could not look», nothing blocks) and rootdeath (the root side killed with -9: the network side
+#   sees the EOF on its channel).
 if [ -z "${LIVE_MODE:-}" ]; then
 	LIVE_MODE=plain sh "$0"; r1=$?
 	LIVE_MODE=journal sh "$0"; r2=$?
-	echo "── live: plain $( [ $r1 = 0 ] && echo GREEN || echo RED) · journal $( [ $r2 = 0 ] && echo GREEN || echo RED)"
-	[ $r1 = 0 ] && [ $r2 = 0 ] && { echo GREEN; exit 0; }
-	[ $r1 = 1 ] || [ $r2 = 1 ] && { echo RED; exit 1; }
+	LIVE_MODE=nologind sh "$0"; r3=$?
+	LIVE_MODE=rootdeath sh "$0"; r4=$?
+	echo "── live: plain $( [ $r1 = 0 ] && echo GREEN || echo RED) · journal $( [ $r2 = 0 ] && echo GREEN || echo RED) · nologind $( [ $r3 = 0 ] && echo GREEN || echo RED) · rootdeath $( [ $r4 = 0 ] && echo GREEN || echo RED)"
+	[ $r1 = 0 ] && [ $r2 = 0 ] && [ $r3 = 0 ] && [ $r4 = 0 ] && { echo GREEN; exit 0; }
+	{ [ $r1 = 1 ] || [ $r2 = 1 ] || [ $r3 = 1 ] || [ $r4 = 1 ]; } && { echo RED; exit 1; }
 	exit 3
 fi
 [ "$LIVE_MODE" = journal ] && export RX_LIVE_JOURNAL=1 || export RX_LIVE_JOURNAL=0
+# the network side's environment is an allow-list: only REMOTIX_* crosses
+export RX_LIVE_MODE=$LIVE_MODE REMOTIX_LIVE_MODE=$LIVE_MODE REMOTIX_LIVE_JOURNAL=$RX_LIVE_JOURNAL
 echo "── mode: $LIVE_MODE"
 cd /albero/src || exit 3
 [ "$(id -u)" = 0 ] || { echo "needs root (a privileged container)"; exit 3; }
-make TWIN=none -j6 >/tmp/rx-make.log 2>&1 || { tail -20 /tmp/rx-make.log; exit 3; }
+make TWIN=none -j2 >/tmp/rx-make.log 2>&1 || { tail -20 /tmp/rx-make.log; exit 3; }
 PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon wayland-client gbm"
 gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags $PK) -o /tmp/rx-live-bin \
 	../benches/02-rootside-live-test.c $(ls *.o | grep -v -e '^main.o$' -e '^walls.o$') \
@@ -34,7 +41,7 @@ gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags $PK) -o /tmp/rx-live-bin 
 	$(pkg-config --libs $PK) -ldl || exit 3
 chmod 755 /tmp/rx-live-bin
 
-for u in rxnet anna bruno carla dario elena; do id "$u" >/dev/null 2>&1 || useradd -M -s /bin/sh "$u" || exit 3; done
+for u in rxnet anna bruno carla dario elena fiona; do id "$u" >/dev/null 2>&1 || useradd -M -s /bin/sh "$u" || exit 3; done
 # carla: a live REMOTIX session as logind writes it (CLOSE_ORPHAN's condition, finding 1)
 mkdir -p /run/systemd/sessions || exit 3
 printf 'UID=%s\nUSER=carla\nSTATE=active\nSERVICE=remotix\n' "$(id -u carla)" > /run/systemd/sessions/c77
@@ -63,6 +70,53 @@ printf 'auth required pam_unix.so\naccount required pam_unix.so\nsession optiona
 rm -rf /tmp/rx-live && mkdir -m 1777 /tmp/rx-live
 printf '# denied\nbruno\n' > /tmp/rx-live/denied-users
 
+# a process by its name, whoever's it is, as the container sees it (a zombie is counted: `Z`)
+count_comm() { n=0; for c in /proc/[0-9]*/comm; do [ "$(cat "$c" 2>/dev/null)" = "$1" ] && n=$((n + 1)); done; echo $n; }
+zombies() { n=0; for s in /proc/[0-9]*/status; do grep -q '^State:[[:space:]]*Z' "$s" 2>/dev/null && n=$((n + 1)); done; echo $n; }
+
+# ⭐ 1.6 (R8 B): the two short modes
+if [ "$LIVE_MODE" = nologind ] || [ "$LIVE_MODE" = rootdeath ]; then
+	[ "$LIVE_MODE" = nologind ] && rm -rf /run/systemd/sessions
+	/tmp/rx-live-bin > /tmp/rx-live/root.log 2>&1 &
+	ROOT=$!
+	red=0
+	want=GREEN; [ "$LIVE_MODE" = rootdeath ] && want=ATTACHED
+	i=0; while ! grep -q "^$want" /tmp/rx-live/net.txt 2>/dev/null && [ $i -lt 120 ]; do sleep 0.5; i=$((i + 1)); done
+	grep -q "^$want" /tmp/rx-live/net.txt 2>/dev/null || { echo "NO the network side never wrote $want"; red=1; }
+	cat /tmp/rx-live/net.txt 2>/dev/null
+	if [ "$LIVE_MODE" = nologind ]; then
+		grep -q '^NO ' /tmp/rx-live/net.txt && red=1
+		grep -q 'could not look for live REMOTIX desktops' /tmp/rx-live/root.log || { echo "NO the root side did not say «could not look»"; red=1; }
+		T0=$(date +%s); kill -TERM $ROOT; wait $ROOT; RC=$?; T1=$(date +%s)
+		[ "$RC" = 0 ] && [ $((T1 - T0)) -le 6 ] || { echo "NO the root side stopped with $RC in $((T1 - T0)) s"; red=1; }
+	else
+		echo "── ps outside (the container's view) before the root side dies"
+		ps -eo pid,ppid,user,stat,comm | grep -E 'PID|rx-live-bin'
+		kill -KILL $ROOT; wait $ROOT 2>/dev/null
+		i=0; while ! grep -q '^ROOT_EOF ' /tmp/rx-live/net.txt && [ $i -lt 50 ]; do sleep 0.2; i=$((i + 1)); done
+		grep -q '^ROOT_EOF ' /tmp/rx-live/net.txt || { echo "NO the network side did not see the EOF of the dead root side"; red=1; }
+		grep '^ROOT_EOF' /tmp/rx-live/net.txt
+		sleep 1
+		[ "$(count_comm rx-live-bin)" = 0 ] || { echo "NO a process of the live binary is still there after the root side's death"; ps -eo pid,ppid,user,stat,comm | grep rx-live-bin; red=1; }
+	fi
+	[ "$(zombies)" = 0 ] || { echo "NO $(zombies) zombie(s) left"; red=1; }
+	echo "── mode $LIVE_MODE: $( [ $red = 0 ] && echo GREEN || echo RED)"
+	exit $red
+fi
+
+# ⭐ 1.6 (R8 B): the stand-ins for logind (the system bus) and, in journal mode, for journald
+export REMOTIX_LIVE_LOGIND=0
+/tmp/rx-live-bin --logind > /tmp/rx-live/logind.log 2>&1 &
+LG=$!
+i=0; while [ ! -S /run/dbus/system_bus_socket ] && [ $i -lt 20 ]; do sleep 0.25; i=$((i + 1)); done
+[ -S /run/dbus/system_bus_socket ] && export REMOTIX_LIVE_LOGIND=1
+JD=
+if [ "$LIVE_MODE" = journal ]; then
+	/tmp/rx-live-bin --journald > /tmp/rx-live/journald.log 2>&1 &
+	JD=$!
+	i=0; while [ ! -S /run/systemd/journal/socket ] && [ $i -lt 20 ]; do sleep 0.25; i=$((i + 1)); done
+fi
+
 # review 3, F6: the product's root side refuses --certificates/--ban-file outside
 # --network-state-dir (a 1.0 drop-in), with the fix in the line — before it binds anything
 ./remotix --network-user rxnet --name 127.0.0.1 --port 7999 --certificates /etc/rx-certs \
@@ -82,11 +136,22 @@ i=0
 while { [ ! -f /tmp/rx-live/restarted2.txt ] || ! grep -q 'child of «dario».*reaped by the root side' /tmp/rx-live/root.log; } \
 	&& [ $i -lt 120 ]; do sleep 0.5; i=$((i + 1)); done
 sleep 0.5
+# ⭐ 1.6 (R8 B): kill -9 of the network side ALONE (the third), the root side stays: a fourth is born, and finds the desktops again
+NP=$(grep -o 'network side started: pid [0-9]*' /tmp/rx-live/root.log | tail -1 | grep -o '[0-9]*$')
+echo "── ps outside (the container's view) with the third network side up"
+ps -eo pid,ppid,user,stat,comm | grep -E 'PID|rx-live-bin|rx-leftover|rx-stage'
+PSOUT=$(ps -o user= -p "$NP" 2>/dev/null | tr -d ' ')
+[ -n "$NP" ] && kill -KILL "$NP"
+i=0; while [ ! -f /tmp/rx-live/restarted3.txt ] && [ $i -lt 90 ]; do sleep 0.5; i=$((i + 1)); done
+sleep 0.5
 T0=$(date +%s)
 kill -TERM $ROOT
 wait $ROOT
 RC=$?
 T1=$(date +%s)
+[ -n "$JD" ] && kill $JD 2>/dev/null
+kill $LG 2>/dev/null
+sleep 1
 
 cat /tmp/rx-live/child-*.txt > /tmp/rx-live/child.txt 2>/dev/null
 echo "── the network side's checks"
@@ -118,10 +183,40 @@ grep -q 'RESTARTED2 uid=[1-9][0-9]* attached=1' /tmp/rx-live/restarted2.txt 2>/d
 	|| { echo "NO --certificates outside net/ was not refused with the fix (exit $F6C)"; cat /tmp/rx-live/f6-cert.log | tail -3; red=1; }
 { [ "$F6B" != 0 ] && grep -q -- '--ban-file /var/lib/remotix/ban is not inside --network-state-dir.*Not starting' /tmp/rx-live/f6-ban.log; } \
 	|| { echo "NO --ban-file outside net/ was not refused (exit $F6B)"; tail -3 /tmp/rx-live/f6-ban.log; red=1; }
-# review 2, L1: the second network side's forked leftover is killed before the third starts
-grep -q 'were still alive in this root side.s cgroup before the network side' /tmp/rx-live/root.log || { echo "NO the dead network side's leftover was not swept"; red=1; }
-lp=$(cat /tmp/rx-live/leftover.pid 2>/dev/null)
-[ -n "$lp" ] && { [ ! -d "/proc/$lp" ] || grep -q '^State:[[:space:]]*Z' "/proc/$lp/status"; } || { echo "NO the leftover (pid ${lp:-?}) is still alive"; red=1; }
+# review 2, L1, 1.6 (R8 B): the second network side's forked leftover is gone — the kernel kills it with the namespace's PID 1 (the
+# sweep of the root side is only a net now); it is found by its NAME from outside the namespace (its pid there means nothing here)
+[ -f /tmp/rx-live/leftover.pid ] || { echo "NO the leftover was never started"; red=1; }
+[ "$(count_comm rx-leftover)" = 0 ] || { echo "NO the leftover of the dead network side is still alive"; red=1; }
+# ⭐ 1.6 (R8 B)
+echo "── 1.6 R8 B"
+echo "outside: the third network side was pid ${NP:-?}, user ${PSOUT:-?}; inside it is pid 1 (net.txt INSIDE line)"
+[ "${PSOUT:-}" = rxnet ] && [ "${NP:-1}" != 1 ] || { echo "NO ps from outside does not show the network side as rxnet with a pid other than 1"; red=1; }
+grep -q '^INSIDE pid=1 procs=1 $' /tmp/rx-live/net.txt || { echo "NO the network side did not see itself as the only process"; red=1; }
+if grep -q '^STAGE ok' /tmp/rx-live/stage.txt 2>/dev/null; then
+	grep -q '^FOUND_AGAIN_AFTER_RESTART n=1 user=fiona' /tmp/rx-live/restarted.txt || { echo "NO the restarted network side did not find fiona's desktop again"; red=1; }
+	grep -q '^GONE_SEEN=1 user=fiona' /tmp/rx-live/restarted.txt || { echo "NO FOUND_GONE for fiona did not arrive"; red=1; }
+	grep -q '^FOUND3 n=0' /tmp/rx-live/restarted2.txt || { echo "NO the third network side was told of a desktop that is gone"; red=1; }
+	grep -q '^FOUND4 n=0' /tmp/rx-live/restarted3.txt || { echo "NO the fourth network side was told of a desktop that is gone"; red=1; }
+else
+	echo "?? no scope for fiona's desktop in this container ($(cat /tmp/rx-live/stage.txt 2>/dev/null)): FOUND_AGAIN across the restart could not look"
+fi
+grep -q 'RESTARTED3 uid=[1-9][0-9]* attached=1' /tmp/rx-live/restarted3.txt 2>/dev/null || { echo "NO after the kill -9 of the network side alone, no fourth one attached"; red=1; }
+grep -q 'will be started again' /tmp/rx-live/root.log || { echo "NO the root side did not restart"; red=1; }
+if [ "$REMOTIX_LIVE_LOGIND" = 1 ]; then
+	grep -q 'sentinel_local(anna)' /tmp/rx-live/net.txt && ! grep -q '^NO sentinel' /tmp/rx-live/net.txt || { echo "NO the sentinel over the bus"; red=1; }
+else
+	echo "?? the stand-in logind did not start: the sentinel could not look"
+fi
+if [ "$LIVE_MODE" = journal ]; then
+	NP1=$(grep -o 'network side started: pid [0-9]*' /tmp/rx-live/root.log | head -1 | grep -o '[0-9]*$')
+	echo "journald saw: $(grep -c . /tmp/rx-live/journal.txt 2>/dev/null) line(s); the first network side was pid ${NP1:-?}"
+	grep 'LIVE-NET-JOURNAL-MARK' /tmp/rx-live/journal.txt 2>/dev/null | head -2
+	{ [ -n "$NP1" ] && grep -q "^pid=$NP1 .*LIVE-NET-JOURNAL-MARK" /tmp/rx-live/journal.txt 2>/dev/null; } \
+		|| { echo "NO the network side's journal line did not arrive with its real pid ($NP1), the _PID journald records"; red=1; }
+	grep -q '^pid=1 ' /tmp/rx-live/journal.txt 2>/dev/null && { echo "NO a line with pid 1: the pid was not translated"; red=1; }
+fi
+[ "$(zombies)" = 0 ] || { echo "NO $(zombies) zombie(s) left after the stop"; ps -eo pid,ppid,stat,comm | grep ' Z'; red=1; }
+[ "$(count_comm rx-live-bin)" = 0 ] || { echo "NO a process of the live binary survived the stop"; ps -eo pid,ppid,user,stat,comm | grep rx-live-bin; red=1; }
 # review 2, L4: the root side writes how long a birth took
 grep -q 'the birth for «anna» took [0-9]* ms' /tmp/rx-live/root.log || { echo "NO no birth duration line"; red=1; }
 # review 2, M1: a second CLOSE_ORPHAN for carla within 30 s is refused without a birth
