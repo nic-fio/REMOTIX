@@ -201,7 +201,7 @@ static bool same_id(const char *s, unsigned long id)
  *      · a line longer than `MAX_LINE` («too long to be judged»);
  *      · a line with a zero byte inside (`strlen` ≠ what `getline` returned): the part after the zero would not be read;
  *      · a `+` line, in any form (`+`, `+:::`, `+@netgroup`): NIS compat, it pulls in accounts from elsewhere, and «no other account has
- *        this gid» cannot be proved («riga NIS compat: altri account con questo gid non si possono escludere»);
+ *        this gid» cannot be proved («NIS compat line: other accounts with this gid cannot be excluded»);
  *      · any other line with too few fields to be a record (it could be the very line that matters);
  *      · a read error at the end (`ferror`).
  *    Skipped: blank lines, lines that begin with `#`, and `-name` lines (NIS compat exclusions: they only take accounts away).
@@ -233,7 +233,7 @@ static int judge_line(char *line, ssize_t n, long nline, const char *file, char 
 	if (line[lead] == '\0' || line[0] == '#' || line[0] == '-')
 		return LINE_SKIP;
 	if (line[0] == '+' || line[lead] == '+') {
-		snprintf(why, how_much, "%s line %ld: riga NIS compat: altri account con questo gid non si possono escludere", file, nline);
+		snprintf(why, how_much, "%s line %ld: NIS compat line: other accounts with this gid cannot be excluded", file, nline);
 		return LINE_REFUSE;
 	}
 	return LINE_RECORD;

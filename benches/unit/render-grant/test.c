@@ -586,20 +586,20 @@ int main(void)
 		reset_world();
 		put(group_path, "anna:x:1001:\n+\n");
 		why[0] = 0;
-		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "riga NIS compat"),
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
 		        "46. a «+» line in /etc/group: not private (NIS compat)");
 		put(group_path, "anna:x:1001:\n+:::\n");
 		why[0] = 0;
-		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "riga NIS compat"),
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
 		        "47. a «+:::» line in /etc/group: not private (NIS compat)");
 		reset_world();
 		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\n+\n");
 		why[0] = 0;
-		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "riga NIS compat"),
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
 		        "48. a «+» line in /etc/passwd: not private (NIS compat)");
 		put(passwd_path, "anna:x:1001:1001::/home/anna:/bin/sh\n+:::::::\n");
 		why[0] = 0;
-		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "riga NIS compat"),
+		require(!group_is_private("anna", 1001, why, sizeof why) && strstr(why, "NIS compat line"),
 		        "49. a «+:::::::» line in /etc/passwd: not private (NIS compat)");
 		/* 50-51. a zero byte inside a line: what follows it would not be read */
 		reset_world();
