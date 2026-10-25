@@ -962,13 +962,14 @@ VaDirect *vadirect_open(const VaDevice *d, const VaDirectRequest *r,
 	int amount = 0;
 	uint32_t value;
 	VAStatus st;
-	bool hevc = r->codec == VADIRECT_HEVC;
-	bool p10 = r->depth == 10;
+	bool hevc, p10;
 
 	if (!d || !d->display || !r || !r->width || !r->height) {
 		di(error, error_byte, "vadiretta: incomplete request");
 		return NULL;
 	}
+	hevc = r->codec == VADIRECT_HEVC; /* E-R11: after the NULL check, not before */
+	p10 = r->depth == 10;
 	if (!hevc && p10) {
 		di(error, error_byte, "vadiretta: 10-bit H.264 does not open (only 8-bit High)");
 		return NULL;
@@ -1401,7 +1402,7 @@ bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
 	uint8_t header[4 * MAX_HEADER];
 	size_t n, tot;
 	VAStatus st, fine;
-	bool hevc = v->r.codec == VADIRECT_HEVC;
+	bool hevc;
 	bool idr;
 	unsigned ref;
 
@@ -1409,6 +1410,7 @@ bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
 		di(error, error_byte, "vadiretta: nothing to encode");
 		return false;
 	}
+	hevc = v->r.codec == VADIRECT_HEVC; /* E-R11: after the NULL check, not before */
 	if (v->lost) {
 		di(error, error_byte, "vadiretta: the previous wait for the encode timed out: this context is lost");
 		return false;
