@@ -59,6 +59,7 @@
  */
 #include "encoder.h"
 #include "colors709.h"
+#include "dimcheck.h"
 #include "log.h"
 #include "bit_writer.h"
 #include "vadirect.h"
@@ -3085,6 +3086,8 @@ static VASurfaceID import_dmabuf(Encoder *c, const EncoderSurface *s)
 		    && c->imported[i].modifier == s->modifier)
 			return c->imported[i].surface;
 
+	uint32_t object_size = 0;
+
 	memset(&d, 0, sizeof d);
 	/*
 	 * ⛔ THE VA-API FOURCC IS NOT THE DRM ONE, and the two look alike
@@ -3112,7 +3115,15 @@ static VASurfaceID import_dmabuf(Encoder *c, const EncoderSurface *s)
 	d.height = s->height;
 	d.num_objects = 1;
 	d.objects[0].fd = s->fd;
-	d.objects[0].size = s->offset + s->stride * s->height;
+	/* ⭐ E-R6 (audit of 25 Oct 2026): the product is made in 64 bits; a size that does not fit the 32-bit field of the import is refused,
+	 *    not wrapped to a smaller one. */
+	if (!dim_object_size(s->offset, s->stride, s->height, &object_size)) {
+		registro_dice(LOG_ENCODING,
+		              "⛔ the DMA-BUF object (offset %u + stride %u x %u rows) does not fit in 32 bits: not imported",
+		              s->offset, s->stride, s->height);
+		return VA_INVALID_ID;
+	}
+	d.objects[0].size = object_size;
 	d.objects[0].drm_format_modifier = s->modifier;
 	d.num_layers = 1;
 	d.layers[0].drm_format = s->formato_drm;

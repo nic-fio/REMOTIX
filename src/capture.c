@@ -16,6 +16,7 @@
 #include "cursor.h"
 #include "shape.h"
 #include "log.h"
+#include "dimcheck.h"
 
 
 #include "wlroots.h"
@@ -1102,7 +1103,7 @@ static void on_process(void *data)
 	 *   every card frame silently, which is the opposite defect. */
 	if (capture->route == CAPTURE_ROUTE_MEMORY
 	    && (capture->fmt.size.width == 0 || capture->fmt.size.height == 0
-	        || step < capture->fmt.size.width * 4u
+	        || !dim_stride_ok(step, capture->fmt.size.width)
 	        || byte < (guint64) step * capture->fmt.size.height))
 	{
 		capture->tally.inconsistent_geometry++;
@@ -2618,7 +2619,7 @@ static gboolean unchanged_judge(Capture *capture, CaptureStopped *report)
 		uc_forget(&capture->uc);
 		capture->uc_generation = report->generation;
 	}
-	if (w == 0 || h == 0 || st < w * 4u)
+	if (w == 0 || h == 0 || !dim_stride_ok(st, w))
 	{
 		uc_forget(&capture->uc);
 		goto deliver;
