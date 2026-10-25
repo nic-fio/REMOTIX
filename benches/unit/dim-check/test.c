@@ -8,9 +8,10 @@
  *   4. by reading the sources (argv[1] = src/encoder.c, argv[2] = src/capture.c, argv[3] = src/child.c, optional): the places the audit named use the header
  *      and no longer the 32-bit expressions.
  *
- * BUILD AND RUN (a second; run from the root of the tree):
- *   gcc -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
- *      -Isrc benches/unit/dim-check/test.c -o /tmp/dim-check && /tmp/dim-check src/encoder.c src/capture.c src/child.c
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
+ *        -I/albero/src /albero/benches/unit/dim-check/test.c -o test && ./test /albero/src/encoder.c /albero/src/capture.c /albero/src/child.c'
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "dimcheck.h"
