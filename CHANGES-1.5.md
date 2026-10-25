@@ -1,9 +1,12 @@
-# REMOTIX 1.5 — release notes (draft, 24 Oct 2026)
+# REMOTIX 1.5 — release notes (draft, 25 Oct 2026)
 
-> Range: `git log 5cf8ca10..HEAD` on branch `integrazione` (package 1b, audit, login defences) over package 1
-> (`git log 04f6aa18..5cf8ca10`). Every line cites a commit or a section of `docs/1.5/DECISIONS-11.md` (written «§11.x»).
-> ⚠ Status words are those of the sections: «built», «under verification», «approved, verification in progress». Nothing here
-> has been run on the full suite or the A/B yet (see «Still open»).
+> Range: `git log 5cf8ca10..a4b9cb1f` on branch `integrazione2` (package 1b, audit, login defences, and the ports from the abandoned
+> attempt: sessions, packages, RCP, page, card, KDE, misc) over package 1 (`git log 04f6aa18..5cf8ca10`). Every line cites a commit or a
+> section of `docs/1.5/DECISIONS-11.md` (written «§11.x»).
+> ⚠ Status words are those of the sections: «built», «under verification», «approved, verification in progress». State of 25 Oct 2026:
+> `integrazione2` builds (BENCH and product) and passes `verifica-rami` 28/28 (`4be3a981`); the functional suite on Intel gave 692 PASS
+> (the 12 FAIL were the F-027 test, rewritten since: `c2766ea1`, `8a7f5247`), the A/B against 1.0 is green on fps and delay with
+> two open points (see «Still open»). Fixes written after that run are on the branches listed in section 6 and are NOT in this range.
 
 ## Contents
 1. What is new for the user
@@ -11,6 +14,8 @@
 3. Defects of 1.0 fixed (security and robustness)
 4. Requirements that changed
 5. Still open
+6. Fixes of 25 Oct 2026 on branches not yet merged
+7. What is OFF by default
 
 ## 1. What is new for the user
 - **A flood of fake connections no longer costs the server a connection each.** The first packet of every connection must
@@ -25,7 +30,7 @@
   the new path is validated the server may send up to 3× what it received from it; the ban and the logs keep the birth
   address. Not yet measured on a real network change.
 - **The last row of the picture has the right colour on Chrome** (it was tinted, e.g. green on GNOME): cure (c), the page
-  trims the last row when the decoded frame has coded rows below the visible ones (§11.41, verified on gnome and xfce, kde and lxqt due; `571c8145`, `9b963d77`,
+  trims the last row when the decoded frame has coded rows below the visible ones (§11.41, verified on gnome, xfce, kde and lxqt, Chrome and Firefox, 25 Oct 2026; `571c8145`, `9b963d77`,
   earlier steps `78b63549`, `127f69a6`). Cost: the bottom row repeats the row above.
 - **Installer and uninstaller**: the install plan states the port before «Proceed? [y/N]» (`29a4a7ce`); the uninstall removes
   what upgrades added (§11.6, under verification; `84fdf573`, `b4f0776e`). The site says «Download 1.0.0» (`b2f8161e`).
@@ -92,18 +97,65 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   peer address correctly in the ban key and in the connection caps (§1.9-bis closed, §11.53, §11.40).
 
 ## 5. Still open
-- **A/B 30-perf against 1.0** and the complete functional suite on the integrated branch: running now, no result yet (§11.6, §11.9, §11.40).
-- **Android F-031** (Chrome on the emulator: `keyboard_close` refocuses after `hide()`): to be tested on the phone (the emulator could not confirm it); the proposed fix
-  is in `PIANO.md`, not in this range.
-- **F-011 cure (c)**: verified 8/8 on gnome and xfce, Chrome and Firefox; **kde and lxqt still due** (§11.41, `9c770c61`).
-- **Live checks due**: Stateless Reset with real Chrome and Firefox (§11.9); caps 16/4/8 with 01-b10, 3 runs of 9 (§11.40); migration on a
-  real network change (§11.29); F-014E on the integrated branch (KDE box); `pacing-ab --dopo integrazione` (the +1 ms RTT cured by `ppoll`); the login ban on the boxes (§11.53); the 30-minute fuzz on the integrated branch
-  and the stream-churn bench (§11.52).
-- **Not in this tree (abandoned attempt; see «READ FIRST» at the top of `docs/1.5/DECISIONS-11.md`)** — being ported on `port-pagina` /
-  `port-rcp`: §11.4 (the 1.0 `terminate-user` is still there), §11.29 LXQt repair, §11.39 `0x0E`, §11.43 30-minute clock,
-  §11.44 page TCP listener, §11.48 320×240 probe, rpm `%ghost` of `quic-secret`. **Ported on port-varie, to be built and tested**: §11.32 `PACE`
-  (`4895f2ad`, `c7bfef17`), §11.45 encoder padding (`19749144`), §11.33 key receipts (`8a2c3faa`, `6217b6dd`, `267068d4`, `cbe4534b`).
-  **Still to port**: §11.36 Firefox worker (a proposal, not decided), §11.37 and §11.38 render nodes, §11.47 `refusal_uncounted`,
-  §11.50 root-side split. Ported on `port-kde`, to be built and tested: the KDE «unchanged» filter, nested KWin size, `remotix-capture` name.
+State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3`, `coda-sera4`); none has a result yet unless said.
+- **Done and measured on `integrazione2`**: build and 28 unit/bench verifications (`4be3a981`); functional suite Intel (692 PASS; the F-027
+  test now follows the new login rules and is queued again on Chrome and Firefox); A/B 30-perf against 1.0 (fps and delay equal; memory
+  better on Chrome; xfce+firefox memory +6..+17 % is a fixed offset of the box, `srv_rss` and `ses_rss` are equal to 1.0, so noise);
+  F-011 cure (c) on the four desktops with Chrome and Firefox; F-014E on KDE; `pacing-ab` RTT at rest +5.8 % (limit 15 %).
+- **Queued, not yet run**: F-027/F-028/N-1 on four desktops with Chrome and Firefox; A/B gnome+chrome (one run showed CPU +9.5 % at
+  4 users and +14.8 % at 6: two more runs) and xfce+firefox (two more runs); `stream-churn` and `pam-tempi` on `integrazione2`;
+  fuzz `rcp-msg` and `child-msg` (900 s each); `verifica-rami` on `pktinfo` and `rootside-completo`; B10 (caps 16/4/8) on `pktinfo`;
+  the «text» scene for 1.0 (8-user check); the 1.0 measures on the Radeon; `pacing-ab` bulk/burst/loss and the live migration, whose test
+  clients were fixed on 25 Oct (the ATTACH layout, QUIC PING instead of raw bytes).
+- **Not provable on the test server, due by hand or on other machines**: Stateless Reset with real Chrome and Firefox (§11.9); a real
+  network change Wi-Fi → mobile (§11.29); the card changes on real AMD, Intel and two-card machines (§11.4, §11.37); the page defences with
+  real browsers (§11.44). KDE with 8 users on the Radeon is **not measurable on this bench** (server RAM: ~1.1-1.2 GB per user for the
+  KDE box plus ~1.5-2 GB for the test Firefox, which in use runs on the user's own device): declared, not measured.
+- **Open outside this range**: Android F-031 (Chrome on the emulator: `keyboard_close` refocuses after `hide()`; the fix is in
+  `PIANO.md` and on `f031-a-p1b`, to be tested on the phone) and NVIDIA (a rented server, `PIANO.md`): both excluded from this release's closing.
+- **Three decisions of the user** (opinions collected from Argon, gpt-oss and Laguna in `tmp/dom5.txt`, none taken): **D1** the root-side
+  split ON or OFF in 1.5 (§11.50); **D2** the Firefox worker as default (§11.36); **D3** decoder `PACE` ON by default (§11.32). Without
+  a decision the release is the safe one: D1 OFF, D2 `ff-worker` not merged, D3 OFF (section 7).
+- **Written, in review, not merged**: branch `rifiniture`: `connect-src` of the CSP narrowed to `'self'` (now `'self' https:` in `page.c`; the WebTransport behaviour on Chrome
+  and Firefox is to be measured before the merge). Branch `ff-worker`: the port of §11.36 D, the worker route as default **only on desktop Firefox**, with
+  automatic fallback to the main-thread route; merged only if the user chooses D2 = A.
+- **Not done, optional**: the
+  zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
+  login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
+  of 10 users in `src/webtransport.h` against the maximum of 8 of §4 (to be settled).
 - **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).
+
+## 6. Fixes of 25 Oct 2026 on branches not yet merged
+These are approved (or built) and are **not** in the range above; they will be merged in this order. Each has its queue run listed in section 5.
+- **Branch `pktinfo` (a few commits over `integrazione2`, in review; the minor remarks `errno` after the fallback and `ENODEV` are corrected on it, and its fallback log line follows the `quic-conn` fuzz oracle):
+  replies leave from the address the client wrote to** (`IP_PKTINFO` / `IPV6_PKTINFO`). The UDP socket is bound to the wildcard and every
+  reply was a plain `sendto()`, so the kernel chose the source address; on a host with several addresses (global + ULA + temporary IPv6, or
+  multi-homed IPv4) the reply may come from another address, a QUIC client does not accept it and the handshake never completes. **A defect
+  of 1.0 as well** (`read_packet` used `c->local` as the path's local address, `transport.c` ~1547): found by the `quic-conn` fuzz on 24 Oct and
+  seen by B10 (`c-48`: 0 of 3 rounds green on `integrazione2`, the /48 cap never reached). The stateless replies use the arrival address only while
+  the datagram is handled and fall back without the source when the kernel refuses it (`5601b8e3`).
+- **Branch `rootside-completo` (head `d09a6738`; approved)**: besides the split (section 7), two corrections of today.
+  - The `quic-conn` fuzz harness (`1a25d20a`): an unlogged connection logged in through `transport_verdict()` before `op_wt` gave it a post-credentials
+    state, a state the product cannot be in since the synchronous PAM fallback is gone (D4b); the age close then hit a «logged-in»
+    connection and the oracle aborted (`verifica-rami`, replay rc=77, crash-5e4ce06f). Harness only, identical in both trees; `integrazione2`
+    still logs in from `transport_expired()`, so the same input passes there.
+  - Arch packaging (`d09a6738`, manual ch17 `32eb4667`): `post_remove` removed `/var/lib/remotix/net` whatever `remotix-net-move --back`
+    had achieved, losing the files a half-done `--back` had refused to move. `net_back()` now writes the marker `/run/remotix/back-incomplete`
+    when `--back` fails or leaves `certificates/`, `ban` or `ban.new` in `net/`; `post_remove` then keeps `net/` and says so. Test `benches/02-arch-install-back.sh`.
+- **Merge order**: `pktinfo` first (small; it also repairs a defect of 1.0), then `rootside-completo` (conflict in `src/transport.c` with
+  `pktinfo`, to be resolved at that merge; then `verifica-rami` again), then, only if the user chooses D2 = A, the branch `ff-worker` (below). The branch `rifiniture` (CSP `connect-src 'self'`, in review) is independent and can go at any point after the runs.
+  `integrazione2` itself is measured at the moment and receives no commit until the runs of section 5 are read.
+- Already in `integrazione2` since the 24 Oct run: `61ea9a6c` (the 429 for a second session counted as chatter), `879cf5fa` (a name clash of `rcp_logged_in`),
+  `549a9e06` (the product build declared five capabilities in HERE_I_AM and wrote four), `0b4d3bda`/`4be3a981` (tests of the six failing units),
+  `c2766ea1`/`8a7f5247` (F-027 rewritten to the new ban rules), `a4b9cb1f` (test client `--rebind` with QUIC PING).
+
+## 7. What is OFF by default
+- **Root-side / network-side split (§11.50)**: written, reviewed, packaged (service user `remotix`, installer, distro packages, SELinux, seccomp,
+  `remotix-net-move --back` with its Arch marker) on `rootside-completo`; the server stays ONE process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`,
+  and `--split` is refused otherwise. Measured cost against 1.0 (4 interleaved rounds, one box): login to first frame −98 ms warm /
+  −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. Needs decision D1.
+- **Decoder `PACE` (§11.32)**: present (`4895f2ad`, `c7bfef17`), enabled with `--decoder-pace`; the page declares `video.pace` only then. The measures
+  of the first attempt favoured ON (slow decoder: 26 → 61 photos/min on Firefox 4K), but the default is a change seen by the browser. Needs decision D3.
+- **Firefox worker as default (§11.36)**: written on the branch `ff-worker` (default on desktop Firefox only, fallback to the main-thread route; Chrome and Android
+  unchanged), in review, NOT merged. It enters 1.5 only if the user chooses D2 = A.
