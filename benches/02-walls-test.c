@@ -20,6 +20,17 @@
  *   root: podman run --rm --network=none --privileged -v TREE:/albero \
  *           -w /albero/src localhost/remotix-costruzione make test-walls
  *
+ * ⭐ 1.6 (audit split R5/R6), two cases that need no mounts: `own_network()` and `scope_abstract_sockets()` are called in a FORK
+ *   with sockets made BEFORE them — an abstract listener, a path listener, two UDP sockets and a TCP listener on 127.0.0.1, a
+ *   socketpair:
+ *     · after `own_network()` (needs CAP_SYS_ADMIN: root, or `unshare -r`; else the case says it is skipped) a connect() to the
+ *       abstract name is refused, a path socket still connects, the inherited UDP socket still sends and the inherited TCP listener
+ *       still accepts a connection made from OUTSIDE, the socketpair works, a new socket cannot reach the host's 127.0.0.1, the
+ *       private loopback is up, and getaddrinfo() of a numeric address and of localhost answers;
+ *     · after `scope_abstract_sockets()` (any user; the kernel needs Landlock ABI 6, else it says so) a connect() to the abstract
+ *       name is EPERM while a path socket, UDP and a socketpair still work.
+ *   Under `unshare -r` the first runs on an ordinary desk; the real walls still need root.
+ *
  * Exit 0 all passed · 1 a check failed · 3 could not look (root without the
  * power to mount, or no user `nobody`).  The last line is «N passed, M
  * failed, of K».
@@ -28,6 +39,11 @@
 
 #include <pwd.h>
 
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 
 static int passed, failed;
@@ -138,6 +154,299 @@ static uint64_t status_value(const char *key)
 }
 
 /* 0 = blind, else the walls were applied and checked */
+/* ── ⭐ 1.6: the private network and the Landlock scope, in a fork ────────── */
+
+static void rep(int out, bool ok, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+static void rep(int out, bool ok, const char *fmt, ...)
+{
+	char b[400];
+	va_list ap;
+	int n = snprintf(b, sizeof b, "%d ", ok ? 1 : 0);
+
+	va_start(ap, fmt);
+	n += vsnprintf(b + n, sizeof b - (size_t)n - 2, fmt, ap);
+	va_end(ap);
+	b[n++] = '\n';
+	if (write(out, b, (size_t)n) < 0)
+		_exit(70);
+}
+
+static int udp_on_loopback(uint16_t *port)
+{
+	struct sockaddr_in a = { .sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK) };
+	socklen_t l = sizeof a;
+	int s = socket(AF_INET, SOCK_DGRAM, 0);
+
+	if (s < 0 || bind(s, (struct sockaddr *)&a, sizeof a) != 0 || getsockname(s, (struct sockaddr *)&a, &l) != 0)
+		return -1;
+	*port = ntohs(a.sin_port);
+	return s;
+}
+
+static int abstract_listener(char *name, size_t cap)
+{
+	struct sockaddr_un a;
+	socklen_t len;
+	int s = socket(AF_UNIX, SOCK_STREAM, 0);
+
+	snprintf(name, cap, "remotix-walls-test-%ld", (long)getpid());
+	memset(&a, 0, sizeof a);
+	a.sun_family = AF_UNIX;
+	memcpy(a.sun_path + 1, name, strlen(name));
+	len = (socklen_t)(offsetof(struct sockaddr_un, sun_path) + 1 + strlen(name));
+	if (s < 0 || bind(s, (struct sockaddr *)&a, len) != 0 || listen(s, 4) != 0)
+		return -1;
+	return s;
+}
+
+static int connect_abstract(const char *name)
+{
+	struct sockaddr_un a;
+	int s = socket(AF_UNIX, SOCK_STREAM, 0), e;
+
+	memset(&a, 0, sizeof a);
+	a.sun_family = AF_UNIX;
+	memcpy(a.sun_path + 1, name, strlen(name));
+	if (s < 0)
+		return -1;
+	if (connect(s, (struct sockaddr *)&a, (socklen_t)(offsetof(struct sockaddr_un, sun_path) + 1 + strlen(name))) == 0) {
+		close(s);
+		return 0;
+	}
+	e = errno;
+	close(s);
+	return e;
+}
+
+static int connect_path(const char *path)
+{
+	struct sockaddr_un a;
+	int s = socket(AF_UNIX, SOCK_STREAM, 0), ok;
+
+	memset(&a, 0, sizeof a);
+	a.sun_family = AF_UNIX;
+	snprintf(a.sun_path, sizeof a.sun_path, "%s", path);
+	if (s < 0)
+		return 0;
+	ok = connect(s, (struct sockaddr *)&a, sizeof a) == 0;
+	close(s);
+	return ok;
+}
+
+struct netfds {
+	int abs_l, path_l, udp_a, udp_b, tcp_l, sp[2];
+	uint16_t port_a, port_b, port_tcp;
+	char abs_name[64], path[108];
+};
+
+static bool net_setup(struct netfds *f)
+{
+	struct sockaddr_in a = { .sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK) };
+	struct sockaddr_un u;
+	socklen_t l = sizeof a;
+
+	memset(f, 0, sizeof *f);
+	f->abs_l = abstract_listener(f->abs_name, sizeof f->abs_name);
+	snprintf(f->path, sizeof f->path, "/tmp/remotix-walls-test-sock.%ld", (long)getpid());
+	unlink(f->path);
+	memset(&u, 0, sizeof u);
+	u.sun_family = AF_UNIX;
+	snprintf(u.sun_path, sizeof u.sun_path, "%s", f->path);
+	f->path_l = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (f->path_l < 0 || bind(f->path_l, (struct sockaddr *)&u, sizeof u) != 0 || listen(f->path_l, 4) != 0)
+		return false;
+	f->udp_a = udp_on_loopback(&f->port_a);
+	f->udp_b = udp_on_loopback(&f->port_b);
+	f->tcp_l = socket(AF_INET, SOCK_STREAM, 0);
+	if (f->tcp_l < 0 || bind(f->tcp_l, (struct sockaddr *)&a, sizeof a) != 0 || listen(f->tcp_l, 4) != 0 ||
+	    getsockname(f->tcp_l, (struct sockaddr *)&a, &l) != 0)
+		return false;
+	f->port_tcp = ntohs(a.sin_port);
+	return f->abs_l >= 0 && f->udp_a >= 0 && f->udp_b >= 0 && socketpair(AF_UNIX, SOCK_SEQPACKET, 0, f->sp) == 0;
+}
+
+static void net_common_checks(int out, struct netfds *f, const char *when)
+{
+	struct sockaddr_in to = { .sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK) };
+	char buf[16] = "";
+	struct pollfd p;
+
+	rep(out, connect_path(f->path), "%s: a socket on a PATH still connects", when);
+	to.sin_port = htons(f->port_b);
+	p = (struct pollfd){ .fd = f->udp_b, .events = POLLIN };
+	rep(out, sendto(f->udp_a, "udp", 3, 0, (struct sockaddr *)&to, sizeof to) == 3 && poll(&p, 1, 2000) == 1 &&
+	        recv(f->udp_b, buf, sizeof buf, 0) == 3 && memcmp(buf, "udp", 3) == 0,
+	    "%s: the inherited UDP socket still sends (and its peer receives)", when);
+	memset(buf, 0, sizeof buf);
+	rep(out, write(f->sp[0], "pair", 4) == 4 && read(f->sp[1], buf, sizeof buf) == 4 && memcmp(buf, "pair", 4) == 0,
+	    "%s: the inherited socketpair (the channel to the root side) still works", when);
+}
+
+/* The private network, in a fork.  `ready` carries the TCP port to the parent, who connects from OUTSIDE and sends "hi". */
+static void net_child(int out, int ready)
+{
+	struct netfds f;
+	char why[256] = "", line[32], buf[8] = "";
+	struct addrinfo hints, *res = NULL;
+	struct sockaddr_in me = { .sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK) }, to = me;
+	struct pollfd p;
+	socklen_t l = sizeof me;
+	int s, c;
+
+	if (!net_setup(&f)) {
+		rep(out, false, "the sockets of the test could not be made (%s)", strerror(errno));
+		_exit(0);
+	}
+	rep(out, connect_abstract(f.abs_name) == 0, "before: the abstract listener is reachable (the test would prove nothing otherwise)");
+	rep(out, own_network(why, sizeof why) == 0, "own_network(): ok («%s»)", why);
+	snprintf(line, sizeof line, "%u\n", (unsigned)f.port_tcp);
+	if (write(ready, line, strlen(line)) < 0)
+		_exit(71);
+	{
+		int e = connect_abstract(f.abs_name);
+
+		rep(out, e != 0, "after: a connect() to the ABSTRACT socket is refused (errno %d: %s)", e, e ? strerror(e) : "it connected!");
+	}
+	net_common_checks(out, &f, "after");
+	/* the TCP listener, inherited: the parent connects from outside the namespace and the child accepts */
+	p = (struct pollfd){ .fd = f.tcp_l, .events = POLLIN };
+	c = poll(&p, 1, 5000) == 1 ? accept(f.tcp_l, NULL, NULL) : -1;
+	rep(out, c >= 0 && read(c, buf, sizeof buf) >= 2 && memcmp(buf, "hi", 2) == 0,
+	    "after: the inherited TCP listener still accepts a connection made from outside");
+	/* a NEW socket cannot reach the host's loopback */
+	s = socket(AF_INET, SOCK_STREAM, 0);
+	to.sin_port = htons(f.port_tcp);
+	rep(out, s >= 0 && connect(s, (struct sockaddr *)&to, sizeof to) != 0,
+	    "after: a new socket cannot connect to the host's 127.0.0.1 listener (errno %d)", errno);
+	/* the private loopback is up: a UDP socket talks to itself */
+	{
+		int u = socket(AF_INET, SOCK_DGRAM, 0);
+
+		me.sin_port = 0;
+		rep(out, u >= 0 && bind(u, (struct sockaddr *)&me, sizeof me) == 0 && getsockname(u, (struct sockaddr *)&me, &l) == 0 &&
+		        sendto(u, "lo", 2, 0, (struct sockaddr *)&me, sizeof me) == 2 && (p = (struct pollfd){ .fd = u, .events = POLLIN }, poll(&p, 1, 1000) == 1),
+		    "after: the private loopback is up (a UDP socket reaches itself)");
+	}
+	memset(&hints, 0, sizeof hints);
+	hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+	hints.ai_socktype = SOCK_DGRAM;
+	rep(out, getaddrinfo("127.0.0.1", "7447", &hints, &res) == 0, "after: getaddrinfo() of a numeric address answers");
+	if (res)
+		freeaddrinfo(res);
+	res = NULL;
+	hints.ai_flags = 0;
+	rep(out, getaddrinfo("localhost", "7447", &hints, &res) == 0, "after: getaddrinfo(\"localhost\") answers (NSS, /etc/hosts)");
+	if (res)
+		freeaddrinfo(res);
+	_exit(0);
+}
+
+/* Landlock's scope, in a fork (any user). */
+static void landlock_child(int out)
+{
+	struct netfds f;
+	bool scoped;
+
+	if (!net_setup(&f)) {
+		rep(out, false, "the sockets of the test could not be made (%s)", strerror(errno));
+		_exit(0);
+	}
+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) {
+		rep(out, false, "PR_SET_NO_NEW_PRIVS failed");
+		_exit(0);
+	}
+	notes[0] = '\0';
+	scope_abstract_sockets();
+	scoped = strstr(notes, "scoped") != NULL;
+	if (scoped) {
+		int e = connect_abstract(f.abs_name);
+
+		rep(out, e == EPERM, "landlock: a connect() to an abstract socket made outside is EPERM (errno %d)", e);
+		net_common_checks(out, &f, "landlock");
+	} else {
+		rep(out, true, "landlock: (skipped) %s", notes);
+	}
+	_exit(0);
+}
+
+static void drain_report(int in)
+{
+	FILE *f = fdopen(in, "r");
+	char line[420];
+
+	while (f && fgets(line, sizeof line, f)) {
+		line[strcspn(line, "\n")] = '\0';
+		CHECK(line[0] == '1', "%s", line + 2);
+	}
+	if (f)
+		fclose(f);
+}
+
+static bool can_new_net(void)
+{
+	pid_t p = fork();
+	int st;
+
+	if (p == 0)
+		_exit(unshare(CLONE_NEWNET) == 0 ? 0 : 1);
+	return p > 0 && waitpid(p, &st, 0) == p && WIFEXITED(st) && WEXITSTATUS(st) == 0;
+}
+
+static void case_network(void)
+{
+	int res[2], rdy[2], st;
+	pid_t p;
+	char port[16] = "";
+
+	if (!can_new_net()) {
+		printf("  (the private network needs CAP_SYS_ADMIN: root, or `unshare -r`; skipped)\n");
+		return;
+	}
+	if (pipe(res) != 0 || pipe(rdy) != 0)
+		return;
+	p = fork();
+	if (p == 0) {
+		close(res[0]);
+		close(rdy[0]);
+		net_child(res[1], rdy[1]);
+	}
+	close(res[1]);
+	close(rdy[1]);
+	if (read(rdy[0], port, sizeof port - 1) > 0) {
+		struct sockaddr_in a = { .sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK) };
+		int s = socket(AF_INET, SOCK_STREAM, 0);
+
+		a.sin_port = htons((uint16_t)atoi(port));
+		if (s >= 0 && connect(s, (struct sockaddr *)&a, sizeof a) == 0)
+			(void)write(s, "hi", 2);
+		/* the descriptor stays open until the child has read: it closes with this process's turn below */
+		drain_report(res[0]);
+		if (s >= 0)
+			close(s);
+	} else {
+		drain_report(res[0]);
+	}
+	close(rdy[0]);
+	(void)waitpid(p, &st, 0);
+}
+
+static void case_landlock(void)
+{
+	int res[2], st;
+	pid_t p;
+
+	if (pipe(res) != 0)
+		return;
+	p = fork();
+	if (p == 0) {
+		close(res[0]);
+		landlock_child(res[1]);
+	}
+	close(res[1]);
+	drain_report(res[0]);
+	(void)waitpid(p, &st, 0);
+}
+
 static int case_root(const struct passwd *nb)
 {
 	char base[] = "/var/tmp/remotix-walls-test.XXXXXX";
@@ -396,6 +705,8 @@ int main(void)
 	printf("02-walls-test (uid %ld)\n", (long)geteuid());
 	case_context();
 	case_unprivileged(nb);
+	case_landlock();
+	case_network();
 	if (geteuid() == 0) {
 		if (!nb) {
 			printf("  BLIND: no user nobody to wall in\n");
