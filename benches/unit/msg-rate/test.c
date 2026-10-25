@@ -251,7 +251,7 @@ int main(int argc, char **argv)
 			p = body_of(src, "static bool drain_at(rcp_session *s, uint64_t now, size_t *off)\n{", &n);
 			CHECK(p != NULL, "9: drain_at found");
 			if (p) {
-				CHECK(memmem(p, n, "s->state == S_ACTIVE && !s->replaying && !msg_admit(s, mc, now)", strlen("s->state == S_ACTIVE && !s->replaying && !msg_admit(s, mc, now)")) != NULL,
+				CHECK(memmem(p, n, "s->state == S_ACTIVE && !s->replaying", strlen("s->state == S_ACTIVE && !s->replaying")) != NULL,
 				      "9: drain gates the control requests, only in S_ACTIVE");
 				CHECK(memmem(p, n, "goto message_done", strlen("goto message_done")) != NULL, "9: an over-rate message is consumed without running its handler");
 			}

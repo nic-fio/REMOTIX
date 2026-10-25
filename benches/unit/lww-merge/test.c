@@ -211,6 +211,20 @@ int main(void)
 	CHECK(!s->needs_key && !s->lww[0].has && !s->lww[1].has && !s->lww[2].has, "6: REQUEST_KEY over the rate is dropped and nothing is kept");
 	rcp_free(s);
 
+	/* 7: a message ADMITTED after a burst supersedes the kept one (the stale one must not come back over it) */
+	s = fresh();
+	empty(s, MC_LAYOUT, t);
+	send_layout(s, "us", t);
+	send_layout(s, "de", t);
+	CHECK(s->lww[1].has && n_layouts == 0, "7: (setup) a burst over the rate: \"de\" is kept, nothing applied");
+	send_layout(s, "fr", t + 1000); /* a second later the bucket has tokens: this one is ADMITTED */
+	CHECK(n_layouts == 1 && strcmp(layouts[0], "fr") == 0, "7: the new message, admitted, is applied at once");
+	CHECK(!s->lww[1].has, "7: and the kept stale one is forgotten");
+	tick(s, t + 2000);
+	tick(s, t + 4000);
+	CHECK(n_layouts == 1 && strcmp(s->layout, "fr") == 0, "7: after rcp_time the layout is still \"fr\": \"de\" never came back");
+	rcp_free(s);
+
 	printf("%d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;
 }

@@ -9010,18 +9010,23 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 		{
 			enum msg_class mc = control_class(kind);
 
-			if (mc != MC_COUNT && s->state == S_ACTIVE && !s->replaying && !msg_admit(s, mc, now)) {
+			if (mc != MC_COUNT && s->state == S_ACTIVE && !s->replaying) {
 				int li = lww_index(kind);
 
-				/* ⭐ a "last one wins" message is KEPT (the older one of its kind is replaced) and applied when the bucket has a token */
-				if (li >= 0 && lung <= LWW_MAX) {
-					s->lww[li].has = true;
-					s->lww[li].kind = kind;
-					s->lww[li].lung = lung;
-					memcpy(s->lww[li].body, s->acc + *off + 6, lung);
+				if (!msg_admit(s, mc, now)) {
+					/* ⭐ a "last one wins" message is KEPT (the older one of its kind is replaced) and applied when the bucket has a token */
+					if (li >= 0 && lung <= LWW_MAX) {
+						s->lww[li].has = true;
+						s->lww[li].kind = kind;
+						s->lww[li].lung = lung;
+						memcpy(s->lww[li].body, s->acc + *off + 6, lung);
+					}
+					l.i = lung;
+					goto message_done;
 				}
-				l.i = lung;
-				goto message_done;
+				/* ⭐ ADMITTED: this message is NEWER than any kept one of its kind, which must not be applied afterwards over it (a stale layout coming back) */
+				if (li >= 0)
+					s->lww[li].has = false;
 			}
 		}
 		switch (kind) {
