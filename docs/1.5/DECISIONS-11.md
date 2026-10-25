@@ -657,13 +657,15 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
   that keeps up the pace never acts and costs nothing; on one that does not, it takes the backlog away (age ~1.9 s →
   ~0, photos ×2.3, no freeze) without the server dropping a frame. Evidence `/media/REMOTIX/tmp/fixer-2134b602/b113`
   (RX 6800) and `/media/REMOTIX/tmp/fixer-2134b602/b114-intel` (Intel): `runs.txt`, `table.txt`, `<v>-<rep>/v1/`.
-- ✅ **Applied 16 Oct 2026 — the coordinator, under the user's rule of 15 Oct** («if the measurement shows it helps,
-  it becomes the default with the §9 sentence»): the server declares `video.pace` **by default**; the switch now
-  names its opposite, `--no-decoder-pace` (the old `--decoder-pace` is gone — with the default on it would mean
-  nothing, the rule of the phase 9 cures in `main.c`); `RCP.md` §9 has the sentence (and §12 its exception, §13 is
-  marked adopted); the benches' switch is `REMOTIX_DECODER_PACE=0` (`11-start.sh server` checks the server says
-  «DECODER PACE ON» or «decoder pace OFF», `11-serves.py` reads it from the server's log). ⚠ Still in `RCP.md` §13
-  and not moved into §3, §4.3, §7.1 (items 1, 2, 4 of §13.7).
+- ⚠ **In 1.5 (`finale`): OFF by default, enabled with `--decoder-pace`; the 16 Oct default change was not ported; decision D3 pending.**
+  `src/main.c:1391` has `decoder_pace = false` and there is no `--no-decoder-pace`. What follows is the text of the attempt that was discarded:
+  ~~✅ **Applied 16 Oct 2026 — the coordinator, under the user's rule of 15 Oct** («if the measurement shows it helps,
+    it becomes the default with the §9 sentence»): the server declares `video.pace` **by default**; the switch now
+    names its opposite, `--no-decoder-pace` (the old `--decoder-pace` is gone — with the default on it would mean
+    nothing, the rule of the phase 9 cures in `main.c`); `RCP.md` §9 has the sentence (and §12 its exception, §13 is
+    marked adopted); the benches' switch is `REMOTIX_DECODER_PACE=0` (`11-start.sh server` checks the server says
+    «DECODER PACE ON» or «decoder pace OFF», `11-serves.py` reads it from the server's log). ⚠ Still in `RCP.md` §13
+    and not moved into §3, §4.3, §7.1 (items 1, 2, 4 of §13.7).~~
 
 ### 11.33 🔸 Product changes of 15 Oct 2026 morning, not yet verified on the boxes (15 Oct 2026)
 

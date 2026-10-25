@@ -186,4 +186,5 @@ What an administrator will notice, most likely first. Everything here is in the 
 - **Limits.** 3K at most (not 4K); 8 users is the tested target, the configurable ceiling is 10.
 - **Options.** New: `--max-connections`, `--max-pending`, `--max-pending-per-address`, `--max-pending-per-48`, `--render-node`, `--decoder-pace`, and the split options (`--split`, `--network-user`, `--network-run-dir`, `--network-state-dir`). None of the 1.0 options was removed.
 - **Installer and packages.** The plan states the port before the question; the codes `RX-H264-003`, `RX-H264-004` and `RX-FW-004` are retired and no longer raised (`RX-H264-002` and `RX-FW-002` instead); zlib is a new dependency (the page is compressed).
-- **Unchanged by default.** The root/network split, decoder `PACE` and the Firefox worker are OFF: no new system user, no moved files, no new unit.
+- **Encoder padding.** `REMOTIX_VPP_PADDING=0` in the server's environment switches off the VPP padding strips of the encoder (`src/encoder.c:3206`; for an A/B on a box); by default they are on, and if the driver refuses them once the frame is redone without them.
+- **Unchanged by default.** The root/network split, decoder `PACE` and the Firefox worker are OFF: no new system user, no moved files, no new unit. The SELinux policy of the split (`remotix.te.split`) has not been measured yet.
