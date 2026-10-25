@@ -299,6 +299,9 @@ typedef struct {
 	/* the page_move() call that accepted it: that call's `revents` are an
 	 * older owner's of the same descriptor number, never its own */
 	uint64_t accepted_in;
+	/* the page that owns this slot (set when it is taken) and whether it is counted in `n_parked`: see the counters */
+	page *owner;
+	bool counted_parked;
 } client;
 
 struct page {
@@ -356,6 +359,11 @@ struct page {
 	/* parked for the rate; served 503 after waiting in vain */
 	unsigned delayed_rate, busy_rate, refused_rate;
 	uint64_t park_next;
+	/* ⭐ ACTIVE slots (`client_active`: a descriptor and a phase other than F_DONE) and, among them, the PARKED ones
+	 *    (F_RATE).  Kept at the three places where a slot opens (accept), closes (client_close and the failed-SSL path of
+	 *    client_start_tls) and is parked/started; the idle loop reads them to skip the 128-slot scans (each slot is ~8.6 KB:
+	 *    a scan is one cache miss per slot).  Under REMOTIX_BENCH every stable change is compared with a full scan. */
+	size_t n_active, n_parked;
 	/* the buckets the last rate_take() spent a token from, and the ones it
 	 * looked at */
 	struct bucket *taken, *taken48, *cand, *cand48;
@@ -437,8 +445,84 @@ static char *replace(const char *text, const char *sign, const char *value)
 
 /* ------------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------------ */
+/* The counters of active and parked slots (see `n_active` in struct page).      */
+
+#ifdef REMOTIX_BENCH
+/* Compares the counters with a scan of the whole table: a count that drifts would make the idle loop skip a client
+ * (it never expires) or scan for nothing.  Called only at STABLE points (not between the memset of a new slot and the
+ * choice of its phase) and only on events, never per loop round, so a bench build does not pay the scans it removed. */
+static void counts_check(const page *p, const char *where)
+{
+	size_t a = 0, k = 0;
+
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		const client *c = &p->clients[i];
+		if (c->phase != F_DONE && c->fd >= 0) {
+			a++;
+			if (c->phase == F_RATE)
+				k++;
+		}
+	}
+	if (a != p->n_active || k != p->n_parked) {
+		registro_dice(LOG_PAGE, "⛔ page slot counters wrong at %s: n_active %zu (scan %zu), n_parked %zu (scan %zu)",
+		              where, p->n_active, a, p->n_parked, k);
+		abort();
+	}
+}
+#define COUNTS_CHECK(p, where) counts_check((p), (where))
+#else
+#define COUNTS_CHECK(p, where) ((void)0)
+#endif
+
+/* A slot has just been taken (its descriptor stored). */
+static void count_open(page *p, client *c)
+{
+	c->owner = p;
+	c->counted_parked = false;
+	p->n_active++;
+}
+
+/* A slot that is active is about to close: BEFORE `fd`/`phase` change.  A slot that is not active is left alone. */
+static void count_close(client *c)
+{
+	page *p = c->owner;
+
+	if (!p || c->phase == F_DONE || c->fd < 0)
+		return;
+	if (p->n_active)
+		p->n_active--;
+	if (c->counted_parked) {
+		if (p->n_parked)
+			p->n_parked--;
+		c->counted_parked = false;
+	}
+}
+
+/* The slot has just been parked (phase F_RATE chosen). */
+static void count_park(client *c)
+{
+	if (c->owner && !c->counted_parked) {
+		c->owner->n_parked++;
+		c->counted_parked = true;
+	}
+}
+
+/* A parked slot leaves F_RATE (its TLS begins). */
+static void count_unpark(client *c)
+{
+	if (c->owner && c->counted_parked) {
+		if (c->owner->n_parked)
+			c->owner->n_parked--;
+		c->counted_parked = false;
+	}
+}
+
 static void client_close(client *c)
 {
+	page *owner = c->owner;
+
+	count_close(c);
 	if (c->ssl) {
 		SSL_free(c->ssl);
 		c->ssl = NULL;
@@ -453,6 +537,8 @@ static void client_close(client *c)
 	c->shared = NULL;
 	c->nhead = c->nresponse = c->oresponse = c->nrequest = c->ntail = 0;
 	c->phase = F_DONE;
+	if (owner)
+		COUNTS_CHECK(owner, "client_close");
 }
 
 /* ⛔ For an EXPIRED or EVICTED client only: a reset, not a FIN — the kernel
@@ -1480,6 +1566,8 @@ size_t page_descriptors(page *p, struct pollfd *dove, size_t cap)
 	dove[n].events = POLLIN;
 	dove[n].revents = 0;
 	n++;
+	if (p->n_active == 0)
+		return n; /* no client: do not walk the 128 slots */
 	for (size_t i = 0; i < MAX_CLIENTS && n < cap; i++) {
 		if (p->clients[i].phase == F_DONE || p->clients[i].fd < 0)
 			continue;
@@ -1870,11 +1958,14 @@ static void rate_refund(page *p)
  * False if there is no SSL object (then `c` is closed). */
 static bool client_start_tls(page *p, client *c)
 {
+	count_unpark(c); /* a parked slot leaves F_RATE here (a fresh one was never counted as parked) */
 	c->ssl = SSL_new(p->ctx);
 	if (!c->ssl) {
+		count_close(c);
 		close(c->fd);
 		c->fd = -1;
 		c->phase = F_DONE;
+		COUNTS_CHECK(p, "client_start_tls: no SSL object");
 		return false;
 	}
 	SSL_set_fd(c->ssl, c->fd);
@@ -1886,6 +1977,7 @@ static bool client_start_tls(page *p, client *c)
 	SSL_set_mode(c->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
 	SSL_set_accept_state(c->ssl);
 	c->phase = F_HANDSHAKE;
+	COUNTS_CHECK(p, "client_start_tls");
 	move_client(p, c, 0);
 	return true;
 }
@@ -2069,6 +2161,7 @@ static int accept_page(page *p, int budget)
 		}
 		memset(c, 0, sizeof *c);
 		c->fd = fd;
+		count_open(p, c);
 		c->born = now;
 		c->has48 = has48;
 		memcpy(c->p48, p48, sizeof c->p48);
@@ -2088,6 +2181,8 @@ static int accept_page(page *p, int budget)
 			c->phase = F_RATE;
 			c->rate_until = now + PAGE_RATE_WAIT_MS;
 			c->park_seq = ++p->park_next;
+			count_park(c);
+			COUNTS_CHECK(p, "accept: parked");
 			p->delayed_rate++;
 			p->delayed_rate_total++;
 			snprintf(p->refused_last, sizeof p->refused_last, "%s", rate_who);
@@ -2101,8 +2196,9 @@ static int accept_page(page *p, int budget)
 
 void page_expired(page *p, uint64_t now)
 {
-	parked_move(p, now);
-	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+	if (p->n_parked)
+		parked_move(p, now);
+	for (size_t i = 0; p->n_active && i < MAX_CLIENTS; i++) {
 		client *c = &p->clients[i];
 		if (client_active(c) && c->phase == F_WRITE)
 			sample(c, now);
@@ -2132,7 +2228,7 @@ int page_wait_ms(const page *p, uint64_t now)
 {
 	uint64_t before = UINT64_MAX;
 
-	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+	for (size_t i = 0; p->n_active && i < MAX_CLIENTS; i++) {
 		const client *c = &p->clients[i];
 		if (client_active(c) && client_deadline(c) < before)
 			before = client_deadline(c);
