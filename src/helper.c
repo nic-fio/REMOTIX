@@ -256,6 +256,8 @@ static void grandchild(int fd, struct request *r)
 	r->tag[sizeof r->tag - 1] = 0;
 	if (r->tag[0])
 		(void)setenv("REMOTIX_PAM_LOG_TAG", r->tag, 1);
+	else
+		(void)unsetenv("REMOTIX_PAM_LOG_TAG"); /* no tag: a value inherited from the server's environment must not be used */
 	judged = rcp_authenticate_judged(r->user, r->password, r->rhost);
 
 	out.ticket = r->ticket;
