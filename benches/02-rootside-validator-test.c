@@ -61,7 +61,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 143
+#define EXPECTED_CHECKS 145
 
 static void require(int cond, const char *desc)
 {
@@ -1162,16 +1162,41 @@ int main(void)
 		rootside_login_done(&lb, "4000", "198.51.100.9", 2010, tk, RXR_LOGIN_ACCEPTED, NULL);
 		REFUSE("4000", "198.51.100.9", 2020);
 		require(!ev.pair_ban, "four refused, a yes, one refused: the count restarted (no pause)");
-		/* the address: 12 refused in 5 min from different users pauses the address for everyone */
+		/* the address (1.5: ROOTSIDE_LOGIN_HOST_LIMIT, 20; it was 12): that many refused in 5 min from different users pauses the address for everyone */
 		rootside_bounds_init(&lb, 1000);
-		for (int i = 0; i < 12; i++) {
+		for (int i = 0; i < ROOTSIDE_LOGIN_HOST_LIMIT - 1; i++) {
 			char k[16];
 
 			snprintf(k, sizeof k, "%d", 5000 + i);
 			REFUSE(k, "203.0.113.7", 3000 + i);
 		}
+		require(!ev.host_ban && ADMIT("9999", "203.0.113.7", 3500) == RXR_LOGIN_OK,
+		        "one refusal short of the limit: no pause, and a new attempt is admitted");
+		rootside_login_done(&lb, "9999", "203.0.113.7", 3500, tk, RXR_LOGIN_UNCHECKED, NULL);
+		/* 1.5: the ATTACHMENTS IN FLIGHT do not count at the address level: with LIMIT-1 failures, many users can be in flight at once */
+		{
+			unsigned tf[8];
+			int ok_in_flight = 0;
+
+			for (int i = 0; i < 8; i++) {
+				char k[16];
+
+				snprintf(k, sizeof k, "%d", 7000 + i);
+				tf[i] = 0;
+				if (rootside_login_admit(&lb, k, "203.0.113.7", 3600, NULL, &tf[i]) == RXR_LOGIN_OK)
+					ok_in_flight++;
+			}
+			require(ok_in_flight == 8, "LIMIT-1 failures and eight users in flight at once from the address: all admitted (the address counts only the failures)");
+			for (int i = 0; i < 8; i++) {
+				char k[16];
+
+				snprintf(k, sizeof k, "%d", 7000 + i);
+				rootside_login_done(&lb, k, "203.0.113.7", 3601, tf[i], RXR_LOGIN_UNCHECKED, NULL);
+			}
+		}
+		REFUSE("5999", "203.0.113.7", 3700);
 		require(ev.host_ban && ev.host_level == 1 && !ev.pair_ban && !ev.user_ban,
-		        "12 refused from one address (12 different users): the address is paused, not the users");
+		        "the LIMIT-th refusal from one address (different users): the address is paused, not the users");
 		require(ADMIT("9999", "203.0.113.7", 4000) == RXR_LOGIN_HOST_PAUSED
 		        && ADMIT("9999", "203.0.113.8", 4000) == RXR_LOGIN_OK,
 		        "… everybody from that address waits, the others do not");

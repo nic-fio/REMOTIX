@@ -447,7 +447,9 @@ int rootside_login_admit(struct rootside_bounds *b, const char *ukey, const char
 		return RXR_LOGIN_PAIR_BUSY;
 	if (fail_inside(u, now_ms) + u->pending >= ROOTSIDE_LOGIN_USER_LIMIT)
 		return RXR_LOGIN_USER_BUSY;
-	if (h && fail_inside(h, now_ms) + h->pending >= ROOTSIDE_LOGIN_HOST_LIMIT)
+	/* ⭐ 1.5: the ADDRESS level counts only the failures, not the AUTH in flight (the pair and the uid keep counting theirs): eight people behind one
+	 *    NAT who log in together must not be refused by their own number.  The in-flight AUTH are bounded anyway (RXR_AUTH_IN_FLIGHT_MAX, the bucket). */
+	if (h && fail_inside(h, now_ms) >= ROOTSIDE_LOGIN_HOST_LIMIT)
 		return RXR_LOGIN_HOST_BUSY;
 	u->pending++;
 	u->touched_ms = now_ms;

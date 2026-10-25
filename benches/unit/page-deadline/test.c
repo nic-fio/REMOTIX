@@ -8,7 +8,7 @@
  *   later `now` to `page_expired()`, not by waiting.  The sources are
  *   127.0.0.1-9 (all of 127/8 is local).
  *
- *   1. four idle connections from one address are taken, the fifth is refused;
+ *   1. PAGE_PER_ADDRESS idle connections from one address are taken, the next is refused (1.5: 32; it was four);
  *   2. 128 idle connections from 32 addresses fill the table;
  *   3. a newcomer from a fresh address evicts ONE idle client (fair share:
  *      from a group holding 4), and the victim sees a RESET;
@@ -603,19 +603,25 @@ int main(void)
 	int nf = 0;
 	char src[32];
 
-	printf("1. four idle from one address are taken, the fifth is refused\n");
-	for (int i = 0; i < 5; i++) {
+	printf("1. PAGE_PER_ADDRESS idle from one address are taken, the next one is refused\n");
+	for (int i = 0; i < PAGE_PER_ADDRESS + 1; i++) {
 		fds[nf++] = connect_from(port, "127.0.0.1", 0);
 		pump(p, 2);
 	}
-	require(active(p) == 4, "4 clients active after 5 connections from 127.0.0.1");
-	require(closed_by_server(fds[4]), "the 5th socket was closed by the server");
+	require(active(p) == PAGE_PER_ADDRESS, "PAGE_PER_ADDRESS clients active after one more connection from 127.0.0.1 (1.5: it was 4; now 32, for an office of eight)");
+	require(closed_by_server(fds[PAGE_PER_ADDRESS]), "the socket past the cap was closed by the server");
 	/* ⚠ The first refusal writes the summary line at once and zeroes the
 	 *   counters: «written» is what is checked. */
 	require(p->refused_ever && p->refused_address == 0,
 	        "the refusal was reported in the summary line");
-	close(fds[4]);
+	close(fds[PAGE_PER_ADDRESS]);
 	nf--;
+	/* back to the four idle connections the next sections start from (1.5: the cap is 32 now, so the others are closed here) */
+	for (int i = 4; i < PAGE_PER_ADDRESS; i++)
+		close(fds[i]);
+	nf = 4;
+	pump(p, 4);
+	require(active(p) == 4, "four clients active again from 127.0.0.1, the state the next sections start from");
 
 	printf("2. 128 idle from 32 addresses fill the table\n");
 	for (int a = 2; a <= 32; a++)
@@ -642,7 +648,9 @@ int main(void)
 		require(client_of(p, "[127.0.0.100]") == 1, "the newcomer got in");
 
 		printf("4. churn cannot evict the lone client\n");
-		for (int k = 0; k < 200; k++) {
+		/* ⭐ 1.5: the accept bucket per address is 8 a second with a burst of 32 now (it was 4 and 8): the churn is sized to TWICE what the eight crowded addresses can take
+		 *   before their buckets run dry, so that, as before, a part of it is parked or refused by the rate and the rest pushes out each other. */
+		for (int k = 0; k < 8 * 2 * PAGE_ACCEPT_BURST; k++) {
 			snprintf(src, sizeof src, "127.0.0.%d", 1 + k % 8);
 			int f = connect_from(port, src, 0);
 			pump(p, 1);
@@ -650,7 +658,7 @@ int main(void)
 		}
 		pump(p, 3);
 		require(client_of(p, "[127.0.0.100]") == 1,
-		        "after 200 connects from 8 crowded addresses the lone client is still there");
+		        "after 8 × 2 × PAGE_ACCEPT_BURST connects from 8 crowded addresses the lone client is still there");
 		/* ⚠ Tolerant on purpose: a churner that got in and then closed
 		 *   leaves its slot free until the next accept, so the table holds
 		 *   127 or 128 depending on the random victims — the lone client is
@@ -1578,43 +1586,61 @@ int main(void)
 			const char *who = NULL;
 			int got = 0, later = 0, newk = 0, own = 0, n48 = 0;
 			uint64_t t0 = 1000000;
-			for (int i = 0; i < 20; i++)
+			/* ⭐ 1.5 (margins for eight people behind one NAT): burst 32, 8 a second — the loops run to TWICE the burst, whatever its value */
+			for (int i = 0; i < 2 * PAGE_ACCEPT_BURST; i++)
 				got += rate_take(&rp, "[10.0.0.1]", NULL, t0, &who);
-			for (int i = 0; i < 20; i++)
+			for (int i = 0; i < 2 * PAGE_ACCEPT_BURST; i++)
 				later += rate_take(&rp, "[10.0.0.1]", NULL, t0 + 1000, &who);
 			require(got == PAGE_ACCEPT_BURST && later == PAGE_ACCEPT_RATE,
-			        "a bucket: the burst (8), then 4 a second");
+			        "a bucket: the burst (PAGE_ACCEPT_BURST), then PAGE_ACCEPT_RATE a second");
 			memset(&rp, 0, sizeof rp);
 			for (int i = 0; i < PAGE_RATE_KEYS; i++) {
 				char k[32];
 				snprintf(k, sizeof k, "[10.1.0.%d]", i);
 				rate_take(&rp, k, NULL, t0, &who); /* each bucket one short of full */
 			}
-			for (int i = 0; i < 40; i++) {
+			for (int i = 0; i < 2 * PAGE_ACCEPT_BURST; i++) {
 				char k[32];
-				snprintf(k, sizeof k, "[10.2.0.%d]", i);
+				snprintf(k, sizeof k, "[10.2.%d.%d]", i / 200, i % 200);
 				newk += rate_take(&rp, k, NULL, t0 + 100, &who);
 				newk += rate_take(&rp, k, NULL, t0 + 100, &who);
 			}
-			printf("       (40 rotating addresses × 2 with every bucket in use: %d admitted)\n", newk);
+			printf("       (%d rotating addresses × 2 with every bucket in use: %d admitted)\n", 2 * PAGE_ACCEPT_BURST, newk);
 			require(newk == PAGE_ACCEPT_BURST && strcmp(who, "(the shared overflow bucket)") == 0,
-			        "rotating new addresses share ONE overflow bucket: 8 admitted, not 80 (on 95ed70ea: a fresh burst each)");
-			for (int i = 0; i < 10; i++)
+			        "rotating new addresses share ONE overflow bucket: PAGE_ACCEPT_BURST admitted, not twice that per address (on 95ed70ea: a fresh burst each)");
+			for (int i = 0; i < 2 * PAGE_ACCEPT_BURST; i++)
 				own += rate_take(&rp, "[10.3.0.1]", NULL, t0 + 5000, &who);
 			require(own == PAGE_ACCEPT_BURST,
 			        "once a bucket is full again, a new address gets a bucket of its own");
 			memset(&rp, 0, sizeof rp);
-			for (int i = 0; i < 20; i++) {
-				char k[32];
-				snprintf(k, sizeof k, "[2001:db8:1:%x::]", i);
-				n48 += rate_take(&rp, k, "2001:0db8:0001::/48", t0, &who);
-			}
+			/* ⭐ 1.5: the /48 burst is 64, more than the busy buckets one IPv6 /32 may hold (PAGE_KEYS_PER_32, 32): more /64 keys than that would land on the
+			 *   shared overflow bucket and the refusal would be the overflow's, not the /48's.  So the requests go round-robin over PAGE_KEYS_PER_32 different
+			 *   /64 of the /48 (each bucket gets about two), twice the /48 burst in all: the first PAGE_ACCEPT_BURST_48 are admitted, the next is refused BY THE /48. */
 			{
-				struct bucket *b = bucket_of(rp.rate, rp.rate_over, "[2001:db8:1:13::]",
-				                             t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-				require(n48 == PAGE_ACCEPT_BURST_48 && strcmp(who, "2001:0db8:0001::/48") == 0 &&
-				                b->milli == PAGE_ACCEPT_BURST * 1000u,
-				        "a /48 over its rate: refused, named as the /48, and the /64 keeps its token");
+				int per_key[PAGE_KEYS_PER_32] = {0};
+				int last_ok_key = -1;
+
+				for (int i = 0; i < 2 * PAGE_ACCEPT_BURST_48; i++) {
+					char k[32];
+					int kk = i % PAGE_KEYS_PER_32;
+					snprintf(k, sizeof k, "[2001:db8:1:%x::]", kk);
+					if (rate_take(&rp, k, "2001:0db8:0001::/48", t0, &who)) {
+						n48++;
+						per_key[kk]++;
+						last_ok_key = kk;
+					}
+				}
+				{
+					char k[32];
+					struct bucket *b;
+
+					snprintf(k, sizeof k, "[2001:db8:1:%x::]", (2 * PAGE_ACCEPT_BURST_48 - 1) % PAGE_KEYS_PER_32);
+					b = bucket_of(rp.rate, rp.rate_over, k, t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+					(void)last_ok_key;
+					require(n48 == PAGE_ACCEPT_BURST_48 && strcmp(who, "2001:0db8:0001::/48") == 0 &&
+					                b->milli == (unsigned)(PAGE_ACCEPT_BURST - per_key[(2 * PAGE_ACCEPT_BURST_48 - 1) % PAGE_KEYS_PER_32]) * 1000u,
+					        "a /48 over its rate: refused, named as the /48, and the /64 keeps its token");
+				}
 			}
 		}
 		/* … and over the rate a connection is PARKED (no TLS), then started
