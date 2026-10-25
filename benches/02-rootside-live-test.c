@@ -261,8 +261,8 @@ static int net_side(void)
 			no += v_out[20 + i] == RXR_NO;
 		}
 		char d[160];
-		snprintf(d, sizeof d, "25 AUTH at once for anna: %d NO, %d not checked (burst 8, and 5 refused-or-in-flight per user)", no, nc);
-		check(no <= 16 && nc >= 9 && no + nc == 25, d);
+		snprintf(d, sizeof d, "25 AUTH at once for anna: %d NO, %d not checked (burst 8; 5 refused-or-in-flight per user and address)", no, nc);
+		check(no <= ROOTSIDE_LOGIN_PAIR_LIMIT && no + nc == 25, d);
 	}
 	fprintf(out, "%s\n", fails ? "RED" : "GREEN");
 	fprintf(out, "MALFORMED_SENT\n");

@@ -350,47 +350,65 @@ static struct rootside_fail *fail_get(struct rootside_fail *t, int n, const char
 }
 
 int rootside_login_admit(struct rootside_bounds *b, const char *ukey, const char *rhost,
-                         uint64_t now_ms, uint64_t *left_ms)
+                         uint64_t now_ms, uint64_t *left_ms, unsigned *taken)
 {
-	struct rootside_fail *u, *h = NULL;
+	struct rootside_fail *u, *p = NULL, *h = NULL;
+	char pkey[ROOTSIDE_LOGIN_KEY_MAX];
 	bool with_host = rhost && rhost[0];
 
+	*taken = 0;
 	if (left_ms)
 		*left_ms = 0;
+	/* the uid table is the ground floor: no place there = refused.  The other two are
+	 * extra levels: no place there = that level is skipped and the uid level decides */
 	u = fail_get(b->users, ROOTSIDE_LOGIN_USERS, ukey, now_ms, true);
+	if (!u)
+		return RXR_LOGIN_FULL;
+	snprintf(pkey, sizeof pkey, "%s|%s", ukey, with_host ? rhost : "");
+	p = fail_get(b->pairs, ROOTSIDE_LOGIN_PAIRS, pkey, now_ms, true);
 	if (with_host)
 		h = fail_get(b->hosts, ROOTSIDE_LOGIN_HOSTS, rhost, now_ms, true);
-	if (!u || (with_host && !h))
-		return RXR_LOGIN_FULL;
 	fail_forget(u, now_ms);
+	if (p)
+		fail_forget(p, now_ms);
 	if (h)
 		fail_forget(h, now_ms);
-	if (u->until_ms > now_ms) {
-		if (left_ms)
-			*left_ms = u->until_ms - now_ms;
-		return RXR_LOGIN_USER_PAUSED;
+#define PAUSED(e, code) \
+	if ((e) && (e)->until_ms > now_ms) { \
+		if (left_ms) \
+			*left_ms = (e)->until_ms - now_ms; \
+		return code; \
 	}
-	if (h && h->until_ms > now_ms) {
-		if (left_ms)
-			*left_ms = h->until_ms - now_ms;
-		return RXR_LOGIN_HOST_PAUSED;
-	}
+	PAUSED(p, RXR_LOGIN_PAIR_PAUSED)
+	PAUSED(u, RXR_LOGIN_USER_PAUSED)
+	PAUSED(h, RXR_LOGIN_HOST_PAUSED)
+#undef PAUSED
+	if (p && fail_inside(p, now_ms) + p->pending >= ROOTSIDE_LOGIN_PAIR_LIMIT)
+		return RXR_LOGIN_PAIR_BUSY;
 	if (fail_inside(u, now_ms) + u->pending >= ROOTSIDE_LOGIN_USER_LIMIT)
 		return RXR_LOGIN_USER_BUSY;
 	if (h && fail_inside(h, now_ms) + h->pending >= ROOTSIDE_LOGIN_HOST_LIMIT)
 		return RXR_LOGIN_HOST_BUSY;
 	u->pending++;
 	u->touched_ms = now_ms;
+	*taken = RXR_LOGIN_L_USER;
+	if (p) {
+		p->pending++;
+		p->touched_ms = now_ms;
+		*taken |= RXR_LOGIN_L_PAIR;
+	}
 	if (h) {
 		h->pending++;
 		h->touched_ms = now_ms;
+		*taken |= RXR_LOGIN_L_HOST;
 	}
 	return RXR_LOGIN_OK;
 }
 
-/* one failure on `e`, whose limit is `limit`; true when it started a pause */
-static bool fail_record(struct rootside_fail *e, int limit, uint64_t now_ms, int *level,
-                        uint64_t *ms)
+/* one failure on `e`, whose limit is `limit`; true when it started a pause.  `ladder` false:
+ * a fixed pause of `fixed_ms`, no level, no memory of it */
+static bool fail_record(struct rootside_fail *e, int limit, uint64_t now_ms, bool ladder,
+                        uint64_t fixed_ms, int *level, uint64_t *ms)
 {
 	if (e->n < limit) {
 		e->times[e->n++] = now_ms;
@@ -400,43 +418,59 @@ static bool fail_record(struct rootside_fail *e, int limit, uint64_t now_ms, int
 	}
 	if (e->n < limit || now_ms - e->times[0] > ROOTSIDE_LOGIN_WINDOW_MS)
 		return false;
-	if (e->level < 3)
-		e->level++;
-	*level = e->level;
-	*ms = LOGIN_LADDER_MS[e->level - 1];
+	if (ladder) {
+		if (e->level < 3)
+			e->level++;
+		*level = e->level;
+		*ms = LOGIN_LADDER_MS[e->level - 1];
+		e->last_ban_ms = now_ms;
+	} else {
+		*level = 0;
+		*ms = fixed_ms;
+	}
 	e->until_ms = now_ms + *ms;
-	e->last_ban_ms = now_ms;
 	e->n = 0; /* the pause took them */
 	return true;
 }
 
 void rootside_login_done(struct rootside_bounds *b, const char *ukey, const char *rhost,
-                         uint64_t now_ms, int verdict, struct rootside_login_event *ev)
+                         uint64_t now_ms, unsigned taken, int verdict,
+                         struct rootside_login_event *ev)
 {
+	char pkey[ROOTSIDE_LOGIN_KEY_MAX];
+	struct rootside_login_event local;
 	struct rootside_fail *u = fail_get(b->users, ROOTSIDE_LOGIN_USERS, ukey, now_ms, false);
-	struct rootside_fail *h = rhost && rhost[0]
-	                              ? fail_get(b->hosts, ROOTSIDE_LOGIN_HOSTS, rhost, now_ms, false)
-	                              : NULL;
+	struct rootside_fail *p, *h;
+	int dummy;
 
-	if (ev)
-		memset(ev, 0, sizeof *ev);
-	if (u && u->pending > 0)
+	snprintf(pkey, sizeof pkey, "%s|%s", ukey, rhost ? rhost : "");
+	p = fail_get(b->pairs, ROOTSIDE_LOGIN_PAIRS, pkey, now_ms, false);
+	h = rhost && rhost[0] ? fail_get(b->hosts, ROOTSIDE_LOGIN_HOSTS, rhost, now_ms, false) : NULL;
+	if (!ev)
+		ev = &local;
+	memset(ev, 0, sizeof *ev);
+	/* the places are given back where they were taken, and only there */
+	if (u && (taken & RXR_LOGIN_L_USER) && u->pending > 0)
 		u->pending--;
-	if (h && h->pending > 0)
+	if (p && (taken & RXR_LOGIN_L_PAIR) && p->pending > 0)
+		p->pending--;
+	if (h && (taken & RXR_LOGIN_L_HOST) && h->pending > 0)
 		h->pending--;
 	if (verdict == RXR_LOGIN_REFUSED) {
-		struct rootside_login_event local;
-
-		if (!ev)
-			ev = &local;
 		if (u)
-			ev->user_ban = fail_record(u, ROOTSIDE_LOGIN_USER_LIMIT, now_ms, &ev->user_level,
-			                           &ev->user_ms);
+			ev->user_ban = fail_record(u, ROOTSIDE_LOGIN_USER_LIMIT, now_ms, false,
+			                           ROOTSIDE_LOGIN_USER_PAUSE_MS, &dummy, &ev->user_ms);
+		if (p)
+			ev->pair_ban = fail_record(p, ROOTSIDE_LOGIN_PAIR_LIMIT, now_ms, true, 0,
+			                           &ev->pair_level, &ev->pair_ms);
 		if (h)
-			ev->host_ban = fail_record(h, ROOTSIDE_LOGIN_HOST_LIMIT, now_ms, &ev->host_level,
-			                           &ev->host_ms);
-	} else if (verdict == RXR_LOGIN_ACCEPTED && u) {
-		u->n = 0; /* only this user's failures: not the recidivism, not the address's */
+			ev->host_ban = fail_record(h, ROOTSIDE_LOGIN_HOST_LIMIT, now_ms, true, 0,
+			                           &ev->host_level, &ev->host_ms);
+	} else if (verdict == RXR_LOGIN_ACCEPTED) {
+		if (u)
+			u->n = 0; /* only this user's failures: not the recidivism, not the address's */
+		if (p)
+			p->n = 0;
 	}
 }
 
@@ -675,7 +709,8 @@ struct pending_auth {
 	uint64_t ticket;      /* the helper's */
 	uint64_t request;     /* the network side's */
 	uint32_t generation;  /* of the network side that asked */
-	char ukey[ROOTSIDE_LOGIN_KEY_MAX]; /* ⭐ 1.6 (R2): the uid, in decimal, and the address, */
+	unsigned taken;                    /* ⭐ 1.6 (R2): the levels it took a place in, */
+	char ukey[ROOTSIDE_LOGIN_KEY_MAX]; /*   the uid, in decimal, and the address, */
 	char rhost[RXR_RHOST_MAX];         /*   to give the attempt back to the counters */
 };
 
@@ -919,16 +954,22 @@ static void on_pam_outcome(void *ctx, uint64_t ticket, int outcome, const char *
 		struct rootside_login_event ev;
 		uint64_t now = log_now_ms();
 
-		rootside_login_done(&R.bounds, pa->ukey, pa->rhost, now,
+		rootside_login_done(&R.bounds, pa->ukey, pa->rhost, now, pa->taken,
 		                    (outcome == 0 || outcome == 4) ? RXR_LOGIN_REFUSED
 		                    : outcome == 1                 ? RXR_LOGIN_ACCEPTED
 		                                                   : RXR_LOGIN_UNCHECKED, &ev);
+		if (ev.pair_ban)
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of «%s» (uid %s) from «%s» refused by PAM in %d "
+			              "min: no AUTH for that user from that address for %llu min (pause %d of 3) "
+			              "— «not checked» meanwhile", ROOTSIDE_LOGIN_PAIR_LIMIT, user, pa->ukey,
+			              pa->rhost, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.pair_ms / 60000), ev.pair_level);
 		if (ev.user_ban)
-			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of «%s» (uid %s) refused by PAM in %d "
-			              "min: no AUTH for it for %llu min (pause %d of 3, then the same "
-			              "or longer) — «not checked» meanwhile", ROOTSIDE_LOGIN_USER_LIMIT,
-			              user, pa->ukey, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
-			              (unsigned long long)(ev.user_ms / 60000), ev.user_level);
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of «%s» (uid %s) refused by PAM in %d min "
+			              "from any addresses: no AUTH for that user from anywhere for %llu min "
+			              "(fixed) — «not checked» meanwhile", ROOTSIDE_LOGIN_USER_LIMIT, user,
+			              pa->ukey, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.user_ms / 60000));
 		if (ev.host_ban)
 			registro_dice(LOG_ROOT, "⛔ R2: %d passwords from «%s» refused by PAM in %d min: no "
 			              "AUTH from it for %llu min (pause %d of 3) — «not checked» meanwhile",
@@ -968,6 +1009,7 @@ static void handle_auth(struct rxr_auth *a)
 	char ukey[ROOTSIDE_LOGIN_KEY_MAX];
 	uint64_t left = 0;
 	int lg = RXR_LOGIN_OK;
+	unsigned taken = 0;
 
 	/* ⛔ The bounds FIRST (review of the split, finding 6): the denied file,
 	 *    the NSS lookup (sssd/LDAP: the network) and a log line are work the
@@ -1009,7 +1051,7 @@ static void handle_auth(struct rxr_auth *a)
 			R.prepam_hidden = 0;
 		}
 	} else if ((snprintf(ukey, sizeof ukey, "%lu", (unsigned long)uid),
-	            lg = rootside_login_admit(&R.bounds, ukey, a->rhost, now, &left)) != RXR_LOGIN_OK) {
+	            lg = rootside_login_admit(&R.bounds, ukey, a->rhost, now, &left, &taken)) != RXR_LOGIN_OK) {
 		/* ⭐ 1.6 (R2): paused (or about to be) by the root side's own count of what PAM
 		 *    refused: not asked, «not checked», not counted by the network side.  ⚠ One
 		 *    line a second, with the count. */
@@ -1023,7 +1065,8 @@ static void handle_auth(struct rxr_auth *a)
 			registro_dice(LOG_ROOT, "⛔ AUTH of «%.64s» from «%.64s» not asked of PAM: %s (%llu s "
 			              "to go; %u in the last second) — «not checked», NOT counted towards "
 			              "the network side's ban", a->user, a->rhost,
-			              lg == RXR_LOGIN_USER_PAUSED  ? "the user is paused"
+			              lg == RXR_LOGIN_PAIR_PAUSED  ? "this user from this address is paused"
+			              : lg == RXR_LOGIN_USER_PAUSED ? "the user is paused (too many refused from anywhere)"
 			              : lg == RXR_LOGIN_HOST_PAUSED ? "the address is paused"
 			              : lg == RXR_LOGIN_FULL        ? "the failures table is full"
 			                                            : "attempts in flight plus refused reach the limit",
@@ -1033,7 +1076,7 @@ static void handle_auth(struct rxr_auth *a)
 		}
 	} else if (!helper_ask_bare(R.pam, a->user, a->password, a->rhost, now, &ticket)) {
 		rootside_auth_done(&R.bounds);
-		rootside_login_done(&R.bounds, ukey, a->rhost, now, RXR_LOGIN_UNCHECKED, NULL);
+		rootside_login_done(&R.bounds, ukey, a->rhost, now, taken, RXR_LOGIN_UNCHECKED, NULL);
 		out = RXR_NOT_CHECKED;
 	} else {
 		struct pending_auth *pa = NULL;
@@ -1047,6 +1090,7 @@ static void handle_auth(struct rxr_auth *a)
 			pa->ticket = ticket;
 			pa->request = a->h.request;
 			pa->generation = R.generation;
+			pa->taken = taken;
 			snprintf(pa->ukey, sizeof pa->ukey, "%s", ukey);
 			snprintf(pa->rhost, sizeof pa->rhost, "%s", a->rhost);
 		} else {
@@ -1057,7 +1101,7 @@ static void handle_auth(struct rxr_auth *a)
 			              (unsigned long long)a->h.request,
 			              sizeof R.pending / sizeof R.pending[0]);
 			rootside_auth_done(&R.bounds);
-			rootside_login_done(&R.bounds, ukey, a->rhost, now, RXR_LOGIN_UNCHECKED, NULL);
+			rootside_login_done(&R.bounds, ukey, a->rhost, now, taken, RXR_LOGIN_UNCHECKED, NULL);
 			out = RXR_NOT_CHECKED;
 		}
 	}

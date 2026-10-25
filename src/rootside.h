@@ -250,27 +250,38 @@ struct rootside_grant {
 };
 /* ⭐ 1.6 (split audit R2) — the BAN of the root side, for a network side that no longer
  * applies its own (`rcp.c`'s 5/12/30 live in the network side).  Counts only what PAM
- * answered REFUSED (outcome 0) or EXPIRED (4): never «not checked», never a yes.
- *   · a user (by uid, so «Anna» and «anna» are one):  5 refused in 5 min → no AUTH for
- *     15 min, then 1 h, then 12 h (as rcp.c's ladder), forgotten after 24 h without one;
- *   · an address (`rhost`):  12 in 5 min, the same ladder.
- * The window is SLIDING (the times of the last N failures are kept).  A request in flight
- * counts as a failure to come, as in rcp.c, so a burst cannot step over the limit.  A
- * successful login clears that user's failures, not the recidivism and not the address's.
- * A user paused here gets «not checked» — the network side does not count it — and PAM
- * is not asked.  The table is small and never fails open: when it is full of entries that
- * cannot be dropped, the AUTH is refused (RXR_LOGIN_FULL). */
-#define ROOTSIDE_LOGIN_USERS 64
+ * answered REFUSED (outcome 0) or EXPIRED (4): never «not checked», never a yes.  Three
+ * levels, the first two as rcp.c's, the third WIDER and SHORTER:
+ *   · (uid, address)   5 refused in 5 min → no AUTH for that user from that address for 15 min,
+ *                      then 1 h, then 12 h; forgotten after 24 h without a pause   (rcp.c LK_USER)
+ *   · address         12 refused in 5 min → the same ladder, for any user          (rcp.c LK_KEY)
+ *   · uid alone       15 refused in 5 min, from any addresses → no AUTH for that user for 15 min,
+ *                      FIXED: it never grows and is never 12 h — a stranger who knows a name must
+ *                      not be able to keep its owner out for good.  What a network side that
+ *                      changes the address at every try still cannot do is pass 15 guesses.
+ * The window is SLIDING.  A request in flight counts as a failure to come.  A successful login
+ * clears that user's failures (both levels), not the recidivism, not the address's.  A paused
+ * request gets «not checked» (the network side does not count it) and PAM is not asked.
+ * ⛔ The tables never fail open: the uid table is the ground floor — when it has no place the
+ * AUTH is refused (RXR_LOGIN_FULL).  When the (uid, address) or the address table has none,
+ * that level is skipped and the uid level decides.
+ * ⚠ These pauses live in the root side's memory: they do NOT survive its restart (rcp.c's ban
+ * is written to a file).  And the global 3 AUTH/s (RXR_AUTH_PER_S) has no margin: eight users
+ * logging in at once fit (burst 8), a ninth waits. */
+#define ROOTSIDE_LOGIN_USERS 1024
+#define ROOTSIDE_LOGIN_PAIRS 512
 #define ROOTSIDE_LOGIN_HOSTS 128
-#define ROOTSIDE_LOGIN_USER_LIMIT 5
+#define ROOTSIDE_LOGIN_PAIR_LIMIT 5
 #define ROOTSIDE_LOGIN_HOST_LIMIT 12
+#define ROOTSIDE_LOGIN_USER_LIMIT 15
+#define ROOTSIDE_LOGIN_USER_PAUSE_MS 900000u
 #define ROOTSIDE_LOGIN_WINDOW_MS 300000u
 #define ROOTSIDE_LOGIN_FORGET_MS 86400000u
 #define ROOTSIDE_LOGIN_KEY_MAX 64
 struct rootside_fail {
 	bool used;
 	char key[ROOTSIDE_LOGIN_KEY_MAX];
-	uint64_t times[ROOTSIDE_LOGIN_HOST_LIMIT]; /* the last failures, oldest first */
+	uint64_t times[ROOTSIDE_LOGIN_USER_LIMIT]; /* the last failures, oldest first */
 	int n;
 	int pending;                  /* AUTH asked to PAM, not answered */
 	uint64_t until_ms;            /* paused until */
@@ -303,6 +314,7 @@ struct rootside_bounds {
 	} exits[ROOTSIDE_EXIT_UIDS];
 	/* ⭐ 1.6 (split audit R2): the failures PAM really gave, per user and per address */
 	struct rootside_fail users[ROOTSIDE_LOGIN_USERS];
+	struct rootside_fail pairs[ROOTSIDE_LOGIN_PAIRS];
 	struct rootside_fail hosts[ROOTSIDE_LOGIN_HOSTS];
 };
 /* ⛔ Review 2, M1: a CLOSE_ORPHAN is a birth without a password, so its rate is
@@ -340,28 +352,35 @@ bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint6
 
 enum rootside_login_result {
 	RXR_LOGIN_OK = 0,
-	RXR_LOGIN_USER_PAUSED,  /* the user is in a pause */
+	RXR_LOGIN_PAIR_PAUSED,  /* this user from this address is in a pause */
+	RXR_LOGIN_USER_PAUSED,  /* the user, from anywhere, is in the short pause */
 	RXR_LOGIN_HOST_PAUSED,  /* the address is in a pause */
-	RXR_LOGIN_USER_BUSY,    /* failures + AUTH in flight reach the limit: not yet a pause */
+	RXR_LOGIN_PAIR_BUSY,    /* failures + AUTH in flight reach the limit: not yet a pause */
+	RXR_LOGIN_USER_BUSY,
 	RXR_LOGIN_HOST_BUSY,
-	RXR_LOGIN_FULL,         /* no entry could be given */
+	RXR_LOGIN_FULL,         /* the uid table has no place */
 };
+/* the levels an admitted attempt took a place in (the bits of `*taken`) */
+#define RXR_LOGIN_L_USER 1u
+#define RXR_LOGIN_L_PAIR 2u
+#define RXR_LOGIN_L_HOST 4u
 /* verdicts for `rootside_login_done()` */
 enum { RXR_LOGIN_REFUSED = 0, RXR_LOGIN_ACCEPTED = 1, RXR_LOGIN_UNCHECKED = 2 };
 struct rootside_login_event {
-	bool user_ban, host_ban;       /* this failure started a pause */
-	int user_level, host_level;    /* the n-th pause of the ladder */
-	uint64_t user_ms, host_ms;     /* … lasting this long */
+	bool user_ban, pair_ban, host_ban;       /* this failure started a pause */
+	int pair_level, host_level;              /* the n-th pause of the ladder */
+	uint64_t user_ms, pair_ms, host_ms;      /* … lasting this long */
 };
 /* May PAM be asked for this user (key: the uid in decimal) from this address?  `rhost` may
- * be empty (then only the user counts).  `OK` takes a place in flight on both: every OK is
- * followed by exactly one `rootside_login_done()`.  `*left_ms` (may be NULL): how long the
- * pause still lasts, for the *_PAUSED answers. */
+ * be empty.  `OK` takes a place in flight on the levels of `*taken` (never NULL): every OK is
+ * followed by exactly one `rootside_login_done()` with the same `taken`.  `*left_ms` (may be
+ * NULL): how long the pause still lasts, for the *_PAUSED answers. */
 int rootside_login_admit(struct rootside_bounds *b, const char *ukey, const char *rhost,
-                         uint64_t now_ms, uint64_t *left_ms);
+                         uint64_t now_ms, uint64_t *left_ms, unsigned *taken);
 /* The end of an attempt admitted above. `ev` (may be NULL) says whether it started a pause. */
 void rootside_login_done(struct rootside_bounds *b, const char *ukey, const char *rhost,
-                         uint64_t now_ms, int verdict, struct rootside_login_event *ev);
+                         uint64_t now_ms, unsigned taken, int verdict,
+                         struct rootside_login_event *ev);
 void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms);
 /* May this AUTH go to PAM now?  `false` = over the in-flight or rate bound
  * (VERDICT NOT_CHECKED).  `true` takes a token and a place in flight. */
