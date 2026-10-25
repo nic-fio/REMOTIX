@@ -358,7 +358,7 @@ struct page {
 	 * table (review of 95ed70ea: a newcomer used to take over the most
 	 * refilled bucket with a fresh burst, so 65 rotating addresses had no
 	 * rate at all). */
-	struct bucket rate_over, rate48_over;
+	struct bucket rate_over[2], rate48_over[2]; /* [0] IPv4 keys, [1] IPv6 keys (R-5: one overflow per family) */
 	/* parked for the rate; served 503 after waiting in vain */
 	unsigned delayed_rate, busy_rate, refused_rate;
 	uint64_t park_next;
@@ -1779,9 +1779,9 @@ static bool queue_on(page *p, const struct bucket *b, const struct bucket *b48)
 static bool rate_take_q(page *p, const char *key, const char *k48, uint64_t now,
                         const char **who, bool queue)
 {
-	struct bucket *b = bucket_of(p->rate, &p->rate_over, key, now,
+	struct bucket *b = bucket_of(p->rate, p->rate_over, key, now,
 	                             PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	struct bucket *b48 = k48 ? bucket_of(p->rate48, &p->rate48_over, k48, now,
+	struct bucket *b48 = k48 ? bucket_of(p->rate48, p->rate48_over, k48, now,
 	                                     PAGE_ACCEPT_RATE_48, PAGE_ACCEPT_BURST_48)
 	                         : NULL;
 
@@ -1789,15 +1789,15 @@ static bool rate_take_q(page *p, const char *key, const char *k48, uint64_t now,
 	p->cand = b;
 	p->cand48 = b48;
 	if (b->milli < 1000u) {
-		*who = b == &p->rate_over ? "(the shared overflow bucket)" : key;
+		*who = BUCKET_IS_OVER(p->rate_over, b) ? "(the shared overflow bucket)" : key;
 		return false;
 	}
 	if (b48 && b48->milli < 1000u) {
-		*who = b48 == &p->rate48_over ? "(the shared /48 overflow bucket)" : k48;
+		*who = BUCKET_IS_OVER(p->rate48_over, b48) ? "(the shared /48 overflow bucket)" : k48;
 		return false;
 	}
 	if (queue && queue_on(p, b, b48)) {
-		*who = b == &p->rate_over ? "(the shared overflow bucket, queued)" : key;
+		*who = BUCKET_IS_OVER(p->rate_over, b) ? "(the shared overflow bucket, queued)" : key;
 		return false;
 	}
 	b->milli -= 1000u;

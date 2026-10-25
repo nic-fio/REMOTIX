@@ -13,6 +13,8 @@
  *   4. the buckets the attacker stops using are idle after burst/rate seconds and are recycled: the same /32 gets a bucket of its own again;
  *   5. the residual limit, declared: 8 /32s × 32 keys fill the 256 places, and a 9th /32 then shares the overflow bucket;
  *   6. IPv4 has no group: 300 keys of one 10.1.0.0/16 fill the table as before (no cap), the 257th shares the overflow bucket;
+ *   8. one overflow bucket PER FAMILY (audit R-5, line 51): with the table full, an IPv6 flood drains the IPv6 overflow bucket and the IPv4 one
+ *      stays whole (a visitor on IPv4 is admitted with its burst), and the other way round;
  *   7. key_g32(): «[2001:db8:1:2::]» and «2001:0db8:0001::/48» give 20 01 0d b8; IPv4, loopback, IPv4-mapped, NAT64 and text that is not an
  *      address give none; a zone («fe80::1%eth0») is cut.
  *
@@ -39,12 +41,12 @@
 static int checks, bad;
 #define CHECK(c, what) do { checks++; if (!(c)) { bad++; printf("FAIL: %s\n", what); } } while (0)
 
-static struct bucket tab[PAGE_RATE_KEYS], over;
+static struct bucket tab[PAGE_RATE_KEYS], over[2];
 
 static void reset(void)
 {
 	memset(tab, 0, sizeof tab);
-	memset(&over, 0, sizeof over);
+	memset(over, 0, sizeof over);
 }
 
 static unsigned with_prefix(const char *p)
@@ -58,7 +60,7 @@ static unsigned with_prefix(const char *p)
 /* one connection from `key`: a token, as rate_take() does for it (the bucket and its tokens) */
 static struct bucket *touch(const char *key, uint64_t now, unsigned cap32)
 {
-	struct bucket *b = bucket_of_cap(tab, &over, key, now, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST, cap32);
+	struct bucket *b = bucket_of_cap(tab, over, key, now, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST, cap32);
 	if (b->milli >= 1000u)
 		b->milli -= 1000u;
 	return b;
@@ -76,7 +78,7 @@ int main(void)
 	reset();
 	n = 0;
 	for (int i = 0; i < 20; i++) {
-		b = bucket_of(tab, &over, "[10.0.0.1]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+		b = bucket_of(tab, over, "[10.0.0.1]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
 		if (b->milli >= 1000u) {
 			b->milli -= 1000u;
 			n++;
@@ -85,7 +87,7 @@ int main(void)
 	CHECK(n == PAGE_ACCEPT_BURST, "1. a bucket: the burst of 8");
 	n = 0;
 	for (int i = 0; i < 20; i++) {
-		b = bucket_of(tab, &over, "[10.0.0.1]", t0 + 1000, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+		b = bucket_of(tab, over, "[10.0.0.1]", t0 + 1000, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
 		if (b->milli >= 1000u) {
 			b->milli -= 1000u;
 			n++;
@@ -99,12 +101,12 @@ int main(void)
 		snprintf(k, sizeof k, "[2001:db8:%x:%x::]", i / 200, i % 200);
 		touch(k, t0, PAGE_KEYS_PER_32);
 	}
-	CHECK(with_prefix("[2001:db8:") <= PAGE_KEYS_PER_32 && with_prefix("[2001:db8:") > 0,
-	      "2. 400 /64s of ONE /32: at most 32 buckets of that /32 in the table");
-	b = bucket_of(tab, &over, "[2001:db8:ff:ff::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	CHECK(b == &over, "2b. the attacker's further keys share the overflow bucket");
-	b = bucket_of(tab, &over, "[2001:db9:1:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	CHECK(b != &over && b->milli == PAGE_ACCEPT_BURST * 1000u,
+	CHECK(with_prefix("[2001:db8:") == PAGE_KEYS_PER_32,
+	      "2. 400 /64s of ONE /32 at one instant: exactly 32 buckets of that /32 in the table");
+	b = bucket_of(tab, over, "[2001:db8:ff:ff::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b == &over[1], "2b. the attacker's further keys share the overflow bucket");
+	b = bucket_of(tab, over, "[2001:db9:1:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b != &over[1] && b->milli == PAGE_ACCEPT_BURST * 1000u,
 	      "2c. a visitor from ANOTHER /32 gets a bucket of its own, with its full burst");
 
 	/* 3: the mutant, the cap disabled = the old behaviour */
@@ -113,8 +115,8 @@ int main(void)
 		snprintf(k, sizeof k, "[2001:db8:%x:%x::]", i / 200, i % 200);
 		touch(k, t0, PAGE_RATE_KEYS);
 	}
-	b = bucket_of_cap(tab, &over, "[2001:db9:1:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST, PAGE_RATE_KEYS);
-	CHECK(b == &over, "3. mutant (no cap, the old code): the same visitor lands on the overflow bucket");
+	b = bucket_of_cap(tab, over, "[2001:db9:1:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST, PAGE_RATE_KEYS);
+	CHECK(b == &over[1], "3. mutant (no cap, the old code): the same visitor lands on the overflow bucket");
 
 	/* 4 */
 	reset();
@@ -122,10 +124,10 @@ int main(void)
 		snprintf(k, sizeof k, "[2001:db8:1:%x::]", i);
 		touch(k, t0, PAGE_KEYS_PER_32);
 	}
-	b = bucket_of(tab, &over, "[2001:db8:2:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	CHECK(b == &over, "4. (setup) the /32 is at its cap while its buckets are busy");
-	b = bucket_of(tab, &over, "[2001:db8:2:1::]", t0 + 2500, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	CHECK(b != &over && b->milli == PAGE_ACCEPT_BURST * 1000u, "4b. 2.5 s later they are idle: the same /32 gets a bucket of its own again");
+	b = bucket_of(tab, over, "[2001:db8:2:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b == &over[1], "4. (setup) the /32 is at its cap while its buckets are busy");
+	b = bucket_of(tab, over, "[2001:db8:2:1::]", t0 + 2500, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b != &over[1] && b->milli == PAGE_ACCEPT_BURST * 1000u, "4b. 2.5 s later they are idle: the same /32 gets a bucket of its own again");
 
 	/* 5 */
 	reset();
@@ -134,8 +136,8 @@ int main(void)
 			snprintf(k, sizeof k, "[2001:%x:1:%x::]", 0xdb8 + g32, i);
 			touch(k, t0, PAGE_KEYS_PER_32);
 		}
-	b = bucket_of(tab, &over, "[2001:dc0:1:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	CHECK(b == &over, "5. declared limit: 8 /32s × 32 keys fill the 256 places, a 9th /32 shares the overflow bucket");
+	b = bucket_of(tab, over, "[2001:dc0:1:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b == &over[1], "5. declared limit: 8 /32s × 32 keys fill the 256 places, a 9th /32 shares the overflow bucket");
 
 	/* 6 */
 	reset();
@@ -143,11 +145,11 @@ int main(void)
 		snprintf(k, sizeof k, "[10.1.%d.%d]", i / 200, i % 200 + 1);
 		touch(k, t0, PAGE_KEYS_PER_32);
 	}
-	b = bucket_of(tab, &over, "[10.1.9.9]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	b = bucket_of(tab, over, "[10.1.9.9]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
 	n = 0;
 	for (int i = 0; i < PAGE_RATE_KEYS; i++)
 		n += tab[i].key[0] != 0;
-	CHECK(n == PAGE_RATE_KEYS && b == &over, "6. IPv4 has no group: 300 keys of one /16 fill the table, the next shares the overflow bucket");
+	CHECK(n == PAGE_RATE_KEYS && b == &over[0], "6. IPv4 has no group: 300 keys of one /16 fill the table, the next shares the overflow bucket");
 
 	/* 7 */
 	CHECK(key_g32("[2001:db8:1:2::]", g) && g[0] == 0x20 && g[1] == 0x01 && g[2] == 0x0d && g[3] == 0xb8, "7. a /64 key → 20 01 0d b8");
@@ -156,6 +158,31 @@ int main(void)
 	      !key_g32("?", g) && !key_g32("", g) && !key_g32("*", g),
 	      "7c. IPv4, loopback, IPv4-mapped, NAT64 and not-an-address: no group");
 	CHECK(key_g32("[fe80::1%eth0]", g) && g[0] == 0xfe && g[1] == 0x80, "7d. a zone is cut");
+
+	/* 8 */
+	reset();
+	for (int i = 0; i < PAGE_RATE_KEYS; i++) {
+		snprintf(k, sizeof k, "[10.4.%d.%d]", i / 200, i % 200 + 1);
+		touch(k, t0, PAGE_KEYS_PER_32);
+	}
+	for (int i = 0; i < 60; i++) {   /* an IPv6 flood: the table is full of busy IPv4 buckets, so every IPv6 key lands on the IPv6 overflow */
+		snprintf(k, sizeof k, "[2001:%x:1:1::]", 0x1000 + i);
+		touch(k, t0, PAGE_KEYS_PER_32);
+	}
+	CHECK(over[1].milli < 1000u, "8. (setup) the IPv6 overflow bucket is used up by the flood");
+	b = bucket_of(tab, over, "[10.9.9.9]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b == &over[0] && b->milli == PAGE_ACCEPT_BURST * 1000u, "8b. an IPv4 visitor still has the whole IPv4 overflow bucket");
+	reset();
+	for (int i = 0; i < PAGE_RATE_KEYS; i++) {
+		snprintf(k, sizeof k, "[2001:%x:1:1::]", 0x2000 + i);
+		touch(k, t0, PAGE_KEYS_PER_32);
+	}
+	for (int i = 0; i < 60; i++) {
+		snprintf(k, sizeof k, "[10.5.%d.%d]", i / 200, i % 200 + 1);
+		touch(k, t0, PAGE_KEYS_PER_32);
+	}
+	b = bucket_of(tab, over, "[2001:dd0:1:1::]", t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
+	CHECK(b == &over[1] && b->milli == PAGE_ACCEPT_BURST * 1000u, "8c. and an IPv6 visitor the whole IPv6 one, after an IPv4 flood");
 
 	printf("%d checks, %d bad\n", checks, bad);
 	return bad ? 1 : 0;

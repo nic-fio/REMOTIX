@@ -6,6 +6,10 @@
 #ifndef REMOTIX_PAGEBUCKET_H
 #define REMOTIX_PAGEBUCKET_H
 
+/* ⭐ R-5: the shared overflow bucket is one per FAMILY, `over[0]` for IPv4 keys and `over[1]` for IPv6 ones (a key with a colon), so an IPv6 flood cannot
+ * use up the overflow of the IPv4 visitors, and the other way round (audit R-5, line 51: «un secchio condiviso per famiglia»). */
+#define BUCKET_IS_OVER(over, b) ((b) == &(over)[0] || (b) == &(over)[1])
+
 /* One token bucket: `milli` thousandths of a token at the instant `at`. */
 struct bucket {
 	char key[64];
@@ -52,7 +56,7 @@ static bool bucket_idle(const struct bucket *x, uint64_t now, unsigned cap, unsi
  * FULL (refilled to the burst: forgetting it forgets nothing) or empty;
  * otherwise it is charged to `over`, ONE bucket shared by every such key —
  * so rotating more addresses than buckets buys no fresh bursts. */
-static struct bucket *bucket_of_cap(struct bucket *t, struct bucket *over,
+static struct bucket *bucket_of_cap(struct bucket *t, struct bucket *over2,
                                     const char *key, uint64_t now, unsigned rate,
                                     unsigned burst, unsigned cap32)
 {
@@ -87,6 +91,8 @@ static struct bucket *bucket_of_cap(struct bucket *t, struct bucket *over,
 			memcpy(b->g32, g32, 4);
 	}
 	if (!b) {
+		struct bucket *over = &over2[strchr(key, ':') ? 1 : 0];
+
 		b = over;
 		if (!b->key[0]) {
 			snprintf(b->key, sizeof b->key, "*");
@@ -104,10 +110,10 @@ static struct bucket *bucket_of_cap(struct bucket *t, struct bucket *over,
 	return b;
 }
 
-static struct bucket *bucket_of(struct bucket *t, struct bucket *over, const char *key, uint64_t now,
+static struct bucket *bucket_of(struct bucket *t, struct bucket *over2, const char *key, uint64_t now,
                                 unsigned rate, unsigned burst)
 {
-	return bucket_of_cap(t, over, key, now, rate, burst, PAGE_KEYS_PER_32);
+	return bucket_of_cap(t, over2, key, now, rate, burst, PAGE_KEYS_PER_32);
 }
 
 #endif
