@@ -138,8 +138,9 @@ if grep -q 'FIRST CONNECTION: «anna»' /tmp/rx-live/root.log; then
 else
 	echo "?? no card group in this container: the L2 check could not look"
 fi
-# finding 3: only SIGPIPE ignored (bit 13 = 0x1000, as 1.0 passed it on), nothing blocked, nothing caught
-grep -qx 'SigIgn:[[:space:]]*0000000000001000' /tmp/rx-live/child.txt || { echo "NO the child inherited ignored signals other than SIGPIPE (SIGHUP?)"; red=1; }
+# finding 3, 1.5: NOTHING ignored (SIGPIPE included: the child sets it itself, later), nothing blocked, nothing caught — although the
+# root side was started with SIGHUP, SIGQUIT and SIGWINCH ignored and SIGURG blocked (02-rootside-live-test.c, before rootside_main)
+grep -qx 'SigIgn:[[:space:]]*0000000000000000' /tmp/rx-live/child.txt || { echo "NO the child inherited ignored signals (SIGHUP? SIGQUIT? SIGPIPE?)"; red=1; }
 grep -qx 'SigBlk:[[:space:]]*0000000000000000' /tmp/rx-live/child.txt || { echo "NO the child was born with signals blocked"; red=1; }
 grep -q 'broke the closed list' /tmp/rx-live/root.log || { echo "NO the malformed packet was not seen"; red=1; }
 n=$(grep -c "broke the closed list" /tmp/rx-live/root.log); [ "$n" -le 1 ] || { echo "NO the closed list was broken $n times (once is the deliberate malformed packet)"; red=1; }

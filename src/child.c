@@ -1715,6 +1715,20 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 		argv[na++] = (char *)"--close-only";
 	argv[na] = NULL;
 
+	/* ⛔ 1.5: THE CHILD IS BORN WITH EVERY SIGNAL AT ITS DEFAULT AND AN EMPTY MASK, whatever this process inherited or
+	 *    set for itself.  The server (and the root side: `signal(SIGHUP, SIG_IGN)`) may ignore what it likes; an
+	 *    ignored disposition crosses the `execve`, and a desktop's programs would start with SIGHUP or SIGQUIT ignored
+	 *    — the sign of whoever launched the server (`nohup`, a background shell), not a decision.  SIGPIPE too: the
+	 *    child sets it ignored itself at its start (`main.c`, `child_alive()`), where it is meant to be. */
+	{
+		sigset_t none;
+
+		sigemptyset(&none);
+		sigprocmask(SIG_SETMASK, &none, NULL);
+		for (int sg = 1; sg < NSIG; sg++)
+			if (sg != SIGKILL && sg != SIGSTOP)
+				signal(sg, SIG_DFL);
+	}
 	execve(b->my_path, argv, envp);
 	_exit(37);
 }

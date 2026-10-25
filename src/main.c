@@ -2171,6 +2171,9 @@ int main(int argc, char **argv)
 	 *     ⛔ Here nothing is opened, no certificate is read and the ban file is
 	 *     not touched: we go straight to `child_alive()`, which does not return. */
 	if (argc >= 2 && strcmp(argv[1], "--internal-child") == 0) {
+		/* ⭐ 1.5: born with every signal at its default (`child.c`, before the execve); SIGPIPE is ignored from the first
+		 *    instruction, as the child has always run — a write to a closed socket must be an error, not a death. */
+		signal(SIGPIPE, SIG_IGN);
 		child_alive(argc, argv);
 		return 1; /* never reached */
 	}
