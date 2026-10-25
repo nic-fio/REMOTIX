@@ -55,7 +55,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 6
+#define EXPECTED_CHECKS 10
 
 static void require(int cond, const char *desc)
 {
@@ -218,6 +218,34 @@ int main(void)
 			(void)dispatch_uni(b, 2 + 4 * k, pre, sizeof pre, true, &held);
 		}
 		require(says >= 30, "a logged-in connection writes its line for every stream (30)");
+	}
+
+	printf("  W3. close_session() is idempotent\n");
+	{
+		ngtcp2_ccerr e;
+		wt *a;
+		uint64_t first_deadline, first_since;
+		int first_reason;
+
+		memset(&e, 0, sizeof e);
+		a = wt_new(NULL, &e, "[192.0.2.33]:4001", NULL);
+		a->session = 0;
+		close_session(a, 5);
+		first_reason = a->closing;
+		first_deadline = a->closing_deadline;
+		first_since = a->closing_since;
+		require(first_reason == 5 && first_deadline > ts_ns, "the first call arms the reason and the 3 s deadline");
+		says = 0;
+		ts_ns += 400ULL * NGTCP2_MILLISECONDS;
+		close_session(a, 7);
+		require(a->closing == first_reason && a->closing_deadline == first_deadline && a->closing_since == first_since,
+		        "400 ms later a second call keeps the FIRST reason and re-arms neither the wait nor the deadline");
+		require(says == 0, "and writes no line");
+		for (int k = 0; k < 50; k++) {
+			ts_ns += 400ULL * NGTCP2_MILLISECONDS;
+			close_session(a, 9);
+		}
+		require(a->closing_deadline == first_deadline && says == 0, "20 s of offending streams every 400 ms: the deadline is still the first one (the closure can mature)");
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);

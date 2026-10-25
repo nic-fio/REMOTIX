@@ -7422,6 +7422,11 @@ static void close_session(wt *w, uint8_t reason)
 	 *    QUIC connection, which can carry other things. */
 	if (w->session == -1)
 		return;
+	/* ⭐ rilettura-wt W3: idempotent.  A second call used to re-arm closing_since (+0.5 s) and closing_deadline (+3 s) and write the line again: a client that sent one more offending stream every
+	 *    less than half a second kept the closure from ever maturing — and, `closing` being set, the 5 s of the control channel could not fire either — on a connection with no login.  The FIRST
+	 *    reason and the FIRST deadline stand. */
+	if (w->closing >= 0)
+		return;
 
 	/* ⛔⭐ AND THE CAPSULE IS DEFERRED, instead of being enqueued now — found by
 	 *     B11 on 10 Aug 2026, with real browsers.
