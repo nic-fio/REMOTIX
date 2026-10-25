@@ -127,6 +127,17 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   socket buffer wrote one line per failed reply, at the packet rate), and the pre-login budgets of `webtransport.c` are per address (20 lines every 10 s for each of 128 addresses): whoever has many addresses, or
   rotates an IPv6 /48, gets a fresh budget for each. Both now also go through a GLOBAL budget per 10 s window (`src/linebudget.h`, the idea of `BIRTH_LINES`): 5 `NOT sent` lines and 100 pre-login lines for the whole
   server, the rest counted in one line at the end of the window (with the last error for the first). The «BANNED» and «failed attempt» lines are exempt as before. Tests `benches/unit/line-budget` and `wt-prelogin` (7).
+- **A client cannot flood the input channel** (audit of the session, S-R1, 25 Oct 2026, branch `sessione-a`): a logged-in browser could send valid POINTER / BUTTON / WHEEL / LETTER messages at the speed of its link and the parent
+  (one loop for everybody) formatted a log line and sent to the child for each, until journald dropped the lines of the others, the BANNED ones too. Now a bucket per session (4000 messages a second, burst 1000): the rest is dropped before any
+  work, counted, and one line a second says so; the `input id=` lines have a budget (20 a second, burst 40) and the rest is counted; the line «a character is not producible» of the keyboard is 5 per 10 s and the rest counted.
+  Test `benches/unit/session-caps`.
+- **A client cannot keep the parent busy with LAYOUT** (audit of the session, S-R2/P-R1/Q-R1, 25 Oct 2026): every LAYOUT message compiled a whole XKB keymap in the PARENT (the loop that serves everybody) to ask «does the machine have this
+  layout?», before comparing with the layout in force, with no limit; a client repeating one layout or alternating two held the loop and, for real layouts, replaced the keyboard device of its own desktop each time. Now the layout in force is
+  compared first (no question, no replacement), and a cap per session (1 a second, burst 3) ignores the rest; one line a second says how many. Test `benches/unit/session-caps` (5).
+- **A client cannot flood clipboard ANNOUNCE / ASK** (audit of the session, S-R7, 25 Oct 2026): every ASK sent the whole text (up to the clipboard ceiling) back and every ANNOUNCE made the parent take the desktop selection, with no limit. Now one
+  bucket per session for both (10 a second, burst 20): the rest is ignored, counted, one line a second. Test `benches/unit/session-caps` (6).
+- **The wheel is bounded** (audit of the session, S-R9, 25 Oct 2026): the two wheel amounts of a client went unbounded to `input_wheel()`, where `-axis_y` overflows for INT32_MIN (undefined behaviour) and a huge value asked the compositor
+  for millions of notches. Now both are brought into ±12000 (100 notches) before any negation (`src/wheelclamp.h`, test `benches/unit/wheel-clamp`).
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)

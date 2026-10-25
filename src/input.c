@@ -181,6 +181,7 @@
  *        message: `[M]` removing THAT line (`RG4`) the healing stops.
  *      ⚠ The `close()` stays so as not to lose a descriptor at every healing.
  */
+#include "wheelclamp.h"
 #include "input.h"
 
 #include <errno.h>
@@ -2280,6 +2281,9 @@ int input_button(Input *in, uint16_t code, int pressed)
 
 int input_wheel(Input *in, int32_t axis_x, int32_t axis_y)
 {
+	/* ⭐ S-R9: bounded BEFORE the minus signs below (`-INT32_MIN` is an overflow) and before the compositor is asked for millions of notches */
+	axis_x = wheel_clamp(axis_x);
+	axis_y = wheel_clamp(axis_y);
 	/* ⭐ wlroots: same direction as below — the vertical is inverted HERE, once
 	 *    only (see the box), and `wlr_input_wheel()` receives the
 	 *    Wayland convention.  It makes the whole notches itself (§7.2 n.1). */
