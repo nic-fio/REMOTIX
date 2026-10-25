@@ -25,7 +25,7 @@
  *     { clang -fsanitize=address,undefined t.o r.o l.o $L -o t0 2> link1.log || true; } &&
  *     { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
  *       while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
- *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o r.o l.o s.o $L -o test && cd /albero && ASAN_OPTIONS=detect_leaks=0 /tmp/test'   (the SSL objects of the test certificate are not freed)
+ *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o r.o l.o s.o $L -o test && cd /albero && ASAN_OPTIONS=detect_leaks=0 /tmp/test'   — leaks off: the SSL objects of the test certificate are not freed
  */
 #include "page.h"
 #include "rcp.h"
