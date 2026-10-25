@@ -1194,19 +1194,83 @@ static void slot_leave(const char *user)
  *
  * ⚠ THE TABLE HAS A BOTTOM, and finding R9.1 applies identically: if
  *   `lcreate()` could fail silently, an uncounted failure would be a limiter
- *   that is not there.  ⛔ The victim is NEVER a banned entry, and never one
- *   with an attempt in flight: if the only candidates are those, the NEW entry
- *   is refused (`LV_FULL`: the attempt is refused with `TOO_MANY_ATTEMPTS`, the
- *   refusal is counted and written) instead of erasing somebody's ban.  Before
- *   that, entries with nothing to remember are taken back, and then the
- *   oldest one without recidivism, declared in the log.
- *   `[?]` That 256 slots are enough is not measured.
+ *   that is not there.  ⛔ The victim of an ordinary creation is NEVER a banned
+ *   entry, and never one with an attempt in flight.  Before that, entries with
+ *   nothing to remember are taken back, and then the oldest one without
+ *   recidivism, declared in the log.
+ *
+ * ⛔⭐ THE BANS HAVE A QUOTA, SO THE TABLE CAN NEVER BE ALL BANS — audit of
+ *    25 Oct 2026 (R1), and the rule the user decided the same day.  Until then
+ *    a table full of banned entries (3 per IPv4 address that fails 12 times:
+ *    ~86 addresses; ~8 per IPv6 /48: ~32 prefixes) made `lcreate()` fail for
+ *    EVERY new key: `LV_FULL`, every login refused without asking PAM, the
+ *    owner's included, for as long as the bans lasted.  The 1.0 erased the
+ *    bans instead (the opposite fault).  Now:
+ *      · `BAN_QUOTA` entries are the bans the table is sized for; what is left
+ *        (MAX_ATTEMPTS - BAN_QUOTA) is for the counters and the bookings, and
+ *        bookings are bounded (`BOOKINGS_MAX` attempts at once, each holding
+ *        `LEVELS` entries): so there is ALWAYS an entry an ordinary creation
+ *        may take, whoever the key is;
+ *      · ⛔ A NEW BAN NEVER TAKES AWAY ANOTHER'S.  A first version dropped the
+ *        least valuable ban to make room for the new one, and a botnet of ~54
+ *        addresses taking turns made its own bans fall after ~90 s — and with
+ *        the entry its recidivism, so the ladder 15 min / 1 h / 12 h never
+ *        climbed.  Dropping bans is exactly what the attacker wants, so no
+ *        new ban drops one;
+ *      · ⭐ the keys that logged in lately (`good_recent()`) always find a
+ *        place, as before: they are not asked anything more, their bans are
+ *        given even over the quota (they are 64 at most, and a spoofed one
+ *        cannot be: it is a TCP address).  They are kept in the ban file
+ *        (`G2` lines, see `GOOD_KEYS`) and read back at the start: otherwise a
+ *        restart with the quota full refused the owner too;
+ *      · ⭐ the UNKNOWN keys, when `BAN_QUOTA` bans are in force, go through a
+ *        COMMON COUNTER: `UNKNOWN_LIMIT` failures (5) in `UNKNOWN_WINDOW_MS`
+ *        (5 min) for ALL of them together, and the attempts IN FLIGHT count
+ *        like the failures (the booking itself, as `LV_BUSY` does: otherwise
+ *        sixteen at once pass before the first verdict).  At the limit they are
+ *        refused with `0x08` before PAM (`LV_QUOTA`, not a failure, nothing
+ *        booked, nothing evicted) until the counter goes down; `UNBLOCK` zeroes it.  So once the quota is full the
+ *        whole botnet gets ~1 ban per 5 minutes, which is bounded, while the
+ *        bans it already has run to their end and the ladder climbs for the
+ *        ones that come back (the entry, and its level, stay);
+ *      · what the common counter costs, honestly: while the quota is full AND
+ *        the counter is full, a legitimate NEW user from an address that never
+ *        logged in is refused too (0x08).  It ends when the counter goes down
+ *        or a ban expires; the owner's key, and anyone who logged in within
+ *        30 days, is not touched.  `[?]` 5 in 5 min is the user's number, not
+ *        measured;
+ *      · the bans that do exceed the quota (the keys above) are repaired only
+ *        when the table has no other place, and ONLY FOR A KNOWN KEY
+ *        (`lcreate()`): then the least valuable ban goes, ALL that go in one
+ *        outcome are named in the log, and the ban file is rewritten.  That
+ *        entry's recidivism goes with it: it is the last resort, not a road
+ *        that can be asked for.  An unknown key finds no place there and is
+ *        refused (`LV_FULL`, counted).  A ban file with more bans than the
+ *        quota keeps the most valuable ones, in whatever order the lines come
+ *        (`rcp_ban_load()`); the one displaced, or the line that loses the
+ *        comparison, is kept as an entry that is not banned, with its level;
+ *      · "the least valuable": the lowest level, then the nearest to its
+ *        expiry, then the older touch, then the name (so the choice does not
+ *        depend on the order).
+ *    `[?]` That 256 slots are enough is not measured.
  *
  * ⛔ AND THERE IS NO EXPIRY FOR QUIET other than what is written above: the
  *    slots are given back when an entry has nothing left to remember.      */
 #define MAX_ATTEMPTS 256
 #define LEVELS 3
 #define MAX_RING 30 /* the largest limit of the three levels */
+/* ⭐ The quota of banned entries, and the bound on the bookings it is sized on (see the box above).
+ *    `BOOKINGS_MAX` is `MAX_IN_FLIGHT` of `helper.c` (16): the attempts that can be booked — asked of PAM and
+ *    not yet answered — at the same moment; each holds `LEVELS` entries, and the caller of an ordinary creation
+ *    holds `LEVELS` more.  If `helper.c` grows its number, this one grows with it, and the assert below says
+ *    when there is no more room. */
+#define BAN_QUOTA 160
+#define BOOKINGS_MAX 16
+_Static_assert(BAN_QUOTA + LEVELS * BOOKINGS_MAX + LEVELS < MAX_ATTEMPTS,
+               "the counters need room: bans + bookings + held entries must stay below the table");
+/* ⭐ The common counter of the unknown keys, used only while `BAN_QUOTA` bans are in force (the box above). */
+#define UNKNOWN_LIMIT 5
+#define UNKNOWN_WINDOW_MS 300000u
 
 /* The three levels of counters.  The ORDER is the order of the arrays below. */
 enum { LK_USER = 0, LK_KEY = 1, LK_NET48 = 2 };
@@ -1232,6 +1296,7 @@ struct lentry {
 	uint64_t failure_times[MAX_RING];
 	int amount;
 	int in_flight;       /* booked at CREDENTIALS, not yet resolved */
+	int unk_flight;      /* LK_KEY: of those, the bookings counted by the common counter of the unknown keys */
 	uint64_t banned_until; /* monotonic, like `now`; 0 = never banned */
 	uint8_t level;       /* bans suffered, 0..2: the next one lasts LADDER_MS[level] */
 	uint64_t last_touch;
@@ -1240,46 +1305,128 @@ static struct lentry attempts[MAX_ATTEMPTS];
 
 /* ⭐ THE KEYS THAT LOGGED IN LATELY — 15 Oct 2026, `DECISIONS.md` §11.39 addendum
  *    (ported from 4d9eb72b).  The last ADMITTED verdict of a §4.4-bis key, in
- *    memory only (the monotonic clock does not survive a restart, so neither
- *    does this): it serves `rcp_asking_for_known_key()` and nothing else.  A
+ *    memory and in the ban file (see below): it serves `rcp_asking_for_known_key()` and nothing else.  A
  *    ring of GOOD_KEYS: the same key takes its place again, else an empty one,
- *    else the oldest. */
+ *    else the oldest.
+ *    ⭐ AND ON DISK (review of 25 Oct 2026): a restart used to forget them, and a restart
+ *    with `BAN_QUOTA` bans or more in force then refused the owner too (an unknown key
+ *    goes through the common counter).  They are now written in the ban file, one line
+ *    each — `G2 <epoch> <key or HMAC>`, the REAL time of the last login (`time(NULL)`, kept in
+ *    `good_keys[].epoch`) — and read back at the start; the 30 days are counted on that real
+ *    time, so a restart never rejuvenates a key (the first version wrote the time of the
+ *    restart, and with frequent restarts a key never expired).  A line older than 30 days is
+ *    not read.  The 1.0 reads «<word> <number>» and skips a line whose number is not in the
+ *    future: the epoch of a login is in the past.
+ *    ⭐ When the secret of the logs survives a restart (`rcp_log_secret_load()` returned 0 or 1)
+ *    the key is written as its HMAC-SHA256, "G2|" + key, in hex: the file does not tell who
+ *    the owner is.  An entry read like that keeps only the HMAC until an attempt from that
+ *    address hashes to it.  With a secret of this run only the key is written as itself (a
+ *    HMAC would never match again).
+ *    ⚠ The monotonic stamp of a loaded entry is clamped to 1 if the login is older than the
+ *    process: only the real epoch counts for the 30 days.  The file is rewritten when a key
+ *    is new or its stamp is a day old, not at every login. */
 #define GOOD_KEYS 64
 #define GOOD_AGE 2592000000ull /* 30 days, ms */
-static struct { char key[64]; uint64_t when; } good_keys[GOOD_KEYS];
+#define GOOD_REFRESH_MS 86400000ull /* a stamp younger than this is not rewritten to the file */
+/* ⭐ Each known key has TWO clocks.  `when` is the monotonic one (the age within this run); `epoch` is the REAL
+ *    time of the login (`time(NULL)`), the one written to the file and the one the 30 days are counted on: after a
+ *    restart the monotonic clock starts again, and a stamp made from it would become "the time of the restart" and be
+ *    rewritten, so with frequent restarts a key would never expire.  `mac` is the HMAC of the key under the secret of
+ *    the logs (`rcp_log_secret_load()`), the form in which the key is written when that secret survives a restart:
+ *    the file does not tell who the owner is.  An entry read from such a line has `mac` and no `key` until the key
+ *    comes back (the first attempt of that address hashes to it: the key is then filled in). */
+static struct { char key[64]; char mac[65]; uint64_t when, filed; long long epoch; } good_keys[GOOD_KEYS];
+/* `filed`: the stamp last asked to be written */
 
-static void good_note(const char *key, uint64_t now)
+static void good_mac(const char *key, char out[65]); /* below, with the secret */
+
+/* The place of a key (by itself, or by its HMAC if it was read from the file), or -1. */
+static int good_find(const char *key)
 {
-	int pick = 0;
+	bool pending = false;
 	for (int k = 0; k < GOOD_KEYS; k++) {
-		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0) {
-			pick = k;
-			goto found;
+		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0)
+			return k;
+		if (!good_keys[k].key[0] && good_keys[k].mac[0])
+			pending = true;
+	}
+	if (pending) {
+		char m[65];
+		good_mac(key, m);
+		for (int k = 0; k < GOOD_KEYS; k++)
+			if (!good_keys[k].key[0] && good_keys[k].mac[0] && strcmp(good_keys[k].mac, m) == 0) {
+				snprintf(good_keys[k].key, sizeof good_keys[k].key, "%s", key);
+				return k;
+			}
+	}
+	return -1;
+}
+
+/* Puts a key in the ring: `key`, or only its `mac` (a line of the file), with the monotonic stamp `when` and the
+ * real `epoch` of the login.  Returns true if the file must be rewritten: the key is new, or its previous stamp is
+ * a day old. */
+static bool good_put(const char *key, const char *mac, uint64_t when, long long epoch)
+{
+	int pick = -1;
+	bool fresh_key = true, changed;
+	if (key)
+		pick = good_find(key);
+	else
+		for (int k = 0; k < GOOD_KEYS; k++)
+			if (good_keys[k].mac[0] && strcmp(good_keys[k].mac, mac) == 0)
+				pick = k;
+	if (pick >= 0) {
+		fresh_key = false;
+	} else {
+		pick = 0;
+		for (int k = 0; k < GOOD_KEYS; k++) {
+			if (!good_keys[k].key[0] && !good_keys[k].mac[0]) {
+				pick = k;
+				break;
+			}
+			if (good_keys[k].when < good_keys[pick].when)
+				pick = k;
 		}
 	}
-	for (int k = 0; k < GOOD_KEYS; k++) {
-		if (!good_keys[k].key[0]) {
-			pick = k;
-			goto found;
+	changed = fresh_key || when < good_keys[pick].filed || when - good_keys[pick].filed >= GOOD_REFRESH_MS;
+	if (fresh_key) {
+		memset(&good_keys[pick], 0, sizeof good_keys[pick]);
+		if (key) {
+			snprintf(good_keys[pick].key, sizeof good_keys[pick].key, "%s", key);
+			good_mac(key, good_keys[pick].mac);
+		} else {
+			snprintf(good_keys[pick].mac, sizeof good_keys[pick].mac, "%s", mac);
 		}
-		if (good_keys[k].when < good_keys[pick].when)
-			pick = k;
 	}
-found:
-	snprintf(good_keys[pick].key, sizeof good_keys[pick].key, "%s", key);
-	good_keys[pick].when = now;
+	if (changed)
+		good_keys[pick].filed = when;
+	good_keys[pick].when = when;
+	good_keys[pick].epoch = epoch;
+	return changed;
+}
+
+static bool good_note(const char *key, uint64_t now)
+{
+	return good_put(key, NULL, now, (long long)time(NULL));
+}
+
+/* Is entry `g` still valid: within 30 days on the monotonic clock AND on the real one. */
+static bool good_alive(int g, uint64_t now)
+{
+	/* ⚠ A login stamped LATER than `now` is recent, not 584 million
+	 *   years old: `login_resolve()` may run with the helper's clock,
+	 *   a few hundred ms ahead of a connection's `now`, and the
+	 *   unsigned subtraction would wrap (fresh-eyes review 24c7b668). */
+	if (!(good_keys[g].when >= now || now - good_keys[g].when <= GOOD_AGE))
+		return false;
+	long long t = (long long)time(NULL);
+	return good_keys[g].epoch >= t || (unsigned long long)(t - good_keys[g].epoch) * 1000u <= GOOD_AGE;
 }
 
 static bool good_recent(const char *key, uint64_t now)
 {
-	for (int k = 0; k < GOOD_KEYS; k++)
-		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0)
-			/* ⚠ A login stamped LATER than `now` is recent, not 584 million
-			 *   years old: `login_resolve()` may run with the helper's clock,
-			 *   a few hundred ms ahead of a connection's `now`, and the
-			 *   unsigned subtraction would wrap (fresh-eyes review 24c7b668). */
-			return good_keys[k].when >= now || now - good_keys[k].when <= GOOD_AGE;
-	return false;
+	int g = good_find(key);
+	return g >= 0 && good_alive(g, now);
 }
 
 /* ⭐ Set only around the call to `ask_verify` (`rcp.h`). */
@@ -1290,6 +1437,10 @@ bool rcp_asking_for_known_key(void)
 	return asking_for_known_key;
 }
 static unsigned login_refused_full; /* refusals because of a full table, since the start */
+static unsigned login_bans_dropped;  /* bans dropped as a last resort for a place, since the start */
+static unsigned login_refused_quota; /* unknown keys refused at the quota by the common counter, since the start */
+static uint64_t unknown_times[UNKNOWN_LIMIT]; /* the failures of the unknown keys while the quota was full */
+static int unknown_amount;
 
 static char ban_path[512]; /* empty = not persisted (the bench, usually) */
 /* ⛔⭐ THE ADDRESS WITHOUT THE PORT — found by B5 on 10 Aug 2026
@@ -1634,7 +1785,17 @@ static bool log_secret_random(void)
  * Returns 1 = read, 0 = made and written, -1 = the secret of this run only
  * (memory): the tags change at every restart, and the caller says so;
  * -2 = no secret at all (the tags are «??????»). */
+static bool log_secret_persistent; /* the secret is in a file: it is the same after a restart */
+static int log_secret_load_inner(const char *dir);
+
 int rcp_log_secret_load(const char *dir)
+{
+	int rc = log_secret_load_inner(dir);
+	log_secret_persistent = rc == 0 || rc == 1;
+	return rc;
+}
+
+static int log_secret_load_inner(const char *dir)
 {
 	log_secret_ready = false;
 	if (!dir || !*dir) {
@@ -1713,6 +1874,19 @@ static const char *log_user(const char *user, char *out, size_t cap, bool lookup
 	snprintf(out, cap, "%suser [%02x%02x%02x]", lookup ? "unknown " : "", mac[0],
 	         mac[1], mac[2]);
 	return out;
+}
+
+/* The HMAC (hex) of a known key for the `G2` lines of the ban file; "G2|" keeps it apart from the names. */
+static void good_mac(const char *key, char out[65])
+{
+	uint8_t mac[32];
+	char msg[96];
+	if (!log_secret_ready)
+		log_secret_ready = log_secret_random();
+	snprintf(msg, sizeof msg, "G2|%s", key);
+	hmac_sha256(log_secret, sizeof log_secret, msg, strlen(msg), mac);
+	for (int i = 0; i < 32; i++)
+		snprintf(out + 2 * i, 3, "%02x", mac[i]);
 }
 
 /* The key of a name inside the counters and the ban file: the FULL HMAC-SHA256
@@ -1804,17 +1978,106 @@ static int lfind(int kind, const char *address, const char *user)
 	return -1;
 }
 
-/* Creates an entry, or returns -1 if the table is full of things that must not
- * be thrown away.  ⛔ NEVER a banned entry and never one with an attempt in
- * flight (nor one of `avoid`, the entries the caller is holding): if there is
- * nothing else, -1 and the caller REFUSES the attempt and counts the refusal.
- * Order of preference: free slot, entry with nothing to remember, oldest
- * entry without recidivism, oldest one with it.  The last two are declared
- * in `evicted` (empty if nothing was thrown away that held something). */
-static int lcreate(int kind, const char *address, const char *user, uint64_t now,
-                   const int avoid[LEVELS], char *evicted, size_t evcap)
+/* Which of two BANNED entries is worth less (the one to drop first): the lower level, then the nearer to its
+ * expiry, then the older touch, then the name (a total order: the choice does not depend on the order in which
+ * the entries arrived).  Both are banned, so `banned_until > now`. */
+static bool ban_worth_less(const struct lentry *a, const struct lentry *b, uint64_t now)
 {
-	int slot = -1, victim = -1, victim_class = 99;
+	if (a->level != b->level)
+		return a->level < b->level;
+	if (a->banned_until != b->banned_until)
+		return a->banned_until - now < b->banned_until - now;
+	if (a->last_touch != b->last_touch)
+		return a->last_touch < b->last_touch;
+	int c = strcmp(a->address, b->address);
+	if (c)
+		return c < 0;
+	return strcmp(a->user, b->user) < 0;
+}
+
+static void ban_text(const struct lentry *e, uint64_t now, char *out, size_t cap)
+{
+	snprintf(out, cap, "BAN of the %s %s (level %d, %llu s left)", LEVEL_NAME[e->kind], e->address,
+	         (int)e->level, (unsigned long long)((e->banned_until - now) / 1000u));
+}
+
+/* Appends `text` to what the log will say, separated by «; »: ⭐ EVERY entry or ban thrown away in one outcome is
+ * named, not only the last (three levels can each take a place). */
+static void say_append(char *buf, size_t cap, const char *text)
+{
+	size_t n = strlen(buf);
+	if (!cap || n + 1 >= cap)
+		return;
+	snprintf(buf + n, cap - n, "%s%s", n ? "; " : "", text);
+}
+
+/* How many entries are banned, and (if `cand`) the least valuable one that may be touched: not one the caller
+ * holds (`avoid`) and not one with an attempt in flight; -1 if none. */
+static int ban_candidate(uint64_t now, const int avoid[LEVELS], int *count)
+{
+	int n = 0, bv = -1;
+	for (int k = 0; k < MAX_ATTEMPTS; k++) {
+		const struct lentry *e = &attempts[k];
+		bool held = false;
+		if (!e->used || !is_banned(e, now))
+			continue;
+		n++;
+		for (int j = 0; j < LEVELS; j++)
+			if (avoid && avoid[j] == k)
+				held = true;
+		if (held || e->in_flight > 0)
+			continue;
+		if (bv < 0 || ban_worth_less(e, &attempts[bv], now))
+			bv = k;
+	}
+	if (count)
+		*count = n;
+	return bv;
+}
+
+/* ⭐ The common counter of the unknown keys (the box above `MAX_ATTEMPTS`). */
+static int unknown_inside(uint64_t now)
+{
+	int n = 0;
+	for (int k = 0; k < unknown_amount; k++)
+		if (unknown_times[k] >= now || now - unknown_times[k] <= UNKNOWN_WINDOW_MS)
+			n++;
+	return n;
+}
+
+/* The bookings in flight that the common counter has counted (they sit on the LK_KEY entry, which an attempt
+ * in flight protects from eviction: the count cannot leak). */
+static int unknown_flights(void)
+{
+	int n = 0;
+	for (int k = 0; k < MAX_ATTEMPTS; k++)
+		if (attempts[k].used && attempts[k].kind == LK_KEY)
+			n += attempts[k].unk_flight;
+	return n;
+}
+
+static void unknown_note(uint64_t now)
+{
+	if (unknown_amount < UNKNOWN_LIMIT) {
+		unknown_times[unknown_amount++] = now;
+	} else {
+		memmove(unknown_times, unknown_times + 1, (UNKNOWN_LIMIT - 1) * sizeof unknown_times[0]);
+		unknown_times[UNKNOWN_LIMIT - 1] = now;
+	}
+}
+
+/* Creates an entry, or returns -1 if the table has nothing that may be thrown away.  ⛔ NEVER a banned
+ * entry — except as the box above says, for a KNOWN key only (`may_drop_ban`) — and never one with an attempt
+ * in flight nor one of `avoid`, the entries the caller is holding: if there is nothing else, -1 and the caller
+ * REFUSES the attempt and counts the refusal.  Order of preference: free slot, entry with nothing to remember,
+ * oldest entry without recidivism, oldest one with it, and only then the least valuable ban.  The last three
+ * are declared: the entries in `evicted`, the bans in `dropped` (both APPENDED, empty if nothing was thrown
+ * away that held something). */
+static int lcreate(int kind, const char *address, const char *user, uint64_t now,
+                   const int avoid[LEVELS], char *evicted, size_t evcap, char *dropped, size_t dpcap,
+                   bool may_drop_ban)
+{
+	int slot = -1, victim = -1, victim_class = 99, bvictim = -1;
 	for (int k = 0; k < MAX_ATTEMPTS; k++) {
 		if (!attempts[k].used) {
 			slot = k;
@@ -1825,7 +2088,13 @@ static int lcreate(int kind, const char *address, const char *user, uint64_t now
 		for (int j = 0; j < LEVELS; j++)
 			if (avoid && avoid[j] == k)
 				held = true;
-		if (held || e->in_flight > 0 || is_banned(e, now))
+		if (is_banned(e, now)) {
+			if (!held && e->in_flight == 0 &&
+			    (bvictim < 0 || ban_worth_less(e, &attempts[bvictim], now)))
+				bvictim = k;
+			continue;
+		}
+		if (held || e->in_flight > 0)
 			continue;
 		int cls = lentry_idle(e, now) ? 0 : (level_now(e, now) == 0 ? 1 : 2);
 		if (cls < victim_class ||
@@ -1835,12 +2104,25 @@ static int lcreate(int kind, const char *address, const char *user, uint64_t now
 		}
 	}
 	if (slot < 0) {
-		if (victim < 0)
+		if (victim >= 0) {
+			slot = victim;
+			if (victim_class > 0 && evicted && evcap) {
+				char t[128];
+				snprintf(t, sizeof t, "%s %s", LEVEL_NAME[attempts[slot].kind], attempts[slot].address);
+				say_append(evicted, evcap, t);
+			}
+		} else if (bvictim >= 0 && may_drop_ban) {
+			/* nothing but bans and bookings: the least valuable ban goes, named in the log */
+			slot = bvictim;
+			login_bans_dropped++;
+			if (dropped && dpcap) {
+				char t[160];
+				ban_text(&attempts[slot], now, t, sizeof t);
+				say_append(dropped, dpcap, t);
+			}
+		} else {
 			return -1;
-		slot = victim;
-		if (victim_class > 0 && evicted && evcap)
-			snprintf(evicted, evcap, "%s %s", LEVEL_NAME[attempts[slot].kind],
-			         attempts[slot].address);
+		}
 	}
 	memset(&attempts[slot], 0, sizeof attempts[slot]);
 	attempts[slot].used = true;
@@ -1856,13 +2138,15 @@ enum login_verdict {
 	LV_OK,     /* booked: ask PAM */
 	LV_BANNED, /* a level is banned: do not ask PAM */
 	LV_BUSY,   /* the counters (failed + in flight) are at the limit: do not ask PAM */
-	LV_FULL    /* the table has no place for the entry: do not ask PAM, counted */
+	LV_FULL,   /* the table has no place for the entry: do not ask PAM, counted */
+	LV_QUOTA   /* bans at their quota and the unknown keys at their common limit: do not ask PAM, counted */
 };
 
 struct login_info {
 	int kind;          /* the level that decided (LK_*) */
 	uint64_t remain;   /* LV_BANNED: ms left */
-	char evicted[96];  /* an entry with something in it was thrown away to make room */
+	char evicted[384]; /* entries with something in them thrown away to make room (all named) */
+	char dropped[384]; /* bans thrown away as a last resort (all named) */
 };
 
 /* B — THE CHECK AND THE BOOKING IN ONE STEP.  Called at `CREDENTIALS`, before
@@ -1889,11 +2173,28 @@ static enum login_verdict login_reserve(const char *key, const char *user,
 			info->remain = attempts[idx[j]].banned_until - now;
 			return LV_BANNED;
 		}
+	/* ⭐ Bans at their quota: the unknown keys share a small counter (the box above `MAX_ATTEMPTS`).  Refused
+	 *   BEFORE anything is created or booked, so it evicts nothing and it is not a failure. */
+	bool unknown_counted = false;
+	if (!good_recent(key, now)) {
+		int nb;
+		ban_candidate(now, NULL, &nb);
+		if (nb >= BAN_QUOTA) {
+			/* the booking itself counts, as for LV_BUSY: failures in the window + attempts in flight */
+			if (unknown_inside(now) + unknown_flights() >= UNKNOWN_LIMIT) {
+				login_refused_quota++;
+				info->kind = LK_KEY;
+				return LV_QUOTA;
+			}
+			unknown_counted = true;
+		}
+	}
 	for (int j = 0; j < LEVELS; j++) {
 		if ((j == LK_NET48 && !has48) || idx[j] >= 0)
 			continue;
 		idx[j] = lcreate(j, j == LK_NET48 ? key48 : key, user, now, idx,
-		                 info->evicted, sizeof info->evicted);
+		                 info->evicted, sizeof info->evicted, info->dropped, sizeof info->dropped,
+		                 good_recent(key, now));
 		if (idx[j] < 0) {
 			login_refused_full++;
 			info->kind = j;
@@ -1916,6 +2217,8 @@ static enum login_verdict login_reserve(const char *key, const char *user,
 		attempts[idx[j]].in_flight++;
 		attempts[idx[j]].last_touch = now;
 	}
+	if (unknown_counted)
+		attempts[idx[LK_KEY]].unk_flight++;
 	return LV_OK;
 }
 
@@ -1934,6 +2237,8 @@ static void login_release(const char *key, const char *user)
 	for (int j = 0; j < LEVELS; j++)
 		if (idx[j] >= 0 && attempts[idx[j]].in_flight > 0)
 			attempts[idx[j]].in_flight--;
+	if (idx[LK_KEY] >= 0 && attempts[idx[LK_KEY]].unk_flight > 0)
+		attempts[idx[LK_KEY]].unk_flight--;
 }
 
 struct login_result {
@@ -1944,7 +2249,9 @@ struct login_result {
 	int ban_number[LEVELS];   /* 1, 2, 3.. (the ladder stops at the third duration) */
 	int reset_amount;         /* success: how many failures of (key, user) were wiped */
 	int refused_full;         /* levels that could not be counted: the table is full */
-	char evicted[96];
+	char evicted[384];        /* entries thrown away to make room (all named) */
+	char dropped[384];        /* bans thrown away as a last resort (all named) */
+	bool good_changed;        /* success: the list of known keys changed, the ban file must be rewritten */
 };
 
 /* The VERDICT: the booking is resolved.  `admitted` resets ONLY the failures
@@ -1966,12 +2273,20 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 	idx[LK_USER] = lfind(LK_USER, key, user);
 	idx[LK_KEY] = lfind(LK_KEY, key, NULL);
 	idx[LK_NET48] = has48 ? lfind(LK_NET48, key48, NULL) : -1;
+	if (idx[LK_KEY] >= 0 && attempts[idx[LK_KEY]].unk_flight > 0) {
+		/* ⭐ the booking was counted by the common counter of the unknown keys: its place in flight turns
+		 *   into a failure there, or is given back */
+		attempts[idx[LK_KEY]].unk_flight--;
+		if (!admitted)
+			unknown_note(now);
+	}
 	if (!admitted)
 		for (int j = 0; j < LEVELS; j++) {
 			if ((j == LK_NET48 && !has48) || idx[j] >= 0)
 				continue;
 			idx[j] = lcreate(j, j == LK_NET48 ? key48 : key, user, now, idx,
-			                 r->evicted, sizeof r->evicted);
+			                 r->evicted, sizeof r->evicted, r->dropped, sizeof r->dropped,
+			                 good_recent(key, now));
 			if (idx[j] < 0) {
 				login_refused_full++;
 				r->refused_full++;
@@ -1990,7 +2305,7 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 				e->amount = 0;
 			}
 			if (j == LK_KEY)
-				good_note(key, now);
+				r->good_changed = good_note(key, now);
 			continue;
 		}
 		if (is_banned(e, now)) {
@@ -2007,6 +2322,7 @@ static void login_resolve(const char *key, const char *user, bool admitted,
 		r->inside[j] = failed_inside(e, now);
 		if (r->inside[j] >= LIMIT[j]) {
 			uint8_t lv = level_now(e, now);
+			/* ⛔ no room is made: a new ban never takes away another's (the box above `MAX_ATTEMPTS`) */
 			e->banned_until = now + LADDER_MS[lv];
 			e->level = lv < 2 ? (uint8_t)(lv + 1) : 2;
 			e->amount = 0; /* the count restarts after the ban */
@@ -2098,6 +2414,10 @@ static void login_report(const struct sink *k, const char *key, const char *user
 		say(k, "⚠ attempt table full (%d entries): evicted the entry «%s» to "
 		       "make room — §4.4-bis",
 		    MAX_ATTEMPTS, r->evicted);
+	if (r->dropped[0])
+		say(k, "⚠ attempt table without a place and bans over their quota (%d): dropped as a last resort — %s "
+		       "(the lowest level and the nearest to its expiry go first; %u dropped so far) — §4.4-bis",
+		    BAN_QUOTA, r->dropped, login_bans_dropped);
 	if (r->refused_full)
 		say(k, "⛔ attempt table full and without a place that can be freed "
 		       "(everything in it is banned or in flight): %d level(s) of this "
@@ -2110,6 +2430,9 @@ static void login_report(const struct sink *k, const char *key, const char *user
 		       "and the counters of the address and of the /48 are NOT touched "
 		       "— §4.4-bis",
 		    key, shown, r->reset_amount);
+		/* ⭐ a key that is new in the list of the known ones (or a day old) is written to the ban file */
+		if (r->good_changed || r->dropped[0])
+			save_ban(k, now);
 		return;
 	}
 	say(k, "failed attempt from %s as %s: %d of %d for the user, %d of %d for the "
@@ -2131,7 +2454,8 @@ static void login_report(const struct sink *k, const char *key, const char *user
 		    j == LK_USER ? shown : "", (unsigned long long)(r->ban_ms[j] / 60000u),
 		    r->ban_number[j], LIMIT[j], (unsigned long long)(WINDOW_MS[j] / 60000u));
 	}
-	if (any_ban)
+	/* a ban dropped as a last resort is a change of the file too */
+	if (any_ban || r->dropped[0])
 		save_ban(k, now);
 }
 
@@ -2141,6 +2465,7 @@ static void login_report(const struct sink *k, const char *key, const char *user
  * the next periodic save is a ban that a sudden restart takes away (I7).
  *
  * THE FORMAT (since 24 Oct 2026):   B2 <U|K|N> <level> <epoch> <key>[ <user>]
+ *   and, after them, one line per key that logged in lately:  G2 <epoch of the login> <key | HMAC-SHA256 hex of the key>
  *   U = (key, user), K = key, N = IPv6 /48; `level` = bans suffered (0..2);
  *   `epoch` = when the ban ends (in the past for a ban that has ended and is
  *   only remembered); the user, last because it may contain spaces, only for U.
@@ -2187,6 +2512,15 @@ static void save_ban(const struct sink *k, uint64_t now)
 		        e->kind == LK_USER ? " " : "", e->kind == LK_USER ? e->user : "");
 		if (is_banned(e, now))
 			amount++;
+	}
+	/* ⭐ the keys that logged in lately (`G2 <epoch> <key or HMAC>`): the 1.0 skips them (the epoch is in the past).
+	 *    The REAL epoch of the login is written, not one made from the monotonic clock (see `good_keys`); the key is
+	 *    written as its HMAC when the secret of the logs survives a restart, else as itself. */
+	for (int g = 0; g < GOOD_KEYS; g++) {
+		if ((!good_keys[g].key[0] && !good_keys[g].mac[0]) || !good_alive(g, now))
+			continue;
+		bool as_mac = good_keys[g].mac[0] && (log_secret_persistent || !good_keys[g].key[0]);
+		fprintf(f, "G2 %lld %s\n", good_keys[g].epoch, as_mac ? good_keys[g].mac : good_keys[g].key);
 	}
 	/* ⚠ fsync BEFORE the rename: a rename that survives a crash with a file
 	 *    that does not is the «truncated ban file» this function exists to avoid. */
@@ -2263,7 +2597,7 @@ bool rcp_unblock(const char *address, uint64_t now)
 		if (is_banned(e, now))
 			was_banned = true;
 		touched = true;
-		int flight = e->in_flight;
+		int flight = e->in_flight, unk = e->unk_flight;
 		char kind = (char)e->kind;
 		char address_copy[64], user_copy[65];
 		snprintf(address_copy, sizeof address_copy, "%s", e->address);
@@ -2273,11 +2607,14 @@ bool rcp_unblock(const char *address, uint64_t now)
 			e->used = true;
 			e->kind = (uint8_t)kind;
 			e->in_flight = flight;
+			e->unk_flight = unk;
 			e->last_touch = now;
 			snprintf(e->address, sizeof e->address, "%s", address_copy);
 			snprintf(e->user, sizeof e->user, "%s", user_copy);
 		}
 	}
+	/* ⭐ and the common counter of the unknown keys: whoever unblocks wants to let the people in */
+	unknown_amount = 0;
 	if (touched)
 		save_ban(NULL, now);
 	return was_banned;
@@ -2329,6 +2666,24 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 		int kind = LK_KEY, level = 2;
 		long long exp = 0;
 		line[strcspn(line, "\r\n")] = 0;
+		if (strncmp(line, "G2 ", 3) == 0) {
+			/* a key that logged in lately (`good_keys`, the box above `GOOD_KEYS`): not a ban, not counted */
+			long long when_epoch = 0;
+			char gk[96], gn[64];
+			if (sscanf(line + 3, "%lld %95s", &when_epoch, gk) != 2 || when_epoch < 0 || when_epoch > (long long)t_now)
+				continue; /* not a line, or a login "from the future" */
+			uint64_t age = (uint64_t)((long long)t_now - when_epoch) * 1000u;
+			if (age > GOOD_AGE)
+				continue; /* older than 30 days (REAL time) */
+			uint64_t when = age < now ? now - age : 1;
+			if (gk[0] == '[') {
+				rcp_key_address(gk, gn, sizeof gn);
+				good_put(gn, NULL, when, when_epoch);
+			} else if (strlen(gk) == 64 && strspn(gk, "0123456789abcdef") == 64) {
+				good_put(NULL, gk, when, when_epoch);
+			}
+			continue;
+		}
 		if (strncmp(line, "B2 ", 3) == 0) {
 			char kc = 0;
 			int off = 0;
@@ -2377,10 +2732,42 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 			until = ago < now ? now - ago : 1;
 		}
 		int i = lfind(kind, norm, user);
+		bool loses = false;
+		/* ⭐ the quota holds for a loaded file too, whatever the order of its lines: the line that comes is
+		 *   compared with the least valuable ban already loaded, and the one worth less stays out.  The one
+		 *   displaced is lifted but KEEPS its level (the recidivism), as an ordinary entry. */
+		if (until > now && (i < 0 || !is_banned(&attempts[i], now))) {
+			int nb, cand = ban_candidate(now, none, &nb);
+			if (nb >= BAN_QUOTA && cand >= 0) {
+				struct lentry inc;
+				memset(&inc, 0, sizeof inc);
+				inc.kind = (uint8_t)kind;
+				inc.level = (uint8_t)(level > 0 ? level : 1);
+				inc.banned_until = until;
+				inc.last_touch = now;
+				snprintf(inc.address, sizeof inc.address, "%s", norm);
+				snprintf(inc.user, sizeof inc.user, "%s", user);
+				if (!ban_worth_less(&attempts[cand], &inc, now)) {
+					loses = true; /* it stays out of the bans, but it is remembered with its level */
+				} else {
+					attempts[cand].banned_until = now;
+					if (amount > 0)
+						amount--;
+				}
+			}
+		}
 		if (i < 0)
-			i = lcreate(kind, norm, user, now, none, NULL, 0);
+			i = lcreate(kind, norm, user, now, none, NULL, 0, NULL, 0, false);
 		if (i < 0)
 			continue; /* the table is full of bans: nothing to evict */
+		if (loses) {
+			/* an entry that is not banned, with its level: the recidivism of a line that lost the comparison */
+			if (!is_banned(&attempts[i], now) && attempts[i].banned_until < now)
+				attempts[i].banned_until = now;
+			if (attempts[i].level < (level > 0 ? level : 1))
+				attempts[i].level = (uint8_t)(level > 0 ? level : 1);
+			continue;
+		}
 		if (until > attempts[i].banned_until)
 			attempts[i].banned_until = until;
 		if (level > attempts[i].level)
@@ -2455,6 +2842,9 @@ void rcp_reset_session_log(void)
 		memset(attached, 0, (size_t)how_many_slots * sizeof *attached);
 	memset(attempts, 0, sizeof attempts);
 	login_refused_full = 0;
+	login_bans_dropped = 0;
+	login_refused_quota = 0;
+	unknown_amount = 0;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -3474,6 +3864,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 		reg(s, "⚠ attempt table full (%d entries): evicted the entry «%s» to "
 		       "make room — §4.4-bis",
 		    MAX_ATTEMPTS, linfo.evicted);
+	if (linfo.dropped[0])
+		reg(s, "⚠ attempt table without a place and bans over their quota (%d): dropped as a last resort — %s "
+		       "(%u dropped so far) — §4.4-bis",
+		    BAN_QUOTA, linfo.dropped, login_bans_dropped);
+	if (linfo.dropped[0])
+		save_ban(NULL, now); /* a ban that is gone must not come back at the restart */
 	if (lv != LV_OK) {
 		/* ⛔ The limiter refuses WITHOUT querying PAM, and it must be known from
 		 * reading the reason on the wire: `TOO_MANY_ATTEMPTS` and
@@ -3494,6 +3890,12 @@ static bool handle_credentials(rcp_session *s, reader *l, uint64_t now)
 			       "of %s: PAM is not queried, and the refusal is NOT a failed "
 			       "attempt (§4.4-bis B)",
 			    LEVEL_NAME[linfo.kind], s->address);
+		else if (lv == LV_QUOTA)
+			reg(s, "⛔ %d bans in force (their quota) and the unknown keys together have already failed %d times "
+			       "in %u minutes: %s has never logged in, so it is refused (0x08), PAM is not queried, nothing "
+			       "is evicted and the refusal is NOT a failed attempt.  Refusals for this reason so far: %u "
+			       "(§4.4-bis)",
+			    BAN_QUOTA, UNKNOWN_LIMIT, UNKNOWN_WINDOW_MS / 60000u, s->address, login_refused_quota);
 		else
 			reg(s, "⛔ attempt table full and nothing in it can be freed "
 			       "(banned or in flight): refused, PAM is not queried.  "
