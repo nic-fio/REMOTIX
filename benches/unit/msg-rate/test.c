@@ -20,7 +20,7 @@
  *
  * BUILD AND RUN (a second; run from the root of the tree):
  *   gcc -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
- *      -Isrc benches/unit/msg-rate/test.c -o /tmp/msg-rate-test && /tmp/msg-rate-test src/rcp.c src/main.c
+ *      -Isrc benches/unit/msg-rate/test.c -o /tmp/msg-rate-test && /tmp/msg-rate-test src/rcp.c src/main.c src/webtransport.c src/main.c
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "msgrate.h"
@@ -317,21 +317,31 @@ int main(int argc, char **argv)
 			free(src);
 		}
 	}
-	/* 10: the budget and a canvas that grows (src/main.c, argv[2], optional) */
-	if (argc > 2) {
-		char *m = slurp(argv[2]);
+	/* 10: the budget and a canvas that grows (src/rcp.c argv[1], src/main.c argv[2], src/webtransport.c argv[3], optional) */
+	if (argc > 3) {
+		char *r = slurp(argv[1]), *m = slurp(argv[2]), *w = slurp(argv[3]);
 		size_t n;
 		const char *p;
 
-		CHECK(m != NULL, "10: src/main.c readable");
-		if (m) {
+		CHECK(r && m && w, "10: sources readable");
+		if (r && m && w) {
 			p = body_of(m, "static bool recanvas_to_child(", &n);
 			CHECK(p != NULL, "10: recanvas_to_child found");
+			CHECK(p && !memmem(p, n, "recanvas_fits_budget", strlen("recanvas_fits_budget")),
+			      "10: recanvas_to_child (also the ATTACH and the recall of the scene) NEVER asks the budget");
+			p = body_of(m, "static bool canvas_fits_to_budget(", &n);
+			CHECK(p != NULL && memmem(p, n, "recanvas_fits_budget(p, user, width, height)", strlen("recanvas_fits_budget(p, user, width, height)")) != NULL,
+			      "10: the budget is asked by canvas_fits_to_budget, the hook of a NEW request");
+			CHECK(strstr(m, "wt_canvas_fits_hook(canvas_fits_to_budget, &bridge)") != NULL, "10: and main.c registers it");
+			CHECK(count_in(w, strlen(w), "g.canvas_fits = hook_canvas_fits;") == 1, "10: webtransport connects it to the session hooks");
+			CHECK(count_in(r, strlen(r), "s->g.canvas_fits(") == 1, "10: rcp.c asks it in ONE place only");
+			p = body_of(r, "static bool drain_at(rcp_session *s, uint64_t now, size_t *off)\n{", &n);
 			if (p) {
-				const char *fit = memmem(p, n, "recanvas_fits_budget(p, user, width, height)", strlen("recanvas_fits_budget(p, user, width, height)"));
-				const char *go = memmem(p, n, "children_recanvas(", strlen("children_recanvas("));
+				const char *fits = memmem(p, n, "s->g.canvas_fits(", strlen("s->g.canvas_fits("));
+				const char *flight = memmem(p, n, "if (s->canvas_flight) {", strlen("if (s->canvas_flight) {"));
+				const char *go = memmem(p, n, "s->g.recanvas(s->g.ctx, good_w, good_h)", strlen("s->g.recanvas(s->g.ctx, good_w, good_h)"));
 
-				CHECK(fit && go && fit < go, "10: a growing canvas is judged by the budget BEFORE it leaves for the stage");
+				CHECK(fits && flight && go && fits < flight && flight < go, "10: that place is the FIT_CANVAS branch, before the in-flight handling and the stage call");
 			}
 			p = body_of(m, "static bool recanvas_fits_budget(", &n);
 			CHECK(p != NULL, "10: recanvas_fits_budget found");
@@ -344,8 +354,10 @@ int main(int argc, char **argv)
 				CHECK(memmem(p, n, "e != BUDGET_DOES_NOT_HOLD", strlen("e != BUDGET_DOES_NOT_HOLD")) != NULL,
 				      "10: «I could not measure» passes, only a clear no refuses");
 			}
-			free(m);
 		}
+		free(r);
+		free(m);
+		free(w);
 	}
 	printf("%d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;

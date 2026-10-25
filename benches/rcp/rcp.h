@@ -377,6 +377,13 @@ typedef struct {
 	 *   the day one of them changes. */
 	bool (*recanvas)(void *ctx, uint32_t width, uint32_t height);
 
+	/* ⛔⭐ OPTIONAL — «MAY THIS SESSION GROW TO THIS CANVAS?», asked ONLY for a NEW `FIT_CANVAS` request of the client (audit P-R4/Q-R4).
+	 * The host's budget counted this session at the canvas of its admission; a request for a larger one is judged by it now.
+	 * `false` = it does not fit: `rcp.c` answers `CANVAS(REFUSED, NOT_NOW)` and the canvas stays.  ⛔ It is NOT part of `recanvas`, and must not
+	 * be: `recanvas` is also called to put a session on the canvas it ALREADY had (the `ATTACH`, the recall of the scene), and a budget that
+	 * said no there would leave the screen black.  Not connected (0) = always yes. */
+	bool (*canvas_fits)(void *ctx, uint32_t width, uint32_t height);
+
 	/* ⛔⭐⭐ THE TWO LAYOUT HOOKS — `DECISIONS.md` §5-bis.7, decided
 	 *      by the user on 8 Aug 2026 and CONFIRMED on the 16th: *«for keyboards
 	 *      the same reasoning as for resolutions applies: at session creation or

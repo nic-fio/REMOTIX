@@ -9371,6 +9371,17 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 				break;
 			}
 
+			/* ⛔⭐ THE BUDGET (audit P-R4/Q-R4): ONLY HERE, for a NEW request of the client.  The calls of `recanvas` at the `ATTACH` and at the
+			 *    recall of the scene put the session on the canvas it already had, and must always go through (a budget that said no there leaves
+			 *    the screen black): that is why this is a hook of its own and not a check inside `recanvas`.  Before the in-flight handling
+			 *    below, so that a refused request does not disturb the one that is on its way. */
+			if (s->g.canvas_fits && !s->g.canvas_fits(s->g.ctx, good_w, good_h)) {
+				reg(s, "⛔ FIT_CANVAS %ux%u → %ux%u does NOT fit the budget of this machine: NOT_NOW, and the canvas stays %ux%u",
+				    requested_w, requested_h, good_w, good_h, s->canvas_w, s->canvas_h);
+				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
+				break;
+			}
+
 			/* ⛔⭐ A REQUEST IN FLIGHT IS ANSWERED BEFORE ACCEPTING ANOTHER
 			 *     — §7.1: «the n-th `CANVAS` answers the n-th `FIT_CANVAS`».
 			 *

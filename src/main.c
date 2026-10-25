@@ -1818,7 +1818,9 @@ static bool pace_to_child(void *ctx, const char *user, uint16_t max_fps)
  *     maximum of `rcp.h` (4096x2304, 4.4 times the pixels) without anyone asking the budget again: the admitted sum no longer
  *     meant anything.  A request that stays within what the admission counted costs nothing more and passes; a larger one is judged
  *     NOW, as a newcomer of that size beside everybody else (the user's own stage left out of the sum), and if it does not hold it
- *     does not leave for the stage (the client is answered NOT_NOW and keeps the canvas it has).  Budget OFF (the default) or
+ *     does not leave for the stage (the client is answered NOT_NOW and keeps the canvas it has).  ⛔ Asked ONLY for a NEW FIT_CANVAS of the
+ *     client, through the `canvas_fits` hook: `recanvas_to_child()` also serves the ATTACH and the recall of the scene, which put the
+ *     session on the canvas it already had and must always go through.  Budget OFF (the default) or
  *     «I could not measure»: it passes, like every other verdict of the budget. */
 static bool recanvas_fits_budget(struct bridge *p, const char *user, uint32_t width, uint32_t height)
 {
@@ -1855,9 +1857,17 @@ static bool recanvas_to_child(void *ctx, const char *user, uint32_t width,
 	struct bridge *p = (struct bridge *)ctx;
 	if (!p || !p->f)
 		return false;
-	if (!recanvas_fits_budget(p, user, width, height))
-		return false;
 	return children_recanvas(p->f, user, width, height);
+}
+
+/* The budget's question, ONLY for a new FIT_CANVAS of the client (`canvas_fits` hook of rcp.h, via `wt_canvas_fits_hook()`): the calls of
+ * `recanvas_to_child()` at the ATTACH and at the recall of the scene never ask it. */
+static bool canvas_fits_to_budget(void *ctx, const char *user, uint32_t width, uint32_t height)
+{
+	struct bridge *p = (struct bridge *)ctx;
+	if (!p || !p->f)
+		return true;
+	return recanvas_fits_budget(p, user, width, height);
 }
 
 /* ⛔ The child has gone.  ⚠ There is no longer any depot to empty — it was
@@ -3148,6 +3158,7 @@ int main(int argc, char **argv)
 	 *     matters — and the client would show «fit the desktop» as off on a
 	 *     server that can do it. */
 	wt_recanvas_hook(recanvas_to_child, &bridge);
+	wt_canvas_fits_hook(canvas_fits_to_budget, &bridge);
 	wt_layout_hook(layout_to_child, &bridge);
 	/* ⏳ §13: connected always; `rcp.c` declares `video.pace` only with
 	 *    `--decoder-pace`. */

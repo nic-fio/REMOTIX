@@ -2747,6 +2747,8 @@ static int hook_input_release_all(void *ctx)
  *    stolen from neatvnc»). */
 static wt_recanvas_request hook_stage_recanvas;
 static void *hook_stage_recanvas_ctx;
+static wt_canvas_fits_request hook_stage_canvas_fits;
+static void *hook_stage_canvas_fits_ctx;
 
 void wt_recanvas_hook(wt_recanvas_request f, void *ctx)
 {
@@ -2842,6 +2844,26 @@ static int hook_layout_exists(void *ctx, const char *name)
 	}
 	keyboard_close(t);
 	return 1;
+}
+
+void wt_canvas_fits_hook(wt_canvas_fits_request f, void *ctx)
+{
+	hook_stage_canvas_fits = f;
+	hook_stage_canvas_fits_ctx = ctx;
+}
+
+/* The budget's question for a NEW FIT_CANVAS: the name is the one PAM admitted on this session, never one from the wire (invariant I3). */
+static bool hook_canvas_fits(void *ctx, uint32_t width, uint32_t height)
+{
+	wt *w = (wt *)ctx;
+	const char *my;
+
+	if (!hook_stage_canvas_fits || !w->rcp)
+		return true;
+	my = rcp_user(w->rcp);
+	if (!my || !my[0])
+		return true;
+	return hook_stage_canvas_fits(hook_stage_canvas_fits_ctx, my, width, height);
 }
 
 static bool hook_recanvas(void *ctx, uint32_t width, uint32_t height)
@@ -7226,6 +7248,8 @@ static void rcp_start(wt *w, int64_t stream_id)
 	 *   anybody for. */
 	if (hook_stage_recanvas)
 		g.recanvas = hook_recanvas;
+	if (hook_stage_canvas_fits)
+		g.canvas_fits = hook_canvas_fits;
 	/* ⏳ §13: connected only with the bridge to the stage — a server that
 	 *    cannot apply a `PACE` must not declare `video.pace`. */
 	if (hook_stage_pace)
