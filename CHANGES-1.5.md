@@ -90,6 +90,7 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   callback (`b6e3c5c1`); a second WebTransport CONNECT renewed the first session's deadline and overwrote its state (`f395aff5`).
 - **Sign of life** counted a packet ngtcp2 had discarded, letting an observer keep a dead client alive (found by the `quic-conn`
   fuzz, §11.29; `9f7e2419`). **NULL pointer arithmetic** in `wt_write()` for a FIN-only entry (found by UBSan, §11.29; `721dfd64`).
+- **WebTransport capsule parser quadratic, before any login** (R2 of the network audit; `43fdc3f1`): every capsule on the CONNECT stream moved the whole rest of the buffer down, so a client without credentials sending 2-byte capsules cost the server about L²/4 bytes of `memmove` per chunk of L bytes (360 KB for a 1.2 KB packet, 16.8 MB for an 8 KB one) with its credit widened by every byte it sent — a way to stall the single-threaded server. Now one read index and one compaction per call: linear. Test `benches/unit/capsule-parser`.
 - **Child messages**: the fixed char arrays of MSG_INTRO and MSG_STAGE read from the child socket had no final zero (`d80a4244`),
   found by the `child-msg` fuzz (`7ea65b2d`, with `benches/unit/child-credentials`, `8d2a4f5e`).
 - **Clipboard on KDE**: a zero byte cut the text and the fallback read past the copy (§11.6; `8031958d`).
