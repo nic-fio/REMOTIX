@@ -101,6 +101,21 @@
 #include "kwin.h"
 #include "session.h"
 
+/* ⭐ 1.5: every process this file execs (the desktop's child, usermod) starts with EVERY signal at its default and an empty
+ *    mask: the server and the root side ignore what they like (`signal(SIGHUP, SIG_IGN)`), and ignored dispositions and the
+ *    mask cross `execve`.  The project's order: the dispositions first, then the mask.  SIGPIPE is default too — the child
+ *    ignores it itself from its first instruction (`main.c`).  Same as `rootside_fork_signals_fresh()`, except SIGPIPE. */
+static void child_signals_default(void)
+{
+	sigset_t none;
+
+	for (int sg = 1; sg < NSIG; sg++)
+		if (sg != SIGKILL && sg != SIGSTOP)
+			signal(sg, SIG_DFL);
+	sigemptyset(&none);
+	sigprocmask(SIG_SETMASK, &none, NULL);
+}
+
 /* ⛔⭐ THE SAME SESSION CAP AS `rcp.c`, AND NOW IT IS TRUE — 25 Aug
  *     2026.  One user per child (I2), so the number is the same.
  *
@@ -1720,15 +1735,7 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 	 *    ignored disposition crosses the `execve`, and a desktop's programs would start with SIGHUP or SIGQUIT ignored
 	 *    — the sign of whoever launched the server (`nohup`, a background shell), not a decision.  SIGPIPE too: the
 	 *    child sets it ignored itself at its start (`main.c`, `child_alive()`), where it is meant to be. */
-	{
-		sigset_t none;
-
-		sigemptyset(&none);
-		sigprocmask(SIG_SETMASK, &none, NULL);
-		for (int sg = 1; sg < NSIG; sg++)
-			if (sg != SIGKILL && sg != SIGSTOP)
-				signal(sg, SIG_DFL);
-	}
+	child_signals_default();
 	execve(b->my_path, argv, envp);
 	_exit(37);
 }
@@ -1980,6 +1987,7 @@ static bool run_as_root(const char *which, char *const argv[], const char *user)
 	if (p < 0)
 		return false;
 	if (p == 0) {
+		child_signals_default(); /* a usermod must not inherit this process's ignored signals either */
 		execv(which, argv);
 		_exit(127);
 	}
