@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <arpa/inet.h> /* R-5: inet_pton() for the /32 of a bucket key */
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,6 +108,15 @@
 #define PAGE_ACCEPT_RATE_48 8
 #define PAGE_ACCEPT_BURST_48 16
 #define PAGE_RATE_KEYS 256
+/* ⭐ R-5 (audit of 25 Oct 2026): the keys are ALREADY the IPv4 address / IPv6 /64 (`rcp_key_address()`) and the /48 has its own table, but an
+ *   attacker with ONE large IPv6 allocation (a /32 holds 65536 /48s) could keep all 256 buckets of a table busy with rotating /64s or /48s, and
+ *   then every new address — the legitimate visitors — shared the single overflow bucket and got «503 busy».  So the buckets that are
+ *   BUSY (not yet refilled, see bucket_idle()) of one IPv6 /32 are at most PAGE_KEYS_PER_32 in each table: a key of that /32 past them is
+ *   charged to the shared overflow bucket (the attacker's own extra keys), and the 256 places can be filled only from at least
+ *   PAGE_RATE_KEYS / PAGE_KEYS_PER_32 = 8 different /32s.  IPv4 has no such group (an address is a real address, and 127.0.0.0/8 is how the tests
+ *   and a proxy look). */
+#define PAGE_KEYS_PER_32 32
+#include "pagebucket.h" /* struct bucket, bucket_of(): apart, tested alone by benches/unit/page-bucket */
 /* The kernel's queue of connections not accepted yet (independent review of
  * 16b75f33: 16 overflowed under a connect flood — the probe's SYN then
  * waited 1-2 s for its retransmit). */
@@ -346,16 +356,12 @@ struct page {
 	body *tail_gz; /* raw deflate (no wrapper), with its last block */
 	uLong tail_crc;
 	/* The accept buckets, per key and per /48. */
-	struct bucket {
-		char key[64];
-		uint64_t at;
-		unsigned milli;
-	} rate[PAGE_RATE_KEYS], rate48[PAGE_RATE_KEYS];
+	struct bucket rate[PAGE_RATE_KEYS], rate48[PAGE_RATE_KEYS];
 	/* The ONE bucket every key without a bucket of its own shares, per
 	 * table (review of 95ed70ea: a newcomer used to take over the most
 	 * refilled bucket with a fresh burst, so 65 rotating addresses had no
 	 * rate at all). */
-	struct bucket rate_over, rate48_over;
+	struct bucket rate_over[2], rate48_over[2]; /* [0] IPv4 keys, [1] IPv6 keys (R-5: one overflow per family) */
 	/* parked for the rate; served 503 after waiting in vain */
 	unsigned delayed_rate, busy_rate, refused_rate;
 	uint64_t park_next;
@@ -1860,53 +1866,6 @@ static client *fair_victim(page *p, unsigned mine, uint64_t now)
 	return v;
 }
 
-/* The bucket of `key` in `t`, refilled to `now` (`rate` per second up to a
- * burst of `burst`).  A key without one gets a bucket only if some bucket is
- * FULL (refilled to the burst: forgetting it forgets nothing) or empty;
- * otherwise it is charged to `over`, ONE bucket shared by every such key —
- * so rotating more addresses than buckets buys no fresh bursts. */
-static struct bucket *bucket_of(struct bucket *t, struct bucket *over,
-                                const char *key, uint64_t now, unsigned rate,
-                                unsigned burst)
-{
-	struct bucket *b = NULL, *free_one = NULL;
-	unsigned cap = burst * 1000u;
-
-	for (size_t i = 0; i < PAGE_RATE_KEYS; i++) {
-		struct bucket *x = &t[i];
-		if (x->key[0] && strcmp(x->key, key) == 0) {
-			b = x;
-			break;
-		}
-		if (!free_one && (!x->key[0] || (now >= x->at &&
-		                  (now - x->at >= (uint64_t)cap / rate ||
-		                   x->milli + (now - x->at) * rate >= cap))))
-			free_one = x;
-	}
-	if (!b && free_one) {
-		b = free_one;
-		snprintf(b->key, sizeof b->key, "%s", key);
-		b->milli = cap;
-		b->at = now;
-	}
-	if (!b) {
-		b = over;
-		if (!b->key[0]) {
-			snprintf(b->key, sizeof b->key, "*");
-			b->milli = cap;
-			b->at = now;
-		}
-	}
-	if (now > b->at) {
-		/* ⚠ only forward: a clock that went back refills nothing */
-		uint64_t d = now - b->at;
-		uint64_t m = d >= (uint64_t)cap / rate ? cap : (uint64_t)b->milli + d * rate;
-		b->milli = m > cap ? cap : (unsigned)m;
-		b->at = now;
-	}
-	return b;
-}
-
 /* One token from `key`'s bucket — and from the /48's, when `k48` is not
  * NULL — or none: ⚠ when either refuses, NEITHER is spent (review of
  * 95ed70ea: a /48 refusal used to cost the /64 a token).  `*who` = the
@@ -1942,9 +1901,9 @@ static bool queue_on(page *p, const struct bucket *b, const struct bucket *b48)
 static bool rate_take_q(page *p, const char *key, const char *k48, uint64_t now,
                         const char **who, bool queue)
 {
-	struct bucket *b = bucket_of(p->rate, &p->rate_over, key, now,
+	struct bucket *b = bucket_of(p->rate, p->rate_over, key, now,
 	                             PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
-	struct bucket *b48 = k48 ? bucket_of(p->rate48, &p->rate48_over, k48, now,
+	struct bucket *b48 = k48 ? bucket_of(p->rate48, p->rate48_over, k48, now,
 	                                     PAGE_ACCEPT_RATE_48, PAGE_ACCEPT_BURST_48)
 	                         : NULL;
 
@@ -1952,15 +1911,15 @@ static bool rate_take_q(page *p, const char *key, const char *k48, uint64_t now,
 	p->cand = b;
 	p->cand48 = b48;
 	if (b->milli < 1000u) {
-		*who = b == &p->rate_over ? "(the shared overflow bucket)" : key;
+		*who = BUCKET_IS_OVER(p->rate_over, b) ? "(the shared overflow bucket)" : key;
 		return false;
 	}
 	if (b48 && b48->milli < 1000u) {
-		*who = b48 == &p->rate48_over ? "(the shared /48 overflow bucket)" : k48;
+		*who = BUCKET_IS_OVER(p->rate48_over, b48) ? "(the shared /48 overflow bucket)" : k48;
 		return false;
 	}
 	if (queue && queue_on(p, b, b48)) {
-		*who = b == &p->rate_over ? "(the shared overflow bucket, queued)" : key;
+		*who = BUCKET_IS_OVER(p->rate_over, b) ? "(the shared overflow bucket, queued)" : key;
 		return false;
 	}
 	b->milli -= 1000u;

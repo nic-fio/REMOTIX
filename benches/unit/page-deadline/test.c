@@ -87,6 +87,7 @@
 #include "page.h"
 #include "rcp.h"
 #include "log.h"
+#include <arpa/inet.h> /* page.c includes it (R-5: inet_pton): before the malloc seam below */
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -1609,7 +1610,7 @@ int main(void)
 				n48 += rate_take(&rp, k, "2001:0db8:0001::/48", t0, &who);
 			}
 			{
-				struct bucket *b = bucket_of(rp.rate, &rp.rate_over, "[2001:db8:1:13::]",
+				struct bucket *b = bucket_of(rp.rate, rp.rate_over, "[2001:db8:1:13::]",
 				                             t0, PAGE_ACCEPT_RATE, PAGE_ACCEPT_BURST);
 				require(n48 == PAGE_ACCEPT_BURST_48 && strcmp(who, "2001:0db8:0001::/48") == 0 &&
 				                b->milli == PAGE_ACCEPT_BURST * 1000u,
@@ -1967,8 +1968,8 @@ int main(void)
 					cb = q;
 			}
 			nk = ca && cb && ca->phase == F_RATE && cb->phase == F_RATE && cb < ca;
-			p->rate_over.milli = 1000u; /* one token, shared */
-			p->rate_over.at = now;
+			p->rate_over[0].milli = 1000u; /* one token, shared */
+			p->rate_over[0].at = now;
 			page_expired(p, now);
 			require(nk && ca->phase == F_HANDSHAKE && cb->phase == F_RATE,
 			        "two parked on the shared bucket, the later in a lower slot: one token → the EARLIER goes (on 38639d7d: slot order)");
@@ -2040,8 +2041,8 @@ int main(void)
 				;
 			fa = connect_from(port, "127.0.11.1", 0);
 			pump(p, 2);
-			p->rate_over.milli = 1000u;
-			p->rate_over.at = log_now_ms();
+			p->rate_over[0].milli = 1000u;
+			p->rate_over[0].at = log_now_ms();
 			fb = connect_from(port, "127.0.11.2", 0);
 			pump(p, 2);
 			for (size_t i = 0; i < MAX_CLIENTS; i++) {
@@ -2077,12 +2078,12 @@ int main(void)
 			rate_reset(p);
 			again = connect_from(port, "127.0.12.1", 0); /* its group would hold 2 */
 			pump(p, 3);
-			b = &p->rate_over;
+			b = &p->rate_over[0];
 			for (int i = 0; i < PAGE_RATE_KEYS; i++)
 				if (strcmp(p->rate[i].key, "[127.0.12.1]") == 0)
 					b = &p->rate[i];
 			require(active(p) == MAX_CLIENTS && closed_by_server(again) &&
-			                b != &p->rate_over && b->milli == PAGE_ACCEPT_BURST * 1000u,
+			                b != &p->rate_over[0] && b->milli == PAGE_ACCEPT_BURST * 1000u,
 			        "refused as full after its rate check: the token is refunded (on fc76de93 it was spent)");
 			close(again);
 			page_expired(p, log_now_ms() + PAGE_REQUEST_MS + 1);
