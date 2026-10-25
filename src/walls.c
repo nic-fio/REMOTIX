@@ -6,7 +6,7 @@
  *
  *      · the checks that need no power first (the user, root, the two
  *        directories), so that a wrong option says so before anything moves;
- *      · `setexeccon` BEFORE the tree goes read-only: it writes
+ *      · `setexeccon` (and, 1.6, the AppArmor «exec» attribute) BEFORE the tree goes read-only: it writes
  *        /proc/thread-self/attr/exec, and on a read-only /proc that is EROFS;
  *      · the two writable directories are bind-mounted onto themselves BEFORE
  *        the recursive read-only step, so that each is a mount of its own
@@ -215,6 +215,91 @@ out:
 		free_fn(cur);
 	dlclose(l);
 	return rc;
+}
+
+/* ⭐ 1.6 (split audit, AppArmor): the network side is born INSIDE the AppArmor profile
+ *    `remotix_network`, the way SELinux puts it in `remotix_net_t`: before the `execve`, the
+ *    root side's fork writes «exec remotix_network» into /proc/thread-self/attr/apparmor/exec
+ *    (`aa_change_onexec` does exactly that write, so no library is needed).  The profile has NO
+ *    attachment path: nothing but this write can put a process in it — the root side, which
+ *    runs the same program, is never confined by it, nor are the desktops.
+ * ⛔ Off (AppArmor not in the kernel, or not enabled): said in the notes, go on.  On but the
+ *    profile not loaded: said, go on — the package loads it (postinst), and until the engine
+ *    certifies the installation a missing profile is a warning, not a stop.  The profile
+ *    loaded and the write REFUSED: -1, the network side is not started (as for SELinux).
+ * ⚠ Written BEFORE /proc goes read-only, like the SELinux context.  Not tried on a real
+ *   AppArmor yet: see packaging/debian/remotix_network.apparmor. */
+#define WALLS_APPARMOR_PROFILE "remotix_network"
+#define WALLS_APPARMOR_ENABLED "/sys/module/apparmor/parameters/enabled"
+#define WALLS_APPARMOR_PROFILES "/sys/kernel/security/apparmor/profiles"
+#define WALLS_APPARMOR_EXEC "/proc/thread-self/attr/apparmor/exec"
+#define WALLS_APPARMOR_EXEC_OLD "/proc/thread-self/attr/exec"
+
+/* true if a line of `profiles` ("name (mode)") begins with exactly `name` */
+static bool apparmor_loaded(const char *profiles, const char *name)
+{
+	char l[512];
+	size_t nl = strlen(name);
+	FILE *f = fopen(profiles, "re");
+	bool found = false;
+
+	if (!f)
+		return false;
+	while (!found && fgets(l, sizeof l, f))
+		found = strncmp(l, name, nl) == 0 && (l[nl] == ' ' || l[nl] == '\n' || l[nl] == '\0');
+	fclose(f);
+	return found;
+}
+
+/* The worker, with the four paths as parameters (so a test can give it files).  `attr_old`
+ * is tried when `attr` does not exist (kernels before the per-LSM attr directory). */
+static int apparmor_exec_in(const char *enabled, const char *profiles, const char *attr,
+                            const char *attr_old, const char *profile, char *why, size_t n)
+{
+	char c = 0, cmd[96];
+	int fd;
+	ssize_t w;
+	FILE *f = fopen(enabled, "re");
+
+	if (f) {
+		int ch = fgetc(f);
+
+		c = ch == EOF ? 0 : (char)ch;
+		fclose(f);
+	}
+	if (c != 'Y') {
+		note("AppArmor: off");
+		return 0;
+	}
+	if (!apparmor_loaded(profiles, profile)) {
+		note("⚠ AppArmor: on, but the profile %s is NOT loaded: the network side runs without it",
+		     profile);
+		return 0;
+	}
+	snprintf(cmd, sizeof cmd, "exec %s", profile);
+	fd = open(attr, O_WRONLY | O_CLOEXEC);
+	if (fd < 0 && errno == ENOENT)
+		fd = open(attr_old, O_WRONLY | O_CLOEXEC);
+	if (fd < 0)
+		return say(why, n, "AppArmor: cannot open the exec attribute (%s): the profile %s is "
+		           "loaded but the network side cannot be put in it", strerror(errno), profile);
+	w = write(fd, cmd, strlen(cmd));
+	if (w != (ssize_t)strlen(cmd)) {
+		int e = errno;
+
+		close(fd);
+		return say(why, n, "AppArmor: writing «%s» refused (%s)", cmd,
+		           w < 0 ? strerror(e) : "short write");
+	}
+	close(fd);
+	note("AppArmor: born in %s", profile);
+	return 0;
+}
+
+static int apparmor_exec_net(char *why, size_t n)
+{
+	return apparmor_exec_in(WALLS_APPARMOR_ENABLED, WALLS_APPARMOR_PROFILES, WALLS_APPARMOR_EXEC,
+	                        WALLS_APPARMOR_EXEC_OLD, WALLS_APPARMOR_PROFILE, why, n);
 }
 
 /* A directory the network side must write: absolute, there, a directory,
@@ -532,6 +617,9 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 
 	/* ⛔ 2 — SELinux, while /proc can still be written. */
 	if (selinux_exec_net(why, why_len) != 0)
+		return -1;
+	/* ⭐ 1.6 — AppArmor, in the same breath (a system has one of the two, rarely both). */
+	if (apparmor_exec_net(why, why_len) != 0)
 		return -1;
 
 	/* ⛔ 3 — the read-only tree. */

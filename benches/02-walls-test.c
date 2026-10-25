@@ -387,6 +387,95 @@ static int case_root(const struct passwd *nb)
 	return rc;
 }
 
+/* ⭐ 1.6 (AppArmor): `apparmor_exec_in()` with files in place of /sys and /proc */
+static void put(const char *path, const char *text)
+{
+	FILE *f = fopen(path, "w");
+
+	if (f) {
+		fputs(text, f);
+		fclose(f);
+	}
+}
+
+static void slurp(const char *path, char *out, size_t n)
+{
+	FILE *f = fopen(path, "r");
+	size_t k = 0;
+
+	out[0] = '\0';
+	if (f) {
+		k = fread(out, 1, n - 1, f);
+		fclose(f);
+	}
+	out[k] = '\0';
+}
+
+static void case_apparmor(void)
+{
+	char dir[] = "/tmp/remotix-test-aa.XXXXXX", en[160], pr[160], at[160], ol[160], got[160], why[256];
+	int rc;
+
+	if (!mkdtemp(dir)) {
+		printf("  ??   no temporary directory for the AppArmor cases\n");
+		return;
+	}
+	snprintf(en, sizeof en, "%s/enabled", dir);
+	snprintf(pr, sizeof pr, "%s/profiles", dir);
+	snprintf(at, sizeof at, "%s/attr-apparmor-exec", dir);
+	snprintf(ol, sizeof ol, "%s/attr-exec", dir);
+
+	notes[0] = '\0';
+	rc = apparmor_exec_in(en, pr, at, ol, "remotix_network", why, sizeof why);
+	CHECK(rc == 0 && strstr(walls_in_force(), "AppArmor: off"), "AppArmor: no kernel parameter file: off, go on");
+	put(en, "N\n");
+	put(at, "");
+	notes[0] = '\0';
+	rc = apparmor_exec_in(en, pr, at, ol, "remotix_network", why, sizeof why);
+	slurp(at, got, sizeof got);
+	CHECK(rc == 0 && !got[0] && strstr(walls_in_force(), "AppArmor: off"), "AppArmor: disabled: off, nothing written");
+	put(en, "Y\n");
+	put(pr, "remotix_networkx (enforce)\n/usr/bin/man (complain)\n");
+	notes[0] = '\0';
+	rc = apparmor_exec_in(en, pr, at, ol, "remotix_network", why, sizeof why);
+	slurp(at, got, sizeof got);
+	CHECK(rc == 0 && !got[0] && strstr(walls_in_force(), "NOT loaded"),
+	      "AppArmor: on, only a profile with a longer name: not loaded, said, nothing written");
+	put(pr, "docker-default (enforce)\nremotix_network (complain)\n");
+	notes[0] = '\0';
+	rc = apparmor_exec_in(en, pr, at, ol, "remotix_network", why, sizeof why);
+	slurp(at, got, sizeof got);
+	CHECK(rc == 0 && strcmp(got, "exec remotix_network") == 0 && strstr(walls_in_force(), "born in remotix_network"),
+	      "AppArmor: loaded: «exec remotix_network» written to the attribute («%s»)", got);
+	/* the older kernels: no per-LSM attribute, the generic one */
+	{
+		char missing[160];
+
+		snprintf(missing, sizeof missing, "%s/no-such-dir/exec", dir);
+		put(ol, "");
+		notes[0] = '\0';
+		rc = apparmor_exec_in(en, pr, missing, ol, "remotix_network", why, sizeof why);
+		slurp(ol, got, sizeof got);
+		CHECK(rc == 0 && strcmp(got, "exec remotix_network") == 0,
+		      "AppArmor: no per-LSM attribute: the generic one is written");
+		rc = apparmor_exec_in(en, pr, missing, missing, "remotix_network", why, sizeof why);
+		CHECK(rc == -1 && strstr(why, "AppArmor"),
+		      "AppArmor: loaded but no attribute to write: refused, the network side does not start (%s)", why);
+		/* the write itself refused: the attribute is a directory */
+		rc = apparmor_exec_in(en, pr, dir, dir, "remotix_network", why, sizeof why);
+		CHECK(rc == -1 && strstr(why, "AppArmor"), "AppArmor: the attribute cannot be written: refused (%s)", why);
+	}
+	{
+		char cmd[400];
+
+		snprintf(cmd, sizeof cmd, "rm -f %s/enabled %s/profiles %s/attr-apparmor-exec %s/attr-exec && rmdir %s",
+		         dir, dir, dir, dir, dir);
+		if (system(cmd) != 0)
+			printf("  (could not remove %s)\n", dir);
+	}
+	notes[0] = '\0';
+}
+
 int main(void)
 {
 	struct passwd *nb = getpwnam("nobody");
@@ -395,6 +484,7 @@ int main(void)
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	printf("02-walls-test (uid %ld)\n", (long)geteuid());
 	case_context();
+	case_apparmor();
 	case_unprivileged(nb);
 	if (geteuid() == 0) {
 		if (!nb) {
