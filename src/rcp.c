@@ -223,6 +223,16 @@ enum {
 #define CAP_ATTACH 10000
 /* §4.4-bis: the fixed delay, and it applies to ADMITTED TOO. */
 #define FIXED_DELAY 1000
+/* ⛔⭐ THE FLOOR OF EVERY REFUSAL — 25 Oct 2026.  `[M]` pam-tempi (present since 1.0): a user in the denied list
+ *    (`pam_listfile`, `requisite`, before the password) was refused in ~1.1 s, i.e. only the fixed second above, while
+ *    a real user with a wrong password and a user that does not exist took ~2.0-2.2 s (the failure delay of
+ *    `pam_unix`/`pam_faildelay`, which runs INSIDE the helper): the time told whether a name was in the list.
+ *    ⇒ A refusal leaves NOT BEFORE this floor, the same for every cause (denied, wrong password, no such user, the
+ *    limiter, a check we could not make); a success keeps FIXED_DELAY.  The floor is higher than PAM's failure
+ *    delay (random, up to 2.5 s with the default 2 s base): a refusal slower than the floor is paced by PAM, as
+ *    before, and only that tail could still be told apart — so the number is a margin to be re-measured with
+ *    pam-tempi, not a proof.  It is a FLOOR, like FIXED_DELAY: the verdict arriving later still sets the pace. */
+#define REJECT_FLOOR 2500
 
 /* ⛔⭐ THE VERDICT CEILING — 12 Aug 2026, `DECISIONS.md` §1.10.
  *
@@ -9153,7 +9163,9 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		 *    and the test client, which watches §4.4-bis, left saying
 		 *    «less than a second» (C20 «I could not look» on gnome and kde).
 		 *    The fixed second is a FLOOR: at most 1 ms more is paid. */
-		if (now - s->cred_arrival <= FIXED_DELAY)
+		/* ⛔ A refusal waits for REJECT_FLOOR, a success for FIXED_DELAY: see REJECT_FLOOR.  `cred_good` is final
+		 *    here (the verdict is in, `expected_verdict` is false). */
+		if (now - s->cred_arrival <= (s->cred_good ? FIXED_DELAY : REJECT_FLOOR))
 			return true;
 		reg(s, "the fixed second has passed (%llu ms)",
 		    (unsigned long long)(now - s->cred_arrival));
