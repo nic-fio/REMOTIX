@@ -2403,7 +2403,18 @@ int main(int argc, char **argv)
 		 *
 		 * ⛔ `0` = off, and it is an allowed and declared value. */
 		else if (strcmp(a, "--inactivity-s") == 0 && v)
-			rcp_inactivity_set((uint64_t)strtoull(argv[++i], NULL, 10) * 1000);
+		{
+			/* ⭐ rilettura: the same ceiling as `--abandon-s` (a year): a longer value is «never» for any real service, and the
+			 *    seconds-to-milliseconds product must not wrap (a huge value became a SHORT inactivity time) */
+			unsigned long long v_s = strtoull(argv[++i], NULL, 10);
+
+			if (v_s > ROOTSIDE_ABANDON_S_MAX) {
+				fprintf(stderr, "remotix: --inactivity-s %llu is above a year: using %llu\n", v_s,
+				        ROOTSIDE_ABANDON_S_MAX);
+				v_s = ROOTSIDE_ABANDON_S_MAX;
+			}
+			rcp_inactivity_set((uint64_t)v_s * 1000);
+		}
 		/* ⛔⭐ §5.3, the third: «if after 60 minutes there is no trace of input
 		 *     the session gets killed» (the user's decision, 16 Aug 2026).
 		 *     ⚠ `0` = off, and then no session is ever closed on its own. */
