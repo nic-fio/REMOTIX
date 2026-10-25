@@ -25,5 +25,5 @@ WORKDIR /albero/src
 #     A layer AT THE END, so that the layers above (and the static libraries) stay
 #     cached: `build-deb.sh` uses it, `build-all.sh` does not.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        debhelper dpkg-dev fakeroot lintian binutils \
+        debhelper dh-apparmor dpkg-dev fakeroot lintian binutils \
     && rm -rf /var/lib/apt/lists/*
