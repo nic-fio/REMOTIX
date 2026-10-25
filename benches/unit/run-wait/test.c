@@ -108,6 +108,9 @@ int main(void)
 	}
 	CHECK(has("src/child.c", "close_range(3, ~0U, 0)") && has("src/child.c", "run_wait(p, RUN_AS_ROOT_MAX_MS, &state)") && !has("src/child.c", "if (waitpid(p, &state, 0) != p)\n		return false;\n	if (!WIFEXITED(state)"),
 	      "6. child.c: run_as_root closes the descriptors and waits with a limit");
+	CHECK(has("src/child.c", "if (ran == RUN_NOT_STARTED)\n		ran = run_as_root(\"/sbin/usermod\"") && has("src/child.c", "if (ran == RUN_TIMED_OUT)") && has("src/child.c", "user_in_group_now(user, primary, seen_items[placed[j]])"),
+	      "7. enrolment: /sbin/usermod only if the first did not start; after a timeout the groups are read again");
+	CHECK(has("src/child.c", "WEXITSTATUS(state) == 127)\n		return RUN_NOT_STARTED"), "7b. exit 127 is 'not started'");
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
 	return bad ? 1 : 0;
 }
