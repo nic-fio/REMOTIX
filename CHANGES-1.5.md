@@ -76,6 +76,10 @@
 - One write burst is at most the send quantum, and the loop timeout is rounded up (§11.52 A; `643e9a40`, `3a6d128c`). `pacing-ab`
   then measured +1 ms of RTT at rest from that round-up (24 Oct), so the main loop now waits on the exact deadline with `ppoll`
   (`1b447d3c`, `de5ebdfa`); to be measured again (see Still open).
+- **The page's accept buckets cannot be filled from one IPv6 allocation** (audit R-5, 25 Oct 2026, branch `pagina-secchio`): the page listener's accept rate is kept per IPv4 address / IPv6 /64 and per /48 (256 buckets each);
+  an attacker with rotating addresses of ONE large allocation (a /32 holds 65536 /48s) could keep all of them busy and push every new address, the legitimate visitors, onto the one shared overflow bucket, which his further
+  keys drained: `503 busy` for everybody (only the login page; QUIC and the open sessions are not touched). Now at most 32 BUSY buckets of one IPv6 /32 per table (`src/pagebucket.h`, `PAGE_KEYS_PER_32`); the rest of that /32 shares the overflow bucket.
+  Declared limit: 8 different /32s still fill the table. Test `benches/unit/page-bucket`.
 - «Connection closed» log lines of connections that never logged in are limited per window, the rest in a summary (`6368c6a8`).
 
 ## 3. Defects of 1.0 fixed (all «present since 1.0»)
