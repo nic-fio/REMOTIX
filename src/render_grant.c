@@ -203,7 +203,7 @@ static bool same_id(const char *s, unsigned long id)
  *      · a `+` line, in any form (`+`, `+:::`, `+@netgroup`): NIS compat, it pulls in accounts from elsewhere, and «no other account has
  *        this gid» cannot be proved («NIS compat line: other accounts with this gid cannot be excluded»);
  *      · any other line with too few fields to be a record (it could be the very line that matters);
- *      · a read error at the end (`ferror`).
+ *      · a read error, or no more memory, at the end (`ferror`, or the stream not at its end: `getline()` with ENOMEM does not set the error flag).
  *    Skipped: blank lines, lines that begin with `#`, and `-name` lines (NIS compat exclusions: they only take accounts away).
  *    A last line without the final newline is read like the others.
  *
@@ -288,8 +288,8 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 			}
 		}
 	}
-	if (ok && ferror(fp)) {
-		snprintf(why, how_much, "/etc/group: read error");
+	if (ok && (ferror(fp) || !feof(fp))) { /* getline() with ENOMEM does not set the error flag of the stream */
+		snprintf(why, how_much, "/etc/group: read error or out of memory");
 		ok = false;
 	}
 	fclose(fp);
@@ -334,8 +334,8 @@ static bool group_is_private(const char *user, gid_t gid, char *why, size_t how_
 			ok = false;
 		}
 	}
-	if (ok && ferror(fp)) {
-		snprintf(why, how_much, "/etc/passwd: read error");
+	if (ok && (ferror(fp) || !feof(fp))) { /* getline() with ENOMEM does not set the error flag of the stream */
+		snprintf(why, how_much, "/etc/passwd: read error or out of memory");
 		ok = false;
 	}
 	fclose(fp);
