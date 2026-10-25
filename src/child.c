@@ -55,6 +55,7 @@
 #include "rcp.h"
 #include "log.h"
 #include "rootside.h"
+#include "reapwait.h"
 /* ⭐ PHASE 17 T7: the PARENT's half asks logind and /proc whether a desktop
  *    is alive (nothing of the stage). */
 #include "rediscover.h"
@@ -4119,6 +4120,9 @@ bool children_video(children *f, const char *user, uint8_t codec,
 /* ⭐ 1.5: how long `children_turn_off()` waits for one child's CHILD_EXITED;
  *    the root side waits 5 s for the whole network side (§11.50). */
 #define TURN_OFF_WAIT_MS 1500
+/* ⭐ Audit of the session (25 Oct 2026): in single-process mode the wait was `waitpid(pid, NULL, 0)`, WITHOUT a limit; now SIGTERM, the same
+ *    TURN_OFF_WAIT_MS, then SIGKILL and TURN_OFF_KILL_WAIT_MS more (reapwait.h).  A child still not reaped after that is said and left to init. */
+#define TURN_OFF_KILL_WAIT_MS 1000
 
 static bool child_reaped_now(void *ctx)
 {
@@ -4131,6 +4135,7 @@ void children_turn_off(children *f)
 		return;
 	for (int i = 0; i < f->cap; i++) {
 		struct child *g = &f->v[i];
+		bool left_to_init = false;
 		if (!g->used)
 			continue;
 		/* ⛔ First the socket is closed — which is the most honest signal,
@@ -4149,13 +4154,24 @@ void children_turn_off(children *f)
 			 *   session.
 			 * ⭐ 1.5: in network mode the wait is for the root side's
 			 *    CHILD_EXITED, at most `TURN_OFF_WAIT_MS` per child. */
-			if (f->remote)
+			if (f->remote) {
 				rootside_pump_until(child_reaped_now, g, TURN_OFF_WAIT_MS);
-			else
-				waitpid(g->pid, NULL, 0);
+			} else if (!reap_within(g->pid, TURN_OFF_WAIT_MS)) {
+				registro_dice(LOG_CHILD, "⛔ the child of «%s» (pid %ld) did not die within %d ms of the SIGTERM: SIGKILL",
+				              g->user, (long)g->pid, TURN_OFF_WAIT_MS);
+				child_signal(f, g, SIGKILL);
+				if (!reap_within(g->pid, TURN_OFF_KILL_WAIT_MS)) {
+					registro_dice(LOG_CHILD, "⛔ the child of «%s» (pid %ld) is STILL not reaped %d ms after the SIGKILL "
+					              "(a call that does not return?): the shutdown goes on without it",
+					              g->user, (long)g->pid, TURN_OFF_KILL_WAIT_MS);
+					left_to_init = true; /* said below as «not shut down» */
+				}
+			}
 		}
 		/* review 4 B, finding 17: «shut down» only when it is known */
-		if (f->remote && g->pid > 0 && !child_reaped_now(g))
+		if (left_to_init)
+			registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld) is not confirmed shut down: left to init", g->user, (long)g->pid);
+		else if (f->remote && g->pid > 0 && !child_reaped_now(g))
 			registro_dice(LOG_CHILD, "⚠ the child of «%s» (pid %ld): no CHILD_EXITED "
 			              "within %d ms of the SIGTERM — this side leaves it to the "
 			              "root side", g->user, (long)g->pid, TURN_OFF_WAIT_MS);
