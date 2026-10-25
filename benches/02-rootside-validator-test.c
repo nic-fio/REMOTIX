@@ -60,7 +60,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 83
+#define EXPECTED_CHECKS 88
 
 static void require(int cond, const char *desc)
 {
@@ -293,7 +293,86 @@ static void found_tests(void)
 	found_pump();
 	require(take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fe && in.fe.count == 0 && in.fe.outcome == RXR_FOUND_UNKNOWN,
 	        "could not look: FOUND_END(0, UNKNOWN), and no desktop");
-	stop_sleeper(k2);
+	/* ⭐ BACKPRESSURE: a channel that takes only some of the list.  The pump stops where the socket is full, resumes on the next
+	 *    turn, sends every FOUND_AGAIN once and in order, FOUND_END last with the right count — and a stage that dies in the middle of
+	 *    the list is taken out of the count if it was not announced yet, announced (FOUND_GONE, after FOUND_END) if it was. */
+	{
+		enum { BIG = 40 };
+		static RediscoveredDesktop big[BIG];
+		int small = 4608, got_again = 0, got_end = -1, got_gone = 0, order_ok = 1, turns, first_batch;
+		bool end_seen = false, gone_before_end = false;
+		char name[32];
+
+		setsockopt(sv[0], SOL_SOCKET, SO_SNDBUF, &small, sizeof small);
+		for (int i = 0; i < BIG; i++) {
+			snprintf(name, sizeof name, "u%d", i);
+			desktop_of(&big[i], k2, name, (uid_t)(3000 + i));
+		}
+		found_install(big, BIG, true, "/proc");
+		found_pump();
+		first_batch = 0;
+		while (take(sv[1], &in, sizeof in) > 0) {
+			order_ok = order_ok && in.fa.h.kind == RXR_FOUND_AGAIN && in.fa.uid == (uint32_t)(3000 + first_batch);
+			first_batch++;
+		}
+		require(first_batch > 0 && first_batch < BIG && R.found_phase == FOUND_SENDING && order_ok,
+		        "a small socket takes only part of the list (the pump stops, still SENDING, what left is in order)");
+		got_again = first_batch;
+		for (turns = 0; turns < 200 && !end_seen; turns++) {
+			found_pump();
+			while (take(sv[1], &in, sizeof in) > 0) {
+				if (in.fa.h.kind == RXR_FOUND_AGAIN) {
+					order_ok = order_ok && !end_seen && in.fa.uid == (uint32_t)(3000 + got_again);
+					got_again++;
+				} else if (in.fa.h.kind == RXR_FOUND_END) {
+					end_seen = true;
+					got_end = (int)in.fe.count;
+				}
+			}
+		}
+		require(got_again == BIG && order_ok && end_seen && got_end == BIG && R.found_phase == FOUND_LISTED,
+		        "the pump resumes on the next turns: 40 FOUND_AGAIN once each and in order, then FOUND_END(40)");
+		require(take(sv[1], &in, sizeof in) < 0, "and nothing after it");
+
+		/* a stage that dies in the middle of the list */
+		found_install(big, BIG, true, "/proc");
+		found_pump();
+		first_batch = 0;
+		while (take(sv[1], &in, sizeof in) > 0)
+			first_batch++;
+		{
+			pid_t k3 = k2;
+
+			stop_sleeper(k3);
+			k2 = -1;
+		}
+		found_check(log_now_ms());
+		end_seen = false;
+		got_again = first_batch;
+		got_end = -1;
+		for (turns = 0; turns < 200; turns++) {
+			found_pump();
+			while (take(sv[1], &in, sizeof in) > 0) {
+				if (in.fa.h.kind == RXR_FOUND_AGAIN) {
+					got_again++;
+				} else if (in.fa.h.kind == RXR_FOUND_END) {
+					end_seen = true;
+					got_end = (int)in.fe.count;
+				} else if (in.fa.h.kind == RXR_FOUND_GONE) {
+					gone_before_end = gone_before_end || !end_seen;
+					got_gone++;
+				}
+			}
+			if (end_seen && R.ngone == 0)
+				break;
+		}
+		require(first_batch > 0 && first_batch < BIG && got_again == first_batch && got_end == first_batch,
+		        "the unannounced ones that died are out of the count: FOUND_END says what was sent");
+		require(got_gone == first_batch && !gone_before_end,
+		        "the announced ones that died get FOUND_GONE, all of them, after FOUND_END");
+	}
+	if (k2 > 0)
+		stop_sleeper(k2);
 	found_clear();
 	free(R.found);
 	free(R.gone);
