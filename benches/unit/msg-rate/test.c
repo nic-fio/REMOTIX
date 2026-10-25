@@ -266,6 +266,24 @@ int main(int argc, char **argv)
 				      "9: LAYOUT: a layout already found unknown is not compiled again");
 			}
 			{
+				const char *gp = strstr(src, "#define V_KEY_ASK_GAP_MS ");
+				int gap = gp ? atoi(gp + strlen("#define V_KEY_ASK_GAP_MS ")) : -1;
+				const char *kr = body_of(src, "static bool handle_key_request(rcp_session *s, reader *l, uint64_t now)", &n);
+
+				CHECK(gap >= 50 && gap < 150, "9: REQUEST_KEY: the gap between two accepted ones is between 50 ms and the transport's 150");
+				CHECK(kr != NULL, "9: handle_key_request found");
+				if (kr) {
+					const char *chk = memmem(kr, n, "now - s->key_asked_ms < V_KEY_ASK_GAP_MS", strlen("now - s->key_asked_ms < V_KEY_ASK_GAP_MS"));
+					const char *tol = memmem(kr, n, "!s->never_sent_key && !already_seen", strlen("!s->never_sent_key && !already_seen"));
+					const char *set = memmem(kr, n, "s->key_asked_ms = now;", strlen("s->key_asked_ms = now;"));
+					const char *ask = memmem(kr, n, "key_needed(s,", strlen("key_needed(s,"));
+
+					CHECK(chk && tol && chk < tol, "9: REQUEST_KEY: the gap test also covers already_seen requests (it comes first)");
+					CHECK(set && ask && set < ask, "9: REQUEST_KEY: the time is taken when the request is ACCEPTED");
+					CHECK(count_in(kr, n, "msg_line(s, MC_REQUEST_KEY)") == 3, "9: REQUEST_KEY: its three lines go through msg_line()");
+				}
+			}
+			{
 				const char *cc = body_of(src, "static enum msg_class control_class(uint16_t kind)", &n);
 				const char *dr = body_of(src, "static bool drain(rcp_session *s, uint64_t now)", &n);
 				size_t nd = n;
