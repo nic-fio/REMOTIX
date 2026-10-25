@@ -17,16 +17,18 @@
  *      for self, camera/microphone/geolocation/payment/usb off), every header line ends with CRLF and the text has exactly
  *      three header lines;
  *   3. the format of compose_build() is still the one this test assumes (its fixed pieces are found in the source);
- *   4. the LONGEST head (500 line, the longest status; a 20-digit Content-Length; the gzip answer's extra headers; ISOLATION;
- *      the fixed headers; PAGE_SECURITY) is shorter than N by at least MARGIN bytes.
+ *   4. the LONGEST head is shorter than N by at least MARGIN bytes.  Its pieces are TAKEN FROM THE SOURCE, not guessed: the
+ *      longest status line and the longest Content-Type among the calls of compose(), compose_with(), compose_tail() and
+ *      compose_build(); the longest run of string literals written just before a PAGE_SECURITY (the gzip answer's
+ *      Content-Encoding and Vary, Retry-After, ...); a 20-digit Content-Length; ISOLATION; the fixed headers.
  * If a check 1 fails on purpose (the CSP was changed on purpose), update EXPECTED here, in the same commit as the change.
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
  *        /albero/benches/unit/page-headers/test.c -o test && ./test /albero/src/page.c'
- * (any C compiler does: `gcc -std=gnu11 -Wall -Wextra benches/unit/page-headers/test.c -o /tmp/ph && /tmp/ph src/page.c`)
  * Exit code 0 = every check passed, 1 = a check failed, 2 = the source could not be read or understood.
+ * (Any C compiler does: gcc -std=gnu11 -Wall -Wextra benches/unit/page-headers/test.c -o /tmp/ph && /tmp/ph src/page.c)
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -143,6 +145,129 @@ static char *macro_text(const char *src, const char *name)
 	return out;
 }
 
+
+/* Decodes the string literal that starts at the opening quote q (q[0] == '"') into out; returns the position after the closing quote. */
+static const char *literal(const char *q, char *out, size_t cap)
+{
+	size_t o = 0;
+
+	q++;
+	while (*q && *q != '"') {
+		char c = *q;
+
+		if (c == '\\' && q[1]) {
+			q++;
+			c = *q == 'r' ? '\r' : *q == 'n' ? '\n' : *q == 't' ? '\t' : *q;
+		}
+		if (o + 1 < cap)
+			out[o++] = c;
+		q++;
+	}
+	out[o] = 0;
+	return *q == '"' ? q + 1 : q;
+}
+
+static const char *skip_ws(const char *p)
+{
+	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
+		p++;
+	return p;
+}
+
+/* The longest state and the longest Content-Type among the calls  compose*(c, "state", "kind", ...)  of the source. */
+static void longest_state_kind(const char *src, char *state, size_t scap, char *kind, size_t kcap, int *calls)
+{
+	static const char *const names[] = {"compose_build(", "compose_tail(", "compose_with(", "compose("};
+	size_t k;
+
+	state[0] = kind[0] = 0;
+	*calls = 0;
+	for (k = 0; k < sizeof names / sizeof *names; k++) {
+		const char *p = src;
+		size_t nl = strlen(names[k]);
+
+		while ((p = strstr(p, names[k])) != NULL) {
+			const char *q = p + nl;
+			char st[128], kd[128];
+
+			/* skip the longer name that contains this one (compose_tail( does not contain compose( , but be safe) */
+			if (p > src && (p[-1] == '_' || (p[-1] >= 'a' && p[-1] <= 'z')))
+				goto next;
+			q = skip_ws(q);
+			if (*q != 'c')
+				goto next;
+			q = skip_ws(q + 1);
+			if (*q != ',')
+				goto next;
+			q = skip_ws(q + 1);
+			if (*q != '"')
+				goto next; /* the definition: `client *c, const char *state` */
+			q = literal(q, st, sizeof st);
+			q = skip_ws(q);
+			if (*q != ',')
+				goto next;
+			q = skip_ws(q + 1);
+			if (*q != '"')
+				goto next;
+			literal(q, kd, sizeof kd);
+			(*calls)++;
+			if (strlen(st) > strlen(state))
+				snprintf(state, scap, "%s", st);
+			if (strlen(kd) > strlen(kind))
+				snprintf(kind, kcap, "%s", kd);
+next:
+			p += nl;
+		}
+	}
+}
+
+/* The longest run of string literals written just before a use of PAGE_SECURITY (the "extra" headers of an answer). */
+static size_t longest_extra(const char *src, char *best, size_t cap, int *uses)
+{
+	const char *p = src;
+	size_t blen = 0;
+
+	best[0] = 0;
+	*uses = 0;
+	while ((p = strstr(p, "PAGE_SECURITY")) != NULL) {
+		const char *e = p;
+		char buf[1024];
+		size_t pieces = 0;
+
+		p += 13;
+		if (e >= src + 8 && strncmp(e - 8, "#define ", 8) == 0)
+			continue;
+		/* walk back over adjacent string literals */
+		buf[0] = 0;
+		for (;;) {
+			const char *q = e;
+			const char *open;
+			char piece[512];
+
+			while (q > src && (q[-1] == ' ' || q[-1] == '\t' || q[-1] == '\n' || q[-1] == '\r'))
+				q--;
+			if (q == src || q[-1] != '"')
+				break;
+			open = q - 2;
+			while (open > src && !(*open == '"' && (open == src || open[-1] != '\\')))
+				open--;
+			literal(open, piece, sizeof piece);
+			if (strlen(piece) + strlen(buf) + 1 < sizeof buf) {
+				memmove(buf + strlen(piece), buf, strlen(buf) + 1);
+				memcpy(buf, piece, strlen(piece));
+			}
+			pieces++;
+			e = open;
+		}
+		(*uses)++;
+		if (strlen(buf) > blen) {
+			blen = strlen(buf);
+			snprintf(best, cap, "%s", buf);
+		}
+	}
+	return blen;
+}
+
 static int has(const char *h, const char *needle)
 {
 	return strstr(h, needle) != NULL;
@@ -154,7 +279,7 @@ int main(int argc, char **argv)
 	char *src, *ps, *iso;
 	const char *hp;
 	int headsz = 0;
-	size_t lines = 0, worst, i;
+	size_t lines = 0, worst = 0, i;
 
 	if (argc < 2) {
 		fprintf(stderr, "usage: test <path of src/page.c>\n");
@@ -214,17 +339,21 @@ int main(int argc, char **argv)
 	          has(src, "\"Content-Encoding: gzip\\r\\nVary: Accept-Encoding\\r\\n\" PAGE_SECURITY"),
 	      "compose_build() still has the fixed headers this test counts (else update the test)");
 
-	/* 4. the longest head, built like compose_build() and measured */
+	/* 4. the longest head, built like compose_build() and measured; its pieces come from the source */
 	{
-		char head[8192];
-		const char *extras[2] = {"Content-Encoding: gzip\r\nVary: Accept-Encoding\r\n", "Retry-After: 1\r\n"};
+		char head[8192], state[128], kind[128], extra_pre[1024];
+		int calls = 0, uses = 0;
 
-		worst = 0;
-		for (i = 0; i < 2; i++) {
+		longest_state_kind(src, state, sizeof state, kind, sizeof kind, &calls);
+		longest_extra(src, extra_pre, sizeof extra_pre, &uses);
+		printf("      from the source: %d compose calls, longest status «%s», longest type «%s»; %d uses of PAGE_SECURITY, "
+		       "longest extra before it: %zu bytes\n", calls, state, kind, uses, strlen(extra_pre));
+		check(calls >= 8 && uses >= 5 && state[0] && kind[0], "the calls of compose*() and the uses of PAGE_SECURITY were found in the source");
+		{
 			char extra[2048];
 			int len;
 
-			snprintf(extra, sizeof extra, "%s%s", extras[i], ps);
+			snprintf(extra, sizeof extra, "%s%s", extra_pre, ps);
 			len = snprintf(head, sizeof head,
 			               "HTTP/1.1 %s\r\n"
 			               "Content-Type: %s\r\n"
@@ -235,9 +364,8 @@ int main(int argc, char **argv)
 			               "Connection: close\r\n"
 			               "%s"
 			               "\r\n",
-			               "500 Internal Server Error", "text/html; charset=utf-8", (size_t)18446744073709551615ull, iso, extra);
-			if ((size_t)len > worst)
-				worst = (size_t)len;
+			               state, kind, (size_t)18446744073709551615ull, iso, extra);
+			worst = (size_t)len;
 		}
 	}
 	printf("      longest head: %zu bytes of %d (margin required %d)\n", worst, headsz, MARGIN);
