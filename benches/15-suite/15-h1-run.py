@@ -28,6 +28,7 @@ import argparse
 import datetime
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -51,7 +52,23 @@ def compositor(d, u):
     return common
 
 
+CHILD = []
+
+
+def _term(*_a):
+    """SIGTERM: the test gets it too (its `finally` blocks clean up) and we wait for it."""
+    for c in CHILD:
+        c.terminate()
+    for c in CHILD:
+        try:
+            c.wait(90)
+        except subprocess.TimeoutExpired:
+            c.kill()
+    sys.exit(143)
+
+
 def main():
+    signal.signal(signal.SIGTERM, _term)
     a = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     a.add_argument("--box", choices=DESKTOP, required=True)
     a.add_argument("--browser", default="chrome,firefox")
@@ -109,11 +126,18 @@ def main():
         t0 = time.time()
         os.makedirs(os.path.join(out, b), exist_ok=True)
         with open(os.path.join(out, b + ".log"), "w") as log:
+            child = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env, cwd=HERE)
+            CHILD.append(child)
             try:
-                p = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, env=env, cwd=HERE, timeout=CAP_S)
-                rc = p.returncode
+                rc = child.wait(timeout=CAP_S)
             except subprocess.TimeoutExpired:
+                child.terminate()
+                try:
+                    child.wait(60)
+                except subprocess.TimeoutExpired:
+                    child.kill()
                 rc = 124
+            CHILD.clear()
         rc_all.append(rc)
         for line in open(os.path.join(out, b + ".log"), errors="replace"):
             if line.startswith("SUITE "):

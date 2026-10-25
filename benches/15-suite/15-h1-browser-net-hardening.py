@@ -51,6 +51,7 @@ evidence (declared: they prove the judge can give red); those of e and f are rea
 import copy
 import os
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -147,14 +148,19 @@ def judge_groups(admitted, why, probes, lines, group_seen=""):
             continue
         if not r:
             bad.append("%s offered alone is refused (it must pass)" % g)
+    blind = []
     for g in REFUSED_GROUPS:
         r = probes.get(g)
-        if r:
+        if r is None:
+            blind.append("%s: the client does not know it, so its refusal was not seen" % g)
+        elif r:
             bad.append("%s offered alone is ACCEPTED (negotiated %s)" % (g, r))
     if not any(probes.get(g) for g in ALLOWED_GROUPS):
         return S.BLOCKED if not bad else S.FAIL, "; ".join(bad) or "no probe could be made"
     if bad:
         return S.FAIL, "; ".join(bad)
+    if blind:
+        return S.BLOCKED, "; ".join(blind)
     ok = ", ".join("%s→%s" % (g, probes[g]) for g in ALLOWED_GROUPS if probes.get(g))
     no = ", ".join(g for g in REFUSED_GROUPS if probes.get(g) == "")
     mlkem = " · ML-KEM missing in this OpenSSL" if count(lines, "does not know the key-exchange groups") else ""
@@ -251,6 +257,12 @@ def certify():
     prova("groups: allowed pass and others refused ⇒ PASS", judge_groups(True, "x", pr, [])[0] == S.PASS)
     prova("groups: ffdhe3072 accepted ⇒ FAIL", judge_groups(True, "x", dict(pr, ffdhe3072="ffdhe3072"), [])[0] == S.FAIL)
     prova("groups: X25519 refused ⇒ FAIL", judge_groups(True, "x", dict(pr, X25519=""), [])[0] == S.FAIL)
+    prova("groups: ffdhe3072 unknown to the client (None) ⇒ BLOCKED, not PASS",
+          judge_groups(True, "x", dict(pr, ffdhe3072=None), [])[0] == S.BLOCKED)
+    prova("groups: P-521 unknown to the client (None) ⇒ BLOCKED, not PASS",
+          judge_groups(True, "x", dict(pr, **{"P-521": None}), [])[0] == S.BLOCKED)
+    prova("groups: one refused group accepted and another unknown ⇒ FAIL",
+          judge_groups(True, "x", dict(pr, ffdhe3072="ffdhe3072", **{"P-521": None}), [])[0] == S.FAIL)
     prova("groups: browser login fails ⇒ FAIL", judge_groups(False, "x", pr, [])[0] == S.FAIL)
     prova("groups: client without ML-KEM, rest right ⇒ PASS",
           judge_groups(True, "x", dict(pr, X25519MLKEM768=None), [])[0] == S.PASS)
@@ -579,11 +591,17 @@ def case_b(o, E):
                 time.sleep(0.5)
             ok2, t2 = G7.server("start", o.box)
             t_back = time.time()
+            said_late_pre = G7.page_says(G7.page(s.g))      # just BEFORE the line comes back
             removed = lm.remove()
+            down_s = t_back - t_down
             if not ok2:
                 raise S.Blocked("our server does not start again: %s" % (t2 or "")[-200:])
             if not removed:
                 raise S.Blocked("THE nft RULE CANNOT BE REMOVED")
+            if down_s > 15:
+                raise S.Blocked("the server took %.0f s to come back (limit 15 s): the browser's own timers "
+                                "would decide, not the Stateless Reset" % down_s)
+            said_early = said_early or said_late_pre is True
             said_after = None
             while time.time() - t_back < RESET_OBSERVE_S:
                 nudge(s, k)
@@ -651,9 +669,9 @@ def case_d(o, E):
             if o.evidence:
                 o2.evidence = os.path.join(o.evidence, "d%d" % i)
                 os.makedirs(o2.evidence, exist_ok=True)
-            s = S.Session(o2, "113", E)
+            s = S.Session(o2, "113", E, chi="c15113u%d" % (i + 1))
+            sessions.append(s)                  # in the list BEFORE __enter__: a failure there is still cleared out
             s.__enter__()
-            sessions.append(s)
             ok, m = s.pr.do_open()
             if not ok:
                 raise S.Blocked("browser %d: the page does not open: %s" % (i + 1, m))
@@ -666,6 +684,8 @@ def case_d(o, E):
                 t0s[i] = time.time()
                 e, m, _st = sessions[i].pr.enter(sessions[i].password)
                 results[i] = (e, m)
+            except threading.BrokenBarrierError:
+                results[i] = (None, "the barrier broke: not all the browsers were ready")
             except Exception as ex:               # noqa: BLE001
                 results[i] = (S.RED, "the bench: %r" % ex)
         th = [threading.Thread(target=go, args=(i,)) for i in range(n)]
@@ -673,6 +693,9 @@ def case_d(o, E):
             t.start()
         for t in th:
             t.join(300)
+        if any(r is not None and r[0] is None for r in results):
+            raise S.Blocked("the %d logins were not sent together: %s" % (
+                n, next(r[1] for r in results if r is not None and r[0] is None)))
         time.sleep(3)
         lines = reg.da(sign)
         spread = (max(t0s) - min(t0s)) if all(t0s) else -1
@@ -823,4 +846,6 @@ def body(o, E):
 
 
 if __name__ == "__main__":
+    # a SIGTERM (timeout, queue) becomes SystemExit: the `finally` blocks remove the nft table, close the relay and the sessions
+    signal.signal(signal.SIGTERM, lambda *a: sys.exit(143))
     sys.exit(S.run(__doc__, FUNCTIONS, body, certify, extra))

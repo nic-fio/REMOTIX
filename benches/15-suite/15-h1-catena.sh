@@ -25,13 +25,29 @@ prova|completo) ;;
 *) echo "uso: bash 15-h1-catena.sh prova|completo [--out BASE]  (vedi --help)"; exit 2 ;;
 esac
 mkdir -p "$BASE"
-worst=0
+worst=0; CH=""
+# Pulizia SEMPRE (uscita, SIGTERM): toglie le tabelle nft del banco (inet remotix_g7_861x) e ferma il secondo server dei 4 box.
+pulizia() {
+	trap - EXIT TERM INT HUP
+	if [ -n "$CH" ] && kill -0 "$CH" 2>/dev/null; then kill -TERM "$CH" 2>/dev/null; wait "$CH" 2>/dev/null; fi
+	local pw d p
+	pw=${REMOTIX_SUDO_PASSWORD:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}
+	for p in 8611 8612 8613 8614; do
+		printf '%s\n' "$pw" | sudo -S -p '' /usr/sbin/nft delete table inet remotix_g7_$p >/dev/null 2>&1
+	done
+	for d in gnome kde xfce lxqt; do bash "$HERE/15-g7-server.sh" stop "$d" >/dev/null 2>&1; done
+}
+trap pulizia EXIT
+trap 'exit 143' TERM INT HUP
 note() { case $1 in 1) worst=1 ;; 0) ;; *) [ "$worst" = 1 ] || worst=$1 ;; esac; }
 corsa() {   # corsa <desktop> [opzioni di 15-h1-run.py]
 	local d=$1; shift
 	echo "=== $(date -u +%T) corsa $d $*"
-	python3 "$RUN" --box "$d" --browser chrome,firefox --out "$BASE/$d" "$@"
+	python3 "$RUN" --box "$d" --browser chrome,firefox --out "$BASE/$d" "$@" &
+	CH=$!
+	wait "$CH"
 	local rc=$?
+	CH=""
 	echo "=== $(date -u +%T) corsa $d: rc=$rc ($BASE/$d/riepilogo.txt)"
 	note $rc
 }
