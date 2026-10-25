@@ -59,10 +59,19 @@ profile remotix_network flags=(complain,attach_disconnected) {
   /run/systemd/sessions/ r,
   /run/systemd/sessions/* r,
 
-  # The rediscovery of the desktops after a restart reads /proc (src/rediscover.c) — R8 of the
-  # split plan removes this and narrows it.
+  # ⭐ 1.6 (R8 B) [D, not tried]: the network side is PID 1 of a PID namespace of its own with a /proc of its own (walls.c): it lists only
+  # itself.  The root side — not this profile — looks for the desktops found again, so no other process's /proc is read here.  What it reads:
+  # itself (self, or its number in the namespace), and the system's entries.
   @{PROC}/ r,
-  @{PROC}/** r,
+  @{PROC}/self/ r,
+  @{PROC}/self/** r,
+  @{PROC}/@{pid}/ r,
+  @{PROC}/@{pid}/** r,
+  @{PROC}/sys/** r,
+  @{PROC}/net/** r,
+  @{PROC}/cpuinfo r,
+  @{PROC}/meminfo r,
+  @{PROC}/stat r,
   /sys/devices/system/cpu/** r,
   /sys/class/net/** r,
   /sys/kernel/mm/transparent_hugepage/* r,
