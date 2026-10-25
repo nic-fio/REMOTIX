@@ -182,7 +182,20 @@ static uid_t pkt_uid;
 /* the model */
 struct mgrant { bool used; uint8_t b[RXR_GRANT_BYTES]; char user[RXR_USER_MAX];
                 char rhost[RXR_RHOST_MAX]; uint64_t minted; uint32_t gen; };
+#define FUZZ_ABANDON_MS 1000 /* R1: the abandonment the harness gives the root side */
 static uint64_t orphan_born_ms[5]; /* the last close-only birth per user */
+/* R2: the model of the root side's pause — the times of the last 5 refusals (PAM's 0 or 4) per
+ * user, cleared by a yes; PAM must not be asked while all 5 are inside the 5-minute window */
+static uint64_t refused_ms[5][3][ROOTSIDE_LOGIN_PAIR_LIMIT]; /* per (user, address of RHOSTS) */
+static int refused_n[5][3];
+static int rhost_index(const char *rh)
+{
+	for (int i = 0; i < 3; i++)
+		if (strcmp(RHOSTS[i], rh ? rh : "") == 0)
+			return i;
+	return 2;
+}
+static uint64_t last_exit_ms[5];   /* R1: when the user was last left without a child (the model) */
 static struct mgrant grants[1024]; /* a ring: the root side keeps 32 */
 static int ngrants;
 struct mq { bool open; uint64_t ticket, request; char user[RXR_USER_MAX]; char rhost[RXR_RHOST_MAX];
@@ -190,7 +203,7 @@ struct mq { bool open; uint64_t ticket, request; char user[RXR_USER_MAX]; char r
 static struct mq qs[64];
 static int nqs;
 struct mkid { bool alive, dead, exited_told; pid_t pid; uint64_t serial; uid_t uid;
-             uint32_t gen; };
+             uint32_t gen; uint64_t orphan_ms; };
 static struct mkid kids[64];
 static int nkids;
 static uint64_t requests_sent[4096]; /* a ring: AUTH has 16 in flight, so 4096 back is plenty */
@@ -410,11 +423,19 @@ static pid_t rxr_waitpid(pid_t pid, int *st, int opt)
 			return 0;
 		net_dead = false;
 		*st = 9; /* killed by SIGKILL */
+		/* R1: the root side marks the children of that network side the moment it sees it die */
+		for (int i = 0; i < nkids; i++)
+			if (kids[i].alive && kids[i].gen == R.generation && !kids[i].orphan_ms)
+				kids[i].orphan_ms = rx_now_ms ? rx_now_ms : 1;
 		return pid;
 	}
 	for (int i = 0; i < nkids; i++)
 		if (kids[i].pid == pid && kids[i].dead && kids[i].alive) {
 			kids[i].alive = false; /* reaped */
+			for (int u = 0; u < 5; u++)
+				if (USERS[u].uid == kids[i].uid)
+					last_exit_ms[u] = kids[i].orphan_ms ? kids[i].orphan_ms
+					                                    : (rx_now_ms ? rx_now_ms : 1);
 			*st = 7 << 8;
 			return pid;
 		}
@@ -463,6 +484,10 @@ static child_outcome rxr_child_birth(const struct birth_opts *b, const char *use
 		ORACLE(!rhost && strcmp(c.user, user) == 0, "CLOSE_ORPHAN of «%s» gave birth to «%s»",
 		       c.user, user);
 		ORACLE(logind_live[ui], "CLOSE_ORPHAN of «%s» without its live remotix session", user);
+		ORACLE(rx_now_ms >= (last_exit_ms[ui] > t_start ? last_exit_ms[ui] : t_start) + FUZZ_ABANDON_MS,
+		       "CLOSE_ORPHAN of «%s» accepted %llu ms after the root side started (last exit of "
+		       "that uid at %llu), under the abandon clock", user,
+		       (unsigned long long)(rx_now_ms - t_start), (unsigned long long)last_exit_ms[ui]);
 		ORACLE(!orphan_born_ms[ui] || rx_now_ms >= orphan_born_ms[ui] + ROOTSIDE_ORPHAN_UID_MS,
 		       "a second close-only child for «%s» %llu ms after the first", user,
 		       (unsigned long long)(rx_now_ms - orphan_born_ms[ui]));
@@ -492,6 +517,7 @@ static child_outcome rxr_child_birth(const struct birth_opts *b, const char *use
 	kids[nkids].serial = serial;
 	kids[nkids].uid = USERS[ui].uid;
 	kids[nkids].gen = R.generation;
+	kids[nkids].orphan_ms = 0;
 	birth_pid = out->pid;
 	nkids++;
 	return CHILD_READY;
@@ -511,6 +537,10 @@ static bool rxr_helper_ask_bare(helper *a, const char *user, const char *passwor
 	       "PAM asked for «%s» (uid 0, denied, unknown or unresolvable)", user);
 	asked_in_flight++;
 	asked_total++;
+	ORACLE(!(refused_n[ui][rhost_index(rhost)] == ROOTSIDE_LOGIN_PAIR_LIMIT
+	         && rx_now_ms - refused_ms[ui][rhost_index(rhost)][0] <= ROOTSIDE_LOGIN_WINDOW_MS),
+	       "PAM asked for «%s» from «%s» after %d refusals inside %d min (the root side's pause)",
+	       user, rhost, ROOTSIDE_LOGIN_PAIR_LIMIT, ROOTSIDE_LOGIN_WINDOW_MS / 60000);
 	ORACLE(asked_in_flight <= RXR_AUTH_IN_FLIGHT_MAX, "%d questions to PAM in flight",
 	       asked_in_flight);
 	ORACLE(asked_total <= RXR_AUTH_BURST + RXR_AUTH_PER_S * (int)((rx_now_ms - t_start) / 1000 + 1),
@@ -691,9 +721,12 @@ static void setup(void)
 	R.net_pid = NET_PID;
 	R.generation = 1;
 	rootside_bounds_init(&R.bounds, rx_now_ms);
+	R.bounds.abandon_ms = FUZZ_ABANDON_MS; /* R1: CLOSE_ORPHAN needs this much quiet */
 	t_start = rx_now_ms;
 	ngrants = nqs = nkids = nreq = 0;
 	memset(orphan_born_ms, 0, sizeof orphan_born_ms);
+	memset(last_exit_ms, 0, sizeof last_exit_ms);
+	memset(refused_n, 0, sizeof refused_n);
 	asked_in_flight = asked_total = 0;
 	fail_next_birth = 0;
 	memset(logind_live, 0, sizeof logind_live);
@@ -822,6 +855,22 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			qs[k].outcome = outc;
 			asked_in_flight--;
 			cur = NULL;
+			{
+				int ui_ = user_index(qs[k].user), ri_ = rhost_index(qs[k].rhost);
+
+				if (ui_ >= 0) {
+					if (outc == 1) {
+						refused_n[ui_][ri_] = 0;
+					} else if (outc == 0 || outc == 4) {
+						if (refused_n[ui_][ri_] == ROOTSIDE_LOGIN_PAIR_LIMIT) {
+							memmove(refused_ms[ui_][ri_], refused_ms[ui_][ri_] + 1,
+							        (ROOTSIDE_LOGIN_PAIR_LIMIT - 1) * sizeof refused_ms[0][0][0]);
+							refused_n[ui_][ri_]--;
+						}
+						refused_ms[ui_][ri_][refused_n[ui_][ri_]++] = rx_now_ms;
+					}
+				}
+			}
 			on_pam_outcome(NULL, qs[k].ticket, outc, qs[k].user, qs[k].rhost);
 			qs[k].outcome = -1; /* answered: a later VERDICT YES for it is no longer PAM's */
 			break;

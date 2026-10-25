@@ -180,6 +180,7 @@ void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms)
 	b->tokens_ms = now_ms;
 	b->orphan_tokens = ROOTSIDE_ORPHAN_BURST;
 	b->orphan_tokens_ms = now_ms;
+	b->started_ms = now_ms;
 }
 
 bool rootside_auth_admit(struct rootside_bounds *b, uint64_t now_ms)
@@ -235,6 +236,244 @@ bool rootside_orphan_uid_admit(struct rootside_bounds *b, uid_t uid, uint64_t no
 	b->orphan_uid[k].uid = uid;
 	b->orphan_uid[k].at_ms = now_ms ? now_ms : 1;
 	return true;
+}
+
+void rootside_exit_note(struct rootside_bounds *b, uid_t uid, uint64_t now_ms)
+{
+	int k = -1, oldest = 0;
+
+	if (!now_ms)
+		now_ms = 1;
+	for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++) {
+		if (b->exits[i].at_ms && b->exits[i].uid == uid) {
+			if (now_ms > b->exits[i].at_ms) /* the clock never goes back */
+				b->exits[i].at_ms = now_ms;
+			return;
+		}
+		if (!b->exits[i].at_ms) {
+			if (k < 0)
+				k = i;
+		} else if (b->exits[i].at_ms < b->exits[oldest].at_ms || !b->exits[oldest].at_ms) {
+			oldest = i;
+		}
+	}
+	if (k < 0) {
+		/* full: the OLDEST goes, and its time is kept as a floor for every uid that has no
+		 * entry — a forgotten uid then waits at least as long as it really should */
+		k = oldest;
+		if (b->exits[k].at_ms > b->exits_forgot_ms)
+			b->exits_forgot_ms = b->exits[k].at_ms;
+	}
+	b->exits[k].uid = uid;
+	b->exits[k].at_ms = now_ms;
+}
+
+bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint64_t now_ms,
+                               uint64_t *left_ms)
+{
+	uint64_t since = b->started_ms, due;
+
+	if (left_ms)
+		*left_ms = UINT64_MAX;
+	if (!b->abandon_ms)
+		return false;
+	if (b->exits_forgot_ms > since)
+		since = b->exits_forgot_ms;
+	for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++)
+		if (b->exits[i].at_ms && b->exits[i].uid == uid) {
+			if (b->exits[i].at_ms > since)
+				since = b->exits[i].at_ms;
+			break;
+		}
+	due = since > UINT64_MAX - b->abandon_ms ? UINT64_MAX : since + b->abandon_ms; /* saturates */
+	if (now_ms >= due)
+		return true;
+	if (left_ms)
+		*left_ms = due - now_ms;
+	return false;
+}
+
+/* ⭐ 1.5 (split audit R2) — the ban of the root side; see the box in rootside.h. */
+static const uint64_t LOGIN_LADDER_MS[3] = {900000u, 3600000u, 43200000u};
+
+static int fail_inside(const struct rootside_fail *e, uint64_t now_ms)
+{
+	int in = 0;
+
+	for (int i = 0; i < e->n; i++)
+		if (e->times[i] >= now_ms || now_ms - e->times[i] <= ROOTSIDE_LOGIN_WINDOW_MS)
+			in++;
+	return in;
+}
+
+static void fail_forget(struct rootside_fail *e, uint64_t now_ms)
+{
+	if (e->last_ban_ms && e->until_ms <= now_ms
+	    && now_ms - e->last_ban_ms >= ROOTSIDE_LOGIN_FORGET_MS) {
+		e->level = 0;
+		e->last_ban_ms = 0;
+	}
+}
+
+/* The entry of `key`; one is given (taking back, in this order, a never-used one, an
+ * idle one with no recidivism, the idle one touched longest ago) when `create`.  Never an
+ * entry with an attempt in flight or a pause in force: NULL then. */
+static struct rootside_fail *fail_get(struct rootside_fail *t, int n, const char *key,
+                                      uint64_t now_ms, bool create)
+{
+	struct rootside_fail *free_e = NULL, *victim = NULL;
+
+	for (int i = 0; i < n; i++) {
+		if (t[i].used && strcmp(t[i].key, key) == 0)
+			return &t[i];
+		if (!t[i].used) {
+			if (!free_e)
+				free_e = &t[i];
+			continue;
+		}
+		if (t[i].pending > 0 || t[i].until_ms > now_ms)
+			continue;
+		if (!victim || (t[i].level == 0) > (victim->level == 0)
+		    || ((t[i].level == 0) == (victim->level == 0)
+		        && t[i].touched_ms < victim->touched_ms))
+			victim = &t[i];
+	}
+	if (!create)
+		return NULL;
+	if (!free_e)
+		free_e = victim;
+	if (!free_e)
+		return NULL;
+	memset(free_e, 0, sizeof *free_e);
+	free_e->used = true;
+	snprintf(free_e->key, sizeof free_e->key, "%s", key);
+	free_e->touched_ms = now_ms;
+	return free_e;
+}
+
+int rootside_login_admit(struct rootside_bounds *b, const char *ukey, const char *rhost,
+                         uint64_t now_ms, uint64_t *left_ms, unsigned *taken)
+{
+	struct rootside_fail *u, *p = NULL, *h = NULL;
+	char pkey[ROOTSIDE_LOGIN_KEY_MAX];
+	bool with_host = rhost && rhost[0];
+
+	*taken = 0;
+	if (left_ms)
+		*left_ms = 0;
+	/* the uid table is the ground floor: no place there = refused.  The other two are
+	 * extra levels: no place there = that level is skipped and the uid level decides */
+	u = fail_get(b->users, ROOTSIDE_LOGIN_USERS, ukey, now_ms, true);
+	if (!u)
+		return RXR_LOGIN_FULL;
+	snprintf(pkey, sizeof pkey, "%s|%s", ukey, with_host ? rhost : "");
+	p = fail_get(b->pairs, ROOTSIDE_LOGIN_PAIRS, pkey, now_ms, true);
+	if (with_host)
+		h = fail_get(b->hosts, ROOTSIDE_LOGIN_HOSTS, rhost, now_ms, true);
+	fail_forget(u, now_ms);
+	if (p)
+		fail_forget(p, now_ms);
+	if (h)
+		fail_forget(h, now_ms);
+#define PAUSED(e, code) \
+	if ((e) && (e)->until_ms > now_ms) { \
+		if (left_ms) \
+			*left_ms = (e)->until_ms - now_ms; \
+		return code; \
+	}
+	PAUSED(p, RXR_LOGIN_PAIR_PAUSED)
+	PAUSED(u, RXR_LOGIN_USER_PAUSED)
+	PAUSED(h, RXR_LOGIN_HOST_PAUSED)
+#undef PAUSED
+	if (p && fail_inside(p, now_ms) + p->pending >= ROOTSIDE_LOGIN_PAIR_LIMIT)
+		return RXR_LOGIN_PAIR_BUSY;
+	if (fail_inside(u, now_ms) + u->pending >= ROOTSIDE_LOGIN_USER_LIMIT)
+		return RXR_LOGIN_USER_BUSY;
+	if (h && fail_inside(h, now_ms) + h->pending >= ROOTSIDE_LOGIN_HOST_LIMIT)
+		return RXR_LOGIN_HOST_BUSY;
+	u->pending++;
+	u->touched_ms = now_ms;
+	*taken = RXR_LOGIN_L_USER;
+	if (p) {
+		p->pending++;
+		p->touched_ms = now_ms;
+		*taken |= RXR_LOGIN_L_PAIR;
+	}
+	if (h) {
+		h->pending++;
+		h->touched_ms = now_ms;
+		*taken |= RXR_LOGIN_L_HOST;
+	}
+	return RXR_LOGIN_OK;
+}
+
+/* one failure on `e`, whose limit is `limit`; true when it started a pause.  `ladder` false:
+ * a fixed pause of `fixed_ms`, no level, no memory of it */
+static bool fail_record(struct rootside_fail *e, int limit, uint64_t now_ms, bool ladder,
+                        uint64_t fixed_ms, int *level, uint64_t *ms)
+{
+	if (e->n < limit) {
+		e->times[e->n++] = now_ms;
+	} else {
+		memmove(e->times, e->times + 1, (size_t)(limit - 1) * sizeof e->times[0]);
+		e->times[limit - 1] = now_ms;
+	}
+	if (e->n < limit || now_ms - e->times[0] > ROOTSIDE_LOGIN_WINDOW_MS)
+		return false;
+	if (ladder) {
+		if (e->level < 3)
+			e->level++;
+		*level = e->level;
+		*ms = LOGIN_LADDER_MS[e->level - 1];
+		e->last_ban_ms = now_ms;
+	} else {
+		*level = 0;
+		*ms = fixed_ms;
+	}
+	e->until_ms = now_ms + *ms;
+	e->n = 0; /* the pause took them */
+	return true;
+}
+
+void rootside_login_done(struct rootside_bounds *b, const char *ukey, const char *rhost,
+                         uint64_t now_ms, unsigned taken, int verdict,
+                         struct rootside_login_event *ev)
+{
+	char pkey[ROOTSIDE_LOGIN_KEY_MAX];
+	struct rootside_login_event local;
+	struct rootside_fail *u = fail_get(b->users, ROOTSIDE_LOGIN_USERS, ukey, now_ms, false);
+	struct rootside_fail *p, *h;
+	int dummy;
+
+	snprintf(pkey, sizeof pkey, "%s|%s", ukey, rhost ? rhost : "");
+	p = fail_get(b->pairs, ROOTSIDE_LOGIN_PAIRS, pkey, now_ms, false);
+	h = rhost && rhost[0] ? fail_get(b->hosts, ROOTSIDE_LOGIN_HOSTS, rhost, now_ms, false) : NULL;
+	if (!ev)
+		ev = &local;
+	memset(ev, 0, sizeof *ev);
+	/* the places are given back where they were taken, and only there */
+	if (u && (taken & RXR_LOGIN_L_USER) && u->pending > 0)
+		u->pending--;
+	if (p && (taken & RXR_LOGIN_L_PAIR) && p->pending > 0)
+		p->pending--;
+	if (h && (taken & RXR_LOGIN_L_HOST) && h->pending > 0)
+		h->pending--;
+	if (verdict == RXR_LOGIN_REFUSED) {
+		if (u)
+			ev->user_ban = fail_record(u, ROOTSIDE_LOGIN_USER_LIMIT, now_ms, false,
+			                           ROOTSIDE_LOGIN_USER_PAUSE_MS, &dummy, &ev->user_ms);
+		if (p)
+			ev->pair_ban = fail_record(p, ROOTSIDE_LOGIN_PAIR_LIMIT, now_ms, true, 0,
+			                           &ev->pair_level, &ev->pair_ms);
+		if (h)
+			ev->host_ban = fail_record(h, ROOTSIDE_LOGIN_HOST_LIMIT, now_ms, true, 0,
+			                           &ev->host_level, &ev->host_ms);
+	} else if (verdict == RXR_LOGIN_ACCEPTED) {
+		if (u)
+			u->n = 0; /* only this user's failures: not the recidivism, not the address's */
+		if (p)
+			p->n = 0;
+	}
 }
 
 void rootside_auth_done(struct rootside_bounds *b)
@@ -462,6 +701,9 @@ struct own_child {
 	uint32_t generation;  /* of the network side it was born for */
 	uint64_t term_at;     /* ≠ 0: that network side is dead — SIGTERM then */
 	uint64_t kill_at;     /* ≠ 0: SIGTERM sent — SIGKILL then */
+	/* ⭐ 1.5 (R1): ≠ 0: the moment its network side died — the user was left without a client
+	 * THEN, not when this (slow) child is finally reaped */
+	uint64_t orphaned_ms;
 };
 
 struct pending_auth {
@@ -469,6 +711,9 @@ struct pending_auth {
 	uint64_t ticket;      /* the helper's */
 	uint64_t request;     /* the network side's */
 	uint32_t generation;  /* of the network side that asked */
+	unsigned taken;                    /* ⭐ 1.5 (R2): the levels it took a place in, */
+	char ukey[ROOTSIDE_LOGIN_KEY_MAX]; /*   the uid, in decimal, and the address, */
+	char rhost[RXR_RHOST_MAX];         /*   to give the attempt back to the counters */
 };
 
 static struct {
@@ -639,14 +884,20 @@ static void send_exited(const struct rxr_child_exited *e)
 	R.outbox[R.nout++] = *e;
 }
 
-static void send_refused(uint64_t request, int reason)
+static void send_refused_wait(uint64_t request, int reason, uint64_t wait_ms)
 {
 	struct rxr_spawn_refused r;
 
 	memset(&r, 0, sizeof r);
 	head_fill(&r.h, RXR_SPAWN_REFUSED, request);
 	r.reason = (uint8_t)reason;
+	r.wait_ms = wait_ms > UINT32_MAX ? UINT32_MAX : (uint32_t)wait_ms;
 	(void)chan_send(&r, sizeof r, -1);
+}
+
+static void send_refused(uint64_t request, int reason)
+{
+	send_refused_wait(request, reason, 0);
 }
 
 static void send_verdict(uint64_t request, int outcome, const uint8_t *grant)
@@ -698,6 +949,35 @@ static void on_pam_outcome(void *ctx, uint64_t ticket, int outcome, const char *
 	}
 	pa->used = false;
 	rootside_auth_done(&R.bounds);
+	/* ⭐ 1.5 (R2): what PAM REALLY answered goes to the counters — refused (0) or expired (4)
+	 *    count, a yes clears the user, everything else (locked, not checked) is not counted.
+	 *    Before the next test: an AUTH of a network side that is gone has failed all the same. */
+	{
+		struct rootside_login_event ev;
+		uint64_t now = log_now_ms();
+
+		rootside_login_done(&R.bounds, pa->ukey, pa->rhost, now, pa->taken,
+		                    (outcome == 0 || outcome == 4) ? RXR_LOGIN_REFUSED
+		                    : outcome == 1                 ? RXR_LOGIN_ACCEPTED
+		                                                   : RXR_LOGIN_UNCHECKED, &ev);
+		if (ev.pair_ban)
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of «%s» (uid %s) from «%s» refused by PAM in %d "
+			              "min: no AUTH for that user from that address for %llu min (pause %d of 3) "
+			              "— «not checked» meanwhile", ROOTSIDE_LOGIN_PAIR_LIMIT, user, pa->ukey,
+			              pa->rhost, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.pair_ms / 60000), ev.pair_level);
+		if (ev.user_ban)
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of «%s» (uid %s) refused by PAM in %d min "
+			              "from any addresses: no AUTH for that user from anywhere for %llu min "
+			              "(fixed) — «not checked» meanwhile", ROOTSIDE_LOGIN_USER_LIMIT, user,
+			              pa->ukey, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.user_ms / 60000));
+		if (ev.host_ban)
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords from «%s» refused by PAM in %d min: no "
+			              "AUTH from it for %llu min (pause %d of 3) — «not checked» meanwhile",
+			              ROOTSIDE_LOGIN_HOST_LIMIT, pa->rhost, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.host_ms / 60000), ev.host_level);
+	}
 	if (pa->generation != R.generation || R.chan < 0)
 		return; /* asked by a network side that is gone */
 	/* ⭐ D3 (7645beb7): outcome 4 is the root-form EXPIRY — an attempt without a verdict is not a free one, so it
@@ -727,6 +1007,11 @@ static void handle_auth(struct rxr_auth *a)
 	uint64_t ticket = 0, now = log_now_ms();
 	int r = -1;
 	int out = -1;
+	uid_t uid = 0;
+	char ukey[ROOTSIDE_LOGIN_KEY_MAX];
+	uint64_t left = 0;
+	int lg = RXR_LOGIN_OK;
+	unsigned taken = 0;
 
 	/* ⛔ The bounds FIRST (review of the split, finding 6): the denied file,
 	 *    the NSS lookup (sssd/LDAP: the network) and a log line are work the
@@ -746,7 +1031,7 @@ static void handle_auth(struct rxr_auth *a)
 			R.refused_hidden = 0;
 		}
 		out = RXR_NOT_CHECKED;
-	} else if ((r = rootside_user_refused(a->user, R.o->denied_users_path, NULL, why,
+	} else if ((r = rootside_user_refused(a->user, R.o->denied_users_path, &uid, why,
 	                                      sizeof why)) != 0
 	           || !rhost_ok(a->rhost)) {
 		rootside_auth_done(&R.bounds);
@@ -767,8 +1052,33 @@ static void handle_auth(struct rxr_auth *a)
 			R.prepam_logged_ms = now;
 			R.prepam_hidden = 0;
 		}
+	} else if ((snprintf(ukey, sizeof ukey, "%lu", (unsigned long)uid),
+	            lg = rootside_login_admit(&R.bounds, ukey, a->rhost, now, &left, &taken)) != RXR_LOGIN_OK) {
+		/* ⭐ 1.5 (R2): paused (or about to be) by the root side's own count of what PAM
+		 *    refused: not asked, «not checked», not counted by the network side.  ⚠ One
+		 *    line a second, with the count. */
+		static uint64_t paused_logged_ms;
+		static uint32_t paused_hidden;
+
+		rootside_auth_done(&R.bounds);
+		out = RXR_NOT_CHECKED;
+		paused_hidden++;
+		if (now >= paused_logged_ms + 1000) {
+			registro_dice(LOG_ROOT, "⛔ AUTH of «%.64s» from «%.64s» not asked of PAM: %s (%llu s "
+			              "to go; %u in the last second) — «not checked», NOT counted towards "
+			              "the network side's ban", a->user, a->rhost,
+			              lg == RXR_LOGIN_PAIR_PAUSED  ? "this user from this address is paused"
+			              : lg == RXR_LOGIN_USER_PAUSED ? "the user is paused (too many refused from anywhere)"
+			              : lg == RXR_LOGIN_HOST_PAUSED ? "the address is paused"
+			              : lg == RXR_LOGIN_FULL        ? "the failures table is full"
+			                                            : "attempts in flight plus refused reach the limit",
+			              (unsigned long long)((left + 999) / 1000), paused_hidden);
+			paused_logged_ms = now;
+			paused_hidden = 0;
+		}
 	} else if (!helper_ask_bare(R.pam, a->user, a->password, a->rhost, now, &ticket)) {
 		rootside_auth_done(&R.bounds);
+		rootside_login_done(&R.bounds, ukey, a->rhost, now, taken, RXR_LOGIN_UNCHECKED, NULL);
 		out = RXR_NOT_CHECKED;
 	} else {
 		struct pending_auth *pa = NULL;
@@ -782,6 +1092,9 @@ static void handle_auth(struct rxr_auth *a)
 			pa->ticket = ticket;
 			pa->request = a->h.request;
 			pa->generation = R.generation;
+			pa->taken = taken;
+			snprintf(pa->ukey, sizeof pa->ukey, "%s", ukey);
+			snprintf(pa->rhost, sizeof pa->rhost, "%s", a->rhost);
 		} else {
 			/* ⚠ Cannot happen (32 places, 16 in flight); the helper's answer
 			 *   then finds nothing and is dropped.  Said (review 4 B, 11). */
@@ -790,6 +1103,7 @@ static void handle_auth(struct rxr_auth *a)
 			              (unsigned long long)a->h.request,
 			              sizeof R.pending / sizeof R.pending[0]);
 			rootside_auth_done(&R.bounds);
+			rootside_login_done(&R.bounds, ukey, a->rhost, now, taken, RXR_LOGIN_UNCHECKED, NULL);
 			out = RXR_NOT_CHECKED;
 		}
 	}
@@ -835,6 +1149,28 @@ static void birth(uint64_t request, const char *user, const char *rhost, uint32_
 		              "session of uid %ld with SERVICE=remotix", user, (long)uid);
 		send_refused(request, RXR_REF_NO_ORPHAN);
 		return;
+	}
+	/* ⭐ 1.5 (split audit R1): a desktop is closed only when it has really been abandoned —
+	 *    the root side's own clock (`--abandon-s`, its last child's exit or its own start),
+	 *    not the network side's word: a network side taken over could otherwise close the
+	 *    desktop of anyone who had merely disconnected.  BEFORE the per-uid hold, so a
+	 *    refusal here takes no hold. */
+	if (orphan) {
+		uint64_t left;
+
+		if (!rootside_orphan_abandoned(&R.bounds, uid, log_now_ms(), &left)) {
+			if (left == UINT64_MAX)
+				registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: the abandonment "
+				              "clock is off (--abandon-s 0), no desktop is closed for "
+				              "abandonment", user);
+			else
+				registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: uid %ld has not "
+				              "been without a client for %llu s yet (%llu s to go)", user,
+				              (long)uid, (unsigned long long)(R.bounds.abandon_ms / 1000),
+				              (unsigned long long)((left + 999) / 1000));
+			send_refused_wait(request, RXR_REF_TOO_SOON, left == UINT64_MAX ? 0 : left);
+			return;
+		}
 	}
 	/* ⛔ One CLOSE_ORPHAN per uid per 30 s (review 2, M1): CLOSE_ORPHAN →
 	 *    SIGNAL KILL → reaped → CLOSE_ORPHAN was a new logind session each
@@ -1100,6 +1436,8 @@ static void reap_kids(void)
 		 *    never asked to remove anything (§11.50). */
 		if (k->render_grant)
 			render_grant_remove(k->user, k->uid, k->gid);
+		/* ⭐ 1.5 (R1): the moment the user was left without a client, for CLOSE_ORPHAN */
+		rootside_exit_note(&R.bounds, k->uid, k->orphaned_ms ? k->orphaned_ms : log_now_ms());
 		registro_dice(LOG_ROOT, "the child of «%s» (pid %ld, serial %llu) is reaped by "
 		              "the root side: %s", k->user, (long)k->pid,
 		              (unsigned long long)k->serial, status_text(st, said, sizeof said));
@@ -1200,8 +1538,11 @@ static void reap_net(uint64_t now)
 	}
 	/* ⛔ Its children: the EOF first, then the signals (`kids_hurry()`). */
 	for (int i = 0; i < R.cap; i++)
-		if (R.kids[i].used && R.kids[i].generation == R.generation && !R.kids[i].term_at)
+		if (R.kids[i].used && R.kids[i].generation == R.generation && !R.kids[i].term_at) {
 			R.kids[i].term_at = now + KIDS_EOF_GRACE_MS;
+			/* ⭐ 1.5 (R1): from here the user has no client, whatever the child takes to leave */
+			R.kids[i].orphaned_ms = now ? now : 1;
+		}
 	if (R.stopping)
 		return;
 	R.deaths_in_row = now - R.net_born_ms < NET_STABLE_MS ? R.deaths_in_row + 1 : 1;
@@ -1563,6 +1904,8 @@ int rootside_main(const struct rootside_options *o)
 		return 1;
 	}
 	rootside_bounds_init(&R.bounds, log_now_ms());
+	R.bounds.abandon_ms = (o->abandon_s > ROOTSIDE_ABANDON_S_MAX ? ROOTSIDE_ABANDON_S_MAX
+	                                                          : o->abandon_s) * 1000;
 	registro_dice(LOG_ROOT,
 	              "⭐ ROOT SIDE on (pid %ld, DECISIONS.md §11.50): single-threaded, PAM "
 	              "helper and children below it, up to %d children; the network side "
@@ -1708,6 +2051,7 @@ static struct {
 	void *verdict_ctx;
 	RootsideChildExited on_exited;
 	void *exited_ctx;
+	uint32_t last_wait_ms; /* R1: the TOO_SOON answer's wait */
 	struct {
 		bool used;
 		uint64_t request;
@@ -2094,8 +2438,10 @@ static int wait_birth(uint64_t request, int timeout_ms, struct rootside_born *ou
 			continue;
 		if ((pk.h.kind == RXR_SPAWNED || pk.h.kind == RXR_SPAWN_REFUSED)
 		    && pk.h.request == request) {
-			if (pk.h.kind == RXR_SPAWN_REFUSED)
+			if (pk.h.kind == RXR_SPAWN_REFUSED) {
+				C.last_wait_ms = pk.r.reason == RXR_REF_TOO_SOON ? pk.r.wait_ms : 0;
 				return pk.r.reason ? pk.r.reason : RXR_REF_FAILED;
+			}
 			memset(out, 0, sizeof *out);
 			out->serial = pk.s.serial;
 			out->pid = (pid_t)pk.s.pid;
@@ -2139,6 +2485,11 @@ int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
 	}
 	explicit_bzero(s.grant, sizeof s.grant);
 	return wait_birth(s.h.request, timeout_ms, out);
+}
+
+uint64_t rootside_last_wait_ms(void)
+{
+	return C.last_wait_ms;
 }
 
 int rootside_close_orphan(const char *user, int timeout_ms, struct rootside_born *out)

@@ -193,13 +193,17 @@ These are approved and are **not** in the range above; `finale` has them, merged
 - TLS key-exchange groups restricted to X25519MLKEM768, X25519, P-256, P-384 (`src/tls.c`, both the QUIC and the TCP context; audit R4). Present since 1.0: no group was set, so a client could offer only `ffdhe3072` and make each handshake cost about 6 ms of CPU instead of 1.2. Needs a try with Chrome, Firefox and Android before it is merged.
 
 ## 7. What is OFF by default
-- **Root-side / network-side split (§11.50)**: written, reviewed, packaged (service user `remotix`, installer, distro packages, SELinux, seccomp,
-  `remotix-net-move --back` with its Arch marker), in `finale` (from `rootside-completo`); the server stays ONE process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`,
-  and `--split` without it is refused (the server logs why and exits with 78).
-  **Build switches of the packages (all OFF unless asked)**: Debian: `REMOTIX_SPLIT=1` (`packaging/debian/rules:30`, passed by `src/build-targets/build-deb.sh`); Arch: `REMOTIX_SPLIT=1`
-  (`packaging/arch/build.sh`); rpm: `--with split` (`%bcond_with split`, `packaging/rpm/remotix.spec:37-39`) or `RX_SPLIT=1` for `build-rpm.sh`; any other value leaves the pieces OFF.
-  **Inert without the switch**: the system user `remotix` (sysusers), `remotix-net-move`, the `*.split` units and tmpfiles, the rpm SELinux domain, the Arch install script, and their guards in `postinst` / `%post` / `remotix.install`.
-  **Would change today's behaviour, therefore behind the switch**: creating the user, moving `certificates/` and `ban` into `/var/lib/remotix/net`, the units' `--certificates` / `--ban-file`, `/var/lib/remotix` 0755.
+- **Root-side / network-side split (§11.50) — ON BY DEFAULT since 25 Oct 2026** (the user's decision; it was OFF in the first drafts of these notes). Started as root, the server
+  is two processes: the root side (PAM, the desktops' births, the ban of what PAM refused) and the network side as the system user `remotix`, behind walls.
+  `--no-split` is the way back to the single process of 1.0 (also as root); `--split` asks for it explicitly; started as an ordinary user (benches) it stays one process.
+  The `REMOTIX_SPLIT_EXPERIMENTAL` gate is gone. Exit 78 is left for real configuration errors (the user `remotix` missing, certificates or ban outside `net/`, ...).
+  **Packages**: the user `remotix` (sysusers), `remotix-net-move` (`--back` is the way back for the files), the `*.split` units and tmpfiles and the SELinux split policy are installed by default;
+  Debian `REMOTIX_SPLIT=0`, Arch `REMOTIX_SPLIT=0`, rpm `--without split` (`RX_SPLIT=0` for `build-rpm.sh`) build the single-process package instead. The installer takes the user into account (`PackageCarriesNetUser`).
+  **New with the split (branch `v15-split`)**: CLOSE_ORPHAN only for a desktop abandoned for `--abandon-s` by the root side's own clock (R1); the root side's pause for what PAM really refused —
+  (uid, address) 5 in 5 min with the 15 min / 1 h / 12 h ladder, address 12 in 5 min, uid alone 15 in 5 min with a fixed 15 min pause; these pauses do not survive a restart of the root side —
+  and the AUTH bucket lowered to 3/s, burst 8 (R2); the network side in its own network namespace, a Landlock scope on abstract sockets and a seccomp allow list of socket families (R5/R6/R7);
+  an AppArmor profile `remotix_network` in COMPLAIN mode on Debian/Ubuntu (it logs what it would refuse and confines nothing yet; installed by `dh_apparmor`; NOT TRIED on a real AppArmor).
+  **Not yet**: R8 (the rediscovery of the desktops in the root side and `/proc` hidden) and the live tests on the four machines.
   Measured on the discarded attempt (16 Oct; `benches/24-privsep-cost.sh`, run 20261016-113915); not re-measured on `rootside-completo`. Cost against 1.0 (4 interleaved rounds, one box): login to first frame −98 ms warm /
   −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. Needs decision D1.
 - **Decoder `PACE` (§11.32)**: present (`4895f2ad`, `c7bfef17`), enabled with `--decoder-pace`; the page declares `video.pace` only then. The measures

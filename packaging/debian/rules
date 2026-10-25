@@ -27,10 +27,9 @@ R_CFLAGS := $(CFLAGS) $(CPPFLAGS) -std=gnu11 -Wall -Wextra -Wno-unused-parameter
 B := debian/remotix
 
 # ⭐ DECISIONS-11.md §11.50, PHASE F — the network side's user, directories, units and the 1.0 → 1.5 move.
-#    ⛔ OFF by default: `REMOTIX_SPLIT=1 dpkg-buildpackage …` (src/build-targets/build-deb.sh
-#    passes it through) switches the pieces on.  They are useless — and
-#    the new paths would BREAK the 1.5 of today — until phase D (the split in main.c/child.c/helper.c) exists.
-REMOTIX_SPLIT ?= 0
+#    ⭐ ON by default (decided 25 Oct 2026): `REMOTIX_SPLIT=0 dpkg-buildpackage …` (src/build-targets/build-deb.sh
+#    passes it through) builds the single-process package instead.
+REMOTIX_SPLIT ?= 1
 
 %:
 	dh $@
@@ -98,7 +97,13 @@ ifeq ($(REMOTIX_SPLIT),1)
 	# ⚠ Not dh_installsysusers: it is in dh's sequence only from compat 14 (`[M]` 16 Oct 2026: debhelper
 	#    13.24.2 at compat 13 installed nothing); the postinst runs `systemd-sysusers remotix.conf`.
 	install -D -m 0644 debian/remotix.sysusers $(B)/usr/lib/sysusers.d/remotix.conf
+	# ⭐ 1.5 (AppArmor, NOT TRIED): the network side's profile `remotix_network`, in COMPLAIN mode (it logs, it confines nothing
+	#    yet), a conffile in /etc/apparmor.d.  dh_apparmor (package dh-apparmor, run here, before dh_installdeb) writes the
+	#    load / reload lines of postinst; the unload on removal is in debian/remotix.postrm.
+	install -D -m 0644 debian/remotix_network.apparmor $(B)/etc/apparmor.d/remotix_network
+	dh_apparmor --profile-name=remotix_network -premotix
 endif
+
 
 override_dh_installtmpfiles:
 ifeq ($(REMOTIX_SPLIT),1)

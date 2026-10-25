@@ -1,4 +1,7 @@
 #!/bin/bash
+# ⭐ 1.5 (split on by default as root): this bench starts the product as container root and measures it as ONE process, as before; RX_SPLIT_OPT="" (set,
+#    empty) lets the product split — then the container needs the user remotix and CAP_SYS_ADMIN for the walls: the live split proofs do that.
+SPLITOPT=${RX_SPLIT_OPT---no-split}
 # 01-b10-launch.sh <product> [out] — B10 (01-b10-flood.py) against a REAL server, on the test server,
 # OUTSIDE the safety-net boxes: two private podman containers sharing ONE private network namespace.
 #
@@ -100,7 +103,7 @@ P run -d --name $SRV --cpus 2 --memory 2g --network none --device "$CARD" --stop
 	usermod -aG \$(getent group \$CARD_GID | cut -d: -f1) rxflood &&
 	cp /flood/remotix.pam /etc/pam.d/remotix && mkdir -p /etc/remotix &&
 	echo root > /etc/remotix/denied-users && chmod 644 /etc/remotix/denied-users &&
-	ND=/flood && RD=/flood && NETA= && exec nice -n 19 /prod/remotix --address :: --name 127.0.0.1 --port $PORT \
+	ND=/flood && RD=/flood && NETA= && exec nice -n 19 /prod/remotix --address :: $SPLITOPT --name 127.0.0.1 --port $PORT \
 	  --certificates \$ND/cert --page /prod/page.html --ban-file \$ND/ban \
 	  --command-socket \$RD/cmd.sock \$NETA --verbose $CAPS > /flood/server.log 2>&1" >/dev/null || exit 3
 for _ in $(seq 60); do

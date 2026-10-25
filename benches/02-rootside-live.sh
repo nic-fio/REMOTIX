@@ -126,6 +126,8 @@ lp=$(cat /tmp/rx-live/leftover.pid 2>/dev/null)
 grep -q 'the birth for «anna» took [0-9]* ms' /tmp/rx-live/root.log || { echo "NO no birth duration line"; red=1; }
 # review 2, M1: a second CLOSE_ORPHAN for carla within 30 s is refused without a birth
 grep -q 'CLOSE_ORPHAN for «carla» refused: one was already asked' /tmp/rx-live/root.log || { echo "NO a second CLOSE_ORPHAN for carla was not held"; red=1; }
+# R1: right after her child left, the root side's own clock says carla is not abandoned yet
+grep -q 'CLOSE_ORPHAN for «carla» refused: uid .* has not been without a client for' /tmp/rx-live/root.log || { echo "NO a CLOSE_ORPHAN for carla right after her child left was not refused TOO_SOON"; red=1; }
 # finding 1: the CLOSE_ORPHAN child is born --close-only, the SPAWN child is not
 grep -q -- 'argv remotix-child --internal-child carla .* --close-only' /tmp/rx-live/child.txt || { echo "NO carla's CLOSE_ORPHAN child is not --close-only"; red=1; }
 grep -- 'argv remotix-child --internal-child anna ' /tmp/rx-live/child.txt | grep -q -- '--close-only' && { echo "NO anna's SPAWN child is --close-only"; red=1; }

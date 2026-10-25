@@ -95,7 +95,7 @@ class MyServer:
             "echo \"=== startup $(date -u +%%FT%%TZ) ===\" >> %(r)s; "
             "systemd-run --unit=%(u)s --working-directory=/opt/remotix "
             "--property=StandardOutput=append:%(r)s --property=StandardError=append:%(r)s "
-            "--property=KillMode=mixed /opt/remotix/remotix --address 0.0.0.0 "
+            "--property=KillMode=mixed /opt/remotix/remotix --address 0.0.0.0 --no-split "
             "--name 127.0.0.1 --port %(p)d --certificates %(d)s/certificati "
             "--page /opt/remotix/page.html --ban-file %(b)s --command-socket %(s)s "
             "--survey %(d)s/rilievo --verbose >/dev/null 2>&1; "

@@ -220,7 +220,10 @@ static int net_side(void)
 	/* finding 1: carla has a remotix session file (written by the .sh) — the
 	 * birth without a password is a CLOSE-ONLY child (its argv, child.txt) */
 	{
-		int r = rootside_close_orphan("carla", 10000, &b);
+		int r;
+
+		pump(1300, NULL); /* R1: the root side has now been up for more than abandon_s */
+		r = rootside_close_orphan("carla", 10000, &b);
 		check(r == 0 && b.fd >= 0 && strcmp(b.user, "carla") == 0,
 		      "CLOSE_ORPHAN carla (a live remotix session in logind): SPAWNED");
 		if (r == 0) {
@@ -229,8 +232,13 @@ static int net_side(void)
 			pump(10000, child_exited);
 			check(exited_serial == b.serial, "… and its CHILD_EXITED");
 		}
+		/* R1: carla's child has only just left, so the root side's own clock says she is not
+		 * abandoned yet — TOO_SOON now, before the per-uid hold (RATE) is even asked */
+		check(rootside_close_orphan("carla", 5000, &b) == RXR_REF_TOO_SOON,
+		      "a second CLOSE_ORPHAN for carla right after her child left: refused TOO_SOON, no birth (R1)");
+		pump(1300, NULL);
 		check(rootside_close_orphan("carla", 5000, &b) == RXR_REF_RATE,
-		      "a second CLOSE_ORPHAN for carla within 30 s: refused RATE, no birth (review 2 M1, review 4 B 22)");
+		      "after abandon_s but within 30 s of the first birth: refused RATE, no birth (review 2 M1, review 4 B 22)");
 	}
 	/* finding 2: dario's child hangs (ignores SIGTERM, never reads): it must be
 	 * SIGTERMed then SIGKILLed by the root side once this network side dies */
@@ -253,8 +261,8 @@ static int net_side(void)
 			no += v_out[20 + i] == RXR_NO;
 		}
 		char d[160];
-		snprintf(d, sizeof d, "25 AUTH at once: %d NO, %d not checked (16 in flight max)", no, nc);
-		check(no <= 16 && nc >= 9 && no + nc == 25, d);
+		snprintf(d, sizeof d, "25 AUTH at once for anna: %d NO, %d not checked (burst 8; 5 refused-or-in-flight per user and address)", no, nc);
+		check(no <= ROOTSIDE_LOGIN_PAIR_LIMIT && no + nc == 25, d);
 	}
 	fprintf(out, "%s\n", fails ? "RED" : "GREEN");
 	fprintf(out, "MALFORMED_SENT\n");
@@ -331,6 +339,7 @@ int main(int argc, char **argv)
 	o.canvas_w = 1920;
 	o.canvas_h = 1080;
 	o.audio_silence = true;
+	o.abandon_s = 1; /* R1: CLOSE_ORPHAN only after 1 s without a child of that uid */
 	o.net_argv = net_argv;
 	o.denied_users_path = DIR_ "/denied-users";
 	/* ⭐ RX_LIVE_JOURNAL=1: the root side with --journal, as every package unit runs it —

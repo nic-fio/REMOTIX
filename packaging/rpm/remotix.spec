@@ -34,9 +34,8 @@
 #    rule 2 and D5.  The installation engine will do it, with consent.
 
 # ⭐ DECISIONS-11.md §11.50, PHASE F — the network side's user, directories, unit, SELinux domain and the 1.0 → 1.5 move.
-#    ⛔ OFF by default: `rpmbuild --with split` (build-rpm.sh: RX_SPLIT=1) switches them on.  They are useless — and
-#    the new paths would BREAK the 1.5 of today — until phase D (the split in main.c/child.c/helper.c) exists.
-%bcond_with split
+#    ⭐ ON by default (decided 25 Oct 2026): `rpmbuild --without split` (build-rpm.sh: RX_SPLIT=0) builds the single-process package.
+%bcond_without split
 
 %global ngtcp2_ver  1.25.0
 %global nghttp3_ver 1.18.0

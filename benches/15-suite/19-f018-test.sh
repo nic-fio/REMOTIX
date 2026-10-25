@@ -28,7 +28,7 @@ if [ "$ROUTE" != card ]; then
 			--property=StandardOutput=append:/var/lib/rete11/registro.log \
 			--property=StandardError=append:/var/lib/rete11/registro.log \
 			--property=KillMode=mixed \
-			/opt/remotix/remotix --address 0.0.0.0 --name 127.0.0.1 --port $PORT \
+			/opt/remotix/remotix --address 0.0.0.0 --no-split --name 127.0.0.1 --port $PORT \
 			--certificates /var/lib/rete11/certificati --page /opt/remotix/page.html \
 			--ban-file /var/lib/rete11/ban --command-socket /var/lib/rete11/command.sock \
 			--survey /var/lib/rete11/rilievo --verbose --journal --encoding-route $ROUTE

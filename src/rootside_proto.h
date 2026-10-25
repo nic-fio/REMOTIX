@@ -49,10 +49,14 @@
  * network side costs PAM nothing).  The grant lives 30 s: a right password is
  * followed by its SPAWN within the same login, `[M]` 1–14 ms (the «SPAWNED
  * after N ms» line); 30 s is the slack for a slow PAM session stack.  The
- * rate is a decision, not a measurement. */
+ * rate is a decision, not a measurement.
+ * ⭐ 1.5 (split audit R2): it was 10 per second, burst 20.  A person types a password every
+ * few seconds and eight users can log in together (burst 8); 3 sustained leaves a hijacked
+ * network side three guesses a second at most before the per-user and per-address pauses
+ * (`rootside_login_admit`) even start. */
 #define RXR_AUTH_IN_FLIGHT_MAX 16
-#define RXR_AUTH_PER_S         10
-#define RXR_AUTH_BURST         20
+#define RXR_AUTH_PER_S         3
+#define RXR_AUTH_BURST         8
 #define RXR_GRANT_LIFE_MS      30000
 
 enum rxr_kind {
@@ -156,12 +160,21 @@ enum rxr_refusal {
 	RXR_REF_RATE      = 9,  /* ⭐ review 4 B, finding 22: over a rate bound (the CLOSE_ORPHAN
 	                         * bucket, one per uid per 30 s) — it used to travel as FULL or
 	                         * CLOSING, and the network side wrote the wrong reason */
+	RXR_REF_TOO_SOON  = 10, /* ⭐ 1.5 (split audit R1): CLOSE_ORPHAN for a desktop that has not
+	                         * been without a client for `abandon_s` yet (or the clock is off) */
 };
 
 struct rxr_spawn_refused {
 	struct rxr_head h;
 	uint8_t reason;                   /* enum rxr_refusal */
+	/* ⭐ 1.5 (R1): with RXR_REF_TOO_SOON, how long until the root side would accept the
+	 * CLOSE_ORPHAN (ms, 0 = never: the clock is off); 0 for every other reason.  The
+	 * network side retries after that, a few times (main.c, `abandon_round`). */
+	uint32_t wait_ms;
 };
+/* the wire size: both sides are the same binary, but a field added or moved changes what a
+ * fuzz seed or a test packet has to be */
+_Static_assert(sizeof(struct rxr_spawn_refused) == 24, "rxr_spawn_refused changed size");
 
 struct rxr_child_exited {
 	struct rxr_head h;

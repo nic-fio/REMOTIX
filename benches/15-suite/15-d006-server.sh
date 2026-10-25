@@ -70,7 +70,7 @@ start)
 			--property=StandardOutput=append:$REG \
 			--property=StandardError=append:$REG \
 			--property=KillMode=mixed \
-			/opt/remotix/remotix --address 0.0.0.0 --name 127.0.0.1 --port $PORT \
+			/opt/remotix/remotix --address 0.0.0.0 --no-split --name 127.0.0.1 --port $PORT \
 			--certificates $DIR/certificati --page $DIR/page.html \
 			--ban-file $DIR/ban --command-socket $DIR/command.sock \
 			--survey $DIR/rilievo --verbose $*

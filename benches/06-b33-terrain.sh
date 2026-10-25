@@ -571,7 +571,8 @@ start)
 	# ⛔ `--verbose`: without it, `log_detail()` of `child.c` and of
 	#    `input.c` ends up in nothing and the branches look «not triggered».  A
 	#    diagnostic that stays silent is not neutral: it lies (trap 1).
-	nohup "$D/remotix" --address 0.0.0.0 --name "$ADDR" --port "$PORT" \
+	# ⭐ 1.5: split is the default as root — this bench is about the single process (it starts the server by hand): --no-split.
+	nohup "$D/remotix" --address 0.0.0.0 --no-split --name "$ADDR" --port "$PORT" \
 		--certificates "$CERT" --page "$D/page.html" \
 		--ban-file "$BAN" --command-socket "$SOCK" \
 		--survey "$SURVEY" --verbose >> "$LOG" 2>&1 &

@@ -57,7 +57,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 56
+#define EXPECTED_CHECKS 100
 
 static void require(int cond, const char *desc)
 {
@@ -107,7 +107,7 @@ int main(void)
 	struct rxr_signal_msg g;
 	struct rxr_close_orphan c;
 	char why[256];
-	struct rootside_bounds b;
+	static struct rootside_bounds b;
 	uint8_t ga[RXR_GRANT_BYTES], gb[RXR_GRANT_BYTES];
 	char user[RXR_USER_MAX], rhost[RXR_RHOST_MAX];
 	int ok_count;
@@ -213,21 +213,29 @@ int main(void)
 	ok_count = 0;
 	for (int i = 0; i < 17; i++)
 		ok_count += rootside_auth_admit(&b, 1000);
-	require(ok_count == RXR_AUTH_IN_FLIGHT_MAX, "17 at once: 16 admitted (in flight)");
-	for (int i = 0; i < 16; i++)
+	require(ok_count == RXR_AUTH_BURST, "17 at once: the burst (8) admitted");
+	for (int i = 0; i < ok_count; i++)
 		rootside_auth_done(&b);
 	ok_count = 0;
 	for (int i = 0; i < 10; i++) {
 		ok_count += rootside_auth_admit(&b, 1000);
 		rootside_auth_done(&b);
 	}
-	require(ok_count == RXR_AUTH_BURST - 16, "burst 20: after 16, only 4 more in the same instant");
+	require(ok_count == 0, "burst 8: none more in the same instant");
 	ok_count = 0;
 	for (int i = 0; i < 30; i++) {
 		ok_count += rootside_auth_admit(&b, 2000);
 		rootside_auth_done(&b);
 	}
-	require(ok_count == RXR_AUTH_PER_S, "one second later: 10 more (10/s)");
+	require(ok_count == RXR_AUTH_PER_S, "one second later: 3 more (3/s)");
+	rootside_bounds_init(&b, 1000);
+	b.tokens = 100; /* a slow PAM, a long quiet before: the in-flight bound is its own */
+	ok_count = 0;
+	for (int i = 0; i < 20; i++)
+		ok_count += rootside_auth_admit(&b, 1000);
+	require(ok_count == RXR_AUTH_IN_FLIGHT_MAX, "20 at once with tokens to spare: 16 in flight");
+	for (int i = 0; i < 16; i++)
+		rootside_auth_done(&b);
 
 	printf("  the names refused before PAM\n");
 	require(rootside_user_refused("root", "/nonexistent", NULL, why, sizeof why) == 1
@@ -352,7 +360,7 @@ int main(void)
 			R.prepam_logged_ms = 0;
 			fflush(stderr);
 			dup2(lf, 2);
-			for (int i = 0; i < 15; i++) {
+			for (int i = 0; i < RXR_AUTH_BURST - 1; i++) {
 				auth_fill(&a);
 				snprintf(a.user, sizeof a.user, "root");
 				handle_auth(&a);
@@ -367,10 +375,10 @@ int main(void)
 				lines += strstr(l, "refused BEFORE PAM") != NULL;
 			if (f)
 				fclose(f);
-			require(nos == 15 && R.bounds.in_flight == 0,
-			        "15 AUTH «root» within the burst: 15 NO, none left in flight");
+			require(nos == RXR_AUTH_BURST - 1 && R.bounds.in_flight == 0,
+			        "7 AUTH «root» within the burst (8): 7 NO, none left in flight");
 			char d[120];
-			snprintf(d, sizeof d, "… and %d «refused BEFORE PAM» line(s) written, not 15", lines);
+			snprintf(d, sizeof d, "… and %d «refused BEFORE PAM» line(s) written, not 7", lines);
 			require(lines == 1, d);
 			close(sv[0]);
 			close(sv[1]);
@@ -449,7 +457,7 @@ int main(void)
 
 	printf("  review 2: CLOSE_ORPHAN's own bounds (M1)\n");
 	{
-		struct rootside_bounds ob;
+		static struct rootside_bounds ob;
 
 		rootside_bounds_init(&ob, 5000);
 		ok_count = 0;
@@ -468,7 +476,7 @@ int main(void)
 		/* lane 1's pre-release review: a live hold is never evicted — a run of other uids
 		 * filling the table is refused instead (before: the oldest, uid 1000's, went) */
 		{
-			struct rootside_bounds hb;
+			static struct rootside_bounds hb;
 			int filled = 0;
 			rootside_bounds_init(&hb, 10000);
 			(void)rootside_orphan_uid_admit(&hb, 1000, 10000);
@@ -478,6 +486,312 @@ int main(void)
 			        && !rootside_orphan_uid_admit(&hb, 1000, 10000 + ROOTSIDE_ORPHAN_UID_MS - 1),
 			        "a table full of live holds refuses new uids and never frees uid 1000's");
 		}
+	}
+
+	printf("  1.5 (split audit R1): CLOSE_ORPHAN only for a desktop abandoned for abandon_s\n");
+	{
+		static struct rootside_bounds ab;
+		uint64_t left = 0;
+
+		rootside_bounds_init(&ab, 5000);
+		require(!rootside_orphan_abandoned(&ab, 1000, 999999999, &left) && left == UINT64_MAX,
+		        "abandonment clock off (abandon_ms 0): never accepted, whatever the time");
+		ab.abandon_ms = 60000;
+		require(!rootside_orphan_abandoned(&ab, 1000, 64999, &left) && left == 1,
+		        "no exit seen (desktop found after the root side's restart): counts from the "
+		        "root side's start — 1 ms short, refused");
+		require(rootside_orphan_abandoned(&ab, 1000, 65000, &left) && left == UINT64_MAX,
+		        "… and accepted exactly at start + abandon_s");
+		rootside_exit_note(&ab, 1000, 100000);
+		require(!rootside_orphan_abandoned(&ab, 1000, 159999, &left) && left == 1
+		        && rootside_orphan_abandoned(&ab, 1000, 160000, NULL),
+		        "a child of uid 1000 left at 100 s: refused until 160 s, accepted from then");
+		require(rootside_orphan_abandoned(&ab, 1001, 160000, NULL)
+		        && rootside_orphan_abandoned(&ab, 1001, 65000, NULL),
+		        "another uid is not held up by uid 1000's exit");
+		rootside_exit_note(&ab, 1000, 200000);
+		require(!rootside_orphan_abandoned(&ab, 1000, 250000, NULL)
+		        && rootside_orphan_abandoned(&ab, 1000, 260000, NULL),
+		        "a second exit of the same uid moves the clock forward (one entry, not two)");
+		/* a full table drops the OLDEST and keeps its time as a floor for uids with no entry:
+		 * a forgotten uid then waits at least as long as it really should */
+		{
+			static struct rootside_bounds fb;
+
+			rootside_bounds_init(&fb, 5000);
+			fb.abandon_ms = 60000;
+			for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++)
+				rootside_exit_note(&fb, (uid_t)(2000 + i), (uint64_t)(100000 + i));
+			rootside_exit_note(&fb, 3000, 200000); /* evicts uid 2000 (100000) */
+			require(!rootside_orphan_abandoned(&fb, 2000, 159999, NULL)
+			        && rootside_orphan_abandoned(&fb, 2000, 160000, NULL),
+			        "a table full: the evicted uid waits from the forgotten exit, not from the start");
+			require(!rootside_orphan_abandoned(&fb, 2005, 160004, NULL)
+			        && rootside_orphan_abandoned(&fb, 2005, 160005, NULL),
+			        "… and a uid still in the table keeps its own time");
+			require(!rootside_orphan_abandoned(&fb, 3000, 259999, NULL)
+			        && rootside_orphan_abandoned(&fb, 3000, 260000, NULL),
+			        "… and the newcomer has its own");
+		}
+	}
+
+	printf("  1.5 (R1, review): the exit of a child whose network side died, and the overflow\n");
+	{
+		static struct rootside_bounds ab;
+		struct own_child kid;
+		pid_t netp, kidp;
+		uint64_t left = 0;
+		int tries;
+
+		/* the sum with abandon_ms saturates instead of wrapping */
+		rootside_bounds_init(&ab, 5000);
+		ab.abandon_ms = UINT64_MAX;
+		require(!rootside_orphan_abandoned(&ab, 1000, 1ull << 62, &left) && left > 0,
+		        "abandon_ms at the maximum: no wrap, nothing is abandoned (it did, once, by wrapping)");
+		/* network side killed, a SLOW child: the clock starts when the network side died,
+		 * not when the child is finally reaped (else an honest request, made from the network
+		 * side's own clock that started at its restart, would come too soon and the desktop
+		 * stay open for good) */
+		netp = fork();
+		if (netp == 0)
+			_exit(0);
+		kidp = fork();
+		if (kidp == 0) {
+			pause();
+			_exit(0);
+		}
+		memset(&kid, 0, sizeof kid);
+		kid.used = true;
+		kid.pid = kidp;
+		kid.uid = 1000;
+		kid.generation = 1;
+		snprintf(kid.user, sizeof kid.user, "anna");
+		R.cap = 1;
+		R.kids = &kid;
+		R.chan = -1;
+		R.net_pid = netp;
+		R.generation = 1;
+		R.stopping = false;
+		rootside_bounds_init(&R.bounds, 1000);
+		R.bounds.abandon_ms = 60000;
+		for (tries = 0; tries < 100 && R.net_pid > 0; tries++) {
+			usleep(20000);
+			reap_net(20000);
+		}
+		require(R.net_pid == 0 && kid.orphaned_ms == 20000,
+		        "the network side's death is written on its children (orphaned_ms)");
+		R.generation = 2; /* the network side was started again */
+		kill(kidp, SIGKILL);
+		for (tries = 0; tries < 100 && kid.used; tries++) {
+			usleep(20000);
+			reap_kids();
+		}
+		require(!kid.used, "the slow child is reaped later");
+		require(!rootside_orphan_abandoned(&R.bounds, 1000, 20000 + 60000 - 1, &left) && left == 1
+		        && rootside_orphan_abandoned(&R.bounds, 1000, 20000 + 60000, NULL),
+		        "… and its uid counts from the network side's death (20 s), not from the reaping");
+		R.kids = NULL;
+		R.cap = 0;
+		R.net_pid = 0;
+	}
+
+	printf("  1.5 (split audit R2): the root side's own pause for what PAM refused\n");
+	{
+		static struct rootside_bounds lb; /* ~400 KB: not on the stack */
+		struct rootside_login_event ev;
+		uint64_t left = 0;
+		unsigned tk = 0, tk2 = 0;
+		int n_ok = 0;
+#define ADMIT(u, h, t) rootside_login_admit(&lb, (u), (h), (t), &left, &tk)
+#define REFUSE(u, h, t) do { (void)ADMIT(u, h, t); rootside_login_done(&lb, (u), (h), (t), tk, RXR_LOGIN_REFUSED, &ev); } while (0)
+
+		rootside_bounds_init(&lb, 1000);
+		/* (uid, address): five refused in a row start a 15-minute pause */
+		for (int i = 0; i < 5; i++) {
+			require(ADMIT("1000", "192.0.2.1", 10000 + 1000 * i) == RXR_LOGIN_OK,
+			        "an AUTH is asked while fewer than 5 refused");
+			rootside_login_done(&lb, "1000", "192.0.2.1", 10000 + 1000 * i, tk, RXR_LOGIN_REFUSED, &ev);
+			if (i < 4)
+				require(!ev.pair_ban, "… and the refused one starts no pause yet");
+		}
+		require(ev.pair_ban && ev.pair_level == 1 && ev.pair_ms == 900000 && !ev.user_ban,
+		        "the fifth refused in 5 min: pause 1 of the ladder, 15 min, for that user from that address");
+		require(ADMIT("1000", "192.0.2.1", 15000) == RXR_LOGIN_PAIR_PAUSED && left == 899000,
+		        "that user from that address is paused: not asked, with the time left");
+		require(ADMIT("1000", "192.0.2.9", 15000) == RXR_LOGIN_OK
+		        && (rootside_login_done(&lb, "1000", "192.0.2.9", 15000, tk, RXR_LOGIN_UNCHECKED, NULL), 1),
+		        "the SAME user from ANOTHER address is not blocked (a stranger cannot keep anna out)");
+		require(ADMIT("1001", "192.0.2.1", 15000) == RXR_LOGIN_OK
+		        && (rootside_login_done(&lb, "1001", "192.0.2.1", 15000, tk, RXR_LOGIN_UNCHECKED, NULL), 1),
+		        "another user from the same address is not held up either");
+		require(ADMIT("1000", "192.0.2.1", 14000 + 900000 + 1) == RXR_LOGIN_OK,
+		        "after 15 min the user is asked again from that address");
+		rootside_login_done(&lb, "1000", "192.0.2.1", 14000 + 900000 + 1, tk, RXR_LOGIN_UNCHECKED, NULL);
+		{
+			uint64_t t = 14000 + 900000 + 10;
+
+			for (int i = 0; i < 5; i++)
+				REFUSE("1000", "192.0.2.1", t + i);
+			require(ev.pair_ban && ev.pair_level == 2 && ev.pair_ms == 3600000, "five more: pause 2, one hour");
+			for (int k = 3; k <= 4; k++) {
+				t += 3600000 + 10;
+				for (int i = 0; i < 5; i++)
+					REFUSE("1000", "192.0.2.1", t + i);
+			}
+			require(ev.pair_ban && ev.pair_level == 3 && ev.pair_ms == 43200000,
+			        "the third and the fourth: 12 hours, the ladder stops there");
+		}
+		/* in flight counts as a failure to come: a burst cannot step over the limit */
+		rootside_bounds_init(&lb, 1000);
+		n_ok = 0;
+		for (int i = 0; i < 10; i++) {
+			unsigned t_;
+
+			n_ok += rootside_login_admit(&lb, "2000", "192.0.2.1", 5000, NULL, &t_) == RXR_LOGIN_OK;
+			if (i == 0)
+				tk2 = t_;
+		}
+		require(n_ok == ROOTSIDE_LOGIN_PAIR_LIMIT && ADMIT("2000", "192.0.2.1", 5000) == RXR_LOGIN_PAIR_BUSY,
+		        "10 AUTH at once for one user from one address, none answered: 5 asked, the rest «busy»");
+		for (int i = 0; i < n_ok; i++)
+			rootside_login_done(&lb, "2000", "192.0.2.1", 5000, tk2, RXR_LOGIN_UNCHECKED, NULL);
+		require(ADMIT("2000", "192.0.2.1", 5000) == RXR_LOGIN_OK,
+		        "«not checked» answers are not failures: the places come back, nothing counted");
+		rootside_login_done(&lb, "2000", "192.0.2.1", 5000, tk, RXR_LOGIN_UNCHECKED, NULL);
+		/* the sliding window: failures 100 s apart never add up to five inside five minutes */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 8; i++) {
+			REFUSE("3000", "192.0.2.1", 1000 + (uint64_t)i * 100000);
+			if (ev.pair_ban)
+				break;
+		}
+		require(!ev.pair_ban, "failures 100 s apart: never 5 inside the window, no pause");
+		/* a yes clears that user's failures (both levels), not the address's */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 4; i++)
+			REFUSE("4000", "198.51.100.9", 2000 + i);
+		(void)ADMIT("4000", "198.51.100.9", 2010);
+		rootside_login_done(&lb, "4000", "198.51.100.9", 2010, tk, RXR_LOGIN_ACCEPTED, NULL);
+		REFUSE("4000", "198.51.100.9", 2020);
+		require(!ev.pair_ban, "four refused, a yes, one refused: the count restarted (no pause)");
+		/* the address: 12 refused in 5 min from different users pauses the address for everyone */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 12; i++) {
+			char k[16];
+
+			snprintf(k, sizeof k, "%d", 5000 + i);
+			REFUSE(k, "203.0.113.7", 3000 + i);
+		}
+		require(ev.host_ban && ev.host_level == 1 && !ev.pair_ban && !ev.user_ban,
+		        "12 refused from one address (12 different users): the address is paused, not the users");
+		require(ADMIT("9999", "203.0.113.7", 4000) == RXR_LOGIN_HOST_PAUSED
+		        && ADMIT("9999", "203.0.113.8", 4000) == RXR_LOGIN_OK,
+		        "… everybody from that address waits, the others do not");
+		rootside_login_done(&lb, "9999", "203.0.113.8", 4000, tk, RXR_LOGIN_UNCHECKED, NULL);
+		/* the uid alone: 15 refused from 15 DIFFERENT addresses → a short, FIXED pause, never 12 h */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 15; i++) {
+			char h[24];
+
+			snprintf(h, sizeof h, "192.0.2.%d", 10 + i);
+			REFUSE("7000", h, 10000 + i);
+		}
+		require(ev.user_ban && ev.user_ms == ROOTSIDE_LOGIN_USER_PAUSE_MS && !ev.pair_ban,
+		        "15 refused for one user from 15 addresses: the user is paused 15 min from anywhere");
+		require(ADMIT("7000", "192.0.2.200", 20000) == RXR_LOGIN_USER_PAUSED
+		        && ADMIT("7001", "192.0.2.200", 20000) == RXR_LOGIN_OK
+		        && (rootside_login_done(&lb, "7001", "192.0.2.200", 20000, tk, RXR_LOGIN_UNCHECKED, NULL), 1),
+		        "… and only that user");
+		{
+			uint64_t t = 10000 + ROOTSIDE_LOGIN_USER_PAUSE_MS + 10;
+			uint64_t longest = 0;
+
+			for (int round = 0; round < 4; round++) {
+				for (int i = 0; i < 15; i++) {
+					char h[24];
+
+					snprintf(h, sizeof h, "198.18.%d.%d", round, i);
+					REFUSE("7000", h, t + (uint64_t)i);
+					if (ev.user_ban && ev.user_ms > longest)
+						longest = ev.user_ms;
+				}
+				t += ROOTSIDE_LOGIN_USER_PAUSE_MS + 10;
+			}
+			require(longest == ROOTSIDE_LOGIN_USER_PAUSE_MS,
+			        "four rounds of 15 more: the pause stays 15 min, it never grows (no 12 h from strangers)");
+		}
+		/* recidivism of the (uid, address) is forgotten after 24 h without a pause */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 5; i++)
+			REFUSE("6000", "192.0.2.1", 5000 + i);
+		{
+			uint64_t t = 5000 + 900000 + ROOTSIDE_LOGIN_FORGET_MS;
+
+			for (int i = 0; i < 5; i++)
+				REFUSE("6000", "192.0.2.1", t + i);
+			require(ev.pair_ban && ev.pair_level == 1, "24 h after the last pause: back to the first rung");
+		}
+		/* the uid table is the ground floor: all its places in flight → FULL, no entry is stolen */
+		rootside_bounds_init(&lb, 1000);
+		n_ok = 0;
+		for (int i = 0; i < ROOTSIDE_LOGIN_USERS + 5; i++) {
+			char k[16];
+
+			snprintf(k, sizeof k, "%d", 100000 + i);
+			n_ok += rootside_login_admit(&lb, k, "", 6000 + (uint64_t)i, NULL, &tk2) == RXR_LOGIN_OK;
+		}
+		require(n_ok == ROOTSIDE_LOGIN_USERS && ADMIT("8000", "", 7000) == RXR_LOGIN_FULL,
+		        "every place of the uid table in flight: a newcomer is refused (FULL)");
+		for (int i = 0; i < ROOTSIDE_LOGIN_USERS; i++) {
+			char k[16];
+
+			snprintf(k, sizeof k, "%d", 100000 + i);
+			rootside_login_done(&lb, k, "", 7000, RXR_LOGIN_L_USER | RXR_LOGIN_L_PAIR | RXR_LOGIN_L_HOST,
+			                    RXR_LOGIN_UNCHECKED, NULL);
+		}
+		require(ADMIT("8000", "", 7001) == RXR_LOGIN_OK, "… and once they are idle the oldest is taken back");
+		rootside_login_done(&lb, "8000", "", 7001, tk, RXR_LOGIN_UNCHECKED, NULL);
+		/* the address table full: the uid level decides, no FULL (and the places are given back
+		 * only where they were taken) */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < ROOTSIDE_LOGIN_HOSTS; i++) {
+			char h[24], k[16];
+
+			snprintf(h, sizeof h, "10.0.%d.%d", i / 200, i % 200);
+			snprintf(k, sizeof k, "%d", 9200 + i);
+			(void)rootside_login_admit(&lb, k, h, 6000, NULL, &tk2); /* fills the address table */
+		}
+		{
+			unsigned t3 = 0;
+			int r = rootside_login_admit(&lb, "9999", "172.16.0.1", 6001, NULL, &t3);
+
+			require(r == RXR_LOGIN_OK && (t3 & RXR_LOGIN_L_USER) && !(t3 & RXR_LOGIN_L_HOST),
+			        "the address table full: no FULL, the uid level alone decides (no place taken on the address)");
+		}
+		/* the (uid, address) table full: the same */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < ROOTSIDE_LOGIN_PAIRS; i++) {
+			char h[24];
+
+			snprintf(h, sizeof h, "10.1.%d.%d", i / 200, i % 200);
+			(void)rootside_login_admit(&lb, "9300", h, 6000, NULL, &tk2); /* 512 pairs, but the uid level stops at 15 */
+		}
+		for (int i = 0; i < ROOTSIDE_LOGIN_PAIRS; i++) {
+			char h[24], k[16];
+
+			snprintf(h, sizeof h, "10.2.%d.%d", i / 200, i % 200);
+			snprintf(k, sizeof k, "%d", 9400 + i);
+			(void)rootside_login_admit(&lb, k, h, 6000, NULL, &tk2); /* 512 other pairs in flight */
+		}
+		{
+			unsigned t3 = 0;
+			int r = rootside_login_admit(&lb, "9998", "172.16.0.2", 6002, NULL, &t3);
+
+			require(r == RXR_LOGIN_OK && (t3 & RXR_LOGIN_L_USER) && !(t3 & RXR_LOGIN_L_PAIR),
+			        "the (uid, address) table full: no FULL, the uid level alone decides");
+		}
+#undef ADMIT
+#undef REFUSE
 	}
 
 	printf("  review 2: a network side that shut its reading end (M2)\n");

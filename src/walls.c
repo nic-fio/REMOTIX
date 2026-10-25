@@ -6,7 +6,7 @@
  *
  *      · the checks that need no power first (the user, root, the two
  *        directories), so that a wrong option says so before anything moves;
- *      · `setexeccon` BEFORE the tree goes read-only: it writes
+ *      · `setexeccon` (and, 1.5, the AppArmor «exec» attribute) BEFORE the tree goes read-only: it writes
  *        /proc/thread-self/attr/exec, and on a read-only /proc that is EROFS;
  *      · the two writable directories are bind-mounted onto themselves BEFORE
  *        the recursive read-only step, so that each is a mount of its own
@@ -14,9 +14,13 @@
  *        step would copy the bit from its source;
  *      · the private /tmp after the step: a new tmpfs is a new mount, born
  *        writable;
+ *      · the network namespace of its own while still root (CLONE_NEWNET needs
+ *        CAP_SYS_ADMIN), after the mounts and before the identity changes;
  *      · the bounding set dropped while still root (it needs CAP_SETPCAP),
  *        then groups → gid → uid (each step needs the power the next one
- *        takes away), then NO_NEW_PRIVS, then the check of what is left.
+ *        takes away), then NO_NEW_PRIVS, then the check of what is left;
+ *      · Landlock's abstract-socket scope after NO_NEW_PRIVS (restrict_self
+ *        needs it), before the seccomp filter.
  *
  * ⚠ No GLib, no thread, no allocation that outlives the call: it runs in the
  *   root side's fork, right before `execve`.
@@ -47,7 +51,9 @@
 #include <linux/audit.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
-#include <sys/ioctl.h>   /* TIOCSTI, TIOCLINUX */
+#include <sys/ioctl.h>   /* TIOCSTI, TIOCLINUX, SIOCGIFFLAGS */
+#include <net/if.h>
+#include <sys/socket.h>
 
 /* ⚠ `mount_setattr()` (Linux 5.12) is called by number: glibc has its wrapper
  *   only since 2.36, and the struct under our own name so that a glibc that
@@ -80,6 +86,21 @@ static const char *const walls_devices[] = { "null", "zero", "full", "random", "
 #define WALLS_AUDIT_ARCH AUDIT_ARCH_AARCH64
 #endif
 
+/* ⭐ 1.5 (audit split R5/R6): Landlock is called by number (glibc has no wrapper) and the struct under our own name.  The
+ *   ABI is asked first: `scoped` exists from ABI 6 (Linux 6.12); a larger struct than the kernel knows with a non-zero
+ *   new field is E2BIG, so an older kernel is never given it. */
+#ifndef SYS_landlock_create_ruleset
+#define SYS_landlock_create_ruleset 444
+#define SYS_landlock_restrict_self 446
+#endif
+#define WALLS_LANDLOCK_VERSION (1U << 0)
+#define WALLS_LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET (1ULL << 0)
+struct walls_landlock_attr {
+	uint64_t handled_access_fs;
+	uint64_t handled_access_net;
+	uint64_t scoped;
+};
+
 /* ⭐ The SELinux type of the network side (lane 4's module). */
 #define WALLS_SELINUX_TYPE "remotix_net_t"
 
@@ -107,7 +128,7 @@ static int say(char *why, size_t n, const char *fmt, ...)
  *    run in the fork, where this file writes no log (no GLib, nothing that
  *    outlives the call): they write here, and the root side writes ONE line
  *    with it before the `execve` (`walls_in_force()`). */
-static char notes[640];
+static char notes[1024];
 
 static void note(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 static void note(const char *fmt, ...)
@@ -215,6 +236,91 @@ out:
 		free_fn(cur);
 	dlclose(l);
 	return rc;
+}
+
+/* ⭐ 1.5 (split audit, AppArmor): the network side is born INSIDE the AppArmor profile
+ *    `remotix_network`, the way SELinux puts it in `remotix_net_t`: before the `execve`, the
+ *    root side's fork writes «exec remotix_network» into /proc/thread-self/attr/apparmor/exec
+ *    (`aa_change_onexec` does exactly that write, so no library is needed).  The profile has NO
+ *    attachment path: nothing but this write can put a process in it — the root side, which
+ *    runs the same program, is never confined by it, nor are the desktops.
+ * ⛔ Off (AppArmor not in the kernel, or not enabled): said in the notes, go on.  On but the
+ *    profile not loaded: said, go on — the package loads it (postinst), and until the engine
+ *    certifies the installation a missing profile is a warning, not a stop.  The profile
+ *    loaded and the write REFUSED: -1, the network side is not started (as for SELinux).
+ * ⚠ Written BEFORE /proc goes read-only, like the SELinux context.  Not tried on a real
+ *   AppArmor yet: see packaging/debian/remotix_network.apparmor. */
+#define WALLS_APPARMOR_PROFILE "remotix_network"
+#define WALLS_APPARMOR_ENABLED "/sys/module/apparmor/parameters/enabled"
+#define WALLS_APPARMOR_PROFILES "/sys/kernel/security/apparmor/profiles"
+#define WALLS_APPARMOR_EXEC "/proc/thread-self/attr/apparmor/exec"
+#define WALLS_APPARMOR_EXEC_OLD "/proc/thread-self/attr/exec"
+
+/* true if a line of `profiles` ("name (mode)") begins with exactly `name` */
+static bool apparmor_loaded(const char *profiles, const char *name)
+{
+	char l[512];
+	size_t nl = strlen(name);
+	FILE *f = fopen(profiles, "re");
+	bool found = false;
+
+	if (!f)
+		return false;
+	while (!found && fgets(l, sizeof l, f))
+		found = strncmp(l, name, nl) == 0 && (l[nl] == ' ' || l[nl] == '\n' || l[nl] == '\0');
+	fclose(f);
+	return found;
+}
+
+/* The worker, with the four paths as parameters (so a test can give it files).  `attr_old`
+ * is tried when `attr` does not exist (kernels before the per-LSM attr directory). */
+static int apparmor_exec_in(const char *enabled, const char *profiles, const char *attr,
+                            const char *attr_old, const char *profile, char *why, size_t n)
+{
+	char c = 0, cmd[96];
+	int fd;
+	ssize_t w;
+	FILE *f = fopen(enabled, "re");
+
+	if (f) {
+		int ch = fgetc(f);
+
+		c = ch == EOF ? 0 : (char)ch;
+		fclose(f);
+	}
+	if (c != 'Y') {
+		note("AppArmor: off");
+		return 0;
+	}
+	if (!apparmor_loaded(profiles, profile)) {
+		note("⚠ AppArmor: on, but the profile %s is NOT loaded: the network side runs without it",
+		     profile);
+		return 0;
+	}
+	snprintf(cmd, sizeof cmd, "exec %s", profile);
+	fd = open(attr, O_WRONLY | O_CLOEXEC);
+	if (fd < 0 && errno == ENOENT)
+		fd = open(attr_old, O_WRONLY | O_CLOEXEC);
+	if (fd < 0)
+		return say(why, n, "AppArmor: cannot open the exec attribute (%s): the profile %s is "
+		           "loaded but the network side cannot be put in it", strerror(errno), profile);
+	w = write(fd, cmd, strlen(cmd));
+	if (w != (ssize_t)strlen(cmd)) {
+		int e = errno;
+
+		close(fd);
+		return say(why, n, "AppArmor: writing «%s» refused (%s)", cmd,
+		           w < 0 ? strerror(e) : "short write");
+	}
+	close(fd);
+	note("AppArmor: born in %s", profile);
+	return 0;
+}
+
+static int apparmor_exec_net(char *why, size_t n)
+{
+	return apparmor_exec_in(WALLS_APPARMOR_ENABLED, WALLS_APPARMOR_PROFILES, WALLS_APPARMOR_EXEC,
+	                        WALLS_APPARMOR_EXEC_OLD, WALLS_APPARMOR_PROFILE, why, n);
 }
 
 /* A directory the network side must write: absolute, there, a directory,
@@ -443,6 +549,71 @@ out:
 	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (nr), 0, 1),            \
 	BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (err))
 
+/* ⭐ 1.5 (audit split R5 and R6) — A NETWORK OF ITS OWN.  `unshare(CLONE_NEWNET)`: the network side keeps the descriptors it
+ *    was handed (3 the root side, 4 the UDP port, 5 the page's TCP listener: a socket belongs to the namespace where it was
+ *    CREATED, so they go on working), and loses everything else of the network:
+ *      · it can no longer open a connection to anything — Internet, LAN, the host's own services on 127.0.0.1;
+ *      · the ABSTRACT Unix sockets of the machine (`@/tmp/.X11-unix/X0` of every desktop, `@/tmp/dbus-…`, multipathd's) live in
+ *        the network namespace: there are none in the new one.  The mounts hid the path ones; this hides these.
+ *    Sockets on a PATH (the journal, sssd, nscd, the system bus) are not touched: they follow the mounts.
+ *    ⚠ The new namespace has a loopback, DOWN: it is raised, so that a `bind(127.0.0.1)` or a `getaddrinfo("localhost")` of a
+ *      library does not find a dead interface.  If that fails it is said, not fatal.  ⚠ `if_indextoname()` and the like open a
+ *      socket in the NEW namespace and would not find the host's interfaces: the network side uses only numeric scopes. */
+static int own_network(char *why, size_t n)
+{
+	struct ifreq ifr;
+	int s;
+
+	if (unshare(CLONE_NEWNET) != 0)
+		return say(why, n, "unshare(CLONE_NEWNET) failed (%s)", strerror(errno));
+	s = socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+	if (s < 0) {
+		note("⚠ loopback of the private network not raised (socket: %s)", strerror(errno));
+		return 0;
+	}
+	memset(&ifr, 0, sizeof ifr);
+	snprintf(ifr.ifr_name, sizeof ifr.ifr_name, "lo");
+	if (ioctl(s, SIOCGIFFLAGS, &ifr) != 0) {
+		note("⚠ loopback of the private network not raised (SIOCGIFFLAGS: %s)", strerror(errno));
+	} else if (!(ifr.ifr_flags & IFF_UP)) {
+		ifr.ifr_flags |= IFF_UP;
+		if (ioctl(s, SIOCSIFFLAGS, &ifr) != 0)
+			note("⚠ loopback of the private network not raised (SIOCSIFFLAGS: %s)", strerror(errno));
+	}
+	close(s);
+	return 0;
+}
+
+/* ⭐ 1.5 (audit split R6) — A SECOND LEVEL, where the kernel has it: Landlock's scope on abstract Unix sockets (Linux 6.12, ABI
+ *    6) forbids connecting to one created OUTSIDE this process's domain.  The private network already hides them all; this
+ *    holds if that ever does not.  It never fails the walls: a kernel without Landlock (or with it off) is a line in the notes.
+ *    ⚠ Needs NO_NEW_PRIVS (set by then). */
+static void scope_abstract_sockets(void)
+{
+	struct walls_landlock_attr a = { 0, 0, WALLS_LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET };
+	long abi, fd;
+
+	abi = syscall(SYS_landlock_create_ruleset, NULL, (size_t)0, WALLS_LANDLOCK_VERSION);
+	if (abi < 0) {
+		note("landlock not available (%s)", strerror(errno));
+		return;
+	}
+	if (abi < 6) {
+		note("landlock ABI %ld: abstract sockets not scoped (needs 6)", abi);
+		return;
+	}
+	fd = syscall(SYS_landlock_create_ruleset, &a, sizeof a, 0U);
+	if (fd < 0) {
+		note("⚠ landlock ruleset refused (%s)", strerror(errno));
+		return;
+	}
+	if (syscall(SYS_landlock_restrict_self, (int)fd, 0U) != 0)
+		note("⚠ landlock restrict_self refused (%s)", strerror(errno));
+	else
+		note("landlock ABI %ld: abstract unix sockets scoped", abi);
+	close((int)fd);
+}
+
 static int no_user_namespaces(char *why, size_t n)
 {
 #ifndef WALLS_AUDIT_ARCH
@@ -459,6 +630,17 @@ static int no_user_namespaces(char *why, size_t n)
 		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, 0x40000000u, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
 #endif
+		/* ⭐ 1.5 (audit split R7): socket families on an ALLOW list — AF_UNIX, AF_INET, AF_INET6 and nothing else (netlink, packet,
+		 *    vsock, alg, bluetooth, … ⇒ EAFNOSUPPORT, what a kernel without the family says: glibc's AI_ADDRCONFIG falls back on it).
+		 *    `socket` and `socketpair` both take the family as their first argument. */
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_socket, 1, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_socketpair, 0, 6),
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_UNIX, 3, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_INET, 2, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_INET6, 1, 0),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EAFNOSUPPORT),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
 		WALLS_DENY(__NR_io_uring_setup, ENOSYS),
 		WALLS_DENY(__NR_io_uring_enter, ENOSYS),
 		WALLS_DENY(__NR_io_uring_register, ENOSYS),
@@ -532,6 +714,9 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 
 	/* ⛔ 2 — SELinux, while /proc can still be written. */
 	if (selinux_exec_net(why, why_len) != 0)
+		return -1;
+	/* ⭐ 1.5 — AppArmor, in the same breath (a system has one of the two, rarely both). */
+	if (apparmor_exec_net(why, why_len) != 0)
 		return -1;
 
 	/* ⛔ 3 — the read-only tree. */
@@ -617,6 +802,10 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		note("folder %s", cwd);
 	}
 
+	/* ⛔ 3-bis — a network of its own, still as root (audit split R5 and R6). */
+	if (own_network(why, why_len) != 0)
+		return -1;
+
 	/* ⛔ 4 — the identity, and nothing left. */
 	if (drop_bounding_set(why, why_len) != 0)
 		return -1;
@@ -651,11 +840,12 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return -1;
 	/* ⛔ 5 — no user namespace, ever (review 3, F4): after NO_NEW_PRIVS, which
 	 *    an unprivileged filter needs. */
+	scope_abstract_sockets(); /* before the filter, and after NO_NEW_PRIVS; never fatal */
 	if (no_user_namespaces(why, why_len) != 0)
 		return -1;
-	note("tree read-only, nosuid, nodev but %s and %s; private /tmp and /dev; uid/gid %ld/%ld, "
+	note("own network namespace (loopback only; the inherited sockets work); tree read-only, nosuid, nodev but %s and %s; private /tmp and /dev; uid/gid %ld/%ld, "
 	     "no groups, no capabilities, no_new_privs; RLIMIT_NPROC %d; seccomp: no user "
-	     "namespaces, no io_uring/userfaultfd/perf/bpf/keys/ptrace/TIOCSTI", o->net_state_dir,
+	     "namespaces, sockets only AF_UNIX/AF_INET/AF_INET6, no io_uring/userfaultfd/perf/bpf/keys/ptrace/TIOCSTI", o->net_state_dir,
 	     o->net_run_dir, (long)uid, (long)gid, WALLS_NPROC_MAX);
 	return 0;
 }

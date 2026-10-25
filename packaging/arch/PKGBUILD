@@ -199,10 +199,10 @@ package() {
 	install -Dm644 "$a/remotix.conf"     "$pkgdir/usr/share/remotix/remotix.conf"
 	install -dm755                       "$pkgdir/etc/remotix/remotix.conf.d"
 	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
-	# ⭐ DECISIONS-11.md §11.50, PHASE F — OFF by default (REMOTIX_SPLIT=1 in makepkg's environment switches it on): the
+	# ⭐ DECISIONS-11.md §11.50 — ON by default since 25 Oct 2026 (REMOTIX_SPLIT=0 in makepkg's environment switches it off): the
 	#    split's unit and directories replace the two above; the user and the 1.0 → 1.5 move come with it (remotix.install
-	#    runs them itself).  Useless — and the new paths would BREAK the 1.5 of today — until phase D exists.
-	if [ "${REMOTIX_SPLIT:-0}" = 1 ]; then
+	#    runs them itself).
+	if [ "${REMOTIX_SPLIT:-1}" = 1 ]; then
 		install -Dm644 "$a/remotix.service.split"  "$pkgdir/usr/lib/systemd/system/remotix.service"
 		install -Dm644 "$a/remotix.tmpfiles.split" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
 		install -Dm644 "$a/remotix.sysusers"       "$pkgdir/usr/lib/sysusers.d/remotix.conf"

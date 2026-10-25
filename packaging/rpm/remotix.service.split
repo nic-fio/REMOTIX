@@ -5,7 +5,7 @@
 #    password of ANYONE, and the server drops each child to the uid of its
 #    user (`child.c`).  No `User=`, no `ProtectSystem`: it opens
 #    logind sessions, writes in the users' homes, touches /dev/dri.
-# ⭐ 1.5, DECISIONS-11.md §11.50 (PHASE F, NOT ACTIVE YET: this is the unit the split build installs — REMOTIX_SPLIT=1 / rpm `--with split`):
+# ⭐ 1.5, DECISIONS-11.md §11.50 — THE SPLIT IS ON BY DEFAULT (decided 25 Oct 2026; `--without split` / REMOTIX_SPLIT=0 builds the single-process unit):
 #    the process systemd starts is the ROOT side (PAM, the desktops' birth); it forks the NETWORK side, which drops itself to the
 #    system user `remotix` (remotix.sysusers) and keeps its files in /var/lib/remotix/net.  ⛔ No `User=` and no hardening here:
 #    whatever this unit restricts, every desktop born from it inherits (§11.11); the network side's walls are in the program (walls.c).
@@ -37,10 +37,9 @@ Wants=network.target
 Type=simple
 EnvironmentFile=/usr/share/remotix/remotix.conf
 EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
-# ⭐ 1.5 (§11.50, D6): the TWO-PROCESS server is switched on by `--split` in ExecStart (without it the binary is the
-#    single-process 1.0).  While the split is EXPERIMENTAL the binary also demands this variable and refuses (78) without
-#    it: REMOVE the `Environment=` line when the gate in `main.c` ("REMOTIX_SPLIT_EXPERIMENTAL") is removed.
-Environment=REMOTIX_SPLIT_EXPERIMENTAL=1
+# ⭐ 1.5 (§11.50, D6): the TWO-PROCESS server: `--split` in ExecStart says it out loud (it is also the default when started as root;
+#    `--no-split` is the way back to the single process of 1.0).  Exit 78 is left for a REAL configuration error (e.g. the user
+#    `remotix` missing): RestartPreventExitStatus=78 below stops the restart loop.
 WorkingDirectory=/
 # ⭐ T6 (SELinux): the program is launched DIRECTLY, without `/bin/sh -c`.  systemd
 #    transitions to `remotix_t` only if it executes `remotix_exec_t` itself (init_t → remotix_t); a

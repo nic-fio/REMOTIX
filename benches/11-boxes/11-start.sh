@@ -666,18 +666,33 @@ server)
 	*[!0-9]*) ko "REMOTIX_SESSION_CAP=«$REMOTIX_SESSION_CAP» is not a number"; exit 1 ;;
 	*) CAP="--session-cap $REMOTIX_SESSION_CAP"; ok "session ceiling: $REMOTIX_SESSION_CAP" ;;
 	esac
+	# ⭐ 1.5: the product splits by default when started as root.  The boxes measure ONE process unless
+	#   REMOTIX_BOX_SPLIT=1 (opt-in, NOT TRIED): then the box gets the user remotix and the network side's directories
+	#   (certificates, ban and command socket live in them: the root side refuses them elsewhere), and the box has
+	#   CAP_SYS_ADMIN for the walls.  The command socket stays reachable at its old path through a link.
+	SPLIT_OPTS="--no-split"; SPLIT_PREP=""
+	BOX_CERT=/var/lib/rete11/certificati; BOX_BAN=/var/lib/rete11/ban; BOX_SOCK=/var/lib/rete11/command.sock
+	if [ "${REMOTIX_BOX_SPLIT:-0}" = 1 ]; then
+		SPLIT_OPTS="--split --network-state-dir /var/lib/rete11/net --network-run-dir /run/rete11-net"
+		BOX_CERT=/var/lib/rete11/net/certificati; BOX_BAN=/var/lib/rete11/net/ban; BOX_SOCK=/run/rete11-net/command.sock
+		SPLIT_PREP="id remotix >/dev/null 2>&1 || useradd -r -M -d /nonexistent -s /usr/sbin/nologin remotix; \
+			install -d -o remotix -g remotix -m 0750 /var/lib/rete11/net /run/rete11-net; \
+			ln -sfn /run/rete11-net/command.sock /var/lib/rete11/command.sock"
+		ok "the server will SPLIT (REMOTIX_BOX_SPLIT=1): user remotix and net/ directories are made in the box"
+	fi
 	podman exec "$NAME" sh -c "
 		systemctl stop rete11-server 2>/dev/null
 		systemctl reset-failed rete11-server 2>/dev/null
 		rm -f /var/lib/rete11/registro.log
+		$SPLIT_PREP
 		systemd-run --unit=rete11-server \
 			--working-directory=/opt/remotix \
 			--property=StandardOutput=append:/var/lib/rete11/registro.log \
 			--property=StandardError=append:/var/lib/rete11/registro.log \
 			--property=KillMode=mixed \
-			/opt/remotix/remotix --address 0.0.0.0 --name 127.0.0.1 --port $PORT $CAP \
-			--certificates /var/lib/rete11/certificati --page /opt/remotix/page.html \
-			--ban-file /var/lib/rete11/ban --command-socket /var/lib/rete11/command.sock \
+			/opt/remotix/remotix --address 0.0.0.0 $SPLIT_OPTS --name 127.0.0.1 --port $PORT $CAP \
+			--certificates $BOX_CERT --page /opt/remotix/page.html \
+			--ban-file $BOX_BAN --command-socket $BOX_SOCK \
 			--survey /var/lib/rete11/rilievo --verbose --journal
 	" >/dev/null 2>&1
 

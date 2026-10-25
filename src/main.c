@@ -106,10 +106,11 @@
 
 #include <openssl/ssl.h>
 
-/* ⭐⭐ 1.5 (DECISIONS.md §11.11, §11.50) — ONE SERVER, TWO PROCESSES, **ONLY WITH `--split`**.
+/* ⭐⭐ 1.5 (DECISIONS.md §11.11, §11.50) — ONE SERVER, TWO PROCESSES, **ON BY DEFAULT WHEN STARTED AS ROOT**.
  *
- *     Without `--split` (the default, and what every unit shipped so far runs) none of what follows is taken: this is
- *     the single-process server of 1.0, byte for byte in behaviour.  With `--split`, started as root, this binary is the
+ *     ⭐ DECIDED 25 Oct 2026 (the user): the split is on by default in 1.5.  Started as root, the server splits unless
+ *     `--no-split` is given (the way back to the single process of 1.0); `--split` asks for it explicitly.  Started as an
+ *     ordinary user (benches, development) there is nothing to separate and it stays one process.  With the split on, started as root, this binary is the
  *     ROOT SIDE: `main()` parses argv as always, binds the UDP and TCP sockets of the port and hands everything to
  *     `rootside_main()` (`rootside.c`): the codec probe, the PAM helper, the desktops' births, and the NETWORK SIDE —
  *     this same binary re-executed with `--network-side`, as `remotix` behind its walls (`walls.h`), fd 3 = the root
@@ -355,10 +356,11 @@ static void help(const char *name)
 	        "  --split           ⭐ 1.5: two processes — the root side (PAM, the\n"
 	        "                    desktops' births) and the network side as the\n"
 	        "                    user remotix behind walls (DECISIONS.md §11.50).\n"
-	        "                    OFF by default.  EXPERIMENTAL, INCOMPLETE: it\n"
-	        "                    refuses to start unless the environment has\n"
-	        "                    REMOTIX_SPLIT_EXPERIMENTAL=1 (tests only).\n"
-	        "                    Needs root and the user\n"
+	        "                    ON by default when started as root; this asks for\n"
+	        "                    it explicitly (and refuses to start if not root).\n"
+	        "                    Needs the system user remotix (see --network-user)\n"
+	        "  --no-split        the way back: ONE process, as 1.0 (also as root)\n"
+	        "                    (the single-process unit passes it)\n"
 	        "  --network-user NAME\n"
 	        "                    the network side's user (default remotix)\n"
 	        "  --network-state-dir DIR\n"
@@ -1484,6 +1486,7 @@ static size_t max_connections, max_pending, pending_per_address, pending_per_48;
 static struct is_present {
 	char user[257];
 	uint64_t last_input_ms;
+	uint8_t too_soon; /* ⭐ 1.5 (R1): CLOSE_ORPHAN refused TOO_SOON this many times in a row */
 } *present;
 static int how_many_present;
 
@@ -1533,6 +1536,7 @@ static void presence_mark(const char *user, uint64_t now_ms)
 		}
 		if (strcmp(present[i].user, user) == 0) {
 			present[i].last_input_ms = now_ms;
+			present[i].too_soon = 0;
 			return;
 		}
 	}
@@ -1566,6 +1570,7 @@ static void presence_mark(const char *user, uint64_t now_ms)
 	snprintf(present[free_slot].user, sizeof present[free_slot].user, "%s",
 	         user);
 	present[free_slot].last_input_ms = now_ms;
+	present[free_slot].too_soon = 0;
 }
 
 static void presence_forget(const char *user)
@@ -1664,8 +1669,8 @@ static void terminate_in_child(void *ctx, const char *user)
  *    expires it is because nobody was there any more.  But «usually» is not
  *    «never», and whoever is there must read a sentence instead of looking at
  *    a frozen screen. */
-static void abandon_expired(struct bridge *p, const char *user,
-                              uint64_t stalled_ms)
+static uint64_t abandon_expired(struct bridge *p, const char *user,
+                              uint64_t stalled_ms, bool may_retry)
 {
 	size_t amount;
 
@@ -1705,6 +1710,16 @@ static void abandon_expired(struct bridge *p, const char *user,
 		              user);
 		if (children_ensure(p->f, user))
 			found_again_remove(user);
+		else {
+			/* ⭐ 1.5 (R1): the ROOT SIDE keeps its own abandonment clock and said the
+			 *    desktop is not abandoned yet by it (it counts from the moment the
+			 *    network side died, which can be a few seconds after ours).  Not
+			 *    «forgotten»: asked again after what it said, a few times. */
+			uint64_t w = children_retry_after_ms();
+
+			if (w && may_retry)
+				return w;
+		}
 	}
 	if (!children_terminate_session(p->f, user, CHILDREN_EXIT_ABANDON))
 		registro_dice(LOG_STARTUP,
@@ -1717,11 +1732,14 @@ static void abandon_expired(struct bridge *p, const char *user,
 	 *    the first line has already reported.  ⚠ And if a new session is born,
 	 *    its first gesture will put it back in the table. */
 	presence_forget(user);
+	return 0;
 }
 
 /* ⭐ The clock's round.  ⚠ Called at every pass of the loop: it costs nothing
  *    (sixteen comparisons) and an expiry that waits for an event is an expiry
  *    that never triggers — the lesson of `rule_heartbeat`. */
+#define ABANDON_TOO_SOON_RETRIES 3
+
 static void abandon_round(struct bridge *p, uint64_t now_ms)
 {
 	if (!abandon_ms || !p || !p->f)
@@ -1740,7 +1758,23 @@ static void abandon_round(struct bridge *p, uint64_t now_ms)
 			char chi[sizeof present[0].user];
 			memcpy(chi, present[i].user, sizeof chi);
 			chi[sizeof chi - 1] = '\0';
-			abandon_expired(p, chi, now_ms - present[i].last_input_ms);
+			uint64_t again = abandon_expired(p, chi, now_ms - present[i].last_input_ms,
+			                                 present[i].too_soon < ABANDON_TOO_SOON_RETRIES);
+
+			if (again) {
+				/* the clock expires again after what the root side said (+1 s of slack),
+				 * at most a minute and a bit; at most ABANDON_TOO_SOON_RETRIES times */
+				if (again > 60000)
+					again = 60000;
+				again += 1000;
+				present[i].too_soon++;
+				present[i].last_input_ms = now_ms + again - abandon_ms;
+				registro_dice(LOG_STARTUP,
+				              "⭐ §5.3: the root side does not find «%s» abandoned yet: "
+				              "asked again in %llu ms (try %d of %d)", chi,
+				              (unsigned long long)again, present[i].too_soon,
+				              ABANDON_TOO_SOON_RETRIES);
+			}
 		}
 	}
 }
@@ -2114,8 +2148,9 @@ int main(int argc, char **argv)
 	const char *dir_cert = "/var/lib/remotix/certificates";
 	const char *file_html = "page.html";
 	const char *file_ban = "/var/lib/remotix/ban";
-	/* ⭐ 1.5 (§11.50), all inert without `--split`. */
+	/* ⭐ 1.5 (§11.50): the split is the default as root; `--no-split` is the way back.  The three options below only matter when split. */
 	bool split = false, network_side = false, cert_given = false, ban_given = false;
+	int split_choice = -1; /* ⭐ 1.5: -1 not said (on if root), 1 --split, 0 --no-split */
 	const char *net_user = "remotix";
 	const char *net_state_dir = "/var/lib/remotix/net";
 	const char *net_run_dir = "/run/remotix/net";
@@ -2212,9 +2247,11 @@ int main(int argc, char **argv)
 			file_ban = argv[++i];
 			ban_given = true;
 		}
-		/* ⭐ 1.5 (§11.50): `--split` turns the two-process server ON (off by default); the other three only matter with it. */
+		/* ⭐ 1.5 (§11.50): `--split` asks for the two-process server (it is the default as root), `--no-split` for one; the other three only matter with it. */
 		else if (strcmp(a, "--split") == 0)
-			split = true;
+			split_choice = 1;
+		else if (strcmp(a, "--no-split") == 0)
+			split_choice = 0;
 		else if (strcmp(a, "--network-user") == 0 && v)
 			net_user = argv[++i];
 		else if (strcmp(a, "--network-state-dir") == 0 && v)
@@ -2258,7 +2295,18 @@ int main(int argc, char **argv)
 		 *     the session gets killed» (the user's decision, 16 Aug 2026).
 		 *     ⚠ `0` = off, and then no session is ever closed on its own. */
 		else if (strcmp(a, "--abandon-s") == 0 && v)
-			abandon_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
+		{
+			/* ⭐ 1.5 (R1): at most a year — a longer value is «never» for any real service,
+			 *    and the seconds-to-milliseconds product must not wrap */
+			unsigned long long v_s = strtoull(argv[++i], NULL, 10);
+
+			if (v_s > ROOTSIDE_ABANDON_S_MAX) {
+				fprintf(stderr, "remotix: --abandon-s %llu is above a year: using %llu\n", v_s,
+				        ROOTSIDE_ABANDON_S_MAX);
+				v_s = ROOTSIDE_ABANDON_S_MAX;
+			}
+			abandon_ms = (uint64_t)v_s * 1000;
+		}
 		/* ⛔⭐⭐ PHASE 9 — GHOST EVICTION, and it sits next to the clocks
 		 *      because it belongs to their family, but it is NOT a fourth
 		 *      clock: it does not trigger on its own, it triggers only when a
@@ -2530,15 +2578,26 @@ int main(int argc, char **argv)
 		              "⚠ --journal requested but the socket does not open (%s): the "
 		              "log stays ONLY here",
 		              strerror(journal_errno));
-	/* ⭐⭐ 1.5 (DECISIONS.md §11.50) — THE SPLIT, ONLY IF ASKED FOR.  Everything in this block is skipped when `--split` is
-	 *     absent: the server then goes on exactly as in 1.0 (one process).
-	 *     With `--split` there are two halves of this one binary:
+	/* ⭐⭐ 1.5 (DECISIONS.md §11.50) — THE SPLIT, ON BY DEFAULT AS ROOT.  Everything in this block is skipped when the server is
+	 *     not split (`--no-split`, or started as an ordinary user): it then goes on exactly as in 1.0 (one process).
+	 *     When split there are two halves of this one binary:
 	 *       · started by hand/systemd as root: the ROOT SIDE — it binds the port, hands everything to `rootside_main()`
 	 *         (probe, PAM helper, births, network side behind its walls) and never returns here;
 	 *       · re-executed with `--network-side` as the user remotix: the NETWORK SIDE — it waits for READY and then
 	 *         goes on with the rest of this function, asking the root side for what needs root. */
-	if (network_side && !split) {
-		fprintf(stderr, "⛔ --network-side is the root side re-executing this binary (with --split): never by hand.\n");
+	/* ⭐ 1.5: THE SPLIT IS THE DEFAULT.  The network side (re-executed by the root side) is by definition split; the
+	 *    others split when started as root unless `--no-split`; `--split` as an ordinary user is refused below. */
+	if (network_side)
+		split = true;
+	else if (split_choice >= 0)
+		split = split_choice == 1;
+	else
+		split = geteuid() == 0;
+	if (!network_side && split_choice < 0 && !split)
+		registro_dice(LOG_STARTUP,
+		              "⭐ 1.5: not started as root: ONE process (the split needs root to separate anything)");
+	if (network_side && split_choice == 0) {
+		fprintf(stderr, "⛔ --network-side is the root side re-executing this binary: never by hand.\n");
 		return EXIT_CONFIG;
 	}
 	if (split && !network_side) {
@@ -2546,21 +2605,6 @@ int main(int argc, char **argv)
 		struct passwd *pw;
 		static char *net_argv[1024];
 
-		/* ⛔ EXPERIMENTAL until the split is complete (the network side's helper in remote mode and the end of
-		 *    the synchronous PAM fallback must be in this tree, and the whole thing certified): `--split` refuses
-		 *    to start unless REMOTIX_SPLIT_EXPERIMENTAL=1 is in the environment (our tests).  Remove this gate
-		 *    when the split is declared ready. */
-		{
-			const char *ex = getenv("REMOTIX_SPLIT_EXPERIMENTAL");
-
-			if (!ex || strcmp(ex, "1") != 0) {
-				registro_dice(LOG_STARTUP,
-				              "⛔ --split is EXPERIMENTAL and incomplete in this build: it refuses to start "
-				              "(set REMOTIX_SPLIT_EXPERIMENTAL=1 only for tests).  Without --split the server "
-				              "is the single-process one of 1.0.");
-				return EXIT_CONFIG;
-			}
-		}
 		if (geteuid() != 0) {
 			registro_dice(LOG_STARTUP,
 			              "⛔ --split needs root (uid %ld): the root side binds the port, forks the "
@@ -2645,6 +2689,7 @@ int main(int argc, char **argv)
 		o.quality_recovery = quality_recovery;
 		o.bandwidth_cap_mbit = bandwidth_cap_mbit;
 		o.audio_silence = audio_silence;
+		o.abandon_s = abandon_ms / 1000; /* R1: the root side enforces it for CLOSE_ORPHAN */
 		o.udp_fd = transport_bind(address, port);
 		if (o.udp_fd < 0)
 			return 1;

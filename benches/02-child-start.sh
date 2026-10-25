@@ -342,7 +342,8 @@ log "4. Switching on — AS ROOT, on $PORT"
 # ⛔ The log is opened in APPEND mode, never truncated.
 # ⛔ `--verbose` on: the periodic recheck of the children's identity
 #    writes there, and without it nothing would be seen (`child.h`, `children_recheck`).
-nohup "$D/remotix" --address 0.0.0.0 --name "$ADDR" --port "$PORT" \
+# ⭐ 1.5: split is the default as root — this bench is about the single process (it starts the server by hand): --no-split.
+nohup "$D/remotix" --address 0.0.0.0 --no-split --name "$ADDR" --port "$PORT" \
       --certificates "$CERT" --page "$D/page.html" \
       --ban-file "$BAN" --command-socket "$SOCK" \
       --survey "$SURVEY" --verbose \

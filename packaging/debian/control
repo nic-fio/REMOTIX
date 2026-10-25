@@ -5,6 +5,7 @@ Maintainer: nicfio <nicfio@gmail.com>
 Rules-Requires-Root: no
 Standards-Version: 4.7.2
 Build-Depends: debhelper-compat (= 13),
+               dh-apparmor,
                pkgconf | pkg-config,
                libssl-dev (>= 3.5),
                libpam0g-dev,

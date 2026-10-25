@@ -57,7 +57,7 @@ done
 echo "units and defaults equivalent (arch = debian = rpm, documented differences aside)"
 
 # ⭐ DECISIONS-11.md §11.50, PHASE F: the split's pieces are the SAME files in the three families, byte for byte (checked
-#   always: they are not installed unless REMOTIX_SPLIT=1, but they must not drift apart meanwhile).
+#   always: they are installed unless REMOTIX_SPLIT=0 (1.5: split on by default)).
 for n in remotix.sysusers remotix.tmpfiles.split remotix-net-move; do
 	for f in debian rpm; do
 		cmp -s <(git -C "$TREE" show "$COMMIT:packaging/arch/$n") <(git -C "$TREE" show "$COMMIT:packaging/$f/$n") \
@@ -68,12 +68,21 @@ for f in arch debian rpm; do
 	u=$(git -C "$TREE" show "$COMMIT:packaging/$f/remotix.service.split")
 	grep -q -- '--certificates /var/lib/remotix/net/certificates ' <<<"$u" && grep -q -- '--ban-file /var/lib/remotix/net/ban ' <<<"$u" \
 		|| { echo "⛔ packaging/$f/remotix.service.split: ExecStart without net/'s --certificates and --ban-file (§11.50)"; exit 1; }
-	grep -q -- ' --split ' <<<"$u" && grep -q '^Environment=REMOTIX_SPLIT_EXPERIMENTAL=1$' <<<"$u" && grep -q '^RestartPreventExitStatus=78$' <<<"$u" \
-		|| { echo "⛔ packaging/$f/remotix.service.split: ExecStart without --split, or no REMOTIX_SPLIT_EXPERIMENTAL=1, or no RestartPreventExitStatus=78 (the binary's gate, main.c)"; exit 1; }
+	grep -q -- ' --split ' <<<"$u" && grep -q '^RestartPreventExitStatus=78$' <<<"$u" \
+		|| { echo "⛔ packaging/$f/remotix.service.split: ExecStart without --split, or no RestartPreventExitStatus=78 (the binary's EXIT_CONFIG, main.c)"; exit 1; }
+	! grep -q 'REMOTIX_SPLIT_EXPERIMENTAL' <<<"$u" \
+		|| { echo "⛔ packaging/$f/remotix.service.split: REMOTIX_SPLIT_EXPERIMENTAL is gone from the binary (1.5: split on by default)"; exit 1; }
 	! grep -qE '^(User|Group|DynamicUser)=' <<<"$u" \
 		|| { echo "⛔ packaging/$f/remotix.service.split: User=/Group= on the unit (§11.50: the desktops would inherit it)"; exit 1; }
 done
-echo "split pieces (sysusers, tmpfiles.split, remotix-net-move) identical; split units on net/, no User= (§11.50, phase F: not installed unless REMOTIX_SPLIT=1)"
+for f in arch debian rpm; do
+	u=$(git -C "$TREE" show "$COMMIT:packaging/$f/remotix.service")
+	grep -q -- ' --no-split ' <<<"$u" \
+		|| { echo "⛔ packaging/$f/remotix.service: the single-process unit without --no-split (1.5: the binary splits by default as root)"; exit 1; }
+	grep -q '^RestartPreventExitStatus=78$' <<<"$u" \
+		|| { echo "⛔ packaging/$f/remotix.service: no RestartPreventExitStatus=78 (EXIT_CONFIG would loop)"; exit 1; }
+done
+echo "split pieces (sysusers, tmpfiles.split, remotix-net-move) identical; split units on net/, no User= (§11.50: installed unless REMOTIX_SPLIT=0)"
 
 rm -rf "$WORKDIR"; mkdir -p "$WORKDIR/tmp"
 export TMPDIR="$WORKDIR/tmp"
@@ -96,7 +105,7 @@ echo "== makepkg ($COMMIT)"
 # builds give the same binary (same sha256) and packages that differ
 # only in `builddate` in .PKGINFO/.BUILDINFO and the dates in .MTREE.
 SDE=$(git -C "$TREE" log -1 --format=%ct "$COMMIT")
-podman run --rm --userns=keep-id -v "$WORKDIR:/pkg" -w /pkg -e HOME=/pkg/tmp -e REMOTIX_SPLIT="${REMOTIX_SPLIT:-0}" \
+podman run --rm --userns=keep-id -v "$WORKDIR:/pkg" -w /pkg -e HOME=/pkg/tmp -e REMOTIX_SPLIT="${REMOTIX_SPLIT:-1}" \
 	-e SOURCE_DATE_EPOCH="$SDE" "$IMAGE" \
 	makepkg -f --noconfirm >"$WORKDIR/makepkg.log" 2>&1 \
 	|| { tail -30 "$WORKDIR/makepkg.log"; echo "⛔ makepkg failed (see $WORKDIR/makepkg.log)"; exit 1; }

@@ -1132,6 +1132,7 @@ static struct child *search_login(struct children *f, const char *user)
 #pragma weak rootside_attached
 #pragma weak rootside_spawn
 #pragma weak rootside_close_orphan
+#pragma weak rootside_last_wait_ms
 #pragma weak rootside_signal
 #pragma weak rootside_hook_child_exited
 #pragma weak rootside_pump_until
@@ -2484,6 +2485,7 @@ static const char *refusal_text(int r)
 	case RXR_REF_MOVED:        return "the name now points to another uid";
 	case RXR_REF_NAME_UNKNOWN: return "the name could not be looked up now";
 	case RXR_REF_RATE:         return "over the root side's rate bound (one close-only birth per user every 30 s, or the CLOSE_ORPHAN bucket)";
+	case RXR_REF_TOO_SOON:     return "the root side finds the desktop not abandoned yet (no client gone for --abandon-s), or the abandonment clock is off";
 	case ROOTSIDE_NO_ANSWER:   return "no answer from the root side within the wait";
 	case ROOTSIDE_NO_GRANT:    return "no grant kept for this login (expired, used, or the table was full)";
 	case ROOTSIDE_NOT_SENT:    return "the request could not be sent to the root side";
@@ -2498,6 +2500,16 @@ static const char *refusal_text(int r)
  *     gid and the socket end.  ⛔ The uid/gid are the ROOT SIDE's resolution:
  *     the kernel stamps them on every message, and `credentials_match()`
  *     compares, unchanged. */
+static uint64_t retry_after_ms;
+
+uint64_t children_retry_after_ms(void)
+{
+	uint64_t w = retry_after_ms;
+
+	retry_after_ms = 0;
+	return w;
+}
+
 static child_outcome ensure_remote(struct children *f, struct child *g,
                                    const char *user, const char *rhost)
 {
@@ -2515,6 +2527,9 @@ static child_outcome ensure_remote(struct children *f, struct child *g,
 		              "⛔ the root side did NOT give birth to a child for «%s» "
 		              "(%s): %s",
 		              user, rhost ? "SPAWN" : "CLOSE_ORPHAN", refusal_text(r));
+		/* ⭐ 1.5 (R1): TOO_SOON says how long to wait; `children_retry_after_ms()` hands it on */
+		retry_after_ms = (r == RXR_REF_TOO_SOON && rootside_last_wait_ms)
+		                     ? rootside_last_wait_ms() : 0;
 		return r == RXR_REF_CLOSING        ? CHILD_CLOSING
 		       : r == RXR_REF_MOVED        ? CHILD_NAME_MOVED
 		       : r == RXR_REF_NAME_UNKNOWN ? CHILD_NAME_UNKNOWN

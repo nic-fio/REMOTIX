@@ -1,0 +1,83 @@
+# remotix_network — AppArmor profile of REMOTIX's NETWORK SIDE (1.5, split audit).
+#
+# ⛔ NON PROVATA / NOT TRIED: written from packaging/rpm/selinux/remotix.te.split and src/walls.c,
+#    never loaded on a real AppArmor.  It starts in COMPLAIN mode on purpose: it logs what it
+#    would refuse and refuses nothing.  Collect the audit lines (`journalctl -k | grep -i
+#    'apparmor="ALLOWED"'`), add what the real network side needs, and only with zero unexpected
+#    lines through the functional suite and B10 change `complain` into enforce.
+#
+# HOW IT IS ENTERED: not by the path of the program.  The profile has NO attachment path, so
+#    exec'ing /usr/libexec/remotix/remotix never puts anything in it — the root side (PAM, the
+#    desktops' birth, same program) stays unconfined.  The root side's fork writes
+#    «exec remotix_network» into /proc/thread-self/attr/apparmor/exec right before it execs the
+#    network side (src/walls.c, apparmor_exec_net) — what aa_change_onexec() does.
+#
+# WHAT THE NETWORK SIDE IS: it holds the UDP and TCP sockets it was GIVEN (fds 3, 4, 5), talks
+#    QUIC/TLS, serves the page, keeps the ban and the certificates in /var/lib/remotix/net, talks to
+#    the root side over the inherited channel, to logind and the journal, and to sssd for names.
+#    It has no capability (it is uid remotix with an empty bounding set); the profile adds the
+#    kernel's view of the same: no `capability` line.
+
+include <tunables/global>
+
+profile remotix_network flags=(complain,attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+
+  # No capability at all: none is listed, so none is allowed.
+
+  # The program itself (mapped; the exec of it is the root side's business).
+  /usr/libexec/remotix/remotix mr,
+  /usr/share/remotix/** r,
+  # (nothing under /etc/remotix: the configuration is read by the root side and by systemd; remotix.te.split
+  #  gives remotix_net_t only the general reads of /etc, which the nameservice abstraction covers)
+  /etc/machine-id r,
+
+  # Its two writable places (src/walls.c: --network-state-dir, --network-run-dir).
+  /var/lib/remotix/ r,
+  /var/lib/remotix/net/ rw,
+  /var/lib/remotix/net/** rwk,
+  /run/remotix/ r,
+  /run/remotix/net/ rw,
+  /run/remotix/net/** rwk,
+
+  # Sockets: UDP and TCP over IPv4/IPv6 (QUIC, the page); unix for the root channel, D-Bus, the journal and sssd.
+  # Raw and packet sockets are not listed: refused.
+  network inet dgram,
+  network inet stream,
+  network inet6 dgram,
+  network inet6 stream,
+  network unix stream,
+  network unix dgram,
+  network netlink raw,       # route/addresses of the machine (getifaddrs); remove when proven unused
+
+  # logind, system D-Bus, journal.
+  /run/dbus/system_bus_socket rw,
+  /run/systemd/journal/socket w,
+  /run/systemd/journal/dev-log w,
+  /run/systemd/journal/stdout rw,
+  /run/systemd/sessions/ r,
+  /run/systemd/sessions/* r,
+
+  # The rediscovery of the desktops after a restart reads /proc (src/rediscover.c) — R8 of the
+  # split plan removes this and narrows it.
+  @{PROC}/ r,
+  @{PROC}/** r,
+  /sys/devices/system/cpu/** r,
+  /sys/class/net/** r,
+  /sys/kernel/mm/transparent_hugepage/* r,
+
+  /dev/null rw,
+  /dev/urandom r,
+  /dev/random r,
+
+  # The root side signals it (TERM, KILL), it never signals anyone else.
+  signal (receive) peer=unconfined,
+  signal (send, receive) peer=remotix_network,
+
+  # No ptrace, no mount, no module, no abstract unix sockets of the machine (the audit's R6):
+  # none of these is listed, and `deny` says so out loud for the abstract ones.
+  deny ptrace,
+  deny mount,
+  deny unix addr=@*,
+}

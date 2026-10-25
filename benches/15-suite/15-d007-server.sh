@@ -77,7 +77,7 @@ start)
 			--property=StandardOutput=append:$REG \
 			--property=StandardError=append:$REG \
 			--property=KillMode=mixed \
-			$EXECUTE --address 0.0.0.0 --name 127.0.0.1 --port $PORT \
+			$EXECUTE --address 0.0.0.0 --no-split --name 127.0.0.1 --port $PORT \
 			--certificates $DIR/certificati \
 			--ban-file $DIR/ban --command-socket $DIR/command.sock \
 			--survey $DIR/rilievo --verbose
