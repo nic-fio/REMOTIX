@@ -20,9 +20,10 @@
  *     replaced the handler, a child that was not ours any more) delays a reaping by a second at most, never for ever.
  *   · the loop reads the flag also BEFORE it sleeps (`sigchld_gate_pending()` → zero wait): the `ppoll` interrupted by EINTR (the
  *     branch that does `continue`) does not go back to sleep for a whole timeout with a death waiting, and a flag set between two
- *     rounds is seen at once.  The only window left is the few instructions between that read and the kernel's `ppoll` entry: a death
- *     in there waits for the next wake-up, at most the loop's own timeout (≤ 1 s) — the same bound as the safety scan.  Closing it
- *     completely needs the `ppoll` signal mask with SIGCHLD blocked in the loop, i.e. the inherited-mask problem above.
+ *     rounds is seen at once.  The window between that read and the kernel's `ppoll` entry is CLOSED (rilettura-fix B4, main.c): around the
+ *     `ppoll` SIGCHLD is blocked together with the stop signals, the flag is read AGAIN with it blocked (up = zero wait), and the `ppoll` takes the
+ *     original mask, so a death in that window interrupts it at once.  The mask is restored right after the call, so no `fork`/`exec` inherits
+ *     it (the inherited-mask problem above).
  *   · without the handler installed (`on` false: a bench or a fuzz harness that links `child.c` / `helper.c` without `main.c`), the gate
  *     says «scan» every time: the old behaviour.
  *

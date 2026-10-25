@@ -1068,8 +1068,10 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	}
 	/* ⛔ `resumed` only if it really gets in: with a farewell on its way there
 	 *    is no `SESSION` to fill. */
-	transport_verdict_from(p->t, ticket, admitted, resumed && !without_stage[0], user,
-	                       rhost, lost);
+	/* ⭐ rilettura-fix M1: the name obtained above goes UP with the verdict (only for an admitted one that somebody waits for): the session must not ask again — in the split the birth
+	 *    (`children_ensure_from`, before this line) consumed the entry it would find. */
+	transport_verdict_as(p->t, ticket, admitted, resumed && !without_stage[0], user,
+	                     rhost, lost, (admitted && !lost && user_typed && user_typed[0]) ? user : NULL);
 
 	/* ⛔⭐ AND THE FAREWELL GOES OUT HERE, AFTER THE VERDICT — and the order is
 	 *     measured, not aesthetic.  Three reasons, all necessary:
@@ -2657,12 +2659,16 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	/* ⚠ rilettura-fix B3 (declared, not cured): the network side is PID 1 of its own PID namespace, where a signal with the DEFAULT action is ignored, so a SIGTERM that reaches it between
+	 *    its `exec` and these lines is lost.  The root side's SIGKILL after NET_TERM_GRACE_MS (3 s) is the net: such a stop costs 3 s. */
 	signal(SIGINT, on_signal);
 	signal(SIGTERM, on_signal);
 	/* ⭐ E-R8 (audit of the session, 25 Oct 2026): SIGHUP and SIGQUIT had the default action (terminate / core) without going through the orderly close (command socket,
 	 *    FAREWELL to the clients, SIGTERM to the children).  They are a stop request like the other two.  Under systemd they do not arrive; from a shell or a script they do. */
 	/* ⚠ Review of e3de2871: a SIGHUP that was IGNORED when we started stays ignored — `nohup`, or a launcher that sets it, is how a service survives the shell that started it
 	 *    (the default action, which this replaces, respected that too).  Only when it is not ignored does it become a stop request. */
+	/* ⚠ rilettura-fix B2 (declared): in the SPLIT server the network side NEVER inherits an ignored SIGHUP — `rootside_fork_signals_fresh()` puts every disposition back to default before the exec — so
+	 *    here SIGHUP stops it (the root side starts it again like after a crash).  The nohup rule below holds for the single-process server only. */
 	{
 		struct sigaction old_hup;
 
@@ -2849,6 +2855,8 @@ int main(int argc, char **argv)
 			              READY_WAIT_MS);
 			return 1;
 		}
+		/* ⭐ rilettura-fix M1: from here on the system's name for a typed one comes from the root side's VERDICT, not from NSS in this loop */
+		rcp_canonical_hook(rootside_canonical);
 		me = getpwuid(getuid());
 		registro_dice(LOG_STARTUP,
 		              "⭐ network side: uid %ld (%s), parent pid %ld (the root side is outside this PID namespace) — this process talks to the network and holds the "
@@ -3463,10 +3471,16 @@ int main(int argc, char **argv)
 			sigaddset(&stops, SIGTERM);
 			sigaddset(&stops, SIGHUP);
 			sigaddset(&stops, SIGQUIT);
+			sigaddset(&stops, SIGCHLD);   /* ⭐ rilettura-fix B4: a death between the top-of-loop test and the ppoll is delivered BY the ppoll (atomic unblock), no longer waited out */
 			sigprocmask(SIG_BLOCK, &stops, &original);
 			if (stop_requested) {
 				sigprocmask(SIG_SETMASK, &original, NULL);
 				break;
+			}
+			/* ... and one whose handler ran BEFORE the block (after the zero-wait test above) is seen here: no sleep */
+			if (sigchld_gate_pending(&sigchld_gate)) {
+				wait_ts.tv_sec = 0;
+				wait_ts.tv_nsec = 0;
 			}
 			outcome = ppoll(fds, n + npage + ncommand + nhelp + nchildren, &wait_ts, &original);
 			saved = errno;

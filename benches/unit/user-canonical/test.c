@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 
 		CHECK(r && m, "5: sources readable");
 		if (r && m) {
-			p = body_of(r, "bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,\n                  uint64_t now)\n{", &n);
+			p = body_of(r, "bool rcp_verdict_as(rcp_session *s, uint64_t ticket, bool admitted,\n                    uint64_t now, const char *canonical_given)\n{", &n);
 			CHECK(p != NULL, "5: rcp_verdict found");
 			if (p) {
 				const char *rep = memmem(p, n, "login_report(&k", strlen("login_report(&k"));

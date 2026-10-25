@@ -169,6 +169,10 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **A key pressed twice is sent once, and a letter gesture releases only what it pressed** (audit of the session, S-R4 for the keys, 25 Oct 2026): `send_key()` on the libei path resent the state already known (an orphan still goes through), before asking the receipt;
   the skip is only a counter under `--verbose`, no code, no time. The gestures that press several keys (letter with Shift, the labwc recovery combination, the letter on wlroots) now release only the keys THEY pressed, so a Shift the user holds is not released.
   Auto-repeat is not affected: the page discards the browser's repeats. Test `benches/unit/key-dedupe` (the real input.c and keyboard.c, libei interposed).
+- **The split's network side no longer asks NSS for the canonical user name** (second reading of v15c, M1, 25 Oct 2026): after PAM's yes the network side called `getpwnam_r()` inside the one loop that serves every user, so a stalled sssd stopped everybody.
+  Now the ROOT side resolves it and sends it in the VERDICT (`struct rxr_verdict.canon`, a fixed 257-byte field validated at receipt: no space, no '/', no control byte; `RXR_VERSION` 3); the network side keeps it with the grant of that login
+  (single use, 30 s, empty after a restart) and `rcp_canonical_user()` answers from it only (no entry = the typed name stays, no NSS). A spawn finds its grant by the typed OR the system's name (before, a case-insensitive login whose canonical name
+  differed found NO grant). The single-process server is unchanged. Test `benches/unit/canon-verdict`.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)

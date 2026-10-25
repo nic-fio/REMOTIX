@@ -38,7 +38,7 @@
 #include <stdint.h>
 
 #define RXR_MAGIC   0x31525852u   /* "RXR1" little-endian */
-#define RXR_VERSION 2   /* ⭐ 1.6 (R8): FOUND_AGAIN / FOUND_END / FOUND_GONE */
+#define RXR_VERSION 3   /* ⭐ 1.6 (R8): FOUND_AGAIN / FOUND_END / FOUND_GONE; 3 (rilettura-fix M1): VERDICT carries the canonical name */
 
 #define RXR_USER_MAX     257      /* as helper.c's request */
 #define RXR_PASSWORD_MAX 1025
@@ -115,7 +115,38 @@ struct rxr_verdict {
 	uint8_t outcome;                  /* enum rxr_outcome */
 	uint8_t grant[RXR_GRANT_BYTES];   /* single use, RXR_GRANT_LIFE_MS, bound to
 	                                   * (user, rhost) of the AUTH; zero unless YES */
+	/* ⭐ rilettura-fix M1: the NAME OF THE SYSTEM for the typed one (`pw_name` of getpwnam_r), computed by the ROOT side, which resolves names anyway; all zero = "no other
+	 * spelling" (not YES, or the system gives the same name, or the lookup failed).  The network side uses it WITHOUT asking NSS itself: a stalled sssd must not stop the
+	 * loop that serves everybody.  Validated by rxr_canon_valid() at receipt. */
+	char canon[RXR_USER_MAX];
 };
+
+/* A canonical name field is acceptable when it is ALL ZERO, or a plausible user name: 1..RXR_USER_MAX-1 bytes, then a NUL, then only zeros up to the end of the field; no control
+ * byte, no DEL, no space and no '/' (a name that could be taken for a path or split into words is not a user). */
+static inline int rxr_canon_valid(const char *f)
+{
+	int i = 0;
+
+	if (f[0] == 0) {
+		for (i = 1; i < RXR_USER_MAX; i++)
+			if (f[i])
+				return 0;
+		return 1;
+	}
+	for (i = 0; i < RXR_USER_MAX && f[i]; i++) {
+		unsigned char c = (unsigned char)f[i];
+
+		if (c <= 0x20 || c == 0x7f || c == '/')
+			return 0;
+	}
+	if (i >= RXR_USER_MAX)
+		return 0;                          /* no NUL inside the field */
+	for (i++; i < RXR_USER_MAX; i++)
+		if (f[i])
+			return 0;
+	return 1;
+}
+_Static_assert(sizeof(struct rxr_verdict) == 296, "rxr_verdict changed size (RXR_VERSION 3: canon)");
 
 /* SPAWN → SPAWNED + fd | SPAWN_REFUSED.  The user and rhost are the grant's:
  * the network side cannot name anyone else. */

@@ -832,6 +832,11 @@ static ssize_t receive_with_credentials_pidfd(int fd, void *buf, size_t cap,
 	/* ⛔ The control data was cut by the kernel (`MSG_CTRUNC`): something was attached that does not fit what this wall expects (credentials and
 	 *    at most the sender's pidfd) — descriptors the kernel then closes itself.  Same verdict as descriptors that arrived: the child does not do
 	 *    that (as `chan_read()` in rootside.c:1109 does for the root channel). */
+	/* ⛔ `MSG_CTRUNC` is a violation, with or without a descriptor in sight (rilettura-fix M3 looked at this and KEPT it).  VERIFIED on kernel 7.3 (probe, 25 Oct 2026): when THIS process is out of
+	 *    descriptors (EMFILE) the kernel does not cut the control data for the sender's pidfd — it hands over SCM_PIDFD with the value -EMFILE and no MSG_CTRUNC — so an honest child never
+	 *    arrives here for that; whereas a child that sends SCM_RIGHTS at EMFILE gets MSG_CTRUNC and NO SCM_RIGHTS cmsg (nothing could be installed): this branch is the only place that sees
+	 *    it.  A "discard, do not kill" for MSG_CTRUNC alone would let exactly that child through.  The SCM_PIDFD with a negative value is harmless: `sender_pidfd` is closed only if >= 0
+	 *    and pidfd_compare() says UNKNOWN. */
 	if (carried_descriptors || (m.msg_flags & MSG_CTRUNC))
 		return -3;
 	/* ⚠ A message truncated by the kernel (`MSG_TRUNC`) is a message that is
@@ -893,6 +898,9 @@ static bool credentials_match(const struct child *g, const struct head *t,
 		 *    in the HOST's PID namespace by the root side; this process is PID 1 of its own, where the kernel shows every sender
 		 *    from outside as pid 0.  A sender INSIDE the namespace has a pid ≥ 1: only this process lives there, and it holds
 		 *    no end of the child's socket other than the one it reads — so a non-zero pid is refused. */
+		/* ⚠ rilettura-fix M4 (declared, not cured): this is ONE GRADE WEAKER than the single-process server, which also compares the sender's pid with the child's.  Here the identity is the socket
+		 *    (only the child and this side hold an end), uid/gid, serial and pid 0 — and, where the kernel has pidfs (6.9; `SO_PASSPIDFD` from 6.5), the exact pidfd below.  On an older kernel a process of
+		 *    the SAME user that the child lets inherit fd 3 writes with the same credentials; `become_and_exec()` closes everything above fd 3, so only the desktop's own descendants could. */
 		if (chi->pid != 0) {
 			snprintf(why_no, cap_why,
 			         "written by pid %ld, which is inside this PID namespace: the child of «%s» is outside it, "
@@ -2209,7 +2217,7 @@ static bool card_groups(const char *user, gid_t primary,
  * Returns `true` if it changed something (and then the groups must be read
  * again).
  */
-#define RUN_AS_ROOT_MAX_MS 10000
+#define RUN_AS_ROOT_MAX_MS 5000   /* (rilettura-fix M2) tied to SPAWN_WAIT_MS below by a _Static_assert: the birth that waits for usermod must still fit in the wait of the network side */
 
 /* How run_as_root() ended (review of 19eef4c3): the caller must tell "the program is not there" (try the next path) from "it started and ran out of time" (do NOT start a second
  * one on top of the first: look at the groups instead) from "it ran and failed". */
@@ -2703,6 +2711,10 @@ static void birth_opts_of(const struct children *f, struct birth_opts *b)
 }
 
 #define SPAWN_WAIT_MS 15000
+/* ⭐ rilettura-fix M2: the network side waits SPAWN_WAIT_MS for the root side's birth; at a user's first connection the birth includes `usermod` (up to RUN_AS_ROOT_MAX_MS) and the rest
+ *    (render grant, fork, exec).  With usermod's 10 s the sum could pass 15 s: the network side gave up, the child born late was killed and the user saw a generic failure. The rest of the birth
+ *    gets at least as much room as usermod itself. */
+_Static_assert(RUN_AS_ROOT_MAX_MS * 2 <= SPAWN_WAIT_MS, "usermod's limit must leave room for the rest of the birth inside the network side's SPAWN wait");
 
 static const char *refusal_text(int r)
 {

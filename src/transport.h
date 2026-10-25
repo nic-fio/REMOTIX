@@ -89,6 +89,10 @@ void transport_verdict_from(transport *t, uint64_t ticket, bool admitted,
  * connection is gone): kept for the harnesses. */
 void transport_verdict(transport *t, uint64_t ticket, bool admitted,
                         bool resumed);
+/* ⭐ rilettura-fix M1: transport_verdict_from() plus `canonical`, the system's name for the typed user ALREADY obtained by main.c (NULL = the session asks for itself) */
+void transport_verdict_as(transport *t, uint64_t ticket, bool admitted,
+                          bool resumed, const char *user, const char *rhost,
+                          bool lost, const char *canonical);
 /* ⭐ True when a live connection still waits for PAM's answer to `ticket` (the
  * one `transport_verdict()` would hand it to).  `main.c` asks it BEFORE starting a
  * desktop for a yes: a client that hung up while PAM judged gets none. */

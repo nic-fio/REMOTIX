@@ -2238,11 +2238,19 @@ void transport_verdict_from(transport *t, uint64_t ticket, bool admitted,
                             bool resumed, const char *user, const char *rhost,
                             bool lost)
 {
+	transport_verdict_as(t, ticket, admitted, resumed, user, rhost, lost, NULL);
+}
+
+/* ⭐ rilettura-fix M1: `canonical` = the system's name for the typed user, already obtained by main.c; the session goes by it without asking again */
+void transport_verdict_as(transport *t, uint64_t ticket, bool admitted,
+                          bool resumed, const char *user, const char *rhost,
+                          bool lost, const char *canonical)
+{
 	for (connection *c = t->prime; c; c = c->upcoming) {
 		if (c->dead_run || !c->w)
 			continue;
 		if (lost ? wt_verdict_lost(c->w, ticket)
-		         : wt_verdict(c->w, ticket, admitted, resumed)) {
+		         : wt_verdict_as(c->w, ticket, admitted, resumed, canonical)) {
 			if (admitted)
 				note_login(t, c);
 			/* ⛔ And it is written again AT ONCE: the verdict may have made

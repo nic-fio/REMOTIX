@@ -3,7 +3,8 @@
  * before PAM.
  *
  * In the build container, from src/ (the product's objects, then the test
- * linked against all of them except main.o and rootside.o), as
+ * linked against all of them except main.o, rootside.o and rediscover.o — the test defines its own
+ * rediscover_* stand-ins, and linking the real object too is a "multiple definition"), as
  * 02-child-strings-test.c says:
  *
  *   make TWIN=none
@@ -11,7 +12,7 @@
  *       libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 \
  *       xkbcommon wayland-client gbm) -o /tmp/rsv \
  *       ../benches/02-rootside-validator-test.c \
- *       $(ls *.o | grep -v -e '^main.o$' -e '^rootside.o$') \
+ *       $(ls *.o | grep -v -e '^main.o$' -e '^rootside.o$' -e '^rediscover.o$') \
  *       -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
  *       $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm \
  *       libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl && /tmp/rsv
@@ -60,7 +61,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 136
+#define EXPECTED_CHECKS 137
 
 static void require(int cond, const char *desc)
 {
@@ -175,8 +176,9 @@ static void found_tests(void)
 	require(sizeof(struct rxr_found_again) == 344 && sizeof(struct rxr_found_end) == 24 &&
 	        sizeof(struct rxr_found_gone) == 280,
 	        "exact sizes on the wire: FOUND_AGAIN 344, FOUND_END 24, FOUND_GONE 280");
-	require(RXR_VERSION == 2 && RXR_FOUND_AGAIN == 106 && RXR_FOUND_END == 107 && RXR_FOUND_GONE == 108,
-	        "version 2, kinds 106, 107, 108");
+	require(RXR_VERSION == 3 && RXR_FOUND_AGAIN == 106 && RXR_FOUND_END == 107 && RXR_FOUND_GONE == 108,
+	        "version 3 (rilettura-fix M1: VERDICT carries canon), kinds 106, 107, 108");
+	require(sizeof(struct rxr_verdict) == 296, "the VERDICT is 296 bytes on the wire (canon included)");
 	require(size_of_event(RXR_FOUND_AGAIN) == sizeof(struct rxr_found_again) &&
 	        size_of_event(RXR_FOUND_END) == sizeof(struct rxr_found_end) &&
 	        size_of_event(RXR_FOUND_GONE) == sizeof(struct rxr_found_gone),
@@ -1214,7 +1216,7 @@ int main(void)
 			R.chan = sv[0];
 			R.net_pid = 0;
 			shutdown(sv[1], SHUT_RD);
-			send_verdict(9, RXR_NO, NULL);
+			send_verdict(9, RXR_NO, NULL, NULL);
 			require(R.chan == -1, "a send that says EPIPE: the channel is closed (net_kill), no spin");
 			close(sv[1]);
 		} else {
@@ -1238,7 +1240,7 @@ int main(void)
 			fflush(stderr);
 			dup2(lf, 2);
 			for (int i = 0; i < 30; i++)
-				send_verdict(10 + (uint64_t)i, RXR_NO, NULL);
+				send_verdict(10 + (uint64_t)i, RXR_NO, NULL, NULL);
 			fflush(stderr);
 			dup2(saved, 2);
 			f = fopen(logpath, "r");

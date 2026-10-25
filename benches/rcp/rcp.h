@@ -627,6 +627,10 @@ bool rcp_time(rcp_session *s, uint64_t now_ms);
  *   now, can arrive before or after it. */
 bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
                   uint64_t now_ms);
+/* ⭐ rilettura-fix M1: the same, with the SYSTEM's name for the typed user ALREADY OBTAINED by whoever delivers the verdict (main.c `delivery_verdict()`): the session goes by it without asking again.
+ * Asking again was a bug in the split: the lookup there is the grant's entry, and the child's birth (`rootside_spawn`, before this call) consumes it — the child was «anna», the session stayed «ANNA».
+ * `canonical` NULL or empty = ask `rcp_canonical_user()` as `rcp_verdict()` does. */
+bool rcp_verdict_as(rcp_session *s, uint64_t ticket, bool admitted, uint64_t now_ms, const char *canonical);
 
 /* ⛔ §8.1: whoever closes MUST send `FAREWELL` with a reason BEFORE closing the
  * WebTransport session, and MUST repeat the reason in the application error
@@ -1471,6 +1475,9 @@ bool rcp_verdict_lost(rcp_session *s, uint64_t ticket);
  * `true` = `out` holds the name of the system (it may be the same as `typed`); `false` = the system could not say (the name stays as
  * it was).  ⚠ `getpwnam_r` may ask NSS: it is called only for a login that PAM has already admitted. */
 bool rcp_canonical_user(const char *typed, char *out, size_t cap);
+/* ⭐ rilettura-fix M1: in the split the NETWORK SIDE must not ask NSS (a stalled sssd would stop the loop that serves everybody): main.c installs a lookup that answers from the root
+ * side's verdict, and rcp_canonical_user() then answers ONLY from it (no entry = false = the typed name stays).  NULL (the default, the single-process server) = the getpwnam_r lookup. */
+void rcp_canonical_hook(bool (*fn)(const char *typed, char *out, size_t cap));
 
 /* ⛔ The secret of the tags `unknown user [hmac6]` of the log (§4.4-bis D):
  * `<dir>/log-secret`, 0600, next to the QUIC token secret.  Returns 1 = read,

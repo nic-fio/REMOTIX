@@ -992,7 +992,7 @@ static void send_refused(uint64_t request, int reason)
 	send_refused_wait(request, reason, 0);
 }
 
-static void send_verdict(uint64_t request, int outcome, const uint8_t *grant)
+static void send_verdict(uint64_t request, int outcome, const uint8_t *grant, const char *canon)
 {
 	struct rxr_verdict v;
 
@@ -1001,6 +1001,8 @@ static void send_verdict(uint64_t request, int outcome, const uint8_t *grant)
 	v.outcome = (uint8_t)outcome;
 	if (outcome == RXR_YES && grant)
 		memcpy(v.grant, grant, RXR_GRANT_BYTES);
+	if (outcome == RXR_YES && canon && canon[0] && strlen(canon) < sizeof v.canon)
+		memcpy(v.canon, canon, strlen(canon));   /* (the field was zeroed: the NUL and the rest are there) */
 	(void)chan_send(&v, sizeof v, -1);
 	explicit_bzero(&v, sizeof v);
 }
@@ -1089,7 +1091,24 @@ static void on_pam_outcome(void *ctx, uint64_t ticket, int outcome, const char *
 		              "⭐ PAM said YES to «%s»: a grant is minted — single use, %d s, "
 		              "bound to «%s» from «%s»",
 		              user, RXR_GRANT_LIFE_MS / 1000, user, rhost[0] ? rhost : "?");
-	send_verdict(pa->request, out, out == RXR_YES ? grant : NULL);
+	/* ⭐ rilettura-fix M1: the name of the SYSTEM for the typed one goes WITH the yes, resolved here (this side resolves names anyway, at the birth): the network side must not ask
+	 *    NSS in the loop that serves everybody.  Only when it differs from the typed one and is a plausible user name; otherwise the field stays zero. */
+	{
+		char canon[RXR_USER_MAX] = "";
+
+		if (out == RXR_YES) {
+			struct passwd pw, *res = NULL;
+			char spare[2048];
+
+			if (getpwnam_r(user, &pw, spare, sizeof spare, &res) == 0 && res && res->pw_name && res->pw_name[0] &&
+			    strlen(res->pw_name) < sizeof canon && strcmp(res->pw_name, user) != 0) {
+				snprintf(canon, sizeof canon, "%s", res->pw_name);
+				if (!rxr_canon_valid(canon))
+					canon[0] = 0;
+			}
+		}
+		send_verdict(pa->request, out, out == RXR_YES ? grant : NULL, canon);
+	}
 	explicit_bzero(grant, sizeof grant);
 }
 
@@ -1201,7 +1220,7 @@ static void handle_auth(struct rxr_auth *a)
 	}
 	explicit_bzero(a->password, sizeof a->password);
 	if (out >= 0)
-		send_verdict(a->h.request, out, NULL);
+		send_verdict(a->h.request, out, NULL, NULL);
 }
 
 static struct own_child *own_by_uid(uid_t uid)
@@ -2201,6 +2220,7 @@ int rootside_main(const struct rootside_options *o)
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGQUIT, &sa, NULL);   /* ⭐ rilettura-fix B1: main.c's e3de2871 gave SIGQUIT a handler that sets a flag THIS loop does not read: it would do nothing; same stop as SIGTERM */
 	sigaction(SIGUSR1, &sa, NULL);
 	sigaction(SIGUSR2, &sa, NULL);
 	sigaction(SIGCHLD, &sa, NULL);
@@ -2253,7 +2273,7 @@ int rootside_main(const struct rootside_options *o)
 
 		while ((n = read(R.pipe_r, sigs, sizeof sigs)) > 0)
 			for (ssize_t k = 0; k < n; k++) {
-				if ((sigs[k] == SIGTERM || sigs[k] == SIGINT) && !R.stopping) {
+				if ((sigs[k] == SIGTERM || sigs[k] == SIGINT || sigs[k] == SIGQUIT) && !R.stopping) {
 					R.stopping = true;
 					R.stop_deadline = now + STOP_WAIT_MS;
 					registro_dice(LOG_ROOT, "⭐ signal %d: the network side is asked "
@@ -2395,6 +2415,7 @@ static struct {
 		uint8_t grant[RXR_GRANT_BYTES];
 		char user[RXR_USER_MAX];
 		char rhost[RXR_RHOST_MAX];
+		char canon[RXR_USER_MAX];   /* ⭐ rilettura-fix M1: the system's name for `user` (the VERDICT's), "" = none; lives and dies with the grant */
 		uint64_t expires_ms;
 	} grants[CLIENT_GRANTS];
 	struct rxr_verdict q[CLIENT_QUEUE];
@@ -2496,7 +2517,8 @@ static int client_recv(int timeout_ms, union rpk *pk, int *fd)
 	if (!has_cred || cred.uid != 0 || cred.pid != C.root_pid || n < (ssize_t)sizeof pk->h
 	    || pk->h.magic != RXR_MAGIC || pk->h.version != RXR_VERSION
 	    || (size_t)n != size_of_event(pk->h.kind)
-	    || (nfds > 0) != (pk->h.kind == RXR_SPAWNED) || nfds > 2) {
+	    || (nfds > 0) != (pk->h.kind == RXR_SPAWNED) || nfds > 2
+	    || (pk->h.kind == RXR_VERDICT && !rxr_canon_valid(pk->v.canon))) {   /* ⭐ rilettura-fix M1 */
 		registro_dice(LOG_ROOT, "⛔ a packet on the root channel that is not the root "
 		              "side's or not of the list (%zd bytes, kind %u, uid %ld, pid %ld, "
 		              "%d fd): DISCARDED", n, n >= (ssize_t)sizeof pk->h ? pk->h.kind : 0,
@@ -2557,6 +2579,7 @@ static void dispatch(union rpk *pk, int fd)
 			/* same-sized arrays, both terminated by `rootside_auth()` */
 			memcpy(C.grants[g].user, C.auths[k].user, sizeof C.grants[g].user);
 			memcpy(C.grants[g].rhost, C.auths[k].rhost, sizeof C.grants[g].rhost);
+			memcpy(C.grants[g].canon, pk->v.canon, sizeof C.grants[g].canon);   /* validated at receipt: terminated, plausible */
 			/* ⚠ A little less than the root side's life: never sent dead. */
 			C.grants[g].expires_ms = now + RXR_GRANT_LIFE_MS - 2000;
 		}
@@ -2846,7 +2869,9 @@ bool rootside_has_grant(const char *user, const char *rhost)
 
 	for (int i = 0; i < CLIENT_GRANTS; i++)
 		if (C.grants[i].used && C.grants[i].expires_ms > now
-		    && strcmp(C.grants[i].user, user) == 0
+		    && (strcmp(C.grants[i].user, user) == 0
+		        /* ⭐ rilettura-fix M1: the children are keyed by the SYSTEM's name (main.c asks for it), the grant by the TYPED one: either names it */
+		        || (C.grants[i].canon[0] && strcmp(C.grants[i].canon, user) == 0))
 		    && strcmp(C.grants[i].rhost, rhost ? rhost : "") == 0)
 			return true;
 	return false;
@@ -2903,7 +2928,9 @@ int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
 		return ROOTSIDE_LOST;
 	for (int i = 0; i < CLIENT_GRANTS; i++)
 		if (C.grants[i].used && C.grants[i].expires_ms > now
-		    && strcmp(C.grants[i].user, user) == 0
+		    && (strcmp(C.grants[i].user, user) == 0
+		        /* ⭐ rilettura-fix M1: the children are keyed by the SYSTEM's name (main.c asks for it), the grant by the TYPED one: either names it */
+		        || (C.grants[i].canon[0] && strcmp(C.grants[i].canon, user) == 0))
 		    && strcmp(C.grants[i].rhost, rhost ? rhost : "") == 0)
 			k = i;
 	if (k < 0)
@@ -2920,6 +2947,24 @@ int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
 	}
 	explicit_bzero(s.grant, sizeof s.grant);
 	return wait_birth(s.h.request, timeout_ms, out);
+}
+
+/* ⭐ rilettura-fix M1: the system's name for a TYPED one, from the live grant of its login — no NSS here.  false = no live entry: the caller keeps the typed name.
+ *    The entry is the grant's: single use (gone at the birth), 30 s at most, empty after a restart of this side. */
+bool rootside_canonical(const char *typed, char *out, size_t cap)
+{
+	uint64_t now = log_now_ms();
+
+	if (!typed || !*typed || !out || cap == 0)
+		return false;
+	for (int i = 0; i < CLIENT_GRANTS; i++)
+		if (C.grants[i].used && C.grants[i].expires_ms > now && C.grants[i].canon[0] && strcmp(C.grants[i].user, typed) == 0) {
+			if (strlen(C.grants[i].canon) >= cap)
+				return false;
+			snprintf(out, cap, "%s", C.grants[i].canon);
+			return true;
+		}
+	return false;
 }
 
 uint64_t rootside_last_wait_ms(void)
