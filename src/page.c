@@ -2040,7 +2040,7 @@ static int accept_page(page *p, int budget)
 		char host[NI_MAXHOST], serv[NI_MAXSERV];
 		char provenance[80], key[64];
 
-		fd = accept4(p->fd, (struct sockaddr *)&da, &dalen, SOCK_NONBLOCK);
+		fd = accept4(p->fd, (struct sockaddr *)&da, &dalen, SOCK_NONBLOCK | SOCK_CLOEXEC); /* E-R9: no child inherits a client's connection */
 		if (fd < 0) {
 			if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
 				registro_dice(LOG_PAGE, "accept: %s", strerror(errno));

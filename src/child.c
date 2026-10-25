@@ -2041,6 +2041,10 @@ static bool run_as_root(const char *which, char *const argv[], const char *user)
 	if (p < 0)
 		return false;
 	if (p == 0) {
+		/* ⭐ E-R9 (audit of 25 Oct 2026): `usermod` and friends must not inherit the service's sockets (the UDP and TCP ones, the command socket
+		 *    and every accepted connection), as `become_and_exec()` already does for the children.  Best effort: if close_range() fails,
+		 *    the exec goes ahead as before. */
+		(void)close_range(3, ~0U, 0);
 		execv(which, argv);
 		_exit(127);
 	}
