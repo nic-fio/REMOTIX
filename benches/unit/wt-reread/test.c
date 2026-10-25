@@ -10,6 +10,7 @@
  *   W4  network_cycle() writes nothing for a connection without a control channel (it returns before touching the QUIC connection);
  *   W5  wt_logged_in() is false again once the control channel / the session has closed (wt_stream_closed());
  *   W6  close_now() with the session stream already closed (session == -1) queues nothing.
+ *   W4b the quic-net line of a connection with the channel open but not yet logged in is behind prelogin_may_log().
  *   W6b a closure pending when the session stream closes is dropped with it, with the channel deadline: the next session of the connection stays open;
  *   W5b three login/logout cycles on one connection: the pre-login counters (sessions_opened, stray_requests) start again each time, the real user is never closed;
  *
@@ -57,7 +58,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 25
+#define EXPECTED_CHECKS 26
 
 static void require(int cond, const char *desc)
 {
@@ -355,6 +356,20 @@ int main(void)
 		ts_ns += 20ULL * NGTCP2_SECONDS;                                           /* the old deadlines would have expired long ago */
 		wt_beat(a, ts_ns);
 		require(a->session == 4 && a->closing < 0 && queue_empty(a), "20 s later the new session is open: no closing capsule queued, no timeout fired");
+	}
+
+	printf("  W4b. the quic-net line of a connection with the channel open but not logged in\n");
+	{
+		FILE *f = fopen("src/webtransport.c", "r");
+		static char src[16u << 20];
+		size_t n = 0;
+		char *cyc, *gate, *line;
+
+		if (f) { n = fread(src, 1, sizeof src - 1, f); src[n] = 0; fclose(f); }
+		cyc = strstr(src, "static void network_cycle(wt *w, uint64_t now_ms)");
+		line = cyc ? strstr(cyc, "\"quic-net %s since_ms") : NULL;
+		gate = cyc ? strstr(cyc, "if (prelogin_may_log(w))") : NULL;
+		require(cyc && line && gate && gate < line && line - gate < 400, "the quic-net line is behind prelogin_may_log() (run from the root of the tree: reads src/webtransport.c)");
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);

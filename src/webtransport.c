@@ -6005,6 +6005,7 @@ static void network_cycle(wt *w, uint64_t now_ms)
 
 	since_ms = w->network_logged_ms ? now_ms - w->network_logged_ms : 0;
 
+	if (prelogin_may_log(w))   /* ⭐ rilettura-wt W4: also for a connection that opened the control channel but has not logged in (it writes every second otherwise) */
 	log_says_of(REG_WT, wt_chi(w),
 	                 "quic-net %s since_ms=%llu lost=%llu lost_d=%llu "
 	                 "bytes_lost=%llu bytes_lost_d=%llu sent=%llu sent_d=%llu "
