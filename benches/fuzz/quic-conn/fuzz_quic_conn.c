@@ -1395,6 +1395,7 @@ static void op_burst(const uint8_t *a, size_t n)
 		/* owed only when nothing else can stop the Reset: no armed failure (token, RNG), the queue empty (a held datagram
 		 * could push this one past the 64 of a read round) and no recvmsg error pending */
 		signed_owed = signed_unknown && (a3 & 4) /* the cap per address is out of the way */ && !(a3 & 2) && rxq_fail_next == 0 && qhead == qtail && !recv_eintr && !recv_err &&
+		              !(no_pktinfo && gsn_fail) /* no ancillary address AND no getsockname: transport_read() discards the packet ("no local address ... discarded", src/transport.c) before any id is looked at: no Reset can be owed */ &&
 		              rxq_resets_signed_now() < RXQ_RESETS_PER_SECOND;
 		rxq_expect_signed_reset(signed_owed);
 		/* ⛔ the loop's pass, as `main.c` runs it (wait, read, expired): a burst that moved
