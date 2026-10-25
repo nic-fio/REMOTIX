@@ -4,6 +4,7 @@
 #include "transport.h"
 
 #include "log.h"
+#include "lookup.h"
 #include "pktinfo.h"
 #include "rcp.h" /* rcp_orphan_verdict(): a verdict whose connection is gone is still counted (§4.4-bis B) */
 #include "webtransport.h"
@@ -215,11 +216,7 @@ typedef struct connection {
 /* The map of connection ids.  ⚠ A connection has more than one (the client
  * asks for up to `active_connection_id_limit`), and each must lead to the same
  * connection: this is the reason this map is not a field of the connection. */
-typedef struct {
-	ngtcp2_cid cid;
-	connection *c;
-	bool used;
-} entry_cid;
+/* (the entries are `lk_entry` of lookup.h: hashed, same answers as the linear scan this file used to do) */
 
 struct transport {
 	int fd;
@@ -243,12 +240,8 @@ struct transport {
 	char refused_last[64];
 	bool refused_ever;
 	ngtcp2_tstamp refused_line_ns;
-	/* ⭐ 1.5: the used Retry tokens (RETRY_TOKEN_TIMEOUT's box) */
-	struct {
-		uint64_t hash;
-		ngtcp2_tstamp until;
-	} tokens[TOKENS_KEPT];
-	size_t token_next;
+	/* ⭐ 1.5: the used Retry tokens (RETRY_TOKEN_TIMEOUT's box): the ring of TOKENS_KEPT, with a hash index (lookup.h) */
+	lk_ring tokring;
 	unsigned token_replayed, token_forgotten;
 	/* the «new connection» lines (BIRTH_LINES) */
 	ngtcp2_tstamp birth_window_ns;
@@ -257,8 +250,7 @@ struct transport {
 	ngtcp2_tstamp close_window_ns;
 	unsigned closes_in_window, closes_quiet;
 
-	entry_cid *cids;
-	size_t ncids, capcids;
+	lk_cidmap cids; /* the CID map: hashed with a key derived from `secret` (transport_open_fd) */
 
 	/* ⭐ §11.9: static, and kept on disk (`secret_load()`): Retry tokens and
 	 *    Stateless Reset tokens are both derived from it.  Zeroed at close. */
@@ -319,21 +311,17 @@ static void address_text(const struct sockaddr *sa, socklen_t len, char *report,
 /* ------------------------------------------------------------------------ */
 /* The CID map.                                                              */
 
-static bool cid_equal(const ngtcp2_cid *a, const ngtcp2_cid *b)
-{
-	return a->datalen == b->datalen && memcmp(a->data, b->data, a->datalen) == 0;
-}
-
+/* ⭐ Hashed (lookup.h), not scanned: this runs for EVERY packet, and for the packets of a flood the id is unknown, so the old
+ *    scan walked the whole table (~2300 entries when 256 connections each hold 9 ids: ~4.4 us on an N100). */
 static connection *cid_find(transport *t, const uint8_t *dcid, size_t len)
 {
-	for (size_t i = 0; i < t->ncids; i++) {
-		if (!t->cids[i].used)
-			continue;
-		if (t->cids[i].cid.datalen == len &&
-		    memcmp(t->cids[i].cid.data, dcid, len) == 0)
-			return t->cids[i].c;
-	}
-	return NULL;
+	return lk_cid_find(&t->cids, dcid, len);
+}
+
+static void lk_from_ngtcp2(lk_cid *to, const ngtcp2_cid *from)
+{
+	to->datalen = from->datalen;
+	memcpy(to->data, from->data, from->datalen);
 }
 
 /* ⭐ §11.9: returns false if the id could NOT be bound (out of memory).  An
@@ -341,42 +329,27 @@ static connection *cid_find(transport *t, const uint8_t *dcid, size_t len)
  * they would get a Stateless Reset: the callers must refuse the id. */
 static bool cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
 {
-	for (size_t i = 0; i < t->ncids; i++)
-		if (!t->cids[i].used) {
-			t->cids[i].cid = *cid;
-			t->cids[i].c = c;
-			t->cids[i].used = true;
-			return true;
-		}
-	if (t->ncids == t->capcids) {
-		size_t nc = t->capcids ? t->capcids * 2 : 32;
-		entry_cid *n = realloc(t->cids, nc * sizeof *n);
-		if (!n) {
-			registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
-			return false;
-		}
-		t->cids = n;
-		t->capcids = nc;
+	lk_cid k;
+
+	lk_from_ngtcp2(&k, cid);
+	if (!lk_cid_bind(&t->cids, &k, c)) {
+		registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
+		return false;
 	}
-	t->cids[t->ncids].cid = *cid;
-	t->cids[t->ncids].c = c;
-	t->cids[t->ncids].used = true;
-	t->ncids++;
 	return true;
 }
 
 static void cid_unbind(transport *t, const ngtcp2_cid *cid)
 {
-	for (size_t i = 0; i < t->ncids; i++)
-		if (t->cids[i].used && cid_equal(&t->cids[i].cid, cid))
-			t->cids[i].used = false;
+	lk_cid k;
+
+	lk_from_ngtcp2(&k, cid);
+	lk_cid_unbind(&t->cids, &k);
 }
 
 static void cid_unbind_all(transport *t, connection *c)
 {
-	for (size_t i = 0; i < t->ncids; i++)
-		if (t->cids[i].used && t->cids[i].c == c)
-			t->cids[i].used = false;
+	lk_cid_unbind_all(&t->cids, c);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1137,22 +1110,19 @@ static uint64_t token_hash(const transport *t, const uint8_t *tok, size_t len)
 	return h;
 }
 
+/* ⭐ The ring is indexed by the token's own hash (already keyed with the secret), so a lookup is one short chain, not the
+ *    4096 entries (~3.8 us) the scan cost for every Initial with a valid token — and for every replay of a used one. */
+_Static_assert(TOKENS_KEPT == LK_TOKENS, "the ring of lookup.h is the ring of this file");
+
 static bool token_used(const transport *t, uint64_t h, ngtcp2_tstamp now)
 {
-	for (size_t i = 0; i < TOKENS_KEPT; i++)
-		if (t->tokens[i].until > now && t->tokens[i].hash == h)
-			return true;
-	return false;
+	return lk_tok_used(&t->tokring, h, now);
 }
 
 static void token_keep(transport *t, uint64_t h, ngtcp2_tstamp now)
 {
-	size_t i = t->token_next;
-	if (t->tokens[i].until > now)
+	if (lk_tok_keep(&t->tokring, h, now, now + RETRY_TOKEN_TIMEOUT))
 		t->token_forgotten++;
-	t->tokens[i].hash = h;
-	t->tokens[i].until = now + RETRY_TOKEN_TIMEOUT;
-	t->token_next = (i + 1) % TOKENS_KEPT;
 }
 
 /* The count of the «new connection» lines not written, at the end of their window. */
@@ -2439,6 +2409,9 @@ transport *transport_open_fd(int fd, const char *address, const char *port,
 		return NULL;
 	}
 	secret_load(t, secret_dir);
+	/* the key of the CID hash: from the static secret (the attacker does not know it), not the secret itself */
+	for (size_t i = 0; i < sizeof t->cids.key; i++)
+		t->cids.key[i] = (uint8_t)(t->secret[i] ^ t->secret[i + 16] ^ (0xa5 + i));
 
 	if (ngtcp2_crypto_ossl_init() != 0) {
 		registro_dice(REG_QUIC, "⛔ ngtcp2_crypto_ossl_init");
@@ -2472,7 +2445,7 @@ void transport_close(transport *t)
 		connection_free(t, c);
 		c = p;
 	}
-	free(t->cids);
+	lk_cid_free(&t->cids);
 	if (t->fd >= 0)
 		close(t->fd);
 	explicit_bzero(t->secret, sizeof t->secret);

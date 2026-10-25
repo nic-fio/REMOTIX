@@ -557,7 +557,7 @@ $(OGGETTI): log.h .flags
 main.o:           helper.h certificates.h command.h child.h page.h rcp.h \
                   log.h tls.h transport.h rediscover.h rootside.h walls.h
 rootside.o:       rootside.h rootside_proto.h child.h helper.h log.h render_grant.h
-transport.o:      transport.h helper.h log.h webtransport.h
+transport.o:      transport.h helper.h log.h webtransport.h lookup.h
 webtransport.o:   webtransport.h helper.h rcp.h log.h child.h audio.h
 page.o:         page.h certificates.h rcp.h log.h
 command.o:        command.h rcp.h log.h
