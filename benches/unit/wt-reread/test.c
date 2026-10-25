@@ -10,6 +10,7 @@
  *   W4  network_cycle() writes nothing for a connection without a control channel (it returns before touching the QUIC connection);
  *   W5  wt_logged_in() is false again once the control channel / the session has closed (wt_stream_closed());
  *   W6  close_now() with the session stream already closed (session == -1) queues nothing.
+ *   W5b three login/logout cycles on one connection: the pre-login counters (sessions_opened, stray_requests) start again each time, the real user is never closed;
  *
  * BUILD AND RUN (a full build of the product first, about as long as `make`: the test links every object but main.o and webtransport.o; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
@@ -55,7 +56,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 19
+#define EXPECTED_CHECKS 22
 
 static void require(int cond, const char *desc)
 {
@@ -305,6 +306,34 @@ int main(void)
 		a->session = -1;
 		close_now(a, 5);
 		require(queue_empty(a) && queue_unsent(a) == 0, "session == -1: nothing is queued (an orphan element on stream -1 would never be sent nor killed)");
+	}
+
+	printf("  W5b. three login/logout cycles on one QUIC connection\n");
+	{
+		ngtcp2_ccerr e;
+		wt *a;
+		bool closed_early = false;
+
+		memset(&e, 0, sizeof e);
+		a = wt_new(NULL, &e, "[192.0.2.41]:4001", NULL);
+		for (int cycle = 0; cycle < 4; cycle++) {
+			if (prelogin_excess(a, true))                                          /* the session of this cycle, before its login */
+				closed_early = true;
+			for (int k = 0; k < 6; k++)
+				if (prelogin_excess(a, false))                                      /* and some requests outside it */
+					closed_early = true;
+			a->session = 0;
+			a->rcp_stream = 4;
+			a->rcp = session("[192.0.2.41]:4001", "anna", "1920x1080", true, fake_now);
+			(void)wt_logged_in(a);                                                 /* logged in */
+			(void)wt_stream_closed(a, 4, 0, false);                                /* the user logs out: the control channel closes */
+			a->session = -1;
+		}
+		require(!closed_early, "four login/logout cycles: the real user is never closed with H3_EXCESSIVE_LOAD (the pre-login counters start again each time)");
+		require(a->sessions_opened == 0 && a->stray_requests == 0, "and both counters are back to zero when the login is forgotten");
+		/* the cap itself still holds for a connection that never logs in */
+		a = wt_new(NULL, &e, "[192.0.2.42]:4001", NULL);
+		require(!prelogin_excess(a, true) && !prelogin_excess(a, true) && prelogin_excess(a, true), "(control) a stranger's THIRD session is still closed");
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);

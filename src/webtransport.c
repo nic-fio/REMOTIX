@@ -1008,6 +1008,15 @@ static bool wt_logged_in(wt *w)
 	return w && w->was_logged_in;
 }
 
+/* ⭐ rilettura-wt W5: the connection is «before the login» again — ALSO for the pre-login caps: sessions_opened and stray_requests count what a connection that has not logged in
+ *    does, and they were left standing from the previous login's own session, so the real user's THIRD login on one QUIC connection was closed with H3_EXCESSIVE_LOAD. */
+static void forget_login(wt *w)
+{
+	w->was_logged_in = false;
+	w->sessions_opened = 0;
+	w->stray_requests = 0;
+}
+
 /* ⛔ R8 (audit of 25 Oct 2026): ONE budget for ALL addresses, over the per-address ones.  Those are 20 lines every 10 s for each of
  *    128 addresses: whoever has many addresses (or rotates them: an IPv6 /48 is 65536 keys) gets a fresh budget for each and writes
  *    20 × N lines, and the journal of root fills up — exactly what the budget was for.  So every line the address's budget would
@@ -8861,12 +8870,12 @@ int wt_stream_closed(wt *w, int64_t stream_id, uint64_t code, bool with_code)
 		w->rcp = NULL;
 		w->rcp_stream = -1;
 		/* ⭐ rilettura-wt W5: `was_logged_in` was a latch for the whole life of the connection; the control channel is gone, so the connection is «before the login» again (its next one will earn it back) */
-		w->was_logged_in = false;
+		forget_login(w);
 		rule_heartbeat(w);
 	}
 	if (stream_id == w->session) {
 		w->session = -1;
-		w->was_logged_in = false;   /* ⭐ rilettura-wt W5: the session is gone too */
+		forget_login(w);   /* ⭐ rilettura-wt W5: the session is gone too */
 	}
 
 	r = request_find(w, stream_id, false);
