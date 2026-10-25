@@ -1,4 +1,4 @@
-# remotix_network — AppArmor profile of REMOTIX's NETWORK SIDE (1.6, split audit).
+# remotix_network — AppArmor profile of REMOTIX's NETWORK SIDE (1.5, split audit).
 #
 # ⛔ NON PROVATA / NOT TRIED: written from packaging/rpm/selinux/remotix.te.split and src/walls.c,
 #    never loaded on a real AppArmor.  It starts in COMPLAIN mode on purpose: it logs what it
@@ -29,8 +29,8 @@ profile remotix_network flags=(complain,attach_disconnected) {
   # The program itself (mapped; the exec of it is the root side's business).
   /usr/libexec/remotix/remotix mr,
   /usr/share/remotix/** r,
-  /etc/remotix/ r,
-  /etc/remotix/** r,
+  # (nothing under /etc/remotix: the configuration is read by the root side and by systemd; remotix.te.split
+  #  gives remotix_net_t only the general reads of /etc, which the nameservice abstraction covers)
   /etc/machine-id r,
 
   # Its two writable places (src/walls.c: --network-state-dir, --network-run-dir).

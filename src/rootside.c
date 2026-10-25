@@ -291,7 +291,7 @@ bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint6
 	return false;
 }
 
-/* ⭐ 1.6 (split audit R2) — the ban of the root side; see the box in rootside.h. */
+/* ⭐ 1.5 (split audit R2) — the ban of the root side; see the box in rootside.h. */
 static const uint64_t LOGIN_LADDER_MS[3] = {900000u, 3600000u, 43200000u};
 
 static int fail_inside(const struct rootside_fail *e, uint64_t now_ms)
@@ -699,7 +699,7 @@ struct own_child {
 	uint32_t generation;  /* of the network side it was born for */
 	uint64_t term_at;     /* ≠ 0: that network side is dead — SIGTERM then */
 	uint64_t kill_at;     /* ≠ 0: SIGTERM sent — SIGKILL then */
-	/* ⭐ 1.6 (R1): ≠ 0: the moment its network side died — the user was left without a client
+	/* ⭐ 1.5 (R1): ≠ 0: the moment its network side died — the user was left without a client
 	 * THEN, not when this (slow) child is finally reaped */
 	uint64_t orphaned_ms;
 };
@@ -709,7 +709,7 @@ struct pending_auth {
 	uint64_t ticket;      /* the helper's */
 	uint64_t request;     /* the network side's */
 	uint32_t generation;  /* of the network side that asked */
-	unsigned taken;                    /* ⭐ 1.6 (R2): the levels it took a place in, */
+	unsigned taken;                    /* ⭐ 1.5 (R2): the levels it took a place in, */
 	char ukey[ROOTSIDE_LOGIN_KEY_MAX]; /*   the uid, in decimal, and the address, */
 	char rhost[RXR_RHOST_MAX];         /*   to give the attempt back to the counters */
 };
@@ -947,7 +947,7 @@ static void on_pam_outcome(void *ctx, uint64_t ticket, int outcome, const char *
 	}
 	pa->used = false;
 	rootside_auth_done(&R.bounds);
-	/* ⭐ 1.6 (R2): what PAM REALLY answered goes to the counters — refused (0) or expired (4)
+	/* ⭐ 1.5 (R2): what PAM REALLY answered goes to the counters — refused (0) or expired (4)
 	 *    count, a yes clears the user, everything else (locked, not checked) is not counted.
 	 *    Before the next test: an AUTH of a network side that is gone has failed all the same. */
 	{
@@ -1052,7 +1052,7 @@ static void handle_auth(struct rxr_auth *a)
 		}
 	} else if ((snprintf(ukey, sizeof ukey, "%lu", (unsigned long)uid),
 	            lg = rootside_login_admit(&R.bounds, ukey, a->rhost, now, &left, &taken)) != RXR_LOGIN_OK) {
-		/* ⭐ 1.6 (R2): paused (or about to be) by the root side's own count of what PAM
+		/* ⭐ 1.5 (R2): paused (or about to be) by the root side's own count of what PAM
 		 *    refused: not asked, «not checked», not counted by the network side.  ⚠ One
 		 *    line a second, with the count. */
 		static uint64_t paused_logged_ms;
@@ -1148,7 +1148,7 @@ static void birth(uint64_t request, const char *user, const char *rhost, uint32_
 		send_refused(request, RXR_REF_NO_ORPHAN);
 		return;
 	}
-	/* ⭐ 1.6 (split audit R1): a desktop is closed only when it has really been abandoned —
+	/* ⭐ 1.5 (split audit R1): a desktop is closed only when it has really been abandoned —
 	 *    the root side's own clock (`--abandon-s`, its last child's exit or its own start),
 	 *    not the network side's word: a network side taken over could otherwise close the
 	 *    desktop of anyone who had merely disconnected.  BEFORE the per-uid hold, so a
@@ -1434,7 +1434,7 @@ static void reap_kids(void)
 		 *    never asked to remove anything (§11.50). */
 		if (k->render_grant)
 			render_grant_remove(k->user, k->uid, k->gid);
-		/* ⭐ 1.6 (R1): the moment the user was left without a client, for CLOSE_ORPHAN */
+		/* ⭐ 1.5 (R1): the moment the user was left without a client, for CLOSE_ORPHAN */
 		rootside_exit_note(&R.bounds, k->uid, k->orphaned_ms ? k->orphaned_ms : log_now_ms());
 		registro_dice(LOG_ROOT, "the child of «%s» (pid %ld, serial %llu) is reaped by "
 		              "the root side: %s", k->user, (long)k->pid,
@@ -1538,7 +1538,7 @@ static void reap_net(uint64_t now)
 	for (int i = 0; i < R.cap; i++)
 		if (R.kids[i].used && R.kids[i].generation == R.generation && !R.kids[i].term_at) {
 			R.kids[i].term_at = now + KIDS_EOF_GRACE_MS;
-			/* ⭐ 1.6 (R1): from here the user has no client, whatever the child takes to leave */
+			/* ⭐ 1.5 (R1): from here the user has no client, whatever the child takes to leave */
 			R.kids[i].orphaned_ms = now ? now : 1;
 		}
 	if (R.stopping)

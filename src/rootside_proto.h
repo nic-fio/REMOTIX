@@ -50,7 +50,7 @@
  * followed by its SPAWN within the same login, `[M]` 1–14 ms (the «SPAWNED
  * after N ms» line); 30 s is the slack for a slow PAM session stack.  `[?]`
  * the rate is a decision, not a measurement.
- * ⭐ 1.6 (split audit R2): it was 10 per second, burst 20.  A person types a password every
+ * ⭐ 1.5 (split audit R2): it was 10 per second, burst 20.  A person types a password every
  * few seconds and eight users can log in together (burst 8); 3 sustained leaves a hijacked
  * network side three guesses a second at most before the per-user and per-address pauses
  * (`rootside_login_admit`) even start. */
@@ -160,14 +160,14 @@ enum rxr_refusal {
 	RXR_REF_RATE      = 9,  /* ⭐ review 4 B, finding 22: over a rate bound (the CLOSE_ORPHAN
 	                         * bucket, one per uid per 30 s) — it used to travel as FULL or
 	                         * CLOSING, and the network side wrote the wrong reason */
-	RXR_REF_TOO_SOON  = 10, /* ⭐ 1.6 (split audit R1): CLOSE_ORPHAN for a desktop that has not
+	RXR_REF_TOO_SOON  = 10, /* ⭐ 1.5 (split audit R1): CLOSE_ORPHAN for a desktop that has not
 	                         * been without a client for `abandon_s` yet (or the clock is off) */
 };
 
 struct rxr_spawn_refused {
 	struct rxr_head h;
 	uint8_t reason;                   /* enum rxr_refusal */
-	/* ⭐ 1.6 (R1): with RXR_REF_TOO_SOON, how long until the root side would accept the
+	/* ⭐ 1.5 (R1): with RXR_REF_TOO_SOON, how long until the root side would accept the
 	 * CLOSE_ORPHAN (ms, 0 = never: the clock is off); 0 for every other reason.  The
 	 * network side retries after that, a few times (main.c, `abandon_round`). */
 	uint32_t wait_ms;

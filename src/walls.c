@@ -6,7 +6,7 @@
  *
  *      · the checks that need no power first (the user, root, the two
  *        directories), so that a wrong option says so before anything moves;
- *      · `setexeccon` (and, 1.6, the AppArmor «exec» attribute) BEFORE the tree goes read-only: it writes
+ *      · `setexeccon` (and, 1.5, the AppArmor «exec» attribute) BEFORE the tree goes read-only: it writes
  *        /proc/thread-self/attr/exec, and on a read-only /proc that is EROFS;
  *      · the two writable directories are bind-mounted onto themselves BEFORE
  *        the recursive read-only step, so that each is a mount of its own
@@ -86,7 +86,7 @@ static const char *const walls_devices[] = { "null", "zero", "full", "random", "
 #define WALLS_AUDIT_ARCH AUDIT_ARCH_AARCH64
 #endif
 
-/* ⭐ 1.6 (audit split R5/R6): Landlock is called by number (glibc has no wrapper) and the struct under our own name.  The
+/* ⭐ 1.5 (audit split R5/R6): Landlock is called by number (glibc has no wrapper) and the struct under our own name.  The
  *   ABI is asked first: `scoped` exists from ABI 6 (Linux 6.12); a larger struct than the kernel knows with a non-zero
  *   new field is E2BIG, so an older kernel is never given it. */
 #ifndef SYS_landlock_create_ruleset
@@ -238,7 +238,7 @@ out:
 	return rc;
 }
 
-/* ⭐ 1.6 (split audit, AppArmor): the network side is born INSIDE the AppArmor profile
+/* ⭐ 1.5 (split audit, AppArmor): the network side is born INSIDE the AppArmor profile
  *    `remotix_network`, the way SELinux puts it in `remotix_net_t`: before the `execve`, the
  *    root side's fork writes «exec remotix_network» into /proc/thread-self/attr/apparmor/exec
  *    (`aa_change_onexec` does exactly that write, so no library is needed).  The profile has NO
@@ -549,7 +549,7 @@ out:
 	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (nr), 0, 1),            \
 	BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (err))
 
-/* ⭐ 1.6 (audit split R5 and R6) — A NETWORK OF ITS OWN.  `unshare(CLONE_NEWNET)`: the network side keeps the descriptors it
+/* ⭐ 1.5 (audit split R5 and R6) — A NETWORK OF ITS OWN.  `unshare(CLONE_NEWNET)`: the network side keeps the descriptors it
  *    was handed (3 the root side, 4 the UDP port, 5 the page's TCP listener: a socket belongs to the namespace where it was
  *    CREATED, so they go on working), and loses everything else of the network:
  *      · it can no longer open a connection to anything — Internet, LAN, the host's own services on 127.0.0.1;
@@ -584,7 +584,7 @@ static int own_network(char *why, size_t n)
 	return 0;
 }
 
-/* ⭐ 1.6 (audit split R6) — A SECOND LEVEL, where the kernel has it: Landlock's scope on abstract Unix sockets (Linux 6.12, ABI
+/* ⭐ 1.5 (audit split R6) — A SECOND LEVEL, where the kernel has it: Landlock's scope on abstract Unix sockets (Linux 6.12, ABI
  *    6) forbids connecting to one created OUTSIDE this process's domain.  The private network already hides them all; this
  *    holds if that ever does not.  It never fails the walls: a kernel without Landlock (or with it off) is a line in the notes.
  *    ⚠ Needs NO_NEW_PRIVS (set by then). */
@@ -630,7 +630,7 @@ static int no_user_namespaces(char *why, size_t n)
 		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, 0x40000000u, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
 #endif
-		/* ⭐ 1.6 (audit split R7): socket families on an ALLOW list — AF_UNIX, AF_INET, AF_INET6 and nothing else (netlink, packet,
+		/* ⭐ 1.5 (audit split R7): socket families on an ALLOW list — AF_UNIX, AF_INET, AF_INET6 and nothing else (netlink, packet,
 		 *    vsock, alg, bluetooth, … ⇒ EAFNOSUPPORT, what a kernel without the family says: glibc's AI_ADDRCONFIG falls back on it).
 		 *    `socket` and `socketpair` both take the family as their first argument. */
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_socket, 1, 0),
@@ -715,7 +715,7 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	/* ⛔ 2 — SELinux, while /proc can still be written. */
 	if (selinux_exec_net(why, why_len) != 0)
 		return -1;
-	/* ⭐ 1.6 — AppArmor, in the same breath (a system has one of the two, rarely both). */
+	/* ⭐ 1.5 — AppArmor, in the same breath (a system has one of the two, rarely both). */
 	if (apparmor_exec_net(why, why_len) != 0)
 		return -1;
 

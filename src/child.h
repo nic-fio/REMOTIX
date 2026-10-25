@@ -403,7 +403,7 @@ void children_turn_off(children *f);
  *    treat it as "maybe": no stage, no pixels.  The roads leading here are
  *    listed in `child.c`, function `children_ensure`. */
 bool children_ensure(children *f, const char *user);
-/* ⭐ 1.6 (R1): after a `children_ensure()` that failed because the root side said TOO_SOON
+/* ⭐ 1.5 (R1): after a `children_ensure()` that failed because the root side said TOO_SOON
  * (the desktop is not abandoned yet by ITS clock): how long to wait (ms) before asking
  * again; 0 = no such answer (or the root side's clock is off).  Read once. */
 uint64_t children_retry_after_ms(void);

@@ -112,7 +112,7 @@ struct rootside_options {
 	 *    `--network-run-dir` (default /run/remotix/net). */
 	const char *net_state_dir;
 	const char *net_run_dir;
-	/* ⭐ 1.6 (split audit R1): `--abandon-s` as main.c read it, in seconds.  The root side
+	/* ⭐ 1.5 (split audit R1): `--abandon-s` as main.c read it, in seconds.  The root side
 	 * accepts CLOSE_ORPHAN for a uid only when no child of that uid has existed for this
 	 * long (see `rootside_orphan_abandoned`); `0` = the abandonment clock is OFF, and then
 	 * no CLOSE_ORPHAN is ever accepted (the network side does not ask either). */
@@ -195,7 +195,7 @@ struct rootside_born {
 int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
                    uint32_t canvas_h, int timeout_ms, struct rootside_born *out);
 /* The same for a desktop found again (CLOSE_ORPHAN): no grant. */
-/* ⭐ 1.6 (R1): after a `RXR_REF_TOO_SOON` answer, how long (ms) the root side said to wait
+/* ⭐ 1.5 (R1): after a `RXR_REF_TOO_SOON` answer, how long (ms) the root side said to wait
  * (0 = never).  Valid until the next request. */
 uint64_t rootside_last_wait_ms(void);
 int rootside_close_orphan(const char *user, int timeout_ms,
@@ -248,7 +248,7 @@ struct rootside_grant {
 	char rhost[RXR_RHOST_MAX];
 	uint64_t expires_ms;
 };
-/* ⭐ 1.6 (split audit R2) — the BAN of the root side, for a network side that no longer
+/* ⭐ 1.5 (split audit R2) — the BAN of the root side, for a network side that no longer
  * applies its own (`rcp.c`'s 5/12/30 live in the network side).  Counts only what PAM
  * answered REFUSED (outcome 0) or EXPIRED (4): never «not checked», never a yes.  Three
  * levels, the first two as rcp.c's, the third WIDER and SHORTER:
@@ -277,7 +277,8 @@ struct rootside_grant {
 #define ROOTSIDE_LOGIN_USER_PAUSE_MS 900000u
 #define ROOTSIDE_LOGIN_WINDOW_MS 300000u
 #define ROOTSIDE_LOGIN_FORGET_MS 86400000u
-#define ROOTSIDE_LOGIN_KEY_MAX 64
+/* the (uid, address) key is «<uid>|<rhost>»: a uid has at most 10 digits, the bar and the 0 make 12 */
+#define ROOTSIDE_LOGIN_KEY_MAX (12 + RXR_RHOST_MAX)
 struct rootside_fail {
 	bool used;
 	char key[ROOTSIDE_LOGIN_KEY_MAX];
@@ -303,7 +304,7 @@ struct rootside_bounds {
 		uid_t uid;
 		uint64_t at_ms;
 	} orphan_uid[ROOTSIDE_ORPHAN_UIDS];
-	/* ⭐ 1.6 (split audit R1): when the LAST child of a uid left, and the abandonment
+	/* ⭐ 1.5 (split audit R1): when the LAST child of a uid left, and the abandonment
 	 *    the root side enforces.  See `rootside_orphan_abandoned()`. */
 	uint64_t started_ms;          /* when these bounds were made: the root side's start */
 	uint64_t abandon_ms;          /* 0 = clock off: CLOSE_ORPHAN is never accepted */
@@ -312,7 +313,7 @@ struct rootside_bounds {
 		uid_t uid;
 		uint64_t at_ms;           /* 0 = free */
 	} exits[ROOTSIDE_EXIT_UIDS];
-	/* ⭐ 1.6 (split audit R2): the failures PAM really gave, per user and per address */
+	/* ⭐ 1.5 (split audit R2): the failures PAM really gave, per user and per address */
 	struct rootside_fail users[ROOTSIDE_LOGIN_USERS];
 	struct rootside_fail pairs[ROOTSIDE_LOGIN_PAIRS];
 	struct rootside_fail hosts[ROOTSIDE_LOGIN_HOSTS];
@@ -334,9 +335,9 @@ bool rootside_orphan_admit(struct rootside_bounds *b, uint64_t now_ms);
 /* … and one for this uid: `false` if one was born for it less than
  * ROOTSIDE_ORPHAN_UID_MS ago.  `true` records it. */
 bool rootside_orphan_uid_admit(struct rootside_bounds *b, uid_t uid, uint64_t now_ms);
-/* ⭐ 1.6 (split audit R1): a child of `uid` has just left (reaped by the root side). */
+/* ⭐ 1.5 (split audit R1): a child of `uid` has just left (reaped by the root side). */
 void rootside_exit_note(struct rootside_bounds *b, uid_t uid, uint64_t now_ms);
-/* ⭐ 1.6 (split audit R1): may a CLOSE_ORPHAN for `uid` be accepted now?  Only if the uid
+/* ⭐ 1.5 (split audit R1): may a CLOSE_ORPHAN for `uid` be accepted now?  Only if the uid
  * has had no child for at least `b->abandon_ms`, counted from its last exit, or — for a
  * desktop found again after the root side's own restart, whose exit nobody saw — from
  * the root side's start (or from the latest exit forgotten when the table was full: the

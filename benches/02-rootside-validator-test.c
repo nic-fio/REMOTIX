@@ -488,7 +488,7 @@ int main(void)
 		}
 	}
 
-	printf("  1.6 (split audit R1): CLOSE_ORPHAN only for a desktop abandoned for abandon_s\n");
+	printf("  1.5 (split audit R1): CLOSE_ORPHAN only for a desktop abandoned for abandon_s\n");
 	{
 		static struct rootside_bounds ab;
 		uint64_t left = 0;
@@ -535,7 +535,7 @@ int main(void)
 		}
 	}
 
-	printf("  1.6 (R1, review): the exit of a child whose network side died, and the overflow\n");
+	printf("  1.5 (R1, review): the exit of a child whose network side died, and the overflow\n");
 	{
 		static struct rootside_bounds ab;
 		struct own_child kid;
@@ -595,7 +595,7 @@ int main(void)
 		R.net_pid = 0;
 	}
 
-	printf("  1.6 (split audit R2): the root side's own pause for what PAM refused\n");
+	printf("  1.5 (split audit R2): the root side's own pause for what PAM refused\n");
 	{
 		static struct rootside_bounds lb; /* ~400 KB: not on the stack */
 		struct rootside_login_event ev;

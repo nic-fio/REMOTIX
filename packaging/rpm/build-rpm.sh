@@ -27,8 +27,8 @@ TREE=$(cd "$HERE/../.." && pwd)
 OUTPUT=${OUTPUT:-$TREE/costruzione-uscita}
 CACHE=${CACHE:-$OUTPUT/.lavoro}
 ALL=(fedora44 alma10 tumbleweed leap16)
-# §11.50 phase F: only RX_SPLIT=1 (not "0", not empty) switches the split pieces on
-RX_SPLIT_OPT=""; [ "${RX_SPLIT:-0}" = 1 ] && RX_SPLIT_OPT="--with split"
+# §11.50: the split pieces are ON unless RX_SPLIT=0 (1.5: split on by default)
+RX_SPLIT_OPT=""; [ "${RX_SPLIT:-1}" = 0 ] && RX_SPLIT_OPT="--without split"
 # the version: the release one (RX_VERSION, packaging/release.sh) or the spec default
 VER=${RX_VERSION:-$(sed -n 's/^Version:.*!?rx_version:\([^}]*\)}.*/\1/p' "$HERE/remotix.spec")}
 

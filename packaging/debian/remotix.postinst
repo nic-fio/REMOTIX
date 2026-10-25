@@ -22,15 +22,6 @@ if [ "$1" = configure ] && [ -x /usr/libexec/remotix/remotix-net-move ]; then
 	systemd-tmpfiles --create remotix.conf || echo "remotix: ⚠ systemd-tmpfiles --create remotix.conf failed" >&2
 fi
 
-# ⭐ 1.6 (AppArmor, NOT TRIED) — the network side's profile, in complain mode: loaded only if the package
-#    carries it (a REMOTIX_SPLIT=1 build), AppArmor is on and the parser is there.  The walls
-#    (src/walls.c) put the network side in it; a missing profile is only a line in the log.
-#    A failure is said, never makes apt fail.
-if [ "$1" = configure ] && [ -f /etc/apparmor.d/remotix_network ] && [ -d /sys/kernel/security/apparmor ] \
-   && command -v apparmor_parser >/dev/null 2>&1; then
-	apparmor_parser -r -W /etc/apparmor.d/remotix_network || echo "remotix: ⚠ the AppArmor profile remotix_network could not be loaded" >&2
-fi
-
 #DEBHELPER#
 
 if [ "$1" = configure ] && [ -n "${2:-}" ] && [ -x /usr/bin/remotix-install ]; then

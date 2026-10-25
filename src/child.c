@@ -2453,7 +2453,7 @@ static child_outcome ensure_remote(struct children *f, struct child *g,
 		              "⛔ the root side did NOT give birth to a child for «%s» "
 		              "(%s): %s",
 		              user, rhost ? "SPAWN" : "CLOSE_ORPHAN", refusal_text(r));
-		/* ⭐ 1.6 (R1): TOO_SOON says how long to wait; `children_retry_after_ms()` hands it on */
+		/* ⭐ 1.5 (R1): TOO_SOON says how long to wait; `children_retry_after_ms()` hands it on */
 		retry_after_ms = (r == RXR_REF_TOO_SOON && rootside_last_wait_ms)
 		                     ? rootside_last_wait_ms() : 0;
 		return r == RXR_REF_CLOSING        ? CHILD_CLOSING

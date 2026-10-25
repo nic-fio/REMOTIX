@@ -106,10 +106,11 @@
 
 #include <openssl/ssl.h>
 
-/* ⭐⭐ 1.5 (DECISIONS.md §11.11, §11.50) — ONE SERVER, TWO PROCESSES, **ONLY WITH `--split`**.
+/* ⭐⭐ 1.5 (DECISIONS.md §11.11, §11.50) — ONE SERVER, TWO PROCESSES, **ON BY DEFAULT WHEN STARTED AS ROOT**.
  *
- *     Without `--split` (the default, and what every unit shipped so far runs) none of what follows is taken: this is
- *     the single-process server of 1.0, byte for byte in behaviour.  With `--split`, started as root, this binary is the
+ *     ⭐ DECIDED 25 Oct 2026 (the user): the split is on by default in 1.5.  Started as root, the server splits unless
+ *     `--no-split` is given (the way back to the single process of 1.0); `--split` asks for it explicitly.  Started as an
+ *     ordinary user (benches, development) there is nothing to separate and it stays one process.  With the split on, started as root, this binary is the
  *     ROOT SIDE: `main()` parses argv as always, binds the UDP and TCP sockets of the port and hands everything to
  *     `rootside_main()` (`rootside.c`): the codec probe, the PAM helper, the desktops' births, and the NETWORK SIDE —
  *     this same binary re-executed with `--network-side`, as `remotix` behind its walls (`walls.h`), fd 3 = the root
@@ -343,9 +344,9 @@ static void help(const char *name)
 	        "  --split           ⭐ 1.5: two processes — the root side (PAM, the\n"
 	        "                    desktops' births) and the network side as the\n"
 	        "                    user remotix behind walls (DECISIONS.md §11.50).\n"
-	        "                    OFF by default.  EXPERIMENTAL, INCOMPLETE: it\n"
-	        "                    refuses to start unless the environment has\n"
-	        "                    REMOTIX_SPLIT_EXPERIMENTAL=1 (tests only).\n"
+	        "                    ON by default when started as root; this asks for\n"
+	        "                    it explicitly (and refuses to start if not root).\n"
+	        "  --no-split        the way back: ONE process, as 1.0 (also as root)\n"
 	        "                    Needs root and the user\n"
 	        "  --network-user NAME\n"
 	        "                    the network side's user (default remotix)\n"
@@ -1472,7 +1473,7 @@ static size_t max_connections, max_pending, pending_per_address, pending_per_48;
 static struct is_present {
 	char user[257];
 	uint64_t last_input_ms;
-	uint8_t too_soon; /* ⭐ 1.6 (R1): CLOSE_ORPHAN refused TOO_SOON this many times in a row */
+	uint8_t too_soon; /* ⭐ 1.5 (R1): CLOSE_ORPHAN refused TOO_SOON this many times in a row */
 } *present;
 static int how_many_present;
 
@@ -1697,7 +1698,7 @@ static uint64_t abandon_expired(struct bridge *p, const char *user,
 		if (children_ensure(p->f, user))
 			found_again_remove(user);
 		else {
-			/* ⭐ 1.6 (R1): the ROOT SIDE keeps its own abandonment clock and said the
+			/* ⭐ 1.5 (R1): the ROOT SIDE keeps its own abandonment clock and said the
 			 *    desktop is not abandoned yet by it (it counts from the moment the
 			 *    network side died, which can be a few seconds after ours).  Not
 			 *    «forgotten»: asked again after what it said, a few times. */
@@ -2133,6 +2134,7 @@ int main(int argc, char **argv)
 	const char *file_ban = "/var/lib/remotix/ban";
 	/* ⭐ 1.5 (§11.50), all inert without `--split`. */
 	bool split = false, network_side = false, cert_given = false, ban_given = false;
+	int split_choice = -1; /* ⭐ 1.5: -1 not said (on if root), 1 --split, 0 --no-split */
 	const char *net_user = "remotix";
 	const char *net_state_dir = "/var/lib/remotix/net";
 	const char *net_run_dir = "/run/remotix/net";
@@ -2213,9 +2215,11 @@ int main(int argc, char **argv)
 			file_ban = argv[++i];
 			ban_given = true;
 		}
-		/* ⭐ 1.5 (§11.50): `--split` turns the two-process server ON (off by default); the other three only matter with it. */
+		/* ⭐ 1.5 (§11.50): `--split` asks for the two-process server (it is the default as root), `--no-split` for one; the other three only matter with it. */
 		else if (strcmp(a, "--split") == 0)
-			split = true;
+			split_choice = 1;
+		else if (strcmp(a, "--no-split") == 0)
+			split_choice = 0;
 		else if (strcmp(a, "--network-user") == 0 && v)
 			net_user = argv[++i];
 		else if (strcmp(a, "--network-state-dir") == 0 && v)
@@ -2260,7 +2264,7 @@ int main(int argc, char **argv)
 		 *     ⚠ `0` = off, and then no session is ever closed on its own. */
 		else if (strcmp(a, "--abandon-s") == 0 && v)
 		{
-			/* ⭐ 1.6 (R1): at most a year — a longer value is «never» for any real service,
+			/* ⭐ 1.5 (R1): at most a year — a longer value is «never» for any real service,
 			 *    and the seconds-to-milliseconds product must not wrap */
 			unsigned long long v_s = strtoull(argv[++i], NULL, 10);
 
@@ -2536,8 +2540,19 @@ int main(int argc, char **argv)
 	 *         (probe, PAM helper, births, network side behind its walls) and never returns here;
 	 *       · re-executed with `--network-side` as the user remotix: the NETWORK SIDE — it waits for READY and then
 	 *         goes on with the rest of this function, asking the root side for what needs root. */
-	if (network_side && !split) {
-		fprintf(stderr, "⛔ --network-side is the root side re-executing this binary (with --split): never by hand.\n");
+	/* ⭐ 1.5: THE SPLIT IS THE DEFAULT.  The network side (re-executed by the root side) is by definition split; the
+	 *    others split when started as root unless `--no-split`; `--split` as an ordinary user is refused below. */
+	if (network_side)
+		split = true;
+	else if (split_choice >= 0)
+		split = split_choice == 1;
+	else
+		split = geteuid() == 0;
+	if (!network_side && split_choice < 0 && !split)
+		registro_dice(LOG_STARTUP,
+		              "⭐ 1.5: not started as root: ONE process (the split needs root to separate anything)");
+	if (network_side && split_choice == 0) {
+		fprintf(stderr, "⛔ --network-side is the root side re-executing this binary: never by hand.\n");
 		return EXIT_CONFIG;
 	}
 	if (split && !network_side) {
@@ -2545,21 +2560,6 @@ int main(int argc, char **argv)
 		struct passwd *pw;
 		static char *net_argv[1024];
 
-		/* ⛔ EXPERIMENTAL until the split is complete (the network side's helper in remote mode and the end of
-		 *    the synchronous PAM fallback must be in this tree, and the whole thing certified): `--split` refuses
-		 *    to start unless REMOTIX_SPLIT_EXPERIMENTAL=1 is in the environment (our tests).  Remove this gate
-		 *    when the split is declared ready. */
-		{
-			const char *ex = getenv("REMOTIX_SPLIT_EXPERIMENTAL");
-
-			if (!ex || strcmp(ex, "1") != 0) {
-				registro_dice(LOG_STARTUP,
-				              "⛔ --split is EXPERIMENTAL and incomplete in this build: it refuses to start "
-				              "(set REMOTIX_SPLIT_EXPERIMENTAL=1 only for tests).  Without --split the server "
-				              "is the single-process one of 1.0.");
-				return EXIT_CONFIG;
-			}
-		}
 		if (geteuid() != 0) {
 			registro_dice(LOG_STARTUP,
 			              "⛔ --split needs root (uid %ld): the root side binds the port, forks the "

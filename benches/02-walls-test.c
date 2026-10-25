@@ -20,7 +20,7 @@
  *   root: podman run --rm --network=none --privileged -v TREE:/albero \
  *           -w /albero/src localhost/remotix-costruzione make test-walls
  *
- * ⭐ 1.6 (audit split R5/R6), two cases that need no mounts: `own_network()` and `scope_abstract_sockets()` are called in a FORK
+ * ⭐ 1.5 (audit split R5/R6), two cases that need no mounts: `own_network()` and `scope_abstract_sockets()` are called in a FORK
  *   with sockets made BEFORE them — an abstract listener, a path listener, two UDP sockets and a TCP listener on 127.0.0.1, a
  *   socketpair:
  *     · after `own_network()` (needs CAP_SYS_ADMIN: root, or `unshare -r`; else the case says it is skipped) a connect() to the
@@ -153,7 +153,7 @@ static uint64_t status_value(const char *key)
 	return v;
 }
 
-/* ── ⭐ 1.6: the private network and the Landlock scope, in a fork ────────── */
+/* ── ⭐ 1.5: the private network and the Landlock scope, in a fork ────────── */
 
 static void rep(int out, bool ok, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 static void rep(int out, bool ok, const char *fmt, ...)
@@ -436,7 +436,7 @@ static void case_network(void)
 	(void)waitpid(p, &st, 0);
 }
 
-/* ⭐ 1.6 (audit split R7): the socket families allow list, in a fork (any user): the filter of walls.c, installed for real. */
+/* ⭐ 1.5 (audit split R7): the socket families allow list, in a fork (any user): the filter of walls.c, installed for real. */
 static void families_child(int out)
 {
 	static const struct { int af; const char *name; } no[] = {
@@ -775,7 +775,7 @@ static int case_root(const struct passwd *nb)
 	return rc;
 }
 
-/* ⭐ 1.6 (AppArmor): `apparmor_exec_in()` with files in place of /sys and /proc */
+/* ⭐ 1.5 (AppArmor): `apparmor_exec_in()` with files in place of /sys and /proc */
 static void put(const char *path, const char *text)
 {
 	FILE *f = fopen(path, "w");
