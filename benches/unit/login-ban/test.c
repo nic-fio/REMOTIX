@@ -848,6 +848,22 @@ static void test_quota(void)
 			good_put("[8.8.4.4]", NULL, at(5), older);
 			int g = good_find("[8.8.4.4]");
 			CHECK(g >= 0 && good_keys[g].epoch == newer, "an older login given later does not make the entry older");
+			/* the system clock put right BACKWARDS: the epoch of the new login is smaller than the one kept; the epoch
+			 * stays the greater, and the monotonic stamp is refreshed all the same */
+			fresh();
+			uint64_t w1 = at(100), w2 = at(200);
+			good_put("[9.9.4.4]", NULL, w1, tn);
+			bool ch = good_put("[9.9.4.4]", NULL, w2, tn - 3600);
+			g = good_find("[9.9.4.4]");
+			CHECK(g >= 0 && good_keys[g].epoch == tn && good_keys[g].when == w2,
+			      "clock set back: the epoch stays the greater (%lld, wanted %lld) and `when` is refreshed (%llu, wanted %llu)",
+			      g >= 0 ? good_keys[g].epoch : -1LL, tn, g >= 0 ? (unsigned long long)good_keys[g].when : 0ULL, (unsigned long long)w2);
+			(void)ch;
+			/* and an older `when` never lowers the one kept (the file loaded in the wrong order) */
+			good_put("[9.9.4.4]", NULL, at(50), tn - 7200);
+			CHECK(good_keys[g].epoch == tn && good_keys[g].when == w2, "an older (epoch, when) pair changes neither clock");
+			CHECK(good_recent("[9.9.4.4]", at(201)), "and the key is still known");
+			snprintf(ban_path, sizeof ban_path, "%s", p2);   /* fresh() cleared it: the next check writes the file */
 		}
 		/* a ban dropped as a last resort rewrites the file (the report) */
 		captured[0] = 0;

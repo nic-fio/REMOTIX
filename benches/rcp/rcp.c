@@ -1398,9 +1398,16 @@ static bool good_put(const char *key, const char *mac, uint64_t when, long long 
 		}
 	}
 	/* ⭐ The same key can come twice from the file (as itself and as its HMAC): the NEWER date wins, whatever the
-	 *   order of the lines; a login older than what is already known never ages an entry. */
-	if (!fresh_key && epoch < good_keys[pick].epoch)
-		return false;
+	 *   order of the lines, for BOTH clocks — the greater epoch and the greater `when` are kept; a login older than
+	 *   what is already known never ages an entry.  The call is never skipped: a login with an epoch that went BACK
+	 *   (the system clock was put right backwards) still refreshes the monotonic stamp, so the entry does not
+	 *   expire under a key that has just logged in. */
+	if (!fresh_key) {
+		if (epoch < good_keys[pick].epoch)
+			epoch = good_keys[pick].epoch;
+		if (when < good_keys[pick].when)
+			when = good_keys[pick].when;
+	}
 	changed = fresh_key || when < good_keys[pick].filed || when - good_keys[pick].filed >= GOOD_REFRESH_MS;
 	if (fresh_key) {
 		memset(&good_keys[pick], 0, sizeof good_keys[pick]);
