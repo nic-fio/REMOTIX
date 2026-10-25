@@ -84,6 +84,14 @@
   an attacker with rotating addresses of ONE large allocation (a /32 holds 65536 /48s) could keep all of them busy and push every new address, the legitimate visitors, onto the one shared overflow bucket, which his further
   keys drained: `503 busy` for everybody (only the login page; QUIC and the open sessions are not touched). Now at most 32 BUSY buckets of one IPv6 /32 per table (`src/pagebucket.h`, `PAGE_KEYS_PER_32`); the rest of that /32 shares the overflow bucket.
   The shared overflow bucket is also one per family (IPv4 / IPv6), so a flood of one cannot use up the overflow of the other's visitors. Declared limit: 8 different /32s still fill the table. Test `benches/unit/page-bucket`.
+- **One address cannot use up the Stateless Resets** (audit R9, 25 Oct 2026, branch `reset-per-indirizzo`): the cap of 100 Stateless Resets a second was for everybody, so one address sending short packets for unknown connection ids
+  took it all, and the clients that had really lost their connection (a restarted server) got no Reset and waited out their 30 s of idle time. Now one address (IPv4, or IPv6 /64) may have 5 of the 100 in a second (`src/resetcap.h`),
+  and the ones it is refused do not count against the others; one line per second says so. Declared limit: about 20 addresses at 5 a second still use up the global cap. Test `benches/unit/reset-cap`.
+- **The Stateless Resets cannot be used up by forged ids** (audit R9, 25 Oct 2026, branch `cid-firmati`, on top of the per-address cap above): the Connection IDs the server issues (the first one, the Retry's, every NEW_CONNECTION_ID)
+  are now 10 random bytes + 8 of HMAC-SHA256 under a key derived from the static `quic-secret` (`src/cid.c`). A short packet whose destination id carries a valid tag gets its Reset from the 100 a second; one that does not, from 10
+  a second of its own, so a flood of random ids (from any number of forged addresses, which the per-address cap does not see) cannot take the Resets away from the ids this server issued. Not dropped: a client of the 1.0 holds
+  unsigned ids whose Reset token is still valid, and it gets it, at most 10 a second, while the server is upgraded. The tag and the Reset token come from the same secret: an id issued before a restart still verifies after it.
+  The search of the id map is skipped for an id that does not verify. Cost: one HMAC (~170 ns) per received packet. Test `benches/unit/cid-firmati`; the fuzz `quic-conn` has the new oracles (and its harness now sets `bound_any`).
 - «Connection closed» log lines of connections that never logged in are limited per window, the rest in a summary (`6368c6a8`).
 
 ## 3. Defects of 1.0 fixed (all «present since 1.0»)

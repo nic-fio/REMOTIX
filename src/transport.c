@@ -8,6 +8,7 @@
 #include "pktinfo.h"
 #include "linebudget.h"
 #include "hsrate.h"
+#include "resetcap.h"
 #include "rcp.h" /* rcp_orphan_verdict(): a verdict whose connection is gone is still counted (§4.4-bis B) */
 #include "webtransport.h"
 
@@ -32,7 +33,9 @@
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
 
-#define SCIDLEN 18
+#include "cid.h"
+
+#define SCIDLEN CID_LEN /* 18: see cid.h (ngtcp2 allows up to NGTCP2_MAX_CIDLEN = 20) */
 #define MAX_PACKETS_PER_ROUND 64
 
 /* ⭐ §11.9 (13 Oct 2026): how long a Retry token is good for, and the cap on
@@ -65,6 +68,16 @@
  *    socket buffer wrote one line per failed reply. */
 #define SEND_FAIL_LINES BIRTH_LINES
 #define RESET_PER_SECOND 100
+/* ⭐ `cid-firmati` (R9 of the network audit, 25 Oct 2026).  The 100 above are now only for packets whose destination
+ *    id CARRIES A VALID TAG (cid.h): an id this server issued, so a forged flood cannot use them up.  A packet whose
+ *    id does not verify — random bytes, or an id issued by a binary from before this change, which is why it cannot
+ *    just be dropped — gets a Reset only from this small, separate budget.  Why not none: a client connected before
+ *    an UPGRADE holds old, unsigned ids, and its Stateless Reset token (same static secret) is still valid; it must
+ *    learn that the server lost it, as today.  After a restart onto the new binary every NEW connection has signed
+ *    ids, so this budget serves only the clients of the previous binary and a flood can only empty THIS one.
+ *    `0` would drop every unverifiable packet silently (strict mode).  The total sent is at most
+ *    RESET_PER_SECOND + RESET_UNVERIFIED_PER_SECOND a second: the reflection bound grows by 10%. */
+#define RESET_UNVERIFIED_PER_SECOND 10
 #define SECRET_LEN 32
 #define SECRET_FILE "quic-secret"
 
@@ -280,6 +293,19 @@ struct transport {
 	uint64_t reset_second;
 	unsigned reset_count;
 	bool reset_capped_said;
+	/* ⭐ R9: and the cap PER ADDRESS in front of it (resetcap.h): the Resets refused to an address in this second, and whether it was said */
+	struct reset_addr reset_addr;
+	unsigned reset_per_address; /* 0 = RESET_PER_ADDRESS; the fuzz harness raises it (op 13) to reach the global cap from a few addresses */
+	unsigned reset_addr_refused;
+	bool reset_addr_said;
+	/* ⭐ `cid-firmati`: the Resets for ids that do not verify have their own count in the same second */
+	unsigned reset_unverified_count;
+	bool reset_unverified_capped_said;
+	/* the key of the signed ids (cid.h), from `secret`; and how many ids bound to a live connection carry no valid tag:
+	 * 0 in steady state, > 0 only for a connection that came in with a Retry token of the previous binary */
+	cidkey *cidk;
+	unsigned cid_errors_seen;     /* `cidkey_errors()` at the last line written */
+	uint64_t cid_errors_line_ns;
 
 	/* ⭐ The PAM helper (`DECISIONS.md` §1.10): it is not this module's, it is
 	 *    passed in by `main.c`.  It only serves to hand it to every `wt` that
@@ -348,9 +374,10 @@ static void lk_from_ngtcp2(lk_cid *to, const ngtcp2_cid *from)
 static bool cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
 {
 	lk_cid k;
+	bool plain = !cidkey_ok(t->cidk, cid->data, cid->datalen);
 
 	lk_from_ngtcp2(&k, cid);
-	if (!lk_cid_bind(&t->cids, &k, c)) {
+	if (!lk_cid_bind_p(&t->cids, &k, c, plain)) {
 		registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
 		return false;
 	}
@@ -394,7 +421,9 @@ static int cb_get_new_cid(ngtcp2_conn *conn, ngtcp2_cid *cid,
 {
 	connection *c = user_data;
 	(void)conn;
-	if (RAND_bytes(cid->data, (int)cidlen) != 1)
+	/* ⭐ `cid-firmati`: every id the server issues carries its tag.  ngtcp2 asks for the length of our first id
+	 *   (SCIDLEN), so the other branch is not expected; it would give an id that does not verify (`plain`), not a failure. */
+	if (cidlen == SCIDLEN ? !cidkey_make(c->t->cidk, cid->data) : RAND_bytes(cid->data, (int)cidlen) != 1)
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	cid->datalen = cidlen;
 	if (ngtcp2_crypto_generate_stateless_reset_token(
@@ -1387,7 +1416,7 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 	address_text(remote, remotelen, c->provenance, sizeof c->provenance);
 
 	c->scid.datalen = SCIDLEN;
-	if (RAND_bytes(c->scid.data, SCIDLEN) != 1)
+	if (!cidkey_make(t->cidk, c->scid.data)) /* signed: cid.h */
 		goto male;
 
 	ngtcp2_settings_default(&settings);
@@ -1588,7 +1617,7 @@ static void send_retry(transport *t, const ngtcp2_pkt_hd *hd,
 	ngtcp2_ssize tl, n;
 
 	retry_scid.datalen = SCIDLEN;
-	if (RAND_bytes(retry_scid.data, SCIDLEN) != 1) {
+	if (!cidkey_make(t->cidk, retry_scid.data)) { /* signed: the connection that follows is bound to it */
 		registro_dice(REG_QUIC, "⛔ RAND_bytes failed: Retry not sent");
 		return;
 	}
@@ -1640,10 +1669,18 @@ static void send_invalid_token(transport *t, const ngtcp2_pkt_hd *hd,
  *    (RFC 9000 §10.3: otherwise two servers would answer each other forever),
  *    so a packet of 22 or more gets one.
  * ⚠ The token is derived from the static secret and the dcid, so it is the
- *   one the connection announced even if the server restarted since. */
+ *   one the connection announced even if the server restarted since.
+ * ⭐ `cid-firmati` (R9 of the audit, 25 Oct 2026): the ids the server issues carry
+ *   a tag (cid.h), and the Resets are counted in two budgets — the 100 for ids that
+ *   verify, 10 for those that do not (an id of the previous binary, or a forged flood).
+ *   An id that verifies after a restart still gets the SAME Reset as before: the tag
+ *   and the Reset token are both derived from the static secret in `quic-secret`, so
+ *   the id is recognised exactly as long as the token would be accepted.  If the file
+ *   is lost both go together, and the client would have discarded the Reset anyway. */
 static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
                                  const struct sockaddr *remote,
-                                 socklen_t remotelen, size_t triggerlen)
+                                 socklen_t remotelen, size_t triggerlen,
+                                 bool verified)
 {
 	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
 	uint8_t rnd[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
@@ -1663,15 +1700,47 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 		t->reset_second = second;
 		t->reset_count = 0;
 		t->reset_capped_said = false;
+		t->reset_unverified_count = 0;
+		t->reset_unverified_capped_said = false;
+		t->reset_addr_refused = 0;
+		t->reset_addr_said = false;
 	}
-	if (t->reset_count >= RESET_PER_SECOND) {
+	/* ⭐ R9: one address may have RESET_PER_ADDRESS of the RESET_PER_SECOND; what it is refused is not counted against the others.
+	 *   This is the first gate (an address that floods is stopped here whatever its ids are); the two budgets below (`cid-firmati`)
+	 *   then keep the ids that verify apart from the ones that do not, so a flood from MANY addresses, forged or not, cannot use up
+	 *   the Resets of the ids this server issued. */
+	{
+		uint8_t key[16], key48[16];
+
+		address_key(remote, key, key48);
+		if (!reset_addr_take(&t->reset_addr, key, second, t->reset_per_address ? t->reset_per_address : RESET_PER_ADDRESS)) {
+			t->reset_addr_refused++;
+			if (!t->reset_addr_said) {
+				char who[64];
+
+				key_text(key, 64, who, sizeof who);
+				registro_dice(REG_QUIC, "more than %d Stateless Resets in a second to one address (%s): the rest "
+				              "to it are ignored", RESET_PER_ADDRESS, who);
+				t->reset_addr_said = true;
+			}
+			return;
+		}
+	}
+	/* ⭐ `cid-firmati`: two budgets in the same second.  `verified` (the destination id carries a valid tag) uses
+	 *   the 100; an id that does not verify uses only RESET_UNVERIFIED_PER_SECOND, so a flood of random ids cannot
+	 *   take the Resets away from the ids this server issued. */
+	unsigned *count = verified ? &t->reset_count : &t->reset_unverified_count;
+	bool *said = verified ? &t->reset_capped_said : &t->reset_unverified_capped_said;
+	unsigned cap = verified ? RESET_PER_SECOND : RESET_UNVERIFIED_PER_SECOND;
+	if (*count >= cap) {
 		/* ⚠ DECLARED FALLBACK: over the cap the packet is ignored, as before
 		 *   §11.9.  Said once per second, not once per packet: a flood must
 		 *   not also flood the log. */
-		if (!t->reset_capped_said) {
-			registro_dice(REG_QUIC, "more than %d Stateless Resets in a "
-			              "second: the rest are ignored", RESET_PER_SECOND);
-			t->reset_capped_said = true;
+		if (!*said) {
+			registro_dice(REG_QUIC, "more than %u Stateless Resets in a "
+			              "second for %s ids: the rest are ignored", cap,
+			              verified ? "signed" : "unsigned");
+			*said = true;
 		}
 		return;
 	}
@@ -1691,10 +1760,30 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 	n = ngtcp2_pkt_write_stateless_reset2(buf, sizeof buf, &token, rnd, randlen);
 	if (n < 0)
 		return;
-	t->reset_count++;
+	(*count)++;
 	log_detail(REG_QUIC, "packet of %zu bytes for a connection that does not "
-	           "exist: Stateless Reset of %zd bytes", triggerlen, n);
+	           "exist: Stateless Reset of %zd bytes (%s id)", triggerlen, n,
+	           verified ? "signed" : "unsigned");
 	send_msg(t, remote, remotelen, buf, (size_t)n);
+}
+
+/* ⭐ `cid-firmati`: if the HMAC itself fails (OpenSSL out of memory: never seen), `cidkey_ok()` says false and the id is treated as not signed
+ *   — its Stateless Reset comes from the small budget, no connection is lost — and no id can be issued.  That must not be silent: one line,
+ *   at most every REFUSAL_LOG_S seconds, with how many failures since the last one. */
+static void cid_errors_check(transport *t)
+{
+	unsigned e = cidkey_errors(t->cidk);
+	ngtcp2_tstamp now;
+	if (e == t->cid_errors_seen)
+		return;
+	now = now_ns();
+	if (t->cid_errors_line_ns && now < t->cid_errors_line_ns + (uint64_t)REFUSAL_LOG_S * NGTCP2_SECONDS)
+		return;
+	registro_dice(REG_QUIC, "⛔ the HMAC of the connection ids failed %u time(s) since the last line: ids that cannot be verified are "
+	              "treated as not signed (their Stateless Resets come from the small budget) and none can be issued while it fails",
+	              e - t->cid_errors_seen);
+	t->cid_errors_seen = e;
+	t->cid_errors_line_ns = now;
 }
 
 static void read_packet_1(transport *t, const struct sockaddr *local,
@@ -1718,7 +1807,15 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 		return;
 	}
 
-	c = cid_find(t, vc.dcid, vc.dcidlen);
+	/* ⭐ `cid-firmati`: does the destination id carry a valid tag (cid.h)?  If it does not, it is not an id this
+	 *   server issued — except those few bound to a connection that came in with a Retry token of the previous binary
+	 *   (`plain_bound`, 0 in steady state) — so the search of the map is skipped: a packet that cannot belong to any
+	 *   connection does not cost a scan of the map, and (below) does not spend the Resets of the signed ids.
+	 *   The first Initial of a client (random destination id, before our Retry) and every packet after the Retry
+	 *   (our signed ids) are routed exactly as before. */
+	bool signed_dcid = cidkey_ok(t->cidk, vc.dcid, vc.dcidlen);
+	cid_errors_check(t);
+	c = (signed_dcid || t->cids.plain_n) ? cid_find(t, vc.dcid, vc.dcidlen) : NULL;
 	/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25): a connection already marked dead (ngtcp2 asked to
 	 *   drop it silently, or it is closing) is no longer read: a second packet of the same
 	 *   burst would reach `ngtcp2_conn_read_pkt` and could answer with the
@@ -1737,7 +1834,7 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 			 *   not tested, we announce grease_quic_bit).  A long header that
 			 *   is not an Initial is ignored, and the line says so. */
 			if (!(data[0] & 0x80)) {
-				send_stateless_reset(t, &vc, remote, remotelen, len);
+				send_stateless_reset(t, &vc, remote, remotelen, len, signed_dcid);
 				return;
 			}
 			log_detail(REG_QUIC,
@@ -2542,6 +2639,13 @@ transport *transport_open_fd(int fd, const char *address, const char *port,
 		memcpy(t->cids.key, mac, sizeof t->cids.key);
 		explicit_bzero(mac, sizeof mac);
 	}
+	/* ⭐ `cid-firmati`: after `secret_load()`, because the key is derived from the secret that is really in use */
+	t->cidk = cidkey_new(t->secret, sizeof t->secret);
+	if (!t->cidk) {
+		registro_dice(REG_QUIC, "⛔ cannot derive the key of the connection ids");
+		transport_close(t);
+		return NULL;
+	}
 
 	if (ngtcp2_crypto_ossl_init() != 0) {
 		registro_dice(REG_QUIC, "⛔ ngtcp2_crypto_ossl_init");
@@ -2576,6 +2680,7 @@ void transport_close(transport *t)
 		c = p;
 	}
 	lk_cid_free(&t->cids);
+	cidkey_free(t->cidk);
 	if (t->fd >= 0)
 		close(t->fd);
 	explicit_bzero(t->secret, sizeof t->secret);

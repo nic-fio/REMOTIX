@@ -82,8 +82,13 @@
  *      logged in (`logged_in`, kept by the harness after every op) and is not in a state
  *      after the credentials (`wait-verdict` — eviction only —, `wait-attach`, `active`,
  *      `detached-by-silence`);
- *    · the Stateless Reset rate: never more than `RXQ_RESETS_PER_SECOND` resets written in
- *      one second of the clock (`ngtcp2_pkt_write_stateless_reset2`);
+ *    · the Stateless Reset rate: never more than `RXQ_RESETS_PER_SECOND` resets for ids that carry a valid tag
+ *      (cid.h; the stub's `rxq_cid_signed`, written apart from the product's `cidkey_ok`) and never more than
+ *      `RXQ_RESETS_UNVERIFIED_PER_SECOND` for the others, written in one second of the clock
+ *      (`ngtcp2_pkt_write_stateless_reset2`);
+ *    · `cid-firmati`: every id the product gives ngtcp2 or hands to the client (the first id, the Retry's, every
+ *      NEW_CONNECTION_ID) verifies; and a short header for a SIGNED id nobody has gets its Reset while the signed budget
+ *      has room (a flood of unsigned ids cannot take it: BURST a3 bit 2);
  *    · the wait: `transport_wait_ms()` never sleeps past the next age deadline of a live
  *      connection not logged in (`born_ns` + `UNLOGGED_MAX_S`, rounded up to the ms), and
  *      never answers «no timer» (-1) while there is one.
@@ -234,13 +239,21 @@ extern void (*rxq_on_birth)(const uint8_t *token, size_t len);
 enum { RXQ_ST_NONE, RXQ_ST_HELLO, RXQ_ST_CREDENTIALS, RXQ_ST_VERDICT, RXQ_ST_ATTACH,
        RXQ_ST_ACTIVE, RXQ_ST_FINISHED, RXQ_ST_DETACHED, RXQ_ST_N };
 
-/* The Stateless Reset rate the product promises (§11.9: 100 per second), written apart. */
+/* The Stateless Reset rate the product promises (§11.9: 100 per second), written apart.  ⭐ `cid-firmati`: the 100 are for
+ * destination ids that carry a valid tag (cid.h); an id that does not verify has 10 a second of its own. */
 #define RXQ_RESETS_PER_SECOND 100
+#define RXQ_RESETS_UNVERIFIED_PER_SECOND 10
 extern const char *const RXQ_STATE_NAMES[RXQ_ST_N];
 
 /* The Retry token the next Initial carries, as the played `verify_retry_token2` judges it. */
 enum { RXQ_TOKEN_GOOD, RXQ_TOKEN_STALE, RXQ_TOKEN_UNREADABLE, RXQ_TOKEN_N };
 
+/* ⭐ `cid-firmati`: the played cid.h (stubs_quic.c) and the oracles' own reading of an id */
+bool rxq_cid_signed(const uint8_t *cid, size_t len);   /* does the id carry the played tag? (apart from cidkey_ok) */
+void rxq_cid_make(uint8_t out[18]);                    /* a signed id the harness invents (an id "nobody has") */
+unsigned rxq_resets_signed_now(void);                  /* Resets for signed ids written in the current second */
+void rxq_expect_signed_reset(bool on);                 /* the next datagram is a signed unknown id: a Reset is owed */
+bool rxq_signed_reset_seen(void);
 void rxq_reset(void);              /* before every input */
 void rxq_rng_seed(uint64_t seed);  /* the played RAND_bytes */
 bool rxq_rand(uint8_t *d, size_t n);

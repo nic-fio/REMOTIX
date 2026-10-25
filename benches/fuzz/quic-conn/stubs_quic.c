@@ -43,6 +43,7 @@
 #include <string.h>
 
 #include "webtransport.h"
+#include "cid.h" /* the played cid.c below (`cid-firmati`) */
 
 rxq_expectation rxq_expect;
 rxq_received rxq_rx;
@@ -278,6 +279,9 @@ int ngtcp2_conn_server_new_versioned(ngtcp2_conn **pconn, const ngtcp2_cid *dcid
 		return NGTCP2_ERR_NOMEM; /* the harness's table is full: as out of memory */
 	if (!params->original_dcid_present || scid->datalen > NGTCP2_MAX_CIDLEN)
 		DIE("server_new with transport parameters ngtcp2 would refuse");
+	/* ⭐ `cid-firmati`: the first id of every connection is one the product made with its key */
+	if (!rxq_cid_signed(scid->data, scid->datalen))
+		DIE("server_new with a source id that does not verify");
 	local_is_received(path, "server_new");
 	c = calloc(1, sizeof *c);
 	if (!c)
@@ -456,6 +460,9 @@ static int issue_cid(ngtcp2_conn *c, ngtcp2_tstamp ts)
 	if (cid.datalen != c->scid[0].datalen)
 		DIE("get_new_connection_id2 gave a CID of %zu bytes, %zu asked", cid.datalen,
 		    c->scid[0].datalen);
+	/* ⭐ `cid-firmati`: and every NEW_CONNECTION_ID the product hands out */
+	if (!rxq_cid_signed(cid.data, cid.datalen))
+		DIE("get_new_connection_id2 gave a CID that does not verify");
 	c->scid[c->nscid] = cid;
 	c->scid_st[c->nscid] = 0;
 	c->nscid++;
@@ -1239,7 +1246,86 @@ ngtcp2_ssize ngtcp2_pkt_write_version_negotiation(uint8_t *dest, size_t destlen,
 }
 
 static uint64_t resets_second = UINT64_MAX;
-static unsigned resets_in_second;
+static unsigned resets_in_second, resets_unverified_in_second;
+static ngtcp2_cid last_token_cid;     /* the id of the last Stateless Reset token made: the Reset written next is for it */
+static bool expect_signed_reset, signed_reset_seen;
+
+/* ── cid.h, played ────────────────────────────────────────────────────────────────────────────────────────────────────
+ * The product's cid.c (HMAC-SHA256 over OpenSSL) is not linked here: the harness plays it with a keyed mix, so that
+ * the fuzzer can know what an id that verifies is.  ⚠ `rxq_cid_signed()` is the ORACLE's own reading — it reads the bytes, not
+ * the product's `cidkey_ok()`; the two agree by construction of the played mix, what is checked is the product's USE of the
+ * API: that it makes the ids it gives out with `cidkey_make` and spends the Reset budgets by what `cidkey_ok` says. */
+struct cidkey {
+	uint64_t k;
+};
+static uint64_t cid_key_seen;
+static uint64_t cid_mix(uint64_t k, const uint8_t *nonce)
+{
+	uint64_t h = k ^ 0xcbf29ce484222325ull;
+	for (int i = 0; i < 10; i++) {
+		h ^= nonce[i];
+		h *= 0x100000001b3ull;
+		h ^= h >> 29;
+	}
+	return h;
+}
+cidkey *cidkey_new(const uint8_t *secret, size_t secretlen)
+{
+	cidkey *k = calloc(1, sizeof *k);
+	if (!k || !secret || !secretlen) {
+		free(k);
+		return NULL;
+	}
+	k->k = 0x9e3779b97f4a7c15ull;
+	for (size_t i = 0; i < secretlen; i++)
+		k->k = (k->k ^ secret[i]) * 0x100000001b3ull;
+	cid_key_seen = k->k;
+	return k;
+}
+void cidkey_free(cidkey *k) { free(k); }
+unsigned cidkey_errors(const cidkey *k) { (void)k; return 0; } /* the played MAC does not fail; the line is the unit test's (cid-firmati) */
+bool cidkey_make(cidkey *k, uint8_t cid[18])
+{
+	uint64_t h;
+	if (!k || !rxq_rand(cid, 10))
+		return false;
+	h = cid_mix(k->k, cid);
+	memcpy(cid + 10, &h, 8);
+	return true;
+}
+bool cidkey_ok(cidkey *k, const uint8_t *cid, size_t len)
+{
+	uint64_t h;
+	if (!k || len != 18)
+		return false;
+	h = cid_mix(k->k, cid);
+	return memcmp(cid + 10, &h, 8) == 0;
+}
+bool rxq_cid_signed(const uint8_t *cid, size_t len)
+{
+	uint64_t h;
+	if (len != 18 || !cid_key_seen)
+		return false;
+	h = cid_mix(cid_key_seen, cid);
+	return memcmp(cid + 10, &h, 8) == 0;
+}
+void rxq_cid_make(uint8_t out[18])
+{
+	uint64_t h;
+	(void)rxq_rand(out, 10);
+	h = cid_mix(cid_key_seen, out);
+	memcpy(out + 10, &h, 8);
+}
+unsigned rxq_resets_signed_now(void)
+{
+	return rxq_now_ns / NGTCP2_SECONDS == resets_second ? resets_in_second : 0;
+}
+void rxq_expect_signed_reset(bool on)
+{
+	expect_signed_reset = on;
+	signed_reset_seen = false;
+}
+bool rxq_signed_reset_seen(void) { return signed_reset_seen; }
 
 ngtcp2_ssize ngtcp2_pkt_write_stateless_reset2(uint8_t *dest, size_t destlen,
                                                const ngtcp2_stateless_reset_token *token,
@@ -1252,10 +1338,19 @@ ngtcp2_ssize ngtcp2_pkt_write_stateless_reset2(uint8_t *dest, size_t destlen,
 	if (rxq_now_ns / NGTCP2_SECONDS != resets_second) {
 		resets_second = rxq_now_ns / NGTCP2_SECONDS;
 		resets_in_second = 0;
+		resets_unverified_in_second = 0;
 	}
-	if (++resets_in_second > RXQ_RESETS_PER_SECOND)
-		DIE("%u Stateless Resets in the second %llu: the limit is %d", resets_in_second,
-		    (unsigned long long)resets_second, RXQ_RESETS_PER_SECOND);
+	/* ⭐ `cid-firmati`: the Reset written now is for the id of the token made just before it (the product makes the token,
+	 *    then writes the packet); an id that verifies spends the 100, one that does not spends its own 10 */
+	if (rxq_cid_signed(last_token_cid.data, last_token_cid.datalen)) {
+		if (++resets_in_second > RXQ_RESETS_PER_SECOND)
+			DIE("%u Stateless Resets for signed ids in the second %llu: the limit is %d", resets_in_second,
+			    (unsigned long long)resets_second, RXQ_RESETS_PER_SECOND);
+		signed_reset_seen = true;
+	} else if (++resets_unverified_in_second > RXQ_RESETS_UNVERIFIED_PER_SECOND) {
+		DIE("%u Stateless Resets for ids that do not verify in the second %llu: the limit is %d",
+		    resets_unverified_in_second, (unsigned long long)resets_second, RXQ_RESETS_UNVERIFIED_PER_SECOND);
+	}
 	if (randlen < NGTCP2_MIN_STATELESS_RESET_RANDLEN)
 		return NGTCP2_ERR_INVALID_ARGUMENT;
 	if (destlen < randlen + NGTCP2_STATELESS_RESET_TOKENLEN)
@@ -1272,6 +1367,7 @@ int ngtcp2_crypto_generate_stateless_reset_token(uint8_t *token, const uint8_t *
 		rxq_fail_next = 0;
 		return -1;
 	}
+	last_token_cid = *cid;
 	for (size_t i = 0; i < NGTCP2_STATELESS_RESET_TOKENLEN; i++)
 		token[i] = (uint8_t)(secret[i % secretlen] ^ (i < cid->datalen ? cid->data[i] : 0));
 	return 0;
@@ -1325,6 +1421,9 @@ ngtcp2_ssize ngtcp2_crypto_write_retry(uint8_t *dest, size_t destlen, uint32_t v
 {
 	size_t n = 7 + dcid->datalen + scid->datalen + tokenlen + 16;
 	(void)version; (void)odcid; (void)token;
+	/* ⭐ `cid-firmati`: the id our Retry gives the client (the one it will address the next Initial to) carries its tag */
+	if (!rxq_cid_signed(scid->data, scid->datalen))
+		DIE("the Retry gave the client an id that does not verify");
 	rxq_expect.valid = false;
 	rxq_retries++;
 	if (destlen < n)
@@ -1641,7 +1740,9 @@ void rxq_reset(void)
 	rxq_retries = 0;
 	token_seen_len = 0;
 	resets_second = UINT64_MAX;
-	resets_in_second = 0;
+	resets_in_second = resets_unverified_in_second = 0;
+	expect_signed_reset = signed_reset_seen = false;
+	memset(&last_token_cid, 0, sizeof last_token_cid);
 	memset(&rxq_expect, 0, sizeof rxq_expect);
 	memset(&rxq_rx, 0, sizeof rxq_rx);
 }
