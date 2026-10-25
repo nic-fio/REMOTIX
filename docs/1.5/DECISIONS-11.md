@@ -16,7 +16,7 @@ tree». Status of 25 Oct 2026, after the ports:
   KWin size (`port-kde`). All of them built and unit-tested there (`verifica-rami` 28/28); the live checks are listed in CHANGES-1.5.md.
 - **In the branch `finale`, not in `integrazione2`**: §11.50 the root-side split (merged from `rootside-completo`, OFF by default behind
   `REMOTIX_SPLIT_EXPERIMENTAL=1`; it still waits for the user's decision D1), `pktinfo` (replies leave from the address the client wrote to), and `rifiniture` (CSP `connect-src 'self'`; the decoder rebuilt by a keyframe after an error).
-- **In neither**: §11.36 the Firefox worker (written on the branch `ff-worker`, in review, merged only if the user chooses D2 = A).
+- **In neither**: §11.36 the Firefox worker (written on the branch `ff-worker`, approved on reading with the live proof still to do, merged only if the user chooses D2 = A).
 What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
 An entry without the marker may still cite hashes of the discarded attempt; read the hash against `git log` before trusting it.
 
@@ -612,7 +612,7 @@ The «before a release» level of §11.24, release under test `remotix-1.4.99-2.
 
 ### 11.32 ✅ The client tells the server its decoder is behind (`PACE`) — A, measured: ON by default (15–16 Oct 2026)
 
-> ⚠ Ported on port-varie (`4895f2ad` server, `c7bfef17` page; from `738505ff`, `d0e1fe07`), to be built and tested: the `PACE` message
+> ⚠ Ported on port-varie (`4895f2ad` server, `c7bfef17` page; from `738505ff`, `d0e1fe07`) and merged into `integrazione2`; built and unit-tested there (`verifica-rami` 28/28, `4be3a981`): the `PACE` message
 
 - `[M]` Firefox at 4K: decoder queue ≥ 5 for 80 % of the frames, decode delay median 1.35 s, while the server
   keeps sending at the full rate — nothing it can see is wrong. The page measures the queue and tells nobody.
@@ -684,7 +684,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     `[T]` quic-conn fuzz, two new oracles, two grafts caught. ⚠ Not verified on a machine with several
     addresses.
 - **Picture (KDE)**
-  - ported on port-kde (`651e86ad`, `3d115f47`, `ca91b9c8`, `e951c832`, `d9fbdcb3`), to be built and tested: the KDE «unchanged» filter (`1849a57d`, `ac6d5e91`, `845f4d19`, `751af3cb`, `2a02376e`)
+  - ported on port-kde (`651e86ad`, `3d115f47`, `ca91b9c8`, `e951c832`, `d9fbdcb3`) and merged into `integrazione2`; built and unit-tested there (`verifica-rami` 28/28, `4be3a981`): the KDE «unchanged» filter (`1849a57d`, `ac6d5e91`, `845f4d19`, `751af3cb`, `2a02376e`)
   - `1849a57d` + `ac6d5e91` + `845f4d19` + `751af3cb` — the «unchanged» filter: a KWin frame whose damaged
     rectangles hold the same bytes as the last frame out is not encoded. Guards: area ≤ ¼ of 4K, one frame out
     every 250 ms anyway, bypass while a keyframe is due, self switch-off if a look costs > 3 ms on average
@@ -693,18 +693,18 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
     per episode — `UcStaleGate`). `[M]` the problem: KDE/Firefox 3776×2016, ~50 buffers/s for 5 real changes,
     ~45 the same picture. `[T]` the decisions: `benches/20-unchanged-test.c` (`make -C src bench-unchanged`,
     also ASan/UBSan). ⚠ The cure is not measured: F-003 on KDE/Firefox 4K to rerun.
-  - ported on port-kde (`c5f658ca`, `a19ecbd1`), to be built and tested: `6da80736`, `93f9a22b`, nested KWin back to the wanted size
+  - ported on port-kde (`c5f658ca`, `a19ecbd1`) and merged into `integrazione2`; built and unit-tested there (`verifica-rami` 28/28, `4be3a981`): `6da80736`, `93f9a22b`, nested KWin back to the wanted size
   - `6da80736` — KWin nested: KWin's output came up 1280×720 (labwc's own size) at the first mount; the wanted
     size is now written next to labwc's socket (`<host folder>/wanted`) and settle insists on it; `93f9a22b`:
     it is written only once labwc has taken it (birth excepted), and a KWin with no output yet is waited
     for, not nudged («KWin has announced no output after N s»). `[M]` the
     problem: run `functional/20261014-223248` (F-018b/c) and two births in the rete11-kde journal. ⚠ The cure
     is not verified.
-- ported on port-kde (`ded9ca48`), to be built and tested: `fa316d71`, the `remotix-capture` stream name
+- ported on port-kde (`ded9ca48`) and merged into `integrazione2`; built and unit-tested there (`verifica-rami` 28/28, `4be3a981`): `fa316d71`, the `remotix-capture` stream name
 - **Sound** — `fa316d71`: the capture stream is named `remotix-capture` (`PW_KEY_NODE_NAME`), so
   `target.object` «remotix» names only the sink. `[M]` the problem: F-013 xfce/Firefox run `20261015-063747`,
   pw-dump shows the capture linked to itself, digital silence. ⚠ The cure is not verified.
-- ⚠ Ported on port-varie (`8a2c3faa`, `6217b6dd`, `267068d4`, `cbe4534b`; from `247d4bd0`, `0153ad88`, `cbc1cb8b`, `790856bf`), to be built and tested: the key receipts
+- ⚠ Ported on port-varie (`8a2c3faa`, `6217b6dd`, `267068d4`, `cbe4534b`; from `247d4bd0`, `0153ad88`, `cbc1cb8b`, `790856bf`) and merged into `integrazione2`; built and unit-tested there (`verifica-rami` 28/28, `4be3a981`): the key receipts
 - **Input (KDE lost keys)** — `247d4bd0` + `0153ad88` + `cbc1cb8b` + `790856bf`: a receipt from the compositor for every key
   (`ei_ping`; built only with libei ≥ 1.3.901), `DEVICE_PAUSED` written. Privacy (§9.2): the always-on log gets
   **one line per 10 s, only if something was slow**, with **no counts** (`790856bf`: a period starts at the
@@ -751,7 +751,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.36 ✅ Firefox at 4K with video: what to change (15 Oct 2026) — DECIDED D
 
-> ⚠ NOT in this tree (25 Oct 2026): `728acd22`, the Firefox worker default, is written on the branch `ff-worker` (default on desktop Firefox only, with fallback; in review) but NOT merged: it waits for the user's decision D2. Chrome does not need it.
+> ⚠ NOT in this tree (25 Oct 2026): `728acd22`, the Firefox worker default, is written on the branch `ff-worker` (default on desktop Firefox only, with fallback; approved on reading, live proof still to do) but NOT merged: it waits for the user's decision D2. Chrome does not need it.
 
 - `[M]` §11.31: the page's main thread stalls 55–64 % of the time (gaps in the sound); §11.32: the decoder queue
   ≥ 5 for 80 % of the frames, decode delay median 1.35 s, the picture 1.4 s old or more. Chrome is fine.
@@ -842,7 +842,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.37 🔸 The encoder follows the compositor's card (15 Oct 2026) — built, not yet run on a two-card box
 
-> 🔸 Ported on `port-scheda` — to be built and tested: the render node of the compositor's card (`13422add` → `27e7ea61`: `src/render_node.c/h`, `choose_render_node()`, `--render-node`), the per-card codec test (`bc3158bf` → `ef3e6ca9`) and `node_of_codec()` at the negotiated depth (`facc4daa` → `7faac773`). The `DECISIONS.md` hunk of `13422add` is not ported (the 1.0 file: this entry is its text). Not built on this base yet (`git apply` was clean for the last two; the Makefile of the first by hand).
+> 🔸 Ported on `port-scheda` and merged into `integrazione2`; built and unit-tested there (`verifica-rami` 28/28, `4be3a981`): the render node of the compositor's card (`13422add` → `27e7ea61`: `src/render_node.c/h`, `choose_render_node()`, `--render-node`), the per-card codec test (`bc3158bf` → `ef3e6ca9`) and `node_of_codec()` at the negotiated depth (`facc4daa` → `7faac773`). The `DECISIONS.md` hunk of `13422add` is not ported (the 1.0 file: this entry is its text). Built on `integrazione2` (the Makefile of the first was done by hand).
 > ⚠ With `port-sessioni` (`render_grant.c`, §11.4): three adjacent-line conflicts to keep both sides (`SORGENTI` in `src/Makefile`, the `render_grant.o` / `render_node.o` rules, the two `#include`s in `src/child.c`). **No functional conflict**: `render_grant` gives the user's private group `rw` on EVERY `renderD*` (a stale GNOME/KDE manager), §11.38 enrols the group of every `renderD*`; `render_node` only chooses WHICH of those nodes the encoder opens (the compositor's `main_device`, else `--render-node`, else `renderD128`) — the chosen node is always one both mechanisms already cover. Limit: with `--render-node` naming a node the grant did not reach (hot-plugged after the grant, §11.4 «declared limits») the open fails and the encoder falls back as the entry says.
 
 - `[R]` SPECS audit: the encoder opened `/dev/dri/renderD128` hard-wired (`RENDER_NODE`, `src/child.c`). With
@@ -881,7 +881,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.38 🔸 First-login enrolment: only the render nodes' group (15 Oct 2026) — built, not yet run on the boxes
 
-> 🔸 Ported on `port-scheda` — to be built and tested: the product (`76b602b1` → `8205fe12`: `collect_card_groups()` scans `renderD*` only; the box bench `11-c18`), the installer (`add575c6` → `e2620c0d`: `CardGroups()` and its Go test) and the benches (`002f4d14` → `e5d8f11f`: tenants, `tools-card-groups.sh`, `provision.sh`). Not ported on purpose: the `DECISIONS.md` and `docs/` hunks of `76b602b1` (the manuals are rebuilt before the release, §11.14). Expected overlap with `port-sessioni` in `src/child.c`: none at the text level (`git merge-tree` is clean); to be rechecked when built.
+> 🔸 Ported on `port-scheda` and merged into `integrazione2`; built and unit-tested there (`verifica-rami` 28/28, `4be3a981`): the product (`76b602b1` → `8205fe12`: `collect_card_groups()` scans `renderD*` only; the box bench `11-c18`), the installer (`add575c6` → `e2620c0d`: `CardGroups()` and its Go test) and the benches (`002f4d14` → `e5d8f11f`: tenants, `tools-card-groups.sh`, `provision.sh`). Not ported on purpose: the `DECISIONS.md` and `docs/` hunks of `76b602b1` (the manuals are rebuilt before the release, §11.14). Expected overlap with `port-sessioni` in `src/child.c`: none at the text level (`git merge-tree` is clean); rechecked when built: no text-level conflict in `integrazione2`.
 
 - **The evidence** (closes §10.36's «only `render`, once tested on the four desktops»): §11.4, `[M]` 13 Oct 2026 —
   the four boxes (Intel card), GNOME, KDE, XFCE, LXQt, users enrolled before the manager is born: gnome-shell, kwin,
