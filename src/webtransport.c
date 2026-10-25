@@ -1034,9 +1034,28 @@ static bool prelogin_all_may(uint64_t now)
 	struct line_budget_closed c;
 	bool ok = line_budget_take(&prelogin_all, now, WT_PRELOGIN_WINDOW_MS, WT_PRELOGIN_GLOBAL_BURST, &c);
 
-	if (c.hidden)
-		prelogin_all_say(&c);
+	if (c.hidden || prelogin_folded)
+		prelogin_all_say(&c); /* before the caller writes the first line of the new window */
 	return ok;
+}
+
+/* ⭐ The timer's half (transport.c): the window of the global budget closes and its line is written even when no line is asking.
+ *    `now_ms` is `log_now_ms()`'s clock (CLOCK_MONOTONIC, like transport.c's nanoseconds / 1e6). */
+void wt_prelogin_flush(uint64_t now_ms)
+{
+	struct line_budget_closed c;
+
+	line_budget_flush(&prelogin_all, now_ms, WT_PRELOGIN_WINDOW_MS, &c);
+	if (c.hidden || (prelogin_folded && c.written)) /* c.written: a window really closed */
+		prelogin_all_say(&c);
+}
+
+/* When that window ends, in milliseconds of the same clock, or UINT64_MAX if nothing is waiting to be said (for transport_wait_ns()). */
+uint64_t wt_prelogin_expiry_ms(void)
+{
+	if (!prelogin_all.hidden && !prelogin_folded)
+		return UINT64_MAX;
+	return prelogin_all.start + WT_PRELOGIN_WINDOW_MS;
 }
 
 static void prelogin_summary(int i, uint64_t now)
@@ -1044,6 +1063,9 @@ static void prelogin_summary(int i, uint64_t now)
 	if (!prelogin[i].hidden)
 		return;
 	if (!prelogin_all_may(now)) { /* the global budget is spent: the count is not lost, it joins the global line */
+		/* the take that was just refused counted THIS summary as one more hidden line: it is not one of the N, take it back */
+		if (prelogin_all.hidden)
+			prelogin_all.hidden--;
 		prelogin_folded += prelogin[i].hidden;
 		prelogin[i].hidden = 0;
 		return;

@@ -131,6 +131,10 @@ int main(int argc, char **argv)
 			CHECK(!strstr(t, "registro_dice(REG_QUIC, \"packet of %zu bytes NOT sent: %s\", len,\n\t\t              strerror(err));"),
 			      "8b. no bare, unlimited «NOT sent» line is left");
 			CHECK(strstr(t, "send_fail_report(t, now);"), "8c. the periodic call that closes the window is in place");
+			CHECK(strstr(t, "t->send_fail.hidden && t->send_fail.start + REFUSAL_LOG_S * NGTCP2_SECONDS < before"),
+			      "8c2. transport_wait_ns() arms the timer for the send_fail window");
+			CHECK(strstr(t, "wt_prelogin_flush(now / 1000000ull);") && strstr(t, "wt_prelogin_expiry_ms()"),
+			      "8c3. transport_expired() flushes the pre-login budget and transport_wait_ns() waits for it");
 			free(t);
 		}
 	}

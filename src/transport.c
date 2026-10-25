@@ -2023,6 +2023,16 @@ int64_t transport_wait_ns(const transport *t)
 		before = t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
 	if (t->births_quiet && t->birth_window_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->birth_window_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	/* ⭐ R12: «NOT sent» lines counted and not yet written (the window of `send_fail`) wake the loop for their line */
+	if (t->send_fail.hidden && t->send_fail.start + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
+		before = t->send_fail.start + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	/* ⭐ R8: the same for the pre-login lines of ALL addresses (webtransport.c counts in ms; both clocks are CLOCK_MONOTONIC) */
+	{
+		uint64_t pl = wt_prelogin_expiry_ms();
+
+		if (pl != UINT64_MAX && pl * 1000000ull < before)
+			before = pl * 1000000ull;
+	}
 	if (before == UINT64_MAX)
 		return -1;
 	if (before <= now)
@@ -2222,6 +2232,7 @@ void transport_expired(transport *t)
 	if (t->closes_quiet)
 		closes_report(t, now);
 	send_fail_report(t, now);
+	wt_prelogin_flush(now / 1000000ull);
 	transport_write(t);
 }
 

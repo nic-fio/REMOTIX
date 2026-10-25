@@ -145,6 +145,11 @@ ngtcp2_ssize wt_write(wt *w, ngtcp2_path *path, ngtcp2_pkt_info *pi,
  * Returns the instant (in ngtcp2's scale, nanoseconds) at which this layer
  * wants to be called back, or UINT64_MAX if it does not need it. */
 ngtcp2_tstamp wt_heartbeat_ns(const wt *w);
+
+/* ⭐ R8 (25 Oct 2026): the global budget of the pre-login lines closes its window from the timer (transport.c), not only when a line asks.
+ * `now_ms` is `log_now_ms()`'s clock; the expiry is in the same unit (UINT64_MAX = nothing waiting). */
+void wt_prelogin_flush(uint64_t now_ms);
+uint64_t wt_prelogin_expiry_ms(void);
 /* Moves RCP's time forward and matures the deferred close.  To be called
  * when `wt_heartbeat_ns()` has passed. */
 void wt_beat(wt *w, ngtcp2_tstamp ts);
