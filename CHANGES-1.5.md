@@ -48,7 +48,7 @@
 
 ### Page headers and checks (page audit)
 - The HTML response carries a Content-Security-Policy, `Referrer-Policy: no-referrer` and a Permissions-Policy
-  (clipboard for the page itself only) (`65e78f14`). Still open by choice: `unsafe-inline` and `connect-src https:` (`4324ba93`).
+  (clipboard for the page itself only) (`65e78f14`). `connect-src` is `'self'` (it was `'self' https:`); still open by choice: `unsafe-inline` (`4324ba93`).
 - A SESSION or CANVAS granting a canvas of zero or above the maximum closes with PROTOCOL_ERROR (`d3a16466`); a response whose
   headers do not fit the buffer answers 500 instead of truncating (`bd4840db`).
 

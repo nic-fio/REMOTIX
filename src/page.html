@@ -4378,9 +4378,25 @@ class Viewer {
      *   `<video>` and its source (§7.18). */
     const dec_m = this.dec_w + "x" + this.dec_h;
     const ready = VIA_MSE ? !!this.sb : !!this.dec;
-    if (!ready || m !== dec_m) {
+    /* ⛔ A decoder an error CLOSED is not ready for a keyframe either — 15 Oct
+       2026.  Without this, the keyframe asked for after the error went to
+       `decode()` on the dead decoder (same size ⇒ no `reconfigure()`), threw,
+       opened another gap — for ever: the picture froze for the rest of the
+       session.  ⚠ "Not configured" and not just "closed": a `configure()`
+       that THREW leaves a fresh decoder `unconfigured` with the old size still
+       written in `dec_w`/`dec_h`, and it is the same trap.  A delta still
+       takes the old road (refused ⇒ gap): only a keyframe can rebuild. */
+    const dead = !VIA_MSE && !!this.dec && this.dec.state !== "configured";
+    if (!ready || m !== dec_m || (dead && key)) {
       if (key && m === in_effect) {
-        if (!this.reconfigure(i.width, i.height)) return;
+        /* ⛔ And if it cannot be rebuilt, it is a gap: the keyframe is asked
+           for again (once per second, `hole()`), instead of waiting in
+           silence for one nobody requested.  ⚠ WebCodecs route only: the
+           other one keeps its own road (§7.18). */
+        if (!this.reconfigure(i.width, i.height)) {
+          if (!VIA_MSE) this.hole("the decoder could not be configured");
+          return;
+        }
       } else {
         /* ⛔ §5.2: "the client MUST NOT deliver to the decoder a frame whose
            size is not the one the decoder is configured for: it throws it

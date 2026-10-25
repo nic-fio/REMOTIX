@@ -114,7 +114,7 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
     table(["Header", "Value", "Why"], [
         [c("Content-Security-Policy"), c("default-src 'self'") + "; " + c("script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'")
          + "; " + c("style-src 'self' 'unsafe-inline'") + "; " + c("img-src 'self' data: blob:") + "; " + c("media-src blob:")
-         + "; " + c("worker-src blob:") + "; " + c("connect-src 'self' https:") + "; " + c("font-src 'self'") + "; "
+         + "; " + c("worker-src blob:") + "; " + c("connect-src 'self'") + "; " + c("font-src 'self'") + "; "
          + c("object-src 'none'") + "; " + c("base-uri 'none'") + "; " + c("form-action 'self'"),
          "Each directive is what the page really uses. One inline script (a static file admits no nonce) and the Opus "
          "decoder instantiated as WebAssembly, hence " + c("'wasm-unsafe-eval'") + "; MSE and the video worker are blobs; "
@@ -126,17 +126,18 @@ S2 = p("The server makes its own certificates — two of them, on purpose (" + c
          "geolocation, payment, USB, serial, HID, MIDI, motion sensors and screen capture off (" + c("()") + ")",
          "The page uses the clipboard, pointer lock, keyboard lock and fullscreen: those are not touched"],
     ], "«TAB» — The security headers of the page") + \
-    note(c("connect-src") + " carries " + c("https:") + " next to " + c("'self'") + ": whether " + c("'self'")
-         + " alone matches the WebTransport address on both Chrome and Firefox was not measured, and a narrow policy "
-         "that is wrong costs the whole session. Narrow it once the suite has proved it.", "Not settled yet.") + \
+    note(c("connect-src 'self'") + " is enough: the page opens only " + c("fetch(\"/fingerprint\")") + " and the WebTransport to "
+         "its own origin. It used to carry " + c("https:") + " too, because " + c("'self'") + " alone against the WebTransport "
+         "address had not been measured on Chrome and Firefox. Not proved yet: to be confirmed by 15-f001/15-f004 on Chrome "
+         "and Firefox on the final branch.",
+         "Narrowed, to be confirmed.") + \
     p("<b>Threat model of the page.</b> The page is served by the same server that holds the session, so a compromised "
       "server is a compromised page: it can send any script, and the headers above are sent by the party they would "
       "protect against. They do not defend against that. What they do is what the browser can still enforce against "
       "everyone else: no other site can frame the page, a future injection bug cannot load scripts, images, workers, "
       "fonts or objects from another origin nor change the base of the URLs, the address of the box does not leak in a "
       "Referer, and the page cannot ask for devices it never uses. <b>It is not a wall against injection:</b> an injected "
-      "inline script would still run (" + c("'unsafe-inline'") + "), and as long as " + c("connect-src") + " carries "
-      + c("https:") + " it could reach any HTTPS origin. The trust anchor stays the certificate fingerprint (" + rif("Authentication with PAM") + ").") + \
+      "inline script would still run (" + c("'unsafe-inline'") + "), and " + c("connect-src 'self'") + " would keep it from opening connections (fetch, WebSocket, WebTransport) to another origin; a navigation away is not covered. The trust anchor stays the certificate fingerprint (" + rif("Authentication with PAM") + ").") + \
     p("<b>The page listener before login</b> (DECISIONS-11 §11.44; a pre-login denial of service of 1.0: 32 TCP connections that "
       "sent nothing took every slot for ever). " + c("page.c") + " now has " + c("PAGE_MAX_CLIENTS") + " = 128 slots and, for each "
       "client, a birth time: 10 s to finish TLS and send a whole request; no absolute limit while the answer is written (the page "

@@ -168,14 +168,14 @@
  *    media-src blob:          MSE: `<video>.src = URL.createObjectURL(MediaSource)`.
  *    worker-src blob:         the video worker is `new Worker(URL.createObjectURL(Blob))`; a blob
  *                             worker inherits this policy, so the WASM line above covers it too.
- *    connect-src 'self' https:
- *                             `fetch("/fingerprint")` is same-origin, and WebTransport opens
- *                             `https://host:port/rcp/1`, which 'self' matches on the engines
- *                             that apply connect-src to WebTransport.  ⚠ NOT MEASURED on both
- *                             Chrome and Firefox, hence the `https:` next to it: the wide form
- *                             costs little (the origin that serves the page is the one that
- *                             is trusted anyway) and a narrow one that is wrong costs the whole
- *                             session.  Narrow it to 'self' once the suite has proved it.
+ *    connect-src 'self'       `fetch("/fingerprint")` is same-origin, and WebTransport opens
+ *                             `"https://" + location.host + "/rcp/1"` (page.html), i.e. the origin
+ *                             that served the page: 'self' matches it.  The page has no other
+ *                             fetch, WebSocket, EventSource or beacon, and the video worker is a
+ *                             blob that opens no connection of its own.  (It was `'self' https:`
+ *                             while 'self' was not measured against WebTransport on both Chrome
+ *                             and Firefox: if an engine did not match it, the whole session
+ *                             would fail with a CSP error on the connect — look there first.)
  *    font-src 'self'          the page declares no @font-face.
  *    object-src 'none' · base-uri 'none'
  *                             no plugins, and no <base> to redirect the relative URLs.
@@ -195,7 +195,7 @@
 	"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; "                  \
 	"style-src 'self' 'unsafe-inline'; "                                      \
 	"img-src 'self' data: blob:; media-src blob:; worker-src blob:; "         \
-	"connect-src 'self' https:; font-src 'self'; "                            \
+	"connect-src 'self'; font-src 'self'; "                                   \
 	"object-src 'none'; base-uri 'none'; form-action 'self'; "                \
 	"frame-ancestors 'none'\r\n"                                              \
 	"Referrer-Policy: no-referrer\r\n"                                        \
