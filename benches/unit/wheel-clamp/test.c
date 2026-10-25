@@ -1,4 +1,6 @@
-/* test.c — wheelclamp.h (audit of the session, S-R9).
+/* test.c — wheelclamp.h (audit of the session, S-R9): wheel_clamp() brings the client's wheel amounts into ±WHEEL_MAX_UNITS (100 notches) BEFORE the sign inversion of input.c, so that
+ * -INT32_MIN can never overflow.  Pure logic: it does not read the sources.
+ *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \

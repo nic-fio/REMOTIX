@@ -1,4 +1,7 @@
-/* test.c — mimecap.h (audit of the session, S-R10).
+/* test.c — mimecap.h (audit of the session, S-R10): mime_keep() bounds the number and length of the offered MIME type names, mime_line_allowed() lets the «not text» line through once a
+ * second.  The last checks read src/clipboard_kde.c and src/clipboard.c to see that the limits are used where the lists are built and logged (and that the TEXT_TYPES are always kept):
+ * that is why it runs from the root of the tree.
+ *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \

@@ -18,7 +18,10 @@
  *       { clang -fsanitize=address,undefined t.o l.o $L -o t0 2> link1.log || true; } &&
  *       { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
  *         while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
- *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o l.o s.o $L -o test && cd /albero && /tmp/g/test'
+ *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o l.o s.o $L -o test && cd /albero && /tmp/g/test &&
+ *     cd /tmp/g && F2=$(echo "$F" | sed "s/-fsanitize=address,undefined -fno-sanitize-recover=undefined/-fsanitize=thread/") &&
+ *     clang $F2 -c /albero/benches/unit/offer-refs/test.c -o t2.o && clang $F2 -c /albero/benches/fuzz/child-msg/stubs_log.c -o l2.o && clang $F2 -c s.c -o s2.o &&
+ *     clang -fsanitize=thread t2.o l2.o s2.o $L -o test2 && cd /albero && /tmp/g/test2'
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "clipboard_kde.c"
