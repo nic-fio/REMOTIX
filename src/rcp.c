@@ -698,7 +698,9 @@ struct rcp_session {
 	 * not a nuance: counting from requests, two insistent clients push the
 	 * clock forward forever and the keyframe never leaves. */
 	uint64_t last_key_ms;
-	uint64_t key_asked_ms; /* when a REQUEST_KEY was last ACCEPTED (0 = never): the gap of V_KEY_ASK_GAP_MS */
+	uint64_t key_asked_ms; /* when a REQUEST_KEY last STARTED a keyframe (0 = never): the gap of V_KEY_ASK_GAP_MS */
+	bool key_deferred;     /* a REQUEST_KEY came inside the gap with no keyframe owed: `rcp_time()` serves it at the end of the gap */
+	uint64_t key_deferred_ms; /* when it came */
 	bool never_sent_key;
 	/* ⛔ 22 Sep 2026 — the `nr` of the last keyframe sent: the 200 ms grace
 	 *    applies only to whoever has NOT yet seen that keyframe
@@ -5087,11 +5089,14 @@ static void key_paid(rcp_session *s)
 #define V_CAP (16u * 1024u * 1024u)
 /* ⛔ §5.2, exception 5 of §3: 200 ms from the last keyframe SENT. */
 #define V_GRACE_KEY 200
-/* ⛔ AT MOST ONE REQUEST_KEY PER THIS MANY ms IS ACCEPTED (audit P-R5/Q-R6/E-R4).  The grace above is for duplicates only: a request whose
- * `last_number` is as new as the last keyframe sent is ALWAYS accepted (the gap came afterwards, ignoring it freezes the picture), and
- * so a client could force a keyframe — the most expensive frame to encode and to send — at every request.  Below this gap the
- * request is ignored and the next accepted one does the same work; it is the transport's own brake (`WT_KEY_REQUEST_MS` 150) minus
- * a margin, so that no request the transport would have let through is lost here. */
+/* ⛔ AT MOST ONE REQUEST_KEY PER THIS MANY ms STARTS A KEYFRAME (audit P-R5/Q-R6/E-R4).  The grace above is for duplicates only: a request whose
+ * `last_number` is as new as the last keyframe sent skips it (the gap came afterwards, ignoring it freezes the picture), and so a client could force a
+ * keyframe — the most expensive frame to encode and to send — at every request.  Inside this gap since the last request ACCEPTED:
+ *   - if a keyframe is STILL OWED (`needs_key`), the request is redundant: that keyframe will answer it, and it is ignored (declared);
+ *   - otherwise it is NOT LOST: it is marked as DEFERRED and `rcp_time()` turns it into a keyframe when the gap ends — unless a keyframe has gone
+ *     out in the meantime, which answers it too.
+ * So the client's wait for its picture grows by at most the gap, and never to «never».  The gap is the transport's own brake (`WT_KEY_REQUEST_MS` 150)
+ * minus a margin, so that no request the transport would have let through is held back here. */
 #define V_KEY_ASK_GAP_MS 100
 
 /* ⛔ §6.2 — THE COUNTER, AND THE TWO LINES THAT GOVERN IT.
@@ -8193,14 +8198,6 @@ static bool handle_key_request(rcp_session *s, reader *l, uint64_t now)
 	 *     until the line died.  ⚠ Comparison in serial-number arithmetic: the
 	 *     `nr` of §6.2 wraps around. */
 	bool already_seen = (int32_t)(last - s->last_key_number) >= 0;
-	if (s->key_asked_ms && now - s->key_asked_ms < V_KEY_ASK_GAP_MS) {
-		/* ⛔ §3: a tolerance is written — but ONE line per window says how many (msgrate.h), not one per request. */
-		if (msg_line(s, MC_REQUEST_KEY))
-			reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): REQUEST_KEY(last_number=%u) ignored — "
-			       "%llu ms since the last one ACCEPTED, fewer than the %d between two",
-			    last, (unsigned long long)(now - s->key_asked_ms), V_KEY_ASK_GAP_MS);
-		return true;
-	}
 	if (!s->never_sent_key && !already_seen &&
 	    now - s->last_key_ms < V_GRACE_KEY) {
 		/* ⛔ §3: «every tolerance must be written to the log.  A silent
@@ -8211,6 +8208,25 @@ static bool handle_key_request(rcp_session *s, reader *l, uint64_t now)
 			       "passed since the last KEYFRAME sent, fewer than the %d allowed",
 			    last, (unsigned long long)(now - s->last_key_ms),
 			    V_GRACE_KEY);
+		return true;
+	}
+	if (s->key_asked_ms && now - s->key_asked_ms < V_KEY_ASK_GAP_MS) {
+		/* ⛔ §3: a tolerance is written — but ONE line per window says how many (msgrate.h), not one per request. */
+		if (s->needs_key) {
+			if (msg_line(s, MC_REQUEST_KEY))
+				reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): REQUEST_KEY(last_number=%u) ignored — a keyframe is still "
+				       "owed and will answer it (%llu ms since the last one accepted, fewer than the %d between two)",
+				    last, (unsigned long long)(now - s->key_asked_ms), V_KEY_ASK_GAP_MS);
+			return true;
+		}
+		if (!s->key_deferred) {
+			s->key_deferred = true;
+			s->key_deferred_ms = now;
+		}
+		if (msg_line(s, MC_REQUEST_KEY))
+			reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): REQUEST_KEY(last_number=%u) DEFERRED — %llu ms since the "
+			       "last one accepted, fewer than the %d between two: the keyframe is started when the gap ends",
+			    last, (unsigned long long)(now - s->key_asked_ms), V_KEY_ASK_GAP_MS);
 		return true;
 	}
 	s->key_asked_ms = now;
@@ -9892,6 +9908,19 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	/* ⏳ §13.5: a `PACE` held back by the 250 ms window goes out here. */
 	pace_flush(s, now);
 	msg_flush_all(s, now);
+	/* ⛔ A REQUEST_KEY DEFERRED BY THE GAP IS SERVED HERE, not lost (see `V_KEY_ASK_GAP_MS`): unless a keyframe has gone out since it came,
+	 *    which answers it too. */
+	if (s->key_deferred) {
+		if (!s->never_sent_key && s->last_key_ms >= s->key_deferred_ms) {
+			s->key_deferred = false;
+		} else if (now - s->key_asked_ms >= V_KEY_ASK_GAP_MS) {
+			s->key_deferred = false;
+			s->key_asked_ms = now;
+			if (msg_line(s, MC_REQUEST_KEY))
+				reg(s, "REQUEST_KEY deferred by the gap SERVED (§5.2): the next frame will be a KEYFRAME");
+			key_needed(s, "a REQUEST_KEY deferred by the gap (§5.2)");
+		}
+	}
 
 	/* ⛔⛔ THE BACKSTOP OF PASTE REQUESTS, and without it the clipboard
 	 *      channel works only once.

@@ -278,9 +278,9 @@ int main(int argc, char **argv)
 					const char *set = memmem(kr, n, "s->key_asked_ms = now;", strlen("s->key_asked_ms = now;"));
 					const char *ask = memmem(kr, n, "key_needed(s,", strlen("key_needed(s,"));
 
-					CHECK(chk && tol && chk < tol, "9: REQUEST_KEY: the gap test also covers already_seen requests (it comes first)");
+					CHECK(chk && tol && tol < chk, "9: REQUEST_KEY: the grace for duplicates comes first, then the gap (which also covers already_seen requests)");
 					CHECK(set && ask && set < ask, "9: REQUEST_KEY: the time is taken when the request is ACCEPTED");
-					CHECK(count_in(kr, n, "msg_line(s, MC_REQUEST_KEY)") == 3, "9: REQUEST_KEY: its three lines go through msg_line()");
+					CHECK(count_in(kr, n, "msg_line(s, MC_REQUEST_KEY)") == 4, "9: REQUEST_KEY: its four lines go through msg_line()");
 				}
 			}
 			{
