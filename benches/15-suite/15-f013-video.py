@@ -61,6 +61,9 @@ def extra(a):
                    help="how long the video is photographed in the healthy pass")
     a.add_argument("--listen-s", type=float, default=40.0,
                    help="how long it listens, without photos, before photographing")
+    a.add_argument("--video-route", choices=("default", "worker", "main"), default="default",
+                   help="the page's video route: default = what the page chooses (the worker on desktop Firefox, "
+                        "DECISIONS-11 §11.36 D); worker / main force it with #video=worker / #video=main")
 
 
 def prepare_video(s):
@@ -139,6 +142,9 @@ def look(s, o, box, seconds, name, save_every=6, minimum=6, cap=90.0):
 
 
 def body(o, E):
+    # the route is the URL's fragment (a Chrome run with "worker" is allowed: the page decides what it can do)
+    if o.video_route != "default":
+        o.url = o.url.split("#")[0] + "#video=" + o.video_route
     sess = S.Session(o, "013", E)
     G4.robust(sess.sc)
     with sess as s:
