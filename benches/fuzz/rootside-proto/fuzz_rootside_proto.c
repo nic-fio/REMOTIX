@@ -124,8 +124,9 @@ static void op_packet_raw(const uint8_t *a, size_t n)
 
 static void op_packet_good(const uint8_t *a, size_t n)
 {
-	static const uint16_t kinds[11] = { RXR_AUTH, RXR_SPAWN, RXR_CLOSE_ORPHAN, RXR_SIGNAL, RXR_READY,
+	static const uint16_t kinds[14] = { RXR_AUTH, RXR_SPAWN, RXR_CLOSE_ORPHAN, RXR_SIGNAL, RXR_READY,
 	                                    RXR_VERDICT, RXR_SPAWNED, RXR_SPAWN_REFUSED, RXR_CHILD_EXITED,
+	                                    RXR_FOUND_AGAIN, RXR_FOUND_END, RXR_FOUND_GONE, /* ⭐ 1.6: events, never requests */
 	                                    0, 999 };
 	union {
 		struct rxr_head h;
@@ -136,7 +137,7 @@ static void op_packet_good(const uint8_t *a, size_t n)
 		struct rxr_ready re;
 		uint8_t raw[sizeof(struct rxr_ready) + sizeof(struct rxr_auth) + 8];
 	} m;
-	uint16_t kind = kinds[(n > 0 ? a[0] : 0) % 11];
+	uint16_t kind = kinds[(n > 0 ? a[0] : 0) % 14];
 	uint8_t mut = n > 1 ? a[1] % 6 : 0;
 	size_t len = size_of(kind) ? size_of(kind) : sizeof(struct rxr_head) + 16;
 	memset(&m, 0, sizeof m);

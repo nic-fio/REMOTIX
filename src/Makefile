@@ -332,7 +332,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-rootside test-walls FORCE
+.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-rootside test-walls test-rediscover FORCE
 
 all: fingerprints $(NOME)
 
@@ -659,7 +659,7 @@ clipboard.o:        clipboard.h log.h
 test-rootside: ../benches/02-rootside-validator-test.c rootside.c rootside.h rootside_proto.h
 	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-rootside.XXXXXX"); \
 	trap 'rm -rf "$$d"' EXIT; \
-	$(CC) $(CFLAGS) -I. -c -o "$$d/t.o" ../benches/02-rootside-validator-test.c; \
+	$(CC) $(CFLAGS) $(F2_CFLAGS) -I. -c -o "$$d/t.o" ../benches/02-rootside-validator-test.c; \
 	$(CC) $(CFLAGS) -I. -c -o "$$d/log.o" ../benches/fuzz/rootside-dispatch/stubs_log.c; \
 	LC_ALL=C $(CC) -o "$$d/probe" "$$d/t.o" "$$d/log.o" 2> "$$d/link.log" || true; \
 	{ echo '#include <stdio.h>'; \
@@ -669,6 +669,15 @@ test-rootside: ../benches/02-rootside-validator-test.c rootside.c rootside.h roo
 	$(CC) $(CFLAGS) -c -o "$$d/stubs.o" "$$d/stubs.c"; \
 	$(CC) -o "$$d/test" "$$d/t.o" "$$d/log.o" "$$d/stubs.o"; \
 	RXFUZZ_LOG=1 "$$d/test"
+
+# ⭐ 1.6 (R8): the search for live desktops, with a fake /proc and a fake /run/systemd/sessions (a user is enough; as root it
+#    uses `nobody`).  rediscover.c is INCLUDED by the test; log.c is replaced by the harness' stub.
+test-rediscover: ../benches/02-rediscover-test.c rediscover.c rediscover.h
+	@set -e; d=$$(mktemp -d "$${TMPDIR:-/tmp}/remotix-test-rediscover.XXXXXX"); \
+	trap 'rm -rf "$$d"' EXIT; \
+	$(CC) $(CFLAGS) $(F2_CFLAGS) -I. -o "$$d/test" ../benches/02-rediscover-test.c \
+	    ../benches/fuzz/rootside-dispatch/stubs_log.c $(F2_LIBS); \
+	"$$d/test"
 
 # ⭐ The automatic dependencies written by `-MMD` (absent on the first build: `-include` does not mind).
 -include $(OGGETTI:.o=.d)

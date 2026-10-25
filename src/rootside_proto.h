@@ -19,7 +19,13 @@
  * Network side → root side: AUTH, SPAWN, CLOSE_ORPHAN, SIGNAL.  Nothing else.
  * Root side → network side: READY (once, first), VERDICT, SPAWNED (+ one fd by
  * `SCM_RIGHTS`: the child's socket end, the only fd that ever crosses),
- * SPAWN_REFUSED, CHILD_EXITED.
+ * SPAWN_REFUSED, CHILD_EXITED, and (⭐ 1.6, R8) FOUND_AGAIN / FOUND_END / FOUND_GONE:
+ * the live REMOTIX desktops that no child holds, which the ROOT side looks for —
+ * the network side no longer reads /proc.  The order is part of the list:
+ * READY, then N × FOUND_AGAIN, then ONE FOUND_END whose `count` is N, and only
+ * after it any number of FOUND_GONE; the network side treats any other order
+ * (or a count that does not add up) as a broken channel.  Nothing new goes the
+ * other way: a hijacked network side gains no message towards the root side.
  *
  * ⚠ The structs are sent as they are, both sides being the same binary: the
  *    sender zeroes the whole struct first (`memset`) so no padding byte carries
@@ -32,7 +38,7 @@
 #include <stdint.h>
 
 #define RXR_MAGIC   0x31525852u   /* "RXR1" little-endian */
-#define RXR_VERSION 1
+#define RXR_VERSION 2   /* ⭐ 1.6 (R8): FOUND_AGAIN / FOUND_END / FOUND_GONE */
 
 #define RXR_USER_MAX     257      /* as helper.c's request */
 #define RXR_PASSWORD_MAX 1025
@@ -40,6 +46,9 @@
 #define RXR_GRANT_BYTES  16
 #define RXR_CODEC_MAX    32       /* child_video_capabilities()'s `offered` */
 #define RXR_EXPLAIN_MAX  1024     /* … and its `explanation` */
+#define RXR_FOUND_MAX    256      /* desktops found again, at most: main.c's MAX_FOUND_AGAIN */
+#define RXR_SESSION_MAX  32       /* a logind session id */
+#define RXR_COMM_MAX     20       /* a process name, as /proc/<pid>/stat gives it (16) + room */
 
 /* The root side's own bounds (§11.50, «a hijacked network side is the
  * attacker it is built against»): at most 16 AUTH in flight — the PAM helper's
@@ -67,6 +76,9 @@ enum rxr_kind {
 	RXR_SPAWNED       = 103,
 	RXR_SPAWN_REFUSED = 104,
 	RXR_CHILD_EXITED  = 105,
+	RXR_FOUND_AGAIN   = 106,   /* ⭐ 1.6 (R8) */
+	RXR_FOUND_END     = 107,
+	RXR_FOUND_GONE    = 108,
 };
 
 struct rxr_head {
@@ -167,6 +179,40 @@ struct rxr_child_exited {
 	struct rxr_head h;
 	uint64_t serial;
 	int32_t wait_status;              /* as waitpid(); the render grant is already removed */
+};
+
+/* ⭐ 1.6 (R8) FOUND_AGAIN: one per live REMOTIX desktop that no child holds (rediscover.h's criterion, asked by the ROOT
+ * side).  Only what the network side uses: the name and uid (cap, budget, abandonment clock, reattach), and three texts for
+ * its log.  The stage's pid is TEXT here, not a handle: the network side signals nothing by it. */
+struct rxr_found_again {
+	struct rxr_head h;                /* request 0: an event */
+	uint32_t uid;
+	int32_t stage;                    /* the leader of the stage, for the log */
+	uint32_t sessions;                /* how many `remotix` logind sessions the user has */
+	char user[RXR_USER_MAX];
+	char session[RXR_SESSION_MAX];
+	char comm[RXR_COMM_MAX];
+};
+
+enum rxr_found_outcome {
+	RXR_FOUND_OK      = 0,  /* the search ran: `count` FOUND_AGAIN came before this */
+	RXR_FOUND_UNKNOWN = 1,  /* the root side could not look (sessions directory or /proc unreadable):
+	                         * `count` is 0, and the network side counts nothing — «could not look», as in 1.5 */
+};
+
+/* FOUND_END: closes the list.  `count` is the number of FOUND_AGAIN that preceded it. */
+struct rxr_found_end {
+	struct rxr_head h;
+	uint32_t count;
+	uint8_t outcome;                  /* enum rxr_found_outcome */
+};
+
+/* FOUND_GONE: the stage of a desktop already announced is gone (the root side watches it with a pidfd and its start
+ * time, so a reused pid is not the same stage).  Only after FOUND_END. */
+struct rxr_found_gone {
+	struct rxr_head h;
+	uint32_t uid;
+	char user[RXR_USER_MAX];
 };
 
 #endif

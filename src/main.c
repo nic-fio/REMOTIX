@@ -540,6 +540,28 @@ static int stage_count(const struct bridge *p)
 	return children_count(p->f) + found_again_n;
 }
 
+/* ⭐ 1.6 (R8): in the split server the ROOT side looks for the desktops (it reads /proc and logind's files; the network side
+ *    reads neither) and says over the channel when one is gone.  Same effect as the sweep below, same lines; and only for a
+ *    desktop still in the table — one that already has a child was removed by `children_ensure()`, and its clock stays. */
+#define FOUND_AGAIN_WAIT_MS 3000
+
+static void found_again_gone_event(void *ctx, uid_t uid, const char *user)
+{
+	int i = found_again_index(user);
+
+	(void)ctx;
+	if (i < 0 || found_again[i].uid != uid)
+		return;
+	registro_dice(LOG_CHILD,
+	              "⚠ PHASE 17 T7: the desktop found again of «%s» is gone "
+	              "(the stage pid %ld «%s» vanished without anyone "
+	              "coming back): it leaves the cap, the budget and the "
+	              "abandonment clock",
+	              user, (long)found_again[i].stage, found_again[i].comm);
+	found_again_remove(user);
+	presence_forget(user);
+}
+
 static void found_again_at_startup(uint64_t now_ms)
 {
 	char why[256] = "";
@@ -555,7 +577,12 @@ static void found_again_at_startup(uint64_t now_ms)
 		              "counted (cap, budget, abandonment)");
 		return;
 	}
-	n = rediscover_search(found_again, MAX_FOUND_AGAIN, why, sizeof why);
+	if (rootside_attached()) {
+		rootside_hook_found_gone(found_again_gone_event, NULL);
+		n = rootside_wait_found(found_again, MAX_FOUND_AGAIN, FOUND_AGAIN_WAIT_MS, why, sizeof why);
+	} else {
+		n = rediscover_search(found_again, MAX_FOUND_AGAIN, why, sizeof why);
+	}
 	if (n < 0) {
 		registro_dice(LOG_CHILD,
 		              "⛔ PHASE 17 T7: could not look for live REMOTIX desktops "
@@ -614,6 +641,8 @@ static void found_again_sweep(uint64_t now_ms)
 	char why[256] = "";
 	int n;
 
+	if (rootside_attached()) /* ⭐ 1.6 (R8): FOUND_GONE says it (found_again_gone_event) */
+		return;
 	if (!found_again_n || now_ms - last < FOUND_AGAIN_SWEEP_MS)
 		return;
 	last = now_ms;

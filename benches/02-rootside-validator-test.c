@@ -51,13 +51,16 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 	return real_getpwnam_r(n, pw, b, c, r);
 }
 #define getpwnam_r fake_getpwnam_r
+/* ⭐ 1.6 (R8): the root side now asks `rediscover_starttime()` / `rediscover_search_files()`; the real ones (their GLib
+ * half is never reached here, and is stubbed by the link) so the table can be watched by a real pidfd. */
+#include "rediscover.c"
 #include "rootside.c"
 
 #include <stdio.h>
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 56
+#define EXPECTED_CHECKS 83
 
 static void require(int cond, const char *desc)
 {
@@ -100,6 +103,273 @@ static void auth_fill(struct rxr_auth *a)
 	snprintf(a->rhost, sizeof a->rhost, "192.0.2.1");
 }
 
+static void count_exit_gone(void *c, uid_t u, const char *n)
+{
+	(void)u;
+	(void)n;
+	(*(int *)c)++;
+}
+
+/* ── ⭐ 1.6 (R8): the desktops found again — the three events, their order, and the root side's table ─────────────────────── */
+
+static pid_t sleeper(void)
+{
+	pid_t p = fork();
+
+	if (p == 0) {
+		for (;;)
+			pause();
+	}
+	return p;
+}
+
+static void stop_sleeper(pid_t p)
+{
+	int st;
+
+	kill(p, SIGKILL);
+	waitpid(p, &st, 0);
+}
+
+static void desktop_of(RediscoveredDesktop *d, pid_t stage, const char *user, uid_t uid)
+{
+	memset(d, 0, sizeof *d);
+	d->stage = stage;
+	d->uid = uid;
+	d->sessions = 1;
+	snprintf(d->user, sizeof d->user, "%s", user);
+	snprintf(d->session, sizeof d->session, "c%ld", (long)stage);
+	snprintf(d->comm, sizeof d->comm, "stage-%ld", (long)stage);
+	(void)rediscover_starttime("/proc", stage, &d->starttime);
+}
+
+/* one packet from the root side's end, exactly its size or -1 */
+static ssize_t take(int fd, void *buf, size_t cap)
+{
+	return recv(fd, buf, cap, MSG_DONTWAIT);
+}
+
+static int seq(struct rootside_found_seq *q, int kind, uint32_t count, uint8_t outcome)
+{
+	char w[100];
+
+	return rootside_found_step(q, kind, count, outcome, w, sizeof w);
+}
+
+static void found_tests(void)
+{
+	struct rootside_found_seq q;
+	union {
+		struct rxr_found_again fa;
+		struct rxr_found_end fe;
+		struct rxr_found_gone fg;
+		char raw[1024];
+	} in;
+	int sv[2], gone_calls = 0;
+	pid_t k1, k2;
+	RediscoveredDesktop d[3];
+
+	printf("\n  ⭐ 1.6 (R8): the desktops found again\n");
+
+	/* the sizes are the wire format: a field added by accident changes them */
+	require(sizeof(struct rxr_found_again) == 344 && sizeof(struct rxr_found_end) == 24 &&
+	        sizeof(struct rxr_found_gone) == 280,
+	        "exact sizes on the wire: FOUND_AGAIN 344, FOUND_END 24, FOUND_GONE 280");
+	require(RXR_VERSION == 2 && RXR_FOUND_AGAIN == 106 && RXR_FOUND_END == 107 && RXR_FOUND_GONE == 108,
+	        "version 2, kinds 106, 107, 108");
+	require(size_of_event(RXR_FOUND_AGAIN) == sizeof(struct rxr_found_again) &&
+	        size_of_event(RXR_FOUND_END) == sizeof(struct rxr_found_end) &&
+	        size_of_event(RXR_FOUND_GONE) == sizeof(struct rxr_found_gone),
+	        "the network side's client knows the exact size of each event");
+	{
+		bool refused = true;
+		static const int kinds[3] = { RXR_FOUND_AGAIN, RXR_FOUND_END, RXR_FOUND_GONE };
+
+		for (int i = 0; i < 3; i++) {
+			memset(&in, 0, sizeof in);
+			head_fill(&in.fa.h, kinds[i], 5);
+			/* even with a request number, the right credentials and the event's exact size */
+			refused = refused && check(&in, size_of_event(kinds[i])) == 0 && size_of_request(kinds[i]) == 0;
+		}
+		require(refused, "a FOUND_* sent BY the network side is not in the closed list: the root side refuses it");
+	}
+
+	/* the order, pure */
+	memset(&q, 0, sizeof q);
+	require(seq(&q, RXR_FOUND_AGAIN, 0, 0) == -1, "FOUND_AGAIN before READY: broken");
+	memset(&q, 0, sizeof q);
+	require(seq(&q, RXR_READY, 0, 0) == 0 && seq(&q, RXR_FOUND_AGAIN, 0, 0) == 0 && seq(&q, RXR_FOUND_AGAIN, 0, 0) == 0 &&
+	        seq(&q, RXR_FOUND_END, 2, RXR_FOUND_OK) == 0 && seq(&q, RXR_FOUND_GONE, 0, 0) == 0 &&
+	        seq(&q, RXR_FOUND_GONE, 0, 0) == 0,
+	        "READY, 2 x FOUND_AGAIN, FOUND_END(2), 2 x FOUND_GONE: in order");
+	require(seq(&q, RXR_FOUND_AGAIN, 0, 0) == -1 && seq(&q, RXR_FOUND_END, 2, RXR_FOUND_OK) == -1,
+	        "after FOUND_END: a FOUND_AGAIN or a second FOUND_END is broken");
+	memset(&q, 0, sizeof q);
+	(void)seq(&q, RXR_READY, 0, 0);
+	(void)seq(&q, RXR_FOUND_AGAIN, 0, 0);
+	require(seq(&q, RXR_FOUND_END, 2, RXR_FOUND_OK) == -1 && seq(&q, RXR_FOUND_END, 0, RXR_FOUND_OK) == -1,
+	        "a count that does not add up (too many or too few): broken");
+	memset(&q, 0, sizeof q);
+	(void)seq(&q, RXR_READY, 0, 0);
+	require(seq(&q, RXR_FOUND_GONE, 0, 0) == -1, "FOUND_GONE before FOUND_END: broken");
+	(void)seq(&q, RXR_FOUND_AGAIN, 0, 0);
+	require(seq(&q, RXR_FOUND_END, 1, RXR_FOUND_UNKNOWN) == -1 && seq(&q, RXR_FOUND_END, 1, 7) == -1,
+	        "UNKNOWN with desktops listed, and an outcome that does not exist: broken");
+	memset(&q, 0, sizeof q);
+	(void)seq(&q, RXR_READY, 0, 0);
+	require(seq(&q, RXR_FOUND_END, 0, RXR_FOUND_UNKNOWN) == 0 && seq(&q, RXR_READY, 0, 0) == -1,
+	        "UNKNOWN with none is fine; a second READY is broken");
+	memset(&q, 0, sizeof q);
+	(void)seq(&q, RXR_READY, 0, 0);
+	{
+		int last = 0;
+
+		for (int i = 0; i < RXR_FOUND_MAX + 1; i++)
+			last = seq(&q, RXR_FOUND_AGAIN, 0, 0);
+		require(last == -1, "more than RXR_FOUND_MAX FOUND_AGAIN: broken");
+	}
+
+	/* the root side's table, on the wire */
+	if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sv) != 0) {
+		printf("    ??  no socketpair\n");
+		return;
+	}
+	fcntl(sv[0], F_SETFL, O_NONBLOCK);
+	R.chan = sv[0];
+	R.found = calloc(RXR_FOUND_MAX, sizeof *R.found);
+	R.gone = calloc(RXR_FOUND_MAX, sizeof *R.gone);
+	found_clear();
+	k1 = sleeper();
+	k2 = sleeper();
+	desktop_of(&d[0], k1, "anna", 1001);
+	desktop_of(&d[1], k2, "bruno", 1002);
+	desktop_of(&d[2], 1, "ghost", 1003);
+	d[2].starttime += 5; /* the pid exists, but it is another process than the one searched */
+	found_install(d, 3, true, "/proc");
+	require(R.found_promised == 2, "a stage whose start time differs (a reused pid) is not watched, not announced");
+	found_pump();
+	{
+		bool ok = take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fa && in.fa.h.kind == RXR_FOUND_AGAIN &&
+		          in.fa.h.request == 0 && strcmp(in.fa.user, "anna") == 0 && in.fa.uid == 1001 && in.fa.stage == k1;
+		ok = ok && take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fa && in.fa.h.kind == RXR_FOUND_AGAIN &&
+		     strcmp(in.fa.user, "bruno") == 0;
+		require(ok, "two FOUND_AGAIN in order, exact size, request 0, with name, uid and stage");
+	}
+	require(take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fe && in.fe.h.kind == RXR_FOUND_END && in.fe.count == 2 &&
+	        in.fe.outcome == RXR_FOUND_OK,
+	        "then FOUND_END(2, OK)");
+	require(take(sv[1], &in, sizeof in) < 0, "and nothing else while all stages live");
+	stop_sleeper(k1);
+	found_check(log_now_ms());
+	found_pump();
+	require(take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fg && in.fg.h.kind == RXR_FOUND_GONE && in.fg.uid == 1001 &&
+	        strcmp(in.fg.user, "anna") == 0,
+	        "a stage that dies (pidfd) is announced with FOUND_GONE, after FOUND_END");
+	found_check(log_now_ms());
+	found_pump();
+	require(take(sv[1], &in, sizeof in) < 0, "and only once");
+
+	/* a restart: the whole current table again, in order */
+	found_install(d, 2, true, "/proc"); /* k1 is dead now: its start time is gone */
+	found_pump();
+	require(R.found_promised == 1 && take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fa && strcmp(in.fa.user, "bruno") == 0 &&
+	        take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fe && in.fe.count == 1,
+	        "a new network side gets the current table again: only the live desktop, FOUND_END(1)");
+
+	/* a stage that dies before it was announced is neither announced nor counted */
+	k1 = sleeper();
+	desktop_of(&d[0], k1, "carla", 1004);
+	found_install(d, 1, true, "/proc");
+	stop_sleeper(k1);
+	found_check(log_now_ms());
+	require(R.found_promised == 0 && R.ngone == 0, "a stage that dies before FOUND_AGAIN left: taken out of the count, no FOUND_GONE");
+	found_pump();
+	require(take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fe && in.fe.count == 0 && in.fe.outcome == RXR_FOUND_OK &&
+	        take(sv[1], &in, sizeof in) < 0,
+	        "FOUND_END(0, OK) alone");
+
+	/* the root side could not look */
+	found_install(NULL, 0, false, "/proc");
+	found_pump();
+	require(take(sv[1], &in, sizeof in) == (ssize_t)sizeof in.fe && in.fe.count == 0 && in.fe.outcome == RXR_FOUND_UNKNOWN,
+	        "could not look: FOUND_END(0, UNKNOWN), and no desktop");
+	stop_sleeper(k2);
+	found_clear();
+	free(R.found);
+	free(R.gone);
+	R.found = NULL;
+	R.gone = NULL;
+	close(sv[0]);
+	close(sv[1]);
+	R.chan = -1;
+
+	/* the network side's client, fed by hand (the kernel's stamps are tested with a root side in the benches) */
+	C.fd = -1;
+	memset(&C.fseq, 0, sizeof C.fseq);
+	C.found.n = 0;
+	C.found.ended = false;
+	C.lost = false;
+	{
+		union rpk pk;
+		char w[64], why[128];
+		RediscoveredDesktop got[4];
+		int n;
+
+		(void)rootside_found_step(&C.fseq, RXR_READY, 0, 0, w, sizeof w);
+		rootside_hook_found_gone(count_exit_gone, &gone_calls);
+		for (int i = 0; i < 2; i++) {
+			memset(&pk, 0, sizeof pk);
+			head_fill(&pk.fa.h, RXR_FOUND_AGAIN, 0);
+			pk.fa.uid = 2000 + (uint32_t)i;
+			pk.fa.stage = 50 + i;
+			pk.fa.sessions = 1;
+			snprintf(pk.fa.user, sizeof pk.fa.user, "u%d", i);
+			snprintf(pk.fa.session, sizeof pk.fa.session, "c%d", i);
+			snprintf(pk.fa.comm, sizeof pk.fa.comm, "labwc");
+			dispatch(&pk, -1);
+		}
+		memset(&pk, 0, sizeof pk);
+		head_fill(&pk.fe.h, RXR_FOUND_END, 0);
+		pk.fe.count = 2;
+		dispatch(&pk, -1);
+		memset(got, 0, sizeof got);
+		n = rootside_wait_found(got, 4, 10, why, sizeof why);
+		require(n == 2 && got[1].uid == 2001 && strcmp(got[0].user, "u0") == 0 && got[1].stage == 51 &&
+		        strcmp(got[1].comm, "labwc") == 0 && !rootside_lost(),
+		        "the client collects the list and hands it over (2 desktops, fields kept)");
+		memset(&pk, 0, sizeof pk);
+		head_fill(&pk.fg.h, RXR_FOUND_GONE, 0);
+		pk.fg.uid = 2001;
+		snprintf(pk.fg.user, sizeof pk.fg.user, "u1");
+		dispatch(&pk, -1);
+		require(gone_calls == 1, "FOUND_GONE after the list reaches the hook");
+		memset(&pk, 0, sizeof pk);
+		head_fill(&pk.fa.h, RXR_FOUND_AGAIN, 0);
+		dispatch(&pk, -1);
+		require(rootside_lost(), "a FOUND_AGAIN after FOUND_END breaks the channel (the network side stops)");
+
+		C.lost = false;
+		memset(&C.fseq, 0, sizeof C.fseq);
+		C.found.n = 0;
+		C.found.ended = false;
+		(void)rootside_found_step(&C.fseq, RXR_READY, 0, 0, w, sizeof w);
+		memset(&pk, 0, sizeof pk);
+		head_fill(&pk.fe.h, RXR_FOUND_END, 0);
+		pk.fe.outcome = RXR_FOUND_UNKNOWN;
+		dispatch(&pk, -1);
+		n = rootside_wait_found(got, 4, 10, why, sizeof why);
+		require(n == -1 && strstr(why, "could not look"), "FOUND_END UNKNOWN: -1 and the reason (the network side counts none)");
+
+		C.lost = false;
+		memset(&C.fseq, 0, sizeof C.fseq);
+		C.found.n = 0;
+		C.found.ended = false;
+		(void)rootside_found_step(&C.fseq, RXR_READY, 0, 0, w, sizeof w);
+		n = rootside_wait_found(got, 4, 10, why, sizeof why);
+		require(n == -1 && why[0], "no answer: -1 and a reason, no hang (channel absent)");
+	}
+}
+
 int main(void)
 {
 	struct rxr_auth a;
@@ -134,7 +404,7 @@ int main(void)
 		u.h.magic ^= 1;
 		require(check(&u, sizeof u) == 0, "wrong magic: malformed");
 		u = s;
-		u.h.version = 2;
+		u.h.version = RXR_VERSION + 1;
 		require(check(&u, sizeof u) == 0, "wrong version: malformed");
 		u = s;
 		u.h.request = 0;
@@ -533,6 +803,8 @@ int main(void)
 			printf("    ??  no socketpair or temporary file\n");
 		}
 	}
+
+	found_tests();
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);
 	if (failures)

@@ -51,6 +51,9 @@ typedef struct {
 	pid_t stage;       /* the leader of the stage (pid = sid) */
 	char comm[20];     /* its name, for the log */
 	unsigned sessions; /* how many `remotix` logind sessions the user has */
+	/* ⭐ 1.6 (R8): the stage's start time (field 22 of /proc/<pid>/stat, clock ticks since boot): a pid alone can be reused, the
+	 *    pair (pid, starttime) cannot.  The root side watches the stage with it (`pidfd_open` + this check). */
+	unsigned long long starttime;
 } RediscoveredDesktop;
 
 /*
@@ -63,6 +66,22 @@ typedef struct {
  *   `rediscover.c`, above `struct question`.
  */
 int rediscover_search(RediscoveredDesktop *v, int cap, char *why, size_t how_much);
+
+/*
+ * ⭐ 1.6 (R8, DECISIONS.md §11.50) — THE SAME QUESTION, FOR THE ROOT SIDE.  The root side is single-threaded and
+ * has no GDBus (a fork of a process with a GDBus worker thread runs PAM and NSS in a copy whose locks may be held
+ * by a thread that is not there), so it asks logind's own files instead of its bus: /run/systemd/sessions/<id>
+ * (`UID=`, `SERVICE=`, `SCOPE=`, the first of each key, as `render_grant.c` reads them; a «closing» session counts,
+ * as it does on the bus), then the same single pass over /proc and the same criterion.  Returns how many it
+ * wrote (at most `cap`, one per user), or -1 if the sessions' directory or /proc cannot be read (`why`).
+ * Never waits, never touches GLib.  The `_at` form takes the two roots so a desk test can give it a fake /proc.
+ */
+int rediscover_search_files(RediscoveredDesktop *v, int cap, char *why, size_t how_much);
+int rediscover_search_files_at(const char *sessions_dir, const char *proc_root, RediscoveredDesktop *v, int cap,
+                               char *why, size_t how_much);
+
+/* The start time (field 22 of `<proc_root>/<pid>/stat`).  false if the file is missing or malformed. */
+bool rediscover_starttime(const char *proc_root, pid_t pid, unsigned long long *out);
 
 /*
  * Turns the GLib context of the check that does not wait, never blocking:

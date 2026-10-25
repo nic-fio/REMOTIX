@@ -42,6 +42,7 @@
 #ifndef REMOTIX_ROOTSIDE_H
 #define REMOTIX_ROOTSIDE_H
 
+#include "rediscover.h"
 #include "rootside_proto.h"
 
 #include <signal.h>
@@ -200,6 +201,16 @@ bool rootside_signal(uint64_t serial, int sig);
 typedef void (*RootsideChildExited)(void *ctx, uint64_t serial, int wait_status);
 void rootside_hook_child_exited(RootsideChildExited fn, void *ctx);
 
+/* ⭐ 1.6 (R8) — the desktops found again, asked of the ROOT side (no /proc here).  Waits (blocking, at most `timeout_ms`)
+ *    for FOUND_END, putting the other packets aside as `rootside_spawn()` does, then copies what FOUND_AGAIN brought into `v`
+ *    (at most `cap`, `starttime` 0) and returns how many — or -1 with `why` if the root side could not look
+ *    (RXR_FOUND_UNKNOWN), did not answer in time, or the channel is lost.  The list may already have arrived: then it
+ *    returns at once. */
+int rootside_wait_found(RediscoveredDesktop *v, int cap, int timeout_ms, char *why, size_t why_len);
+/* FOUND_GONE (after FOUND_END), from `rootside_move()`.  `uid` and `user` are the desktop's. */
+typedef void (*RootsideFoundGone)(void *ctx, uid_t uid, const char *user);
+void rootside_hook_found_gone(RootsideFoundGone fn, void *ctx);
+
 /* ⚠ For `children_turn_off()` only (after the last round of the loop): pumps
  *    the channel until `done(ctx)` or `timeout_ms`. */
 void rootside_pump_until(bool (*done)(void *ctx), void *ctx, int timeout_ms);
@@ -218,6 +229,17 @@ struct rootside_peer {
 int rootside_check_packet(const struct rootside_peer *p, const void *buf,
                           size_t len, bool has_cred, pid_t cred_pid,
                           uid_t cred_uid, char *why, size_t why_len);
+
+/* ⭐ 1.6 (R8) — the ORDER of the root side's events about desktops found again, pure: READY, N × FOUND_AGAIN, one FOUND_END
+ *    with count N, then FOUND_GONE.  The network side feeds every such packet through it; 0 = in order, -1 = the channel is
+ *    broken (`why` says how).  `end_count`/`end_outcome` are read only for FOUND_END. */
+enum { RXR_SEQ_BEFORE_READY = 0, RXR_SEQ_LISTING = 1, RXR_SEQ_LISTED = 2 };
+struct rootside_found_seq {
+	int phase;
+	uint32_t seen;
+};
+int rootside_found_step(struct rootside_found_seq *s, int kind, uint32_t end_count, uint8_t end_outcome, char *why,
+                        size_t why_len);
 
 /* The grant table and the AUTH bounds, also pure (time is a parameter).
  * ROOTSIDE_GRANTS_MAX: a grant lives from its VERDICT to its SPAWN, about a
