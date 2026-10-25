@@ -72,7 +72,7 @@ NOME    := remotix
 #    fifth link, the video channel, does NOT appear: it lives in `rcp.c`, which was
 #    already there — and it is why it is born already compared with `benches/rcp/`.
 SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
-            budget.c \
+            budget.c cid.c \
             tls.c log.c rcp.c authentication.c helper.c child.c \
             session.c capture.c mutter.c encoder.c vadirect.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
