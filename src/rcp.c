@@ -5,6 +5,7 @@
  * must change `RCP.md` first, or the two drift apart in silence.
  */
 #include "rcp.h"
+#include "msgrate.h" /* the token buckets of what a logged-in client can send as often as it likes */
 
 #include <arpa/inet.h> /* the ban key: IPv4 whole, IPv6 the /64 (`rcp_key_address`) */
 #include <errno.h> /* §4.4-bis: «there is no file yet» and «I could not
@@ -932,6 +933,8 @@ struct rcp_session {
 	/* How long to wait before asking the stage again to go back: it doubles at
 	 * every attempt that came to nothing, up to `RCP_CANVAS_RETRY_MAX_MS`. */
 	uint64_t canvas_mismatch_wait;
+	/* ⛔ One token bucket per kind of message that can be dropped (msgrate.h): see `msg_admit()`. */
+	struct msg_gate gate[MC_COUNT];
 };
 
 /* Declared here because the attempt limiter, below, MUST be able to
@@ -3204,6 +3207,76 @@ static void reg(rcp_session *s, const char *fmt, ...)
 	va_end(ap);
 	if (s->g.record)
 		s->g.record(s->g.ctx, line);
+}
+
+/* ⛔ THE FREQUENCY CEILING OF A LOGGED-IN CLIENT (msgrate.h, audit of 25 Oct 2026).  `true` = go on; `false` = the message is over the
+ *    (wide) rate of its kind: the caller CONSUMES it without effect.  The drops are counted, and one line per 10 s window says
+ *    how many, instead of a line per message. */
+static const char *const MC_NAMES[MC_COUNT] = {"POINTER",     "BUTTON",  "WHEEL",  "LETTER",     "KEY_POSITION",
+                                               "REQUEST_KEY", "PACE",    "VIEW",   "LAYOUT",     "FIT_CANVAS"};
+
+static void msg_report(rcp_session *s, enum msg_class c, const struct msg_gate_closed *cl)
+{
+	unsigned per_s, burst;
+
+	if (!cl->dropped && !cl->hidden)
+		return;
+	msg_class_rate(c, &per_s, &burst);
+	reg(s, "⚠ %s: in the last %u s %u messages over %u a second (burst %u) were DROPPED and %u log lines were not written",
+	    MC_NAMES[c], MSG_WINDOW_MS / 1000u, cl->dropped, per_s, burst, cl->hidden);
+}
+
+static bool msg_admit(rcp_session *s, enum msg_class c, uint64_t now)
+{
+	struct msg_gate_closed cl;
+	unsigned per_s, burst;
+	bool ok;
+
+	msg_class_rate(c, &per_s, &burst);
+	ok = msg_gate_admit(&s->gate[c], now, per_s, burst, &cl);
+	msg_report(s, c, &cl);
+	return ok;
+}
+
+/* May this kind write a log line now?  (at most MSG_LINES_PER_WINDOW per window and kind; the rest is in the summary) */
+static bool msg_line(rcp_session *s, enum msg_class c) { return msg_gate_line(&s->gate[c]); }
+
+/* The periodic call: a window that has ended gets its summary even if no message of that kind arrives any more. */
+static void msg_flush_all(rcp_session *s, uint64_t now)
+{
+	for (int c = 0; c < MC_COUNT; c++) {
+		struct msg_gate_closed cl;
+
+		if (!s->gate[c].started)
+			continue;
+		msg_gate_flush(&s->gate[c], now, &cl);
+		msg_report(s, (enum msg_class)c, &cl);
+	}
+}
+
+static enum msg_class input_class(uint16_t kind)
+{
+	switch (kind) {
+	case T_POINTER:      return MC_POINTER;
+	case T_BUTTON:       return MC_BUTTON;
+	case T_WHEEL:        return MC_WHEEL;
+	case T_LETTER:       return MC_LETTER;
+	default:             return MC_KEY_POSITION;
+	}
+}
+
+/* The control requests of an ACTIVE session that can be dropped without harm: a REQUEST_KEY or a PACE that does not arrive is the
+ * same as one the client never sent; a LAYOUT, VIEW or FIT_CANVAS over the rate is a client that is not a person. */
+static enum msg_class control_class(uint16_t kind)
+{
+	switch (kind) {
+	case T_REQUEST_KEY:  return MC_REQUEST_KEY;
+	case T_PACE:         return MC_PACE;
+	case T_VIEW:         return MC_VIEW;
+	case T_LAYOUT:       return MC_LAYOUT;
+	case T_FIT_CANVAS:   return MC_FIT_CANVAS;
+	default:             return MC_COUNT;
+	}
 }
 
 static void send_message(rcp_session *s, uint16_t kind, const uint8_t *body,
@@ -6464,6 +6537,9 @@ static bool allowed_coordinates(rcp_session *s, uint32_t id, uint32_t x,
 static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
                          uint32_t lung, uint64_t now)
 {
+	/* ⛔ Over the rate of its kind: consumed, not executed, counted.  An input id only has to GROW (§7.3), so a gap is legitimate. */
+	if (!msg_admit(s, input_class(kind), now))
+		return true;
 	reader l = {body, lung, 0, false};
 	uint32_t id = le_u32(&l);
 	uint64_t instant = 0;
@@ -6652,6 +6728,7 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 		 * distinction as `RCP_VIDEO_NO_CHANNEL`, and the fallback is DECLARED
 		 * (`CODER.md` §4.2): this is the line. */
 		s->inp_not_injected++;
+		if (msg_line(s, input_class(kind)))
 		reg(s, "⚠ %s id=%u %s: VALID and NOT injected — this server does not have the "
 		       "five hooks of the input channel (§7.3).  The session HOLDS",
 		    input_name(kind), id, what);
@@ -6664,6 +6741,7 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 	 *   grain is deliberately coarsened — `milliseconds × 1000` (finding
 	 *   R1.27).  ⛔ Whoever derived a delay from it would measure the grain of a
 	 *   browser's `performance.now()`, not our loop. */
+	if (msg_line(s, input_class(kind)))
 	reg(s, "input id=%u (was %u) %s %s · client instant %llu us ⚠ coarsened "
 	       "grain, §7.3: no measurement is built on it",
 	    id, previous, input_name(kind), what,
@@ -8666,6 +8744,15 @@ static bool drain(rcp_session *s, uint64_t now)
 		}
 		reader l = {s->acc + 6, lung, 0, false};
 		bool keep_going = true;
+		/* ⛔ The frequency ceiling (msgrate.h): over the rate, the message is consumed WITHOUT effect, as if it had not been sent. */
+		{
+			enum msg_class mc = control_class(kind);
+
+			if (mc != MC_COUNT && s->state == S_ACTIVE && !msg_admit(s, mc, now)) {
+				l.i = lung;
+				goto message_done;
+			}
+		}
 		switch (kind) {
 		case T_HELLO:
 			if (s->state != S_WAIT_HELLO) {
@@ -9309,6 +9396,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			return false;
 		}
 		}
+	message_done:
 		if (!keep_going)
 			return false;
 		/* ⛔ §6.0: one advances by the DECLARED length, not by how much was
@@ -9668,6 +9756,7 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		return false;
 	/* ⏳ §13.5: a `PACE` held back by the 250 ms window goes out here. */
 	pace_flush(s, now);
+	msg_flush_all(s, now);
 
 	/* ⛔⛔ THE BACKSTOP OF PASTE REQUESTS, and without it the clipboard
 	 *      channel works only once.
