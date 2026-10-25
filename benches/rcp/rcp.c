@@ -6,6 +6,8 @@
  */
 #include "rcp.h"
 #include "msgrate.h" /* the token buckets of what a logged-in client can send as often as it likes */
+#define LWW_KINDS 3 /* VIEW, LAYOUT, PACE */
+#define LWW_MAX 512 /* the longest body kept: a LAYOUT name is 64 bytes, the others a few */
 
 #include <arpa/inet.h> /* the ban key: IPv4 whole, IPv6 the /64 (`rcp_key_address`) */
 #include <errno.h> /* §4.4-bis: «there is no file yet» and «I could not
@@ -766,6 +768,8 @@ struct rcp_session {
 	 *   start from 1.  It is not an implicit sentinel (§6.0), it is the one
 	 *   declared by the protocol. */
 	uint32_t app_my_id;  /* the last one *I* announced */
+	uint32_t ask_live_for; /* the `app_my_id` the counter below belongs to: it starts again when the announcement changes (CLIPBOARD_ASK_FREE) */
+	unsigned ask_live_n;   /* ASK received for the LIVE announcement */
 	/* ⛔ How many bytes the last text the SESSION gave us had: it serves to
 	 *    know whether the session has something to lose.  See the rule
 	 *    of the empty announcement, further below. */
@@ -944,6 +948,15 @@ struct rcp_session {
 	uint64_t canvas_mismatch_wait;
 	/* ⛔ One token bucket per kind of message that can be dropped (msgrate.h): see `msg_admit()`. */
 	struct msg_gate gate[MC_COUNT];
+	/* ⭐ "LAST ONE WINS" MESSAGES KEPT, NOT DROPPED (reading of rcp.c, B1): VIEW, LAYOUT and PACE are state, and the last of a burst is the one that matters. Over the rate the
+	 *    server keeps the LAST of each kind and applies it when the bucket has a token again (`lww_apply()`, from `rcp_time()`), instead of staying on the old state. */
+	struct {
+		bool has;
+		uint16_t kind;
+		uint32_t lung;
+		uint8_t body[LWW_MAX];
+	} lww[LWW_KINDS];
+	bool replaying; /* a kept message is being applied: the bucket has already been paid */
 	/* ⭐ S-R7: the ceiling on clipboard ANNOUNCE / ASK (not among the classes of msgrate.h: the clipboard is not input) */
 	struct msg_gate clip_gate;
 };
@@ -2533,6 +2546,14 @@ void rcp_refusal_unchecked(uint64_t ticket)
 	unchecked_ticket = ticket;
 }
 
+/* ⭐ 1.5 (reading of rcp.c, A1): the ticket whose «no» is the root side's own pause (`rcp_refusal_paused()`, `rcp.h`); 0 = none. */
+static uint64_t paused_ticket;
+
+void rcp_refusal_paused(uint64_t ticket)
+{
+	paused_ticket = ticket;
+}
+
 /* ⛔⭐ A «NO» THAT DOES NOT COUNT — `DECISIONS.md` §11.47 B (the user, 15 Oct
  *     2026).  Both must hold:
  *       1. the helper said «refused while `pam_faillock` had the account
@@ -2560,6 +2581,22 @@ void rcp_refusal_unchecked(uint64_t ticket)
 static bool refusal_uncounted(const struct sink *k, uint64_t ticket,
                               const char *key, uint64_t now)
 {
+	/* ⭐ A1: the root side's own pause leaves as a plain REFUSED/WRONG_CREDENTIALS at REJECT_FLOOR (`refusal_is_ours` stays false): the same byte and the same
+	 *    time as a wrong password.  ⛔ And it is counted by the RULE OF §11.47 B, not always uncounted: only a REAL account can be paused, so «never counted»
+	 *    for everybody would be the name oracle again (a name that does not exist is banned after its failures, one that is paused is not).  For a key
+	 *    that never logged in lately it counts as any refusal; for the owner who logged in during the last 30 days it is not counted (he does not ban himself). */
+	if (paused_ticket && ticket == paused_ticket) {
+		if (!good_recent(key, now)) {
+			say(k, "request %llu was NOT asked of PAM: the root side's own pause (too many refused for this user or from this address); %s never logged in "
+			       "(30 days), so it COUNTS as a failed attempt, like any refusal (DECISIONS.md §11.47 B)",
+			    (unsigned long long)paused_ticket, key);
+			return false;
+		}
+		say(k, "⚠ request %llu was NOT asked of PAM: the root side's own pause (too many refused for this user or from this address); %s logged in lately, so it is "
+		       "NOT counted towards the ban — the booking is given back (§11.47 B)",
+		    (unsigned long long)paused_ticket, key);
+		return true;
+	}
 	if (!locked_ticket || ticket != locked_ticket)
 		return false;
 	if (!good_recent(key, now)) {
@@ -3233,8 +3270,9 @@ static void msg_report(rcp_session *s, enum msg_class c, const struct msg_gate_c
 	if (!cl->dropped && !cl->hidden)
 		return;
 	msg_class_rate(c, &per_s, &burst);
-	reg(s, "⚠ %s: in the last %u s %u messages over %u a second (burst %u) were DROPPED and %u log lines were not written",
-	    MC_NAMES[c], MSG_WINDOW_MS / 1000u, cl->dropped, per_s, burst, cl->hidden);
+	reg(s, "⚠ %s: in the last %u s %u messages over %u a second (burst %u) were DROPPED%s and %u log lines were not written",
+	    MC_NAMES[c], MSG_WINDOW_MS / 1000u, cl->dropped, per_s, burst,
+	    c == MC_VIEW || c == MC_LAYOUT || c == MC_PACE ? " (the LAST of them is kept and applied when the bucket has a token)" : "", cl->hidden);
 }
 
 static bool msg_admit(rcp_session *s, enum msg_class c, uint64_t now)
@@ -3255,6 +3293,10 @@ static bool msg_line(rcp_session *s, enum msg_class c) { return msg_gate_line(&s
 /* The periodic call: a window that has ended gets its summary even if no message of that kind arrives any more. */
 #define CLIPBOARD_PER_SECOND 10u
 #define CLIPBOARD_BURST 20u
+/* ⭐ Reading of rcp.c, B2: the page asks AT ONCE for every announcement of the server, once, and RCP.md 7.4 has no refusal to answer an ASK with — an empty TEXT
+ *   would not match the announced length and the page would close the session.  So an ASK is never lost to the rate: the first CLIPBOARD_ASK_FREE requests for the same
+ *   transfer (the legitimate one, and a retry) are served whatever the bucket says; only the requests past them are subject to it, and they are said in the log. */
+#define CLIPBOARD_ASK_FREE 2u
 
 static void clip_report(rcp_session *s, const struct msg_gate_closed *cl)
 {
@@ -3331,6 +3373,17 @@ static bool input_admit(rcp_session *s, uint16_t kind, const uint8_t *body, uint
  * same as one the client never sent; a LAYOUT or VIEW over the rate is a client that is not a person.  ⛔ NOT FIT_CANVAS: §7.1 wants
  * one `CANVAS` answer for each, the client counts the unanswered ones, and a request consumed in silence would hold its frames back
  * for ever — that one is gated in its own handler, and answered. */
+/* the kinds merged to "the last one" (index in `lww[]`), -1 for the others */
+static int lww_index(uint16_t kind)
+{
+	switch (kind) {
+	case T_VIEW:   return 0;
+	case T_LAYOUT: return 1;
+	case T_PACE:   return 2;
+	default:       return -1;
+	}
+}
+
 static enum msg_class control_class(uint16_t kind)
 {
 	switch (kind) {
@@ -3339,6 +3392,58 @@ static enum msg_class control_class(uint16_t kind)
 	case T_VIEW:         return MC_VIEW;
 	case T_LAYOUT:       return MC_LAYOUT;
 	default:             return MC_COUNT;
+	}
+}
+
+static bool drain(rcp_session *s, uint64_t now);
+
+/* ⭐ Applies the "last one wins" messages kept while the bucket was empty (reading of rcp.c, B1), when it has a token again.  The kept message goes through the
+ *    SAME path as one that came from the wire — `drain()` on a private buffer, swapped for the session's own for the length of the call (the wire's partial message
+ *    stays where it is) — with `replaying` set so that the bucket is not charged twice.  Called from `rcp_time()`; nothing here is a sign of life. */
+static void lww_apply(rcp_session *s, uint64_t now)
+{
+	static const enum msg_class cls[LWW_KINDS] = {MC_VIEW, MC_LAYOUT, MC_PACE};
+
+	for (int i = 0; i < LWW_KINDS; i++) {
+		uint8_t frame[6 + LWW_MAX];
+		uint8_t *save_acc;
+		size_t save_len, save_cap;
+		uint64_t save_since;
+		uint32_t n;
+
+		if (!s->lww[i].has)
+			continue;
+		if (s->state != S_ACTIVE) {
+			s->lww[i].has = false;
+			continue;
+		}
+		if (!msg_admit(s, cls[i], now))
+			continue; /* still no token: it stays kept */
+		n = s->lww[i].lung;
+		frame[0] = (uint8_t)(s->lww[i].kind >> 8);
+		frame[1] = (uint8_t)s->lww[i].kind;
+		frame[2] = (uint8_t)(n >> 24);
+		frame[3] = (uint8_t)(n >> 16);
+		frame[4] = (uint8_t)(n >> 8);
+		frame[5] = (uint8_t)n;
+		memcpy(frame + 6, s->lww[i].body, n);
+		s->lww[i].has = false;
+		save_acc = s->acc;
+		save_len = s->acc_len;
+		save_cap = s->acc_cap;
+		save_since = s->since;
+		s->acc = frame;
+		s->acc_len = 6 + n;
+		s->acc_cap = sizeof frame;
+		s->replaying = true;
+		(void)drain(s, now);
+		s->replaying = false;
+		s->acc = save_acc;
+		s->acc_len = save_len;
+		s->acc_cap = save_cap;
+		s->since = save_since;
+		if (s->state != S_ACTIVE)
+			return;
 	}
 }
 
@@ -5399,8 +5504,9 @@ static void send_canvas(rcp_session *s, uint8_t outcome, uint8_t reason,
 		return;
 	}
 	send_message(s, T_CANVAS, body, w.len);
-	reg(s, "CANVAS sent: outcome %u, reason %u, canvas in force %ux%u (§7.1)",
-	    outcome, reason, lar, h);
+	if (msg_line(s, MC_FIT_CANVAS)) /* a flood of requests must not write a line per answer (reading of rcp.c, M1) */
+		reg(s, "CANVAS sent: outcome %u, reason %u, canvas in force %ux%u (§7.1)",
+		    outcome, reason, lar, h);
 }
 
 /* ⛔ §7.1 / §3 exception 3 — the form that knows WHEN, and opens the grace. */
@@ -5415,9 +5521,10 @@ void rcp_canvas_adapted_now(rcp_session *s, uint32_t lar, uint32_t h,
 		 * the keyframe debt would stop the video on a healthy session —
 		 * the red to the wrong suspect that this family of rules has
 		 * already paid for four times (P8 → P11 → P13 → P14). */
-		reg(s, "CANVAS(FITTED) at the size that was already there (%ux%u): the "
-		       "canvas in force does not change and §5.2 does NOT open the keyframe debt",
-		    lar, h);
+		if (msg_line(s, MC_FIT_CANVAS))
+			reg(s, "CANVAS(FITTED) at the size that was already there (%ux%u): the "
+			       "canvas in force does not change and §5.2 does NOT open the keyframe debt",
+			    lar, h);
 		/* ⛔ One answers ALL THE SAME: §7.1 wants one `CANVAS` for every
 		 *    `FIT_CANVAS`, and a client that received nothing would wait forever. */
 		send_canvas(s, 1 /* FITTED */, 0, s->canvas_w, s->canvas_h);
@@ -7738,8 +7845,6 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 		xform = le_u32(&l);
 		if (l.too_short)
 			return true;
-		if (clipboard_over_rate(s, now))
-			return true;
 
 		/* ⛔ §7.4: «an `CLIPBOARD_ASK` with an identifier that does not
 		 *    match any live announcement is `PROTOCOL_ERROR`».  ⚠ And
@@ -7751,6 +7856,27 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 			                 "(§7.4)",
 			              xform, s->app_my_id);
 			return false;
+		}
+		/* ⭐ The rate applies to the REPEATS (reading of rcp.c, B2): the first CLIPBOARD_ASK_FREE requests for the LIVE announcement (the one the client has just been
+		 *    told of) are always served — the page asks once per announcement, and a token spent by ANNOUNCEs must never cost a paste.  The counter starts again
+		 *    when `app_my_id` changes.  An ASK for a SUPERSEDED announcement is never free: it goes through the bucket, otherwise a client could alternate old
+		 *    and new ids and get two free texts every time (the amplification the bucket exists to bound).  What the bucket refuses is SAID (the protocol has no
+		 *    refusal to send back: see CLIPBOARD_ASK_FREE). */
+		bool free_ask = false;
+
+		if (xform == s->app_my_id) {
+			if (s->ask_live_for != s->app_my_id) {
+				s->ask_live_for = s->app_my_id;
+				s->ask_live_n = 0;
+			}
+			s->ask_live_n++;
+			free_ask = s->ask_live_n <= CLIPBOARD_ASK_FREE;
+		}
+		if (!free_ask && clipboard_over_rate(s, now)) {
+			if (msg_gate_line(&s->clip_gate))
+				reg(s, "⚠ CLIPBOARD: the client asks for transfer %u (the live one is %u) and the rate is over: this request is IGNORED (the first %u for the live announcement are always served)",
+				    xform, s->app_my_id, CLIPBOARD_ASK_FREE);
+			return true;
 		}
 		if (!s->app_text) {
 			/* ⚠ It can happen: one announced, and then the stage was taken down
@@ -7769,7 +7895,7 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 		 * ⚠ And one ANSWERS with the identifier ASKED FOR, not the current one:
 		 *   the client expects an answer to its question, and changing the
 		 *   number under it would be an answer it cannot pair. */
-		if (xform != s->app_my_id)
+		if (xform != s->app_my_id && msg_gate_line(&s->clip_gate))
 			reg(s, "⚠ CLIPBOARD §7.4: the client asks for transfer %u, which has "
 			       "already been superseded by %u: I serve it with the CURRENT text "
 			       "(%zu bytes).  It is the normal race between two people copying, "
@@ -8884,9 +9010,23 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 		{
 			enum msg_class mc = control_class(kind);
 
-			if (mc != MC_COUNT && s->state == S_ACTIVE && !msg_admit(s, mc, now)) {
-				l.i = lung;
-				goto message_done;
+			if (mc != MC_COUNT && s->state == S_ACTIVE && !s->replaying) {
+				int li = lww_index(kind);
+
+				if (!msg_admit(s, mc, now)) {
+					/* ⭐ a "last one wins" message is KEPT (the older one of its kind is replaced) and applied when the bucket has a token */
+					if (li >= 0 && lung <= LWW_MAX) {
+						s->lww[li].has = true;
+						s->lww[li].kind = kind;
+						s->lww[li].lung = lung;
+						memcpy(s->lww[li].body, s->acc + *off + 6, lung);
+					}
+					l.i = lung;
+					goto message_done;
+				}
+				/* ⭐ ADMITTED: this message is NEWER than any kept one of its kind, which must not be applied afterwards over it (a stale layout coming back) */
+				if (li >= 0)
+					s->lww[li].has = false;
 			}
 		}
 		switch (kind) {
@@ -9369,6 +9509,17 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 				       "%ux%u, proportions kept, both even",
 				    prev_w, prev_h, s->max_l, s->max_a, good_w, good_h);
 			}
+			/* ⛔ THE FREQUENCY CEILING (msgrate.h, audit P-R3/Q-R3/E-R5; reading of rcp.c, M1): EVERY FIT_CANVAS counts, the one for the size already in
+			 *    force too.  That one rebuilds nothing, but it is the most frequent request and it costs an answer and a log line each: a modified
+			 *    client could send it at the speed of the link.  A request that CHANGES the size also makes the stage of the child be rebuilt (up to
+			 *    3 s) and reopens the encoders.  Over the rate it is NOT consumed in silence: §7.1 wants one `CANVAS` for each `FIT_CANVAS` and the
+			 *    client keeps count, so it is answered NOT_NOW, with the canvas in force.  The rate is far above what a hand dragging an edge does
+			 *    (twenty a second, the comment below), and the lines of the answers go through `msg_line()`. */
+			if (!msg_admit(s, MC_FIT_CANVAS, now)) {
+				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
+				break;
+			}
+
 			/* ⭐⭐ AND HERE STARTS THE CHAIN THAT WAS MISSING ON 14 AUG 2026.
 			 *
 			 * ⚠ Until yesterday this point answered `COMPOSITOR_UNABLE`
@@ -9396,15 +9547,6 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 				break;
 			}
 
-			/* ⛔ THE FREQUENCY CEILING (msgrate.h, audit P-R3/Q-R3/E-R5): every request that CHANGES the size makes the stage of the child
-			 *    be rebuilt (up to 3 s) and reopens the encoders; the one for the size already in force (the most frequent) does
-			 *    not, and comes before this point.  Over the rate it is NOT consumed in silence: §7.1 wants one
-			 *    `CANVAS` for each `FIT_CANVAS` and the client keeps count, so it is answered NOT_NOW, with the canvas in force.
-			 *    The rate is far above what a hand dragging an edge does (twenty a second, the comment above). */
-			if (!msg_admit(s, MC_FIT_CANVAS, now)) {
-				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
-				break;
-			}
 			/* ⛔ NO HOOK = COMPOSITOR_UNABLE, and it is the TRUE answer for
 			 *    whoever hosts us without a stage: the in-process benches of phase 1
 			 *    and the harness of `benches/01-b3-graft-rcp.py`.  §7.1: «if the
@@ -9966,6 +10108,7 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	/* ⏳ §13.5: a `PACE` held back by the 250 ms window goes out here. */
 	pace_flush(s, now);
 	msg_flush_all(s, now);
+	lww_apply(s, now);
 	/* ⛔ A REQUEST_KEY DEFERRED BY THE GAP IS SERVED HERE, not lost (see `V_KEY_ASK_GAP_MS`): unless a keyframe has gone out since it came,
 	 *    which answers it too. */
 	if (s->key_deferred) {

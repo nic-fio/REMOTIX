@@ -43,7 +43,8 @@ static void h_send(void *c, const uint8_t *d, size_t n)
 	}
 }
 static void h_close(void *c, uint8_t r) { (void)c; (void)r; }
-static void h_record(void *c, const char *l) { (void)c; (void)l; }
+static int canvas_lines;
+static void h_record(void *c, const char *l) { (void)c; if (strncmp(l, "CANVAS", 6) == 0) canvas_lines++; }
 
 static rcp_session *fresh(bool with_fits)
 {
@@ -63,7 +64,7 @@ static rcp_session *fresh(bool with_fits)
 	s->is_attached = false;
 	s->canvas_w = 1920;
 	s->canvas_h = 1080;
-	recanvas_calls = fits_calls = canvas_msgs = 0;
+	recanvas_calls = fits_calls = canvas_msgs = canvas_lines = 0;
 	return s;
 }
 
@@ -149,6 +150,31 @@ int main(int argc, char **argv)
 	fit(s, 1920, 1080, 50000); /* the size already in force */
 	CHECK(fits_calls == 0, "5: the size already in force never asks the budget");
 	CHECK(canvas_msgs == 1 && last_canvas[0] == 1, "5: it is answered CANVAS(FITTED)");
+	rcp_free(s);
+
+	/* 7 (reading of rcp.c, M1): the size already in force passes through the bucket and writes no line per message */
+	s = fresh(true);
+	fits_answer = 1;
+	{
+		int fitted = 0, not_now = 0;
+
+		for (int i = 0; i < 1000; i++) {
+			int before = canvas_msgs;
+
+			fit(s, 1920, 1080, 50000); /* the size in force, 1000 times in the same millisecond */
+			if (canvas_msgs == before + 1) {
+				if (last_canvas[0] == 1)
+					fitted++;
+				else if (last_canvas[0] == 2 && last_canvas[1] == 3)
+					not_now++;
+			}
+		}
+		CHECK(fitted + not_now == 1000, "7: every one of the 1000 identical requests gets ITS CANVAS (§7.1: one for each)");
+		CHECK(fitted <= 180 && fitted >= 170, "7: only the burst of the bucket (180) is answered FITTED");
+		CHECK(not_now == 1000 - fitted, "7: the rest is answered NOT_NOW, with the canvas in force");
+		CHECK(canvas_lines <= 2 * MSG_LINES_PER_WINDOW, "7: and the log gets at most a few lines, not one per message");
+		CHECK(recanvas_calls == 0 && fits_calls == 0, "7: nothing reached the stage or the budget");
+	}
 	rcp_free(s);
 
 	if (argc > 1) {

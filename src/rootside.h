@@ -410,6 +410,8 @@ void rootside_login_done(struct rootside_bounds *b, const char *ukey, const char
                          uint64_t now_ms, unsigned taken, int verdict,
                          struct rootside_login_event *ev);
 void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms);
+/* ⭐ 1.5 (reading of rcp.c, A1): is `outcome` a value of `enum rxr_outcome` the root side may send?  The network side asks it of every VERDICT. */
+bool rootside_verdict_outcome_ok(unsigned outcome);
 /* May this AUTH go to PAM now?  `false` = over the in-flight or rate bound
  * (VERDICT NOT_CHECKED).  `true` takes a token and a place in flight. */
 bool rootside_auth_admit(struct rootside_bounds *b, uint64_t now_ms);

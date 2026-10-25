@@ -251,7 +251,7 @@ int main(int argc, char **argv)
 			p = body_of(src, "static bool drain_at(rcp_session *s, uint64_t now, size_t *off)\n{", &n);
 			CHECK(p != NULL, "9: drain_at found");
 			if (p) {
-				CHECK(memmem(p, n, "s->state == S_ACTIVE && !msg_admit(s, mc, now)", strlen("s->state == S_ACTIVE && !msg_admit(s, mc, now)")) != NULL,
+				CHECK(memmem(p, n, "s->state == S_ACTIVE && !s->replaying", strlen("s->state == S_ACTIVE && !s->replaying")) != NULL,
 				      "9: drain gates the control requests, only in S_ACTIVE");
 				CHECK(memmem(p, n, "goto message_done", strlen("goto message_done")) != NULL, "9: an over-rate message is consumed without running its handler");
 			}
@@ -311,8 +311,8 @@ int main(int argc, char **argv)
 				gate = dr ? memmem(dr, nd, "msg_admit(s, MC_FIT_CANVAS, now)", strlen("msg_admit(s, MC_FIT_CANVAS, now)")) : NULL;
 				hook = dr ? memmem(dr, nd, "if (!s->g.recanvas) {", strlen("if (!s->g.recanvas) {")) : NULL;
 				CHECK(gate != NULL, "9: FIT_CANVAS has its gate in its handler");
-				CHECK(shortcut && gate && hook && shortcut < gate && gate < hook,
-				      "9: FIT_CANVAS: after the same-size shortcut (which rebuilds nothing), before the stage hook");
+				CHECK(shortcut && gate && hook && gate < shortcut && shortcut < hook,
+				      "9: FIT_CANVAS: the gate counts EVERY request, the same-size shortcut included (it comes first), and the stage hook after both");
 				CHECK(gate && memmem(gate, 300, "NOT_NOW", strlen("NOT_NOW")) != NULL, "9: and over the rate it is ANSWERED NOT_NOW");
 			}
 			free(src);
