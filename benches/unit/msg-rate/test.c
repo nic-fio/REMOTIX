@@ -311,8 +311,8 @@ int main(int argc, char **argv)
 				gate = dr ? memmem(dr, nd, "msg_admit(s, MC_FIT_CANVAS, now)", strlen("msg_admit(s, MC_FIT_CANVAS, now)")) : NULL;
 				hook = dr ? memmem(dr, nd, "if (!s->g.recanvas) {", strlen("if (!s->g.recanvas) {")) : NULL;
 				CHECK(gate != NULL, "9: FIT_CANVAS has its gate in its handler");
-				CHECK(shortcut && gate && hook && shortcut < gate && gate < hook,
-				      "9: FIT_CANVAS: after the same-size shortcut (which rebuilds nothing), before the stage hook");
+				CHECK(shortcut && gate && hook && gate < shortcut && shortcut < hook,
+				      "9: FIT_CANVAS: the gate counts EVERY request, the same-size shortcut included (it comes first), and the stage hook after both");
 				CHECK(gate && memmem(gate, 300, "NOT_NOW", strlen("NOT_NOW")) != NULL, "9: and over the rate it is ANSWERED NOT_NOW");
 			}
 			free(src);

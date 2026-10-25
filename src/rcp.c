@@ -5415,8 +5415,9 @@ static void send_canvas(rcp_session *s, uint8_t outcome, uint8_t reason,
 		return;
 	}
 	send_message(s, T_CANVAS, body, w.len);
-	reg(s, "CANVAS sent: outcome %u, reason %u, canvas in force %ux%u (§7.1)",
-	    outcome, reason, lar, h);
+	if (msg_line(s, MC_FIT_CANVAS)) /* a flood of requests must not write a line per answer (reading of rcp.c, M1) */
+		reg(s, "CANVAS sent: outcome %u, reason %u, canvas in force %ux%u (§7.1)",
+		    outcome, reason, lar, h);
 }
 
 /* ⛔ §7.1 / §3 exception 3 — the form that knows WHEN, and opens the grace. */
@@ -5431,9 +5432,10 @@ void rcp_canvas_adapted_now(rcp_session *s, uint32_t lar, uint32_t h,
 		 * the keyframe debt would stop the video on a healthy session —
 		 * the red to the wrong suspect that this family of rules has
 		 * already paid for four times (P8 → P11 → P13 → P14). */
-		reg(s, "CANVAS(FITTED) at the size that was already there (%ux%u): the "
-		       "canvas in force does not change and §5.2 does NOT open the keyframe debt",
-		    lar, h);
+		if (msg_line(s, MC_FIT_CANVAS))
+			reg(s, "CANVAS(FITTED) at the size that was already there (%ux%u): the "
+			       "canvas in force does not change and §5.2 does NOT open the keyframe debt",
+			    lar, h);
 		/* ⛔ One answers ALL THE SAME: §7.1 wants one `CANVAS` for every
 		 *    `FIT_CANVAS`, and a client that received nothing would wait forever. */
 		send_canvas(s, 1 /* FITTED */, 0, s->canvas_w, s->canvas_h);
@@ -9385,6 +9387,17 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 				       "%ux%u, proportions kept, both even",
 				    prev_w, prev_h, s->max_l, s->max_a, good_w, good_h);
 			}
+			/* ⛔ THE FREQUENCY CEILING (msgrate.h, audit P-R3/Q-R3/E-R5; reading of rcp.c, M1): EVERY FIT_CANVAS counts, the one for the size already in
+			 *    force too.  That one rebuilds nothing, but it is the most frequent request and it costs an answer and a log line each: a modified
+			 *    client could send it at the speed of the link.  A request that CHANGES the size also makes the stage of the child be rebuilt (up to
+			 *    3 s) and reopens the encoders.  Over the rate it is NOT consumed in silence: §7.1 wants one `CANVAS` for each `FIT_CANVAS` and the
+			 *    client keeps count, so it is answered NOT_NOW, with the canvas in force.  The rate is far above what a hand dragging an edge does
+			 *    (twenty a second, the comment below), and the lines of the answers go through `msg_line()`. */
+			if (!msg_admit(s, MC_FIT_CANVAS, now)) {
+				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
+				break;
+			}
+
 			/* ⭐⭐ AND HERE STARTS THE CHAIN THAT WAS MISSING ON 14 AUG 2026.
 			 *
 			 * ⚠ Until yesterday this point answered `COMPOSITOR_UNABLE`
@@ -9412,15 +9425,6 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 				break;
 			}
 
-			/* ⛔ THE FREQUENCY CEILING (msgrate.h, audit P-R3/Q-R3/E-R5): every request that CHANGES the size makes the stage of the child
-			 *    be rebuilt (up to 3 s) and reopens the encoders; the one for the size already in force (the most frequent) does
-			 *    not, and comes before this point.  Over the rate it is NOT consumed in silence: §7.1 wants one
-			 *    `CANVAS` for each `FIT_CANVAS` and the client keeps count, so it is answered NOT_NOW, with the canvas in force.
-			 *    The rate is far above what a hand dragging an edge does (twenty a second, the comment above). */
-			if (!msg_admit(s, MC_FIT_CANVAS, now)) {
-				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
-				break;
-			}
 			/* ⛔ NO HOOK = COMPOSITOR_UNABLE, and it is the TRUE answer for
 			 *    whoever hosts us without a stage: the in-process benches of phase 1
 			 *    and the harness of `benches/01-b3-graft-rcp.py`.  §7.1: «if the
