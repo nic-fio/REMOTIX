@@ -135,7 +135,8 @@ fi
 
 # ⛔ The command line is the one read from /proc/PID/cmdline of the server that
 #    was running: it is not "improved" here, or the scene of the other benches changes.
-nohup "$D/remotix" --address 0.0.0.0 --name "$ADDR" --port "$PORT" \
+# ⭐ 1.5: split is the default as root — this bench is about the single process (it starts the server by hand): --no-split.
+nohup "$D/remotix" --address 0.0.0.0 --no-split --name "$ADDR" --port "$PORT" \
       --certificates "$CERT" --page "$D/page.html" \
       --ban-file "$BAN" --command-socket "$SOCK" \
       >> "$LOG" 2>&1 &

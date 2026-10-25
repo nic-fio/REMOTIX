@@ -1,4 +1,7 @@
 #!/bin/bash
+# ⭐ 1.5 (split on by default as root): this bench starts the product as container root and measures it as ONE process, as before; RX_SPLIT_OPT="" (set,
+#    empty) lets the product split — then the container needs the user remotix and CAP_SYS_ADMIN for the walls: the live split proofs do that.
+SPLITOPT=${RX_SPLIT_OPT---no-split}
 # 01-b100-idle-launch.sh <product> [out] — B100 (01-b100-idle.py) against a REAL server, OUTSIDE the
 # safety-net boxes: two private podman containers sharing ONE private network namespace (exactly
 # 01-b10-launch.sh's scene), run TWICE with two pairs of short clocks:
@@ -64,7 +67,7 @@ phase() {
 		cp /prod/lib/*.so* /usr/local/lib/ && ldconfig &&
 		cp /idle/remotix.pam /etc/pam.d/remotix && mkdir -p /etc/remotix &&
 		echo root > /etc/remotix/denied-users && chmod 644 /etc/remotix/denied-users &&
-		exec nice -n 19 /prod/remotix --address :: --name 127.0.0.1 --port $PORT \
+		exec nice -n 19 /prod/remotix --address :: $SPLITOPT --name 127.0.0.1 --port $PORT \
 		  --certificates /idle/cert --page /prod/page.html --ban-file /idle/ban \
 		  --command-socket /idle/cmd.sock --inactivity-s $ina --abandon-s $aba \
 		  --verbose > /idle/server.log 2>&1" >/dev/null || return 3

@@ -125,7 +125,7 @@ echo "==> $m: REMOTIX as a service on 7447"
 $VM 'sudo mkdir -p /var/lib/remotix
 sudo systemd-run --unit=remotix-t1c --collect --working-directory=/opt/remotix \
   --property=KillMode=mixed --property=LimitRTPRIO=20 --property=LimitNICE=-11 \
-  /opt/remotix/remotix --address 0.0.0.0 --name localhost --port 7447 \
+  /opt/remotix/remotix --address 0.0.0.0 --no-split --name localhost --port 7447 \
   --certificates /var/lib/remotix/certificates --page /opt/remotix/page.html \
   --ban-file /var/lib/remotix/ban >/dev/null
 sleep 2; systemctl is-active remotix-t1c; sudo journalctl -u remotix-t1c -o cat --no-pager | grep -E "ready:|PAM" | tail -2'

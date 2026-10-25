@@ -278,7 +278,8 @@ mkdir -p "$CERT"
 # ⭐ It is started FROM INSIDE its folder: the product looks for `page.html`
 #    next to itself.
 cd "$D" || exit 3
-nohup ./remotix --address 0.0.0.0 --name "$ADDR" --port "$PORT" \
+# ⭐ 1.5: split is the default as root — this bench is about the single process (it starts the server by hand): --no-split.
+nohup ./remotix --address 0.0.0.0 --no-split --name "$ADDR" --port "$PORT" \
       --certificates "$CERT" \
       --ban-file "$BAN" --command-socket "$SOCK" --verbose \
       > "$LOG" 2>&1 &
