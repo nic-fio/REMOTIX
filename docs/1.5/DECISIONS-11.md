@@ -488,8 +488,18 @@ Two answers of the user to the first «end of phase» lanes (`rxtest protocol`, 
 - **nodelay.** `[M]` B8: PAM's failure delay (pam_unix / pam_faildelay, ~2 s) came on top of the fixed second of
   §4.4-bis, so a wrong password was told apart from a right one by the time alone. ⇒ `authentication.c` gives PAM
   its own `PAM_FAIL_DELAY` function, which does not sleep: the effect of `nodelay` on every module, ⭐ without
-  editing the stacks REMOTIX mirrors (D3, §10.18). The only delay left is REMOTIX's fixed second, equal for yes and no.
+  editing the stacks REMOTIX mirrors (D3, §10.18). The only delay left was meant to be REMOTIX's fixed second, equal
+  for yes and no. ⚠ `[M]` pam-tempi (25 Oct 2026) shows it is not so: a wrong password and a non-existent user still take
+  ~2.0-2.2 s, i.e. PAM's failure delay is not removed in the helper (see the next entry).
   Brute force stays held by the ban file (§4.4-bis) and by `pam_faillock` where the administrator has it.
+- 🔸 **Uniform refusal floor** (`ritardo-uniforme`, 25 Oct 2026, NOT merged): `[M]` pam-tempi — a name in the denied list
+  (`pam_listfile`, `requisite`) was refused in ~1.1 s (only the fixed second), a real user with a wrong password and
+  a non-existent one in ~2.0-2.2 s (PAM's failure delay, inside the helper): the time said whether a name is denied.
+  ⇒ `REJECT_FLOOR` 2500 ms in `rcp.c`: a refusal that goes out as `0x07` (PAM's no, faillock included) leaves not before
+  it; a success, the limiter's `0x08` and our `0x0E` keep the 1 s (their byte already says the road, and a connection in
+  wait-verdict cannot be evicted: holding them 2.5 s would fill the 128 pre-login places at ~51 CREDENTIALS per second
+  instead of 128). A floor, not a fixed time: a refusal PAM delays beyond it is paced by PAM as before — to be
+  re-measured with pam-tempi.
 - **The card drivers.** `[M]` the installer lane: `Recommends: va-driver-all | va-driver` was satisfied on Ubuntu
   26.04 by Mesa and no Intel driver came; Tumbleweed boxes have recommends off; Arch brings nothing. The install
   then failed late in 7a (RX-AZIONE-003) and rolled back. ⇒ Consistent with §10.36: the .deb and the .rpm recommend

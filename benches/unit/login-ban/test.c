@@ -1281,7 +1281,8 @@ static void test_verdict_paths(void)
 	CHECK(rcp_time(&s, at(0) + FIXED_DELAY) && wire_n == 0, "(wire) nothing before the fixed second is over");
 	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_n == 1 && wire_last == RCP_SESSION_UNSERVABLE
 	      && wire_closed == RCP_SESSION_UNSERVABLE,
-	      "(wire) helper dead: REJECTED 0x0E after the fixed second (got %#x, %d messages)", wire_last, wire_n);
+	      "(wire) helper dead: REJECTED 0x0E after the fixed second alone, NOT held to the floor (got %#x, %d messages)",
+	      wire_last, wire_n);
 	CHECK(failures_of(K, "alice") == 0, "(wire) and nothing was counted");
 	/* b. a PAM no: still 0x07 */
 	fresh();
@@ -1290,7 +1291,7 @@ static void test_verdict_paths(void)
 	s.expected_verdict = true; s.ticket = 12;
 	CHECK(rcp_verdict(&s, 12, false, at(1)), "(wire) the PAM no is taken");
 	wire_reset();
-	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_WRONG_CREDENTIALS && wire_closed == RCP_WRONG_CREDENTIALS,
+	CHECK(!rcp_time(&s, at(0) + REJECT_FLOOR + 1) && wire_last == RCP_WRONG_CREDENTIALS && wire_closed == RCP_WRONG_CREDENTIALS,
 	      "(wire) a PAM no stays REJECTED 0x07 (got %#x)", wire_last);
 	/* c. no verdict within VERDICT_CAP: counted, so 0x07 */
 	fresh();
@@ -1308,7 +1309,26 @@ static void test_verdict_paths(void)
 	s.refusal_is_ours = true; s.cred_arrival = at(0);
 	wire_reset();
 	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_TOO_MANY_ATTEMPTS,
-	      "(wire) a reason other than WRONG_CREDENTIALS is kept (0x08, got %#x)", wire_last);
+	      "(wire) a reason other than WRONG_CREDENTIALS is kept (0x08, got %#x) and goes out at the fixed second, not held to "
+	      "REJECT_FLOOR (the byte already says the road; wait-verdict connections cannot be evicted)", wire_last);
+
+	/* e. ⛔ THE UNIFORM FLOOR (25 Oct 2026, pam-tempi): a denied-list user answered by PAM in 50 ms, a wrong password
+	 *    after PAM's own 2 s and a success: the refusals leave at the same instant, never before REJECT_FLOOR; the
+	 *    success keeps the fixed second */
+	fresh();
+	s.state = S_WAIT_VERDICT; s.expected_verdict = false; s.cred_good = false; s.refusal_is_ours = false;
+	s.cred_reason = RCP_WRONG_CREDENTIALS; s.cred_arrival = at(0);
+	wire_reset();
+	CHECK(rcp_time(&s, at(0) + 50) && rcp_time(&s, at(0) + FIXED_DELAY + 1) && rcp_time(&s, at(0) + 2200) && wire_n == 0,
+	      "(floor) a refusal already decided stays unsent past the fixed second and past PAM's usual 2.2 s");
+	CHECK(!rcp_time(&s, at(0) + REJECT_FLOOR + 1) && wire_last == RCP_WRONG_CREDENTIALS && wire_n == 1,
+	      "(floor) and leaves after REJECT_FLOOR (got %#x, %d messages)", wire_last, wire_n);
+	fresh();
+	s.state = S_WAIT_VERDICT; s.expected_verdict = false; s.cred_good = true; s.refusal_is_ours = false; s.cred_arrival = at(0);
+	wire_reset();
+	CHECK(rcp_time(&s, at(0) + FIXED_DELAY) && wire_n == 0, "(floor) a success waits the fixed second");
+	CHECK(rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_n == 1 && s.state == S_WAIT_ATTACH,
+	      "(floor) and is admitted right after it, NOT held to the refusal floor (state %d, %d messages)", (int)s.state, wire_n);
 
 	/* 5. the keys that logged in lately (ported from 4d9eb72b / 24c7b668): only an ADMITTED verdict makes a key known */
 	{
