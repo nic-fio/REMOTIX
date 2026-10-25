@@ -1903,6 +1903,23 @@ static void good_mac(const char *key, char out[65])
 		snprintf(out + 2 * i, 3, "%02x", mac[i]);
 }
 
+/* ⛔ R3 (25 Oct 2026): the 6-hex tag of a name, the same one `log_user()` writes, for whoever else writes a line about a login (the PAM
+ * helper's `why_no()`, which cannot read the secret itself: `helper.c` hands this to it in the request).  `out` gets 7 bytes at least:
+ * the 6 hex, or `??????` without a secret. */
+void rcp_log_tag(const char *user, char out[8])
+{
+	uint8_t mac[32];
+
+	if (!log_secret_ready)
+		log_secret_ready = log_secret_random();
+	if (!log_secret_ready || !user) {
+		memcpy(out, "??????", 7);
+		return;
+	}
+	hmac_sha256(log_secret, sizeof log_secret, user, strlen(user), mac);
+	snprintf(out, 8, "%02x%02x%02x", mac[0], mac[1], mac[2]);
+}
+
 /* The key of a name inside the counters and the ban file: the FULL HMAC-SHA256
  * in hex.  ⛔ The ban file holds this and never the name (24 Oct 2026): a file
  * kept on disk, 0600 or not, is not where the names of the people who failed

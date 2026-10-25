@@ -37,6 +37,8 @@ extern char **environ;
 int rcp_authenticate_judged(const char *user, const char *password,
                             const char *rhost);
 void rcp_refusal_locked(uint64_t ticket); /* rcp.c / rcp.h */
+void rcp_log_tag(const char *user, char out[8]); /* rcp.c / rcp.h (R3); weak: the root side does not link rcp.c */
+#pragma weak rcp_log_tag
 void rcp_refusal_unchecked(uint64_t ticket); /* rcp.c / rcp.h (D4b) */
 bool rcp_rhost_from_provenance(const char *provenance, char *report, size_t cap);
 
@@ -99,6 +101,10 @@ struct request {
 	/* ⭐ PHASE 17 T6: the client's address, bare, for `PAM_RHOST` (like
 	 *    sshd).  Empty if unknown: then PAM does not receive it. */
 	char rhost[64];
+	/* ⭐ R3 (25 Oct 2026): the 6-hex tag of `user` (`rcp_log_tag()`), computed by the serving process, which holds the log secret.  The
+	 *    grandchild is a fresh image and has none; it puts this in the environment so `why_no()` writes `unknown user [tag]` and never
+	 *    the typed name.  Empty = no tag (root side, where rcp.c is not linked). */
+	char tag[8];
 };
 
 struct response {
@@ -247,6 +253,12 @@ static void grandchild(int fd, struct request *r)
 	 *    this process's stack. */
 	memset(&out, 0, sizeof out);
 
+	/* ⭐ R3: the tag for the log line of `why_no()` (authentication.c); a value that is not 6 hex is ignored there. */
+	r->tag[sizeof r->tag - 1] = 0;
+	if (r->tag[0])
+		(void)setenv("REMOTIX_PAM_LOG_TAG", r->tag, 1);
+	else
+		(void)unsetenv("REMOTIX_PAM_LOG_TAG"); /* no tag: a value inherited from the server's environment must not be used */
 	judged = rcp_authenticate_judged(r->user, r->password, r->rhost);
 
 	out.ticket = r->ticket;
@@ -710,6 +722,8 @@ static bool ask(helper *a, const char *user, const char *password,
 	snprintf(r.user, sizeof r.user, "%s", user);
 	snprintf(r.password, sizeof r.password, "%s", password);
 	snprintf(r.rhost, sizeof r.rhost, "%s", rhost);
+	if (rcp_log_tag)
+		rcp_log_tag(user, r.tag);
 
 	/* ⭐ 1.5: network mode, the same request as AUTH to the root side. */
 	if (a->remote) {

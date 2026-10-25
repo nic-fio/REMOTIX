@@ -97,6 +97,10 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **Clipboard on KDE**: a zero byte cut the text and the fallback read past the copy (§11.6; `8031958d`).
 - **Small fixes of the manual's table** (§11.6): retired RX codes no longer raised, BENCH_MARK out of the installed binary,
   journal lines no longer doubled, FAREWELL reason 0x10 accepted (`84fdf573`).
+- **The user name in the PAM refusal lines** (audit R3, 25 Oct 2026, branch `log-nome`): `why_no()` wrote the raw name the client typed on stderr, so a password typed in the user
+  field stayed in clear in the journal and control characters went through without `log.c`'s cleaning. Now a user of the machine is named (control bytes → `?`, 64 bytes at most) and
+  anything else is `unknown user [a1b2c3]`, the same HMAC tag as the other login lines (the server computes it and hands it to the PAM helper in the request; no tag → `??????`).
+  Test `benches/unit/auth-log`.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
