@@ -26,6 +26,8 @@
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
 #include <ngtcp2/ngtcp2_crypto_ossl.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
 #include <openssl/rand.h>
 
 #define SCIDLEN 18
@@ -2409,9 +2411,20 @@ transport *transport_open_fd(int fd, const char *address, const char *port,
 		return NULL;
 	}
 	secret_load(t, secret_dir);
-	/* the key of the CID hash: from the static secret (the attacker does not know it), not the secret itself */
-	for (size_t i = 0; i < sizeof t->cids.key; i++)
-		t->cids.key[i] = (uint8_t)(t->secret[i] ^ t->secret[i + 16] ^ (0xa5 + i));
+	/* the key of the CID hash: HMAC-SHA256(secret, "lookup-key") cut to 16 bytes — derived from the static secret (the attacker
+	 * does not know it), not the secret itself, and not a reversible mix of its halves */
+	{
+		uint8_t mac[EVP_MAX_MD_SIZE];
+		unsigned int maclen = 0;
+
+		if (!HMAC(EVP_sha256(), t->secret, (int)sizeof t->secret, (const unsigned char *)"lookup-key", 10, mac, &maclen) ||
+		    maclen < sizeof t->cids.key) {
+			registro_dice(REG_QUIC, "⛔ cannot derive the key of the CID map");
+			transport_close(t);
+			return NULL;
+		}
+		memcpy(t->cids.key, mac, sizeof t->cids.key);
+	}
 
 	if (ngtcp2_crypto_ossl_init() != 0) {
 		registro_dice(REG_QUIC, "⛔ ngtcp2_crypto_ossl_init");

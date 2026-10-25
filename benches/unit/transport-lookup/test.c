@@ -202,15 +202,24 @@ static void test_cid_equivalence(void)
 		/* the whole table, at the end: every id of the space */
 		for (unsigned v = 0; v < 3100; v++) {
 			lk_cid id;
-			unsigned save = (unsigned)rng_state;
 
-			(void)save;
 			memset(&id, 0, sizeof id);
 			id.datalen = 1 + v % LK_CID_MAX;
 			for (size_t i = 0; i < id.datalen; i++)
 				id.data[i] = (uint8_t)(v * 31 + i * 7);
 			if (lk_cid_find(&m, id.data, id.datalen) != ref_find(&r, id.data, id.datalen))
 				disagree++;
+		}
+		/* the table itself, slot by slot: the same holes, the same ids, the same owners */
+		{
+			long slots = 0;
+
+			for (size_t i = 0; i < m.n && i < r.n; i++)
+				if (m.e[i].used != r.e[i].used ||
+				    (m.e[i].used && (m.e[i].c != r.e[i].c || m.e[i].cid.datalen != r.e[i].cid.datalen ||
+				                     memcmp(m.e[i].cid.data, r.e[i].cid.data, m.e[i].cid.datalen) != 0)))
+					slots++;
+			CHECK(slots == 0, "seed %d: %ld slots of the final table differ from the reference, entry by entry", s, slots);
 		}
 		CHECK(disagree == 0, "seed %d: the hashed map and the scan disagree %ld times in %ld operations (%zu entries, %zu in the reference)",
 		      s, disagree, ops, m.n, r.n);
