@@ -7539,7 +7539,9 @@ static void closed_by_client(wt *w, uint32_t code)
 	 *    contradicted each other two lines apart. */
 	valid = code >= (uint32_t)RCP_CLOSED_BY_USER &&
 	         code <= (uint32_t)RCP_ALREADY_ACTIVE_REMOTELY;
-	if (!valid)
+	/* ⭐ rilettura-wt W1: the three lines of the capsule parser (this one, "SKIPPED" and "the page CLOSED") went straight to the log: a client with NO credentials, one CONNECT open, could write
+	 *    one or two lines per 7-byte capsule (about 14:1) for ever.  They go through the budget of the connection before the login (prelogin_may_log(); a logged-in connection writes all). */
+	if (!valid && prelogin_may_log(w))
 		log_says_of(REG_RCP, wt_chi(w),
 		                 "⛔ VIOLATION §3.1 — the page closed the session "
 		                 "with code 0x%x, which is not a reason of §8.2 "
@@ -7619,6 +7621,7 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 		if (lung > WT_CAPSULE_MAX) {
 			uint64_t here = w->capsbuf.n - off - a - b;
 			uint64_t grabbed = here < lung ? here : lung;
+			if (prelogin_may_log(w))   /* ⭐ rilettura-wt W1 */
 			log_says_of(REG_WT, wt_chi(w),
 			                 "capsule 0x%llx %llu bytes long, beyond the "
 			                 "cap of %d: SKIPPED without keeping it (RFC "
@@ -7640,10 +7643,11 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 			                  ((uint32_t)body[1] << 16) |
 			                  ((uint32_t)body[2] << 8) |
 			                  (uint32_t)body[3];
-			log_says_of(REG_WT, wt_chi(w),
-			                 "the page CLOSED the "
-			                 "WebTransport session: code 0x%x",
-			                 code);
+			if (prelogin_may_log(w))   /* ⭐ rilettura-wt W1 */
+				log_says_of(REG_WT, wt_chi(w),
+				                 "the page CLOSED the "
+				                 "WebTransport session: code 0x%x",
+				                 code);
 			closed_by_client(w, code);
 		}
 		off += a + b + (size_t)lung;
