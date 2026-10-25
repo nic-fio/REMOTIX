@@ -364,6 +364,9 @@ struct page {
 	 *    client_start_tls) and is parked/started; the idle loop reads them to skip the 128-slot scans (each slot is ~8.6 KB:
 	 *    a scan is one cache miss per slot).  Under REMOTIX_BENCH every stable change is compared with a full scan. */
 	size_t n_active, n_parked;
+	/* the safety net of the counters: a full recount about once a second (counts_recount), and how many times it had to correct them */
+	uint64_t last_recount_ms;
+	unsigned recount_fixed;
 	/* the buckets the last rate_take() spent a token from, and the ones it
 	 * looked at */
 	struct bucket *taken, *taken48, *cand, *cand48;
@@ -474,6 +477,37 @@ static void counts_check(const page *p, const char *where)
 #else
 #define COUNTS_CHECK(p, where) ((void)0)
 #endif
+
+/* ⭐ THE SAFETY NET (review of pagina-attivi): about once a second, in page_expired(), the counters are recomputed with a
+ * full scan.  If they differ they are corrected — and the per-slot `counted_parked` marks with them — and a line is
+ * written (the first three times, then at powers of two: a drift must not become a log of its own).  A path added later
+ * that opens or closes a slot without the count_* calls then costs one second of an idle-loop shortcut, not a client
+ * that is never looked at again.  The cost is one scan a second. */
+static void counts_recount(page *p, uint64_t now)
+{
+	size_t a = 0, k = 0;
+
+	p->last_recount_ms = now;
+	for (size_t i = 0; i < MAX_CLIENTS; i++) {
+		client *c = &p->clients[i];
+		bool parked = c->phase != F_DONE && c->fd >= 0 && c->phase == F_RATE;
+
+		if (c->phase != F_DONE && c->fd >= 0)
+			a++;
+		if (parked)
+			k++;
+		if (c->owner)
+			c->counted_parked = parked;
+	}
+	if (a == p->n_active && k == p->n_parked)
+		return;
+	p->recount_fixed++;
+	if (p->recount_fixed <= 3 || (p->recount_fixed & (p->recount_fixed - 1)) == 0)
+		registro_dice(LOG_PAGE, "⚠ page slot counters corrected by the recount: n_active %zu -> %zu, n_parked %zu -> %zu "
+		              "(%u corrections so far)", p->n_active, a, p->n_parked, k, p->recount_fixed);
+	p->n_active = a;
+	p->n_parked = k;
+}
 
 /* A slot has just been taken (its descriptor stored). */
 static void count_open(page *p, client *c)
@@ -2196,6 +2230,8 @@ static int accept_page(page *p, int budget)
 
 void page_expired(page *p, uint64_t now)
 {
+	if (now >= p->last_recount_ms + 1000 || now < p->last_recount_ms)
+		counts_recount(p, now);
 	if (p->n_parked)
 		parked_move(p, now);
 	for (size_t i = 0; p->n_active && i < MAX_CLIENTS; i++) {

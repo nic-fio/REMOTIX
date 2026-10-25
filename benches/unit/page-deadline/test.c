@@ -175,7 +175,7 @@ static void *t_realloc(void *q, size_t n)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 124
+#define EXPECTED_CHECKS 130
 
 static void require(int cond, const char *desc)
 {
@@ -2174,6 +2174,37 @@ int main(void)
 		for (int i = 0; i < 12; i++)
 			close(burst[i]);
 		rate_reset(p);
+	}
+
+	printf("24. the safety net: a drifted counter is corrected by the recount within a second, and nobody is left unlooked-at\n");
+	{
+		int port24 = port_of(p);
+		uint64_t t24 = log_now_ms(); /* the real clock: the client born below is young at t24 + 1.5 s */
+
+		for (size_t i = 0; i < MAX_CLIENTS; i++)
+			if (client_active(&p->clients[i]))
+				client_close(&p->clients[i]);
+		page_expired(p, t24);
+		unsigned fixed0 = p->recount_fixed;
+		int a = connect_from(port24, "127.0.0.211", 0);
+		pump(p, 3);
+		require(p->n_active == 1 && counts_ok(p), "one idle client, counters right");
+		p->n_active = 0; /* the bug the net exists for: a path that forgot to count an opening */
+		page_expired(p, t24 + 500);
+		require(p->n_active == 0 && p->recount_fixed == fixed0 && active(p) == 1,
+		        "within the second the recount has not run yet (the drift is still there)");
+		page_expired(p, t24 + 1500);
+		require(p->n_active == 1 && counts_ok(p) && p->recount_fixed == fixed0 + 1,
+		        "after the second the recount corrects it (and counts the correction)");
+		p->n_active = 0;
+		p->n_parked = 5;
+		page_expired(p, t24 + 1500 + PAGE_REQUEST_MS + 2000);
+		require(active(p) == 0 && p->n_active == 0 && p->n_parked == 0 && counts_ok(p) && p->recount_fixed == fixed0 + 2,
+		        "a drifted table still expires its idle client at the next recount and both counters end at 0");
+		page_expired(p, t24 + 1500 + PAGE_REQUEST_MS + 4000);
+		require(p->recount_fixed == fixed0 + 2, "right counters: the recount changes nothing and logs nothing");
+		close(a);
+		require(counts_ok(p), "and the counters still agree with a scan");
 	}
 
 	rcp_unblock("127.0.0.50", log_now_ms());
