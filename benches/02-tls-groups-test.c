@@ -8,7 +8,7 @@
  * with an unknown name falls back to the list without ML-KEM instead of failing or leaving
  * the OpenSSL defaults.
  *
- *   cd src && make test-tls-groups        (needs `openssl` on the PATH, to make a P-256 certificate)
+ *   cd src && make test-tls-groups        (makes its own P-256 certificate)
  *
  * Exit 0 all passed · 1 a check failed · 3 could not look (a client group unknown to this OpenSSL).  Last line: «N passed, M failed».
  */
@@ -19,6 +19,9 @@
 #include <stdlib.h>
 
 #include <openssl/bio.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+#include <openssl/evp.h>
 
 void log_says_in(const char *file, int text_line, const char *area, const char *fmt, ...)
 {
@@ -105,6 +108,43 @@ static int could_not_look;
 #define REFUSED(r) ((r) == 0)
 #define LOOK(expr) ({ int r_ = (expr); if (r_ < 0) could_not_look++; r_; })
 
+/* a self-signed P-256 certificate and its key, as PEM files (no `openssl` program needed:
+ * the build container may not have it) */
+static bool make_cert(const char *pem, const char *key)
+{
+	EVP_PKEY *k = EVP_EC_gen("P-256");
+	X509 *x = X509_new();
+	X509_NAME *n;
+	FILE *f;
+	bool ok = false;
+
+	if (!k || !x)
+		goto out;
+	ASN1_INTEGER_set(X509_get_serialNumber(x), 1);
+	X509_gmtime_adj(X509_getm_notBefore(x), 0);
+	X509_gmtime_adj(X509_getm_notAfter(x), 3600);
+	X509_set_pubkey(x, k);
+	n = X509_get_subject_name(x);
+	X509_NAME_add_entry_by_txt(n, "CN", MBSTRING_ASC, (const unsigned char *)"t", -1, -1, 0);
+	X509_set_issuer_name(x, n);
+	if (X509_sign(x, k, EVP_sha256()) <= 0)
+		goto out;
+	f = fopen(key, "w");
+	if (!f)
+		goto out;
+	ok = PEM_write_PrivateKey(f, k, NULL, NULL, 0, NULL, NULL) == 1;
+	fclose(f);
+	f = fopen(pem, "w");
+	if (!f)
+		goto out;
+	ok = ok && PEM_write_X509(f, x) == 1;
+	fclose(f);
+out:
+	X509_free(x);
+	EVP_PKEY_free(k);
+	return ok;
+}
+
 int main(void)
 {
 	static const char *ok[] = { "X25519", "P-256", "P-384", "X25519MLKEM768" };
@@ -122,10 +162,7 @@ int main(void)
 	}
 	snprintf(pem, sizeof pem, "%s/c.pem", dir);
 	snprintf(key, sizeof key, "%s/k.pem", dir);
-	snprintf(cmd, sizeof cmd,
-	         "openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes "
-	         "-keyout %s -out %s -days 2 -subj /CN=t >/dev/null 2>&1", key, pem);
-	if (system(cmd) != 0) {
+	if (!make_cert(pem, key)) {
 		printf("cannot make a certificate\n");
 		return 3;
 	}
@@ -171,7 +208,7 @@ int main(void)
 	if (could_not_look) {
 		printf("%d case(s) could not be looked at (a group this OpenSSL does not know, or no memory)\n",
 		       could_not_look);
-		return 3;
+		return failed ? 1 : 3;	/* a check that failed outranks «could not look» */
 	}
 	return failed ? 1 : 0;
 }
