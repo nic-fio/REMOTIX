@@ -232,6 +232,7 @@ S6 = p("With " + c("--journal") + " every event line also goes to the systemd jo
          "dead forever if journald restarts; an unconnected one finds the new journald at the next datagram."],
         ["Socket opened once, at switch-on", c("riga()") + " runs in several threads; two threads opening it "
          "together would leak a descriptor."],
+        [c("REMOTIX_PAM_LOG_TAG"), "Set by the PAM helper in the environment of the process that checks one login (never read from the server's own environment): the six-hex tag of the name, the same one " + c("log_user()") + " writes, so that the line of the PAM check names nobody and still matches the server's lines."],
         [c("SOCK_CLOEXEC"), "The child is an " + c("execve") + " and opens its own; it learns about the journal from "
          "its command line (" + c("--journal") + ", like " + c("--verbose") + ")."],
         ["Detail lines are not sent", "With 16 sessions they are tens of thousands per minute; the journal's rate "

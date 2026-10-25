@@ -482,6 +482,15 @@ if [ -x %{_libexecdir}/remotix/remotix-net-move ]; then
         %{_libexecdir}/remotix/remotix-net-move --back || echo "remotix: ⚠ the move of /var/lib/remotix/net back is incomplete" >&2
     fi
 fi
+# ⭐ R-1 of the page audit (25 Oct 2026): on the LAST removal ($1 == 0) the card grants (ACL on /dev/dri/renderD*,
+#   DECISIONS-11 §11.4) are taken back with the service already stopped (the macro above), BEFORE the binary and the %%ghost
+#   record go.  rpm removes the %%ghost record anyway, so on a failure the ACLs are said to vanish at the next boot.  Never fails
+#   the transaction.  Not on upgrade (the new version's start-up sweeps).
+# BEGIN drop-render-grants
+if [ "$1" -eq 0 ] && [ -x %{_libexecdir}/remotix/remotix ]; then
+    %{_libexecdir}/remotix/remotix --drop-render-grants || echo "remotix: ⚠ the card grants (ACL on /dev/dri/renderD*) could not all be taken back: they vanish at the next boot" >&2
+fi
+# END drop-render-grants
 
 %postun
 # On upgrade: `try-restart`, that is ONLY if it was already running (T2, §5.2, T7:

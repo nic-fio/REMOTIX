@@ -66,6 +66,12 @@ void render_grant_remove(const char *user, uid_t uid, gid_t gid);
  */
 void render_grant_sweep(void);
 
+/*
+ * Package removal (`remotix --drop-render-grants`): every recorded grant is taken back, even one whose desktop is alive.
+ * 0 = none left · 1 = some ACL could not be removed (its line stays in the record) · -1 = the record is unreadable/unwritable.
+ */
+int render_grant_drop_all(void);
+
 /* ⭐ 1.5 (§11.50) — logind's own files, not its bus (phase D2; same text as port-rootside's
  *    render_grant.h, 614d48e9).
  *    Is there a live logind session of `uid` with the PAM service `remotix` (active, or closing with a process left in

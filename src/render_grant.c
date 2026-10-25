@@ -782,3 +782,51 @@ void render_grant_sweep(void)
 		registro_dice(LOG_GRANT, "⚠ %s/%s could not be rewritten after the sweep: %s",
 		              GRANTS_DIR, GRANTS_FILE, strerror(errno));
 }
+
+/* ⭐ R-1 of the page audit (25 Oct 2026): taking back EVERY recorded grant, whether its user has a desktop alive or not.
+ *   The sweep above keeps a grant whose desktop survived the service (that is wanted at a restart), and a package removal has
+ *   no later start-up: the binary and the record go with the package, and the ACL on `/dev/dri/renderD*` would stay
+ *   until the next boot.  Called by `remotix --drop-render-grants`, run by the removal scripts of the three packagings with
+ *   the service already stopped, BEFORE the record is deleted.
+ *   Returns 0 when no grant is left (the record is empty), 1 when some ACL could not be removed (its line stays in the record:
+ *   the caller must not delete the record), -1 when the record cannot be read or written.  A render node that is gone
+ *   (ENOENT) counts as removed. */
+int render_grant_drop_all(void)
+{
+	char nodes[MAX_NODES][64];
+	struct grant v[MAX_GRANTS];
+	int nn = render_nodes(nodes);
+	int ng = grants_load(v);
+	int k = 0;
+
+	if (ng < 0) {
+		registro_dice(LOG_GRANT, "⛔ %s/%s cannot be read (%s): no card grant taken back",
+		              GRANTS_DIR, GRANTS_FILE, strerror(errno));
+		return -1;
+	}
+	if (ng == 0)
+		return 0;
+	for (int i = 0; i < ng; i++) {
+		bool bad = false;
+
+		for (int j = 0; j < nn; j++) {
+			if (acl_remove_group(nodes[j], v[i].gid) != 0 && errno != ENOENT) {
+				registro_dice(LOG_GRANT, "⛔ the card grant on %s for gid %ld («%s») was NOT removed: %s",
+				              nodes[j], (long)v[i].gid, v[i].user, strerror(errno));
+				bad = true;
+			}
+		}
+		if (bad) {
+			v[k++] = v[i];
+			continue;
+		}
+		registro_dice(LOG_GRANT, "⭐ card grant of «%s» (gid %ld) REMOVED: the package is being removed",
+		              v[i].user, (long)v[i].gid);
+	}
+	if (grants_save(v, k) != 0) {
+		registro_dice(LOG_GRANT, "⚠ %s/%s could not be rewritten after taking the grants back: %s",
+		              GRANTS_DIR, GRANTS_FILE, strerror(errno));
+		return -1;
+	}
+	return k == 0 ? 0 : 1;
+}
