@@ -762,6 +762,15 @@ static int send_key(Input *in, uint16_t code, int pressed)
 	beat_border(in, in->keyboard_dev);
 	ask_receipt(in, code, pressed, unread_before);
 
+	/* ⭐ Review of S-R4: a press accepted on an ORPHAN is a live press on the NEW device — the orphan mark is switched off (and counted down), or the release that follows would be
+	 *    swallowed as the release of a press the old device took, and the key would stay down in the compositor until the EIS healing. */
+	if (pressed && bit_read(in->orphan_keys, code))
+	{
+		bit_write(in->orphan_keys, code, FALSE);
+		if (in->how_many_orphans)
+			in->how_many_orphans--;
+	}
+
 	/* ⛔ The count is kept AFTER sending: marking a key that did not leave
 	 *    would make the detach release something nobody pressed. */
 	if ((pressed != 0) != bit_read(in->keys, code))
@@ -833,6 +842,15 @@ static int send_button(Input *in, uint16_t code, int pressed)
 
 	ei_device_button_button(in->pointer, code, pressed != 0);
 	beat_border(in, in->pointer);
+
+	/* ⭐ Review of S-R4: a press accepted on an ORPHAN is a live press on the NEW device — the orphan mark goes off, or the release that follows would be swallowed (see the
+	 *    branch above) and the button would stay down in the compositor until the EIS healing. */
+	if (pressed && bit_read(in->orphan_buttons, code))
+	{
+		bit_write(in->orphan_buttons, code, FALSE);
+		if (in->how_many_orphans)
+			in->how_many_orphans--;
+	}
 
 	if ((pressed != 0) != bit_read(in->buttons, code))
 	{

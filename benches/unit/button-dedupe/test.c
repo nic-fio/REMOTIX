@@ -36,6 +36,12 @@ int main(int argc, char **argv)
 	CHECK(dedupe && send && dedupe < send, "3. it comes BEFORE the event is sent to the compositor");
 	CHECK(dedupe && orph && orph < dedupe, "4. it comes after the orphan-release branch (that one stays first)");
 	CHECK(dedupe && strstr(dedupe, "return 0;") && strstr(dedupe, "return 0;") < send, "5. a duplicate returns 0 without sending");
+	{
+		char *clear = strstr(send ? send : fn, "if (pressed && bit_read(in->orphan_buttons, code))");
+		char *account = strstr(send ? send : fn, "if ((pressed != 0) != bit_read(in->buttons, code))");
+		CHECK(clear && account && send && send < clear && clear < account && clear < end,
+		      "6. an accepted press on an orphan switches the orphan mark off, after the send and before the count (behaviour: benches/unit/key-dedupe, 2e-2h)");
+	}
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
 	return bad ? 1 : 0;
 }
