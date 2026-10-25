@@ -22,6 +22,7 @@ int rcp_authenticate_judged(const char *user, const char *password, const char *
 }
 static uint64_t locked_mark;
 void rcp_refusal_locked(uint64_t ticket) { locked_mark = ticket; }
+void rcp_refusal_paused(uint64_t ticket) { (void)ticket; }
 /* D4b: the bracket of «not checked»; the delivery records what it saw */
 static uint64_t unchecked_mark, unchecked_seen;
 void rcp_refusal_unchecked(uint64_t ticket) { unchecked_mark = ticket; }

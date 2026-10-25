@@ -727,16 +727,16 @@ static void rate_start(fconn *c)
 		return;
 	if ((cnt = rate_cell(RT, k->key)) != NULL) {
 		(*cnt)++;
-		if (*cnt > 8u + (unsigned)(4u * ms / 1000u) + 1u)
-			FAIL("H6: %u connections of %s got TLS in %llu ms (burst 8, 4/s)", *cnt, k->key, (unsigned long long)ms);
+		if (*cnt > (unsigned)PAGE_ACCEPT_BURST + (unsigned)(PAGE_ACCEPT_RATE * ms / 1000u) + 1u)
+			FAIL("H6: %u connections of %s got TLS in %llu ms (burst %d, %d/s)", *cnt, k->key, (unsigned long long)ms, PAGE_ACCEPT_BURST, PAGE_ACCEPT_RATE);
 	}
 	if (k->has48) {
 		char k48[64];
 		key48_text(k, k48);
 		if ((cnt = rate_cell(RT48, k48)) != NULL) {
 			(*cnt)++;
-			if (*cnt > 16u + (unsigned)(8u * ms / 1000u) + 1u)
-				FAIL("H6: %u connections of %s got TLS in %llu ms (burst 16, 8/s)", *cnt, k48, (unsigned long long)ms);
+			if (*cnt > (unsigned)PAGE_ACCEPT_BURST_48 + (unsigned)(PAGE_ACCEPT_RATE_48 * ms / 1000u) + 1u)
+				FAIL("H6: %u connections of %s got TLS in %llu ms (burst %d, %d/s)", *cnt, k48, (unsigned long long)ms, PAGE_ACCEPT_BURST_48, PAGE_ACCEPT_RATE_48);
 		}
 	}
 }

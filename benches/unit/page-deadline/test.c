@@ -176,7 +176,7 @@ static void *t_realloc(void *q, size_t n)
 #include <time.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 130
+#define EXPECTED_CHECKS 131
 
 static void require(int cond, const char *desc)
 {

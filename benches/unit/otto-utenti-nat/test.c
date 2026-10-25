@@ -34,14 +34,15 @@
  * Every cut is printed with the user, the time and the limit that did it. Exit code 0 = A and B had no cut, 1 = a cut (or the test is out of date).
  *
  * BUILD AND RUN (a few seconds; from the root of the tree; rootside.c is linked and its dependencies are stubs that trap if reached):
- *   PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon" &&
- *   F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -Isrc -Ibenches/fuzz/rcp-msg $(pkg-config --cflags $PK)" &&
- *   L="$(pkg-config --libs gio-2.0) -lpam -lpthread -ldl -lm" &&
- *   gcc $F -c benches/unit/otto-utenti-nat/test.c -o t.o && gcc $F -c src/rootside.c -o r.o && gcc $F -c benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
- *   { gcc -fsanitize=address,undefined t.o r.o l.o $L -o t0 2> link1.log || true; } &&
- *   { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
- *     while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
- *   gcc $F -c s.c -o s.o && gcc -fsanitize=address,undefined t.o r.o l.o s.o $L -o test && ./test src
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon" &&
+ *     F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg $(pkg-config --cflags $PK)" &&
+ *     L="$(pkg-config --libs gio-2.0) -lpam -lpthread -ldl -lm" &&
+ *     clang $F -c /albero/benches/unit/otto-utenti-nat/test.c -o t.o && clang $F -c /albero/src/rootside.c -o r.o && clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
+ *     { clang -fsanitize=address,undefined t.o r.o l.o $L -o t0 2> link1.log || true; } &&
+ *     { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
+ *       while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
+ *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o r.o l.o s.o $L -o test && cd /albero && /tmp/test src'
  */
 #include "rcp.c"
 

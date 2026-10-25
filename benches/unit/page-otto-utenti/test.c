@@ -17,14 +17,15 @@
  * The time is the real clock (the page uses real_ms()): the test takes about ten seconds.
  *
  * BUILD AND RUN (a few seconds to build; from the root of the tree):
- *   PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon" &&
- *   F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -Isrc -Ibenches/fuzz/rcp-msg $(pkg-config --cflags $PK)" &&
- *   L="$(pkg-config --libs gio-2.0) -lpam -lpthread -ldl -lm -lssl -lcrypto -lz" &&
- *   gcc $F -c benches/unit/page-otto-utenti/test.c -o t.o && gcc $F -c src/rcp.c -o r.o && gcc $F -c benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
- *   { gcc -fsanitize=address,undefined t.o r.o l.o $L -o t0 2> link1.log || true; } &&
- *   { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
- *     while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
- *   gcc $F -c s.c -o s.o && gcc -fsanitize=address,undefined t.o r.o l.o s.o $L -o test && ASAN_OPTIONS=detect_leaks=0 ./test   (the SSL objects of the test certificate are not freed)
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon" &&
+ *     F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg $(pkg-config --cflags $PK)" &&
+ *     L="$(pkg-config --libs gio-2.0) -lpam -lpthread -ldl -lm -lssl -lcrypto -lz" &&
+ *     clang $F -c /albero/benches/unit/page-otto-utenti/test.c -o t.o && clang $F -c /albero/src/rcp.c -o r.o && clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
+ *     { clang -fsanitize=address,undefined t.o r.o l.o $L -o t0 2> link1.log || true; } &&
+ *     { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
+ *       while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
+ *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o r.o l.o s.o $L -o test && cd /albero && ASAN_OPTIONS=detect_leaks=0 /tmp/test'   (the SSL objects of the test certificate are not freed)
  */
 #include "page.h"
 #include "rcp.h"

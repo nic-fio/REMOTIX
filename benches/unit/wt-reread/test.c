@@ -374,6 +374,8 @@ int main(void)
 	printf("  W4b. the quic-net line of a connection with the channel open but not logged in\n");
 	{
 		FILE *f = fopen("src/webtransport.c", "r");
+		if (!f)
+			f = fopen("/albero/src/webtransport.c", "r");
 		static char src[16u << 20];
 		size_t n = 0;
 		char *cyc, *gate, *line;
