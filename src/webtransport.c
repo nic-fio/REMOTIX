@@ -7826,6 +7826,8 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 	            : channel == 0x01 ? G_UNI_INPUT
 	            : channel == 0x02 ? G_UNI_CLIPBOARD
 	                             : G_UNI_OK;
+	/* ⭐ rilettura-wt W2: one line per unidirectional stream of the client, whatever it is: before the login they go through the budget of the connection (a logged-in one writes them all) */
+	if (prelogin_may_log(w))
 	log_says_of(REG_WT, wt_chi(w),
 	                 "client unidirectional stream %ld, session %llu, type "
 	                 "0x%04x, channel 0x%02x — %s",
@@ -7851,9 +7853,10 @@ static enum outcome dispatch_uni(wt *w, int64_t stream_id, const uint8_t *data,
 			 *   second conditional of §3.1 at work: demanding
 			 *   all three points always would give red on the
 			 *   right code. */
-			log_says_of(REG_WT, wt_chi(w),
-			                 "⚠ no control channel: the reason "
-			                 "travels only in the session closure");
+			if (prelogin_may_log(w))   /* ⭐ rilettura-wt W2 */
+				log_says_of(REG_WT, wt_chi(w),
+				                 "⚠ no control channel: the reason "
+				                 "travels only in the session closure");
 			close_session(w, RCP_PROTOCOL_ERROR);
 		}
 	} else if (channel == 0x01) {

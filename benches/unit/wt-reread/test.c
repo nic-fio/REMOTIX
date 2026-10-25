@@ -55,7 +55,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 4
+#define EXPECTED_CHECKS 6
 
 static void require(int cond, const char *desc)
 {
@@ -193,6 +193,31 @@ int main(void)
 		for (int k = 0; k < 10; k++)
 			capsule(b, 0, big, sizeof big);
 		require(says == 10, "and it writes every one of its 10 \"SKIPPED\" lines");
+	}
+
+	printf("  W2. one line per unidirectional stream of the client\n");
+	{
+		ngtcp2_ccerr e;
+		wt *a, *b;
+		bytes held;
+		uint8_t pre[5] = { 0x40, 0x54, 0x00, 0x01, 0x00 };                        /* WebTransport stream (0x54), session 0, kind 0x0100: channel 0x01 (input) */
+
+		memset(&e, 0, sizeof e);
+		a = wt_new(NULL, &e, "[192.0.2.32]:4001", NULL);
+		says = 0;
+		for (int k = 0; k < 100; k++) {
+			memset(&held, 0, sizeof held);
+			(void)dispatch_uni(a, 2 + 4 * k, pre, sizeof pre, true, &held);
+		}
+		require(says > 0 && says <= WT_PRELOGIN_BURST + 1, "100 unidirectional streams before the login: at most WT_PRELOGIN_BURST lines (before: 100)");
+		b = wt_new(NULL, &e, "[198.51.100.32]:4001", NULL);
+		b->rcp = session("[198.51.100.32]:4001", "anna", "1920x1080", true, fake_now);
+		says = 0;
+		for (int k = 0; k < 30; k++) {
+			memset(&held, 0, sizeof held);
+			(void)dispatch_uni(b, 2 + 4 * k, pre, sizeof pre, true, &held);
+		}
+		require(says >= 30, "a logged-in connection writes its line for every stream (30)");
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);
