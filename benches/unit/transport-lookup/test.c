@@ -18,7 +18,7 @@
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
- *     cd /tmp && gcc -std=gnu11 -O2 -Wall -Wextra -D_GNU_SOURCE -I/albero/src /albero/benches/unit/transport-lookup/test.c -o test && ./test'
+ *     cd /tmp && gcc -std=gnu11 -O2 -Wall -Wextra -I/albero/src /albero/benches/unit/transport-lookup/test.c -o test && ./test'
  * Exit code 0 = every check passed.
  */
 #define _GNU_SOURCE
