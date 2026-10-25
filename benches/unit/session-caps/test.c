@@ -4,7 +4,7 @@
  *
  * HOW: the REAL src/rcp.c is #included (never modified), like benches/unit/login-ban/test.c; the log is benches/fuzz/rcp-msg/stubs_log.c; the session is built by hand
  * (calloc) with a `record` hook that counts the lines.  handle_clipboard() is called directly with real wire bodies.
- *   1. 1000 CLIPBOARD_ASK in one instant: at most CLIPBOARD_BURST are handled (a handled one writes «no longer there», the session has no text);
+ *   1. 1000 CLIPBOARD_ASK in one instant: at most CLIPBOARD_BURST (+ the CLIPBOARD_ASK_FREE first ones, never refused: reading of rcp.c, B2) are handled (a handled one writes «no longer there», the session has no text);
  *   2. one summary line says how many were ignored, when the 10 s window closes;
  *   3. later the session is served again; 2 ASK a second for a minute lose nothing;
  *   4. 1000 ANNOUNCE in one instant: the same bucket, the first ones handled (transfer ids 1..), the rest ignored — the last id seen is not 1000;
@@ -65,7 +65,7 @@ int main(void)
 	s->app_my_id = 1;
 	for (int i = 0; i < 1000; i++)
 		handle_clipboard(s, T_CLIPBOARD_ASK, ask, 4, 30000);
-	CHECK(no_text >= 1 && no_text <= CLIPBOARD_BURST, "1. 1000 ASK in one instant: at most CLIPBOARD_BURST handled");
+	CHECK(no_text >= 1 && no_text <= CLIPBOARD_BURST + CLIPBOARD_ASK_FREE, "1. 1000 ASK in one instant: at most CLIPBOARD_BURST handled, plus the CLIPBOARD_ASK_FREE (2) first ones of the transfer that are never refused");
 	handle_clipboard(s, T_CLIPBOARD_ASK, ask, 4, 30000 + MSG_WINDOW_MS + 1);
 	CHECK(over_lines == 1, "2. one summary line when the window closes");
 	{
