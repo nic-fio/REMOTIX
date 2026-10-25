@@ -4,6 +4,7 @@
 #include "tls.h"
 #include "log.h"
 
+#include <stdbool.h>
 #include <string.h>
 
 #include <openssl/err.h>
@@ -46,6 +47,35 @@ static int choose_alpn(SSL *ssl, const unsigned char **out, unsigned char *outle
 	return SSL_TLSEXT_ERR_ALERT_FATAL;
 }
 
+/* ⭐ 1.5 (audit R4): the key-exchange GROUPS the server accepts.  Until now nobody set
+ *   them, so OpenSSL's default list applied, and a client could offer ONLY an expensive
+ *   group — ffdhe3072 costs the server about 6 ms of CPU per handshake against 1.2 ms for
+ *   X25519 — and the server had to follow, on the single loop that also serves the video.
+ *   Browsers send X25519MLKEM768, X25519 and P-256; P-384 is kept for the rest.  The same
+ *   for the QUIC and the TCP context, because both come from `common()`.
+ *
+ * ⛔ `SSL_CTX_set1_groups_list()` fails AS A WHOLE when one name is unknown (checked on
+ *   OpenSSL 3.5.7), and an OpenSSL older than 3.5 does not know X25519MLKEM768: then the
+ *   list WITHOUT it is set and the line says so — the server does not start with the
+ *   defaults, which is exactly the defect.  `ngtcp2_crypto_ossl_configure_server_session()`
+ *   does not touch the groups (it imports no group or option function from OpenSSL). */
+#define TLS_GROUPS         "X25519MLKEM768:X25519:P-256:P-384"
+#define TLS_GROUPS_CLASSIC "X25519:P-256:P-384"
+
+static bool set_groups(SSL_CTX *ctx, const char *wanted, const char *classic)
+{
+	if (SSL_CTX_set1_groups_list(ctx, wanted) == 1)
+		return true;
+	ERR_clear_error();
+	registro_dice(REG_QUIC,
+	              "this OpenSSL does not know the key-exchange groups «%s»: "
+	              "using «%s» (without ML-KEM)", wanted, classic);
+	if (SSL_CTX_set1_groups_list(ctx, classic) == 1)
+		return true;
+	registro_dice(REG_QUIC, "⛔ key-exchange groups «%s»: %s", classic, error_ssl());
+	return false;
+}
+
 static SSL_CTX *common(const char *pem, const char *key)
 {
 	SSL_CTX *ctx = SSL_CTX_new(TLS_server_method());
@@ -57,6 +87,10 @@ static SSL_CTX *common(const char *pem, const char *key)
 	SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE |
 	                           SSL_OP_NO_ANTI_REPLAY);
 	SSL_CTX_set_mode(ctx, SSL_MODE_RELEASE_BUFFERS);
+	if (!set_groups(ctx, TLS_GROUPS, TLS_GROUPS_CLASSIC)) {
+		SSL_CTX_free(ctx);
+		return NULL;
+	}
 
 	if (SSL_CTX_use_PrivateKey_file(ctx, key, SSL_FILETYPE_PEM) != 1) {
 		registro_dice(REG_QUIC, "⛔ key %s: %s", key, error_ssl());
