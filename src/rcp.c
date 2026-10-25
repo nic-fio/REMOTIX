@@ -1181,7 +1181,7 @@ static void slot_leave(const char *user)
  *  C. THREE LEVELS OF COUNTERS, sliding window (the time of the last N
  *     failures is kept, not their number: see the ⚠ below):
  *         (key, user)   5 failed in  5 min   -> ban of (key, user)
- *         key          12 failed in  5 min   -> ban of the key, any user
+ *         key          20 failed in  5 min   -> ban of the key, any user (1.5: it was 12; in-flight attempts no longer count here)
  *         IPv6 /48     30 failed in 10 min   -> ban of the /48
  *     The ban is PROGRESSIVE for each level: 15 min, then 1 h, then 12 h (the
  *     maximum, which is the 1.0 duration); the memory of the previous bans is
@@ -1302,7 +1302,12 @@ _Static_assert(BAN_QUOTA + LEVELS * BOOKINGS_MAX + LEVELS < MAX_ATTEMPTS,
 
 /* The three levels of counters.  The ORDER is the order of the arrays below. */
 enum { LK_USER = 0, LK_KEY = 1, LK_NET48 = 2 };
-static const int LIMIT[LEVELS] = {5, 12, 30};
+/* ⭐ 1.5, margins for the 8-user target: the ADDRESS level was 12; eight people behind one NAT with ONE typo each already used 8 of them, and the
+ *   attempts in flight counted too, so four right passwords sent together were refused.  Now 20 failed in 5 minutes (twelve typos of slack for eight
+ *   people), and at the address level only FAILURES count: the attempts in flight stay counted per (key, user) — 2 at once, and 5 with the failures —
+ *   but the address no longer counts them (a flood of parallel attempts is bounded by the helper's 16 in flight and by the pending cap of the
+ *   transport, and every one that fails is booked at once). */
+static const int LIMIT[LEVELS] = {5, 20, 30};
 static const uint64_t WINDOW_MS[LEVELS] = {300000u, 300000u, 600000u};
 static const char *const LEVEL_NAME[LEVELS] = {"user on this address",
                                                "address", "IPv6 /48"};
@@ -2385,7 +2390,7 @@ static enum login_verdict login_reserve(const char *key, const char *user,
 			continue;
 		const struct lentry *e = &attempts[idx[j]];
 		if ((j == LK_USER && e->in_flight >= MAX_PER_USER_IN_FLIGHT) ||
-		    failed_inside(e, now) + e->in_flight >= LIMIT[j]) {
+		    failed_inside(e, now) + (j == LK_KEY ? 0 : e->in_flight) >= LIMIT[j]) {
 			info->kind = j;
 			return LV_BUSY;
 		}

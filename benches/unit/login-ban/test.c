@@ -10,7 +10,7 @@
  *
  * What it covers (each is a group of checks, named in the output):
  *   keys        IPv4 whole, IPv6 /64, ::ffff: and NAT64 -> IPv4, ::1 whole, idempotent; the /48 of a key
- *   thresholds  (key,user) 5 in 5 min · key 12 in 5 min · /48 30 in 10 min: N-1 does not ban, N does; the SLIDING window
+ *   thresholds  (key,user) 5 in 5 min · key 20 in 5 min (1.5; was 12) · /48 30 in 10 min: N-1 does not ban, N does; the SLIDING window
  *               (a first failure that has left the window does not count) and the boundary of the window
  *   progression 15 min -> 1 h -> 12 h -> 12 h; forgotten after 24 h without a ban (and NOT forgotten at 23 h)
  *   reset       success resets only (key,user): not the key's count, not the /48's, not the recidivism
@@ -54,6 +54,8 @@ static uid_t rxt_geteuid(void);
 #include "rcp.c"
 #undef geteuid
 static uid_t rxt_geteuid(void) { return geteuid() + rxt_uid_shift; }
+/* ⭐ 1.5: the limit of the ADDRESS level (it was 12; 20 since the margins for eight people behind one NAT), read from the product, not copied */
+#define KL (LIMIT[LK_KEY])
 
 #include <dirent.h>
 #include <stdio.h>
@@ -174,19 +176,19 @@ static void test_thresholds(void)
 	fail(K, "alice", at(300));
 	CHECK(peek(K, "alice", at(301), NULL) == LV_BANNED, "0 and 300 s apart is inside the window (<=)");
 
-	/* key: 12 failures from 12 different users in 5 minutes */
+	/* key: KL failures from KL different users in 5 minutes */
 	fresh();
 	char u[16];
-	for (int i = 0; i < 11; i++) { snprintf(u, sizeof u, "user%d", i); fail(K, u, at(i)); }
-	CHECK(peek(K, "someone", at(12), NULL) == LV_OK, "11 failures on the key: no ban");
-	fail(K, "user11", at(12));
-	CHECK(peek(K, "someone", at(13), &info) == LV_BANNED && info.kind == LK_KEY, "12th failure: the KEY is banned, any user");
-	CHECK(rcp_banned(K, at(13), NULL), "rcp_banned says so (the page)");
-	CHECK(peek("[1.2.3.9]", "someone", at(13), NULL) == LV_OK, "another IPv4 is free");
-	/* 12 failures but slower than the window: 25 s apart -> the first has left when the 12th comes */
+	for (int i = 0; i < KL - 1; i++) { snprintf(u, sizeof u, "user%d", i); fail(K, u, at(i)); }
+	CHECK(peek(K, "someone", at(KL), NULL) == LV_OK, "%d failures on the key: no ban", KL - 1);
+	fail(K, "userlast", at(KL));
+	CHECK(peek(K, "someone", at(KL + 1), &info) == LV_BANNED && info.kind == LK_KEY, "the %dth failure: the KEY is banned, any user", KL);
+	CHECK(rcp_banned(K, at(KL + 1), NULL), "rcp_banned says so (the page)");
+	CHECK(peek("[1.2.3.9]", "someone", at(KL + 1), NULL) == LV_OK, "another IPv4 is free");
+	/* KL failures but slower than the window: 16 s apart -> the first has left when the last comes */
 	fresh();
-	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "user%d", i); fail(K, u, at(i * 28)); }
-	CHECK(!rcp_banned(K, at(12 * 28), NULL), "12 failures in 308 s: the first is out, no ban");
+	for (int i = 0; i < KL; i++) { snprintf(u, sizeof u, "user%d", i); fail(K, u, at(i * 16)); }
+	CHECK(!rcp_banned(K, at(KL * 16), NULL), "%d failures in %d s: the first is out, no ban", KL, KL * 16);
 
 	/* /48: 30 failures from 30 different /64 of the same /48 (each /64 sees ONE failure), in 10 minutes */
 	fresh();
@@ -265,11 +267,11 @@ static void test_progression(void)
 	/* the rungs are per level: the KEY has its own ladder */
 	fresh();
 	char u[16];
-	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "u%d", i); fail(K, u, at(i)); }
-	CHECK(peek(K, "x", at(13), &info) == LV_BANNED && info.kind == LK_KEY && info.remain == 900000u - 2000u, "key ban 1 is 15 min");
-	t = at(11) + 900000u + 1000u;
-	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "v%d", i); fail(K, u, t + (uint64_t)i * 1000u); }
-	CHECK(peek(K, "x", t + 13000u, &info) == LV_BANNED && info.kind == LK_KEY && info.remain == 3600000u - 2000u, "key ban 2 is 1 h (remain %llu)", (unsigned long long)info.remain);
+	for (int i = 0; i < KL; i++) { snprintf(u, sizeof u, "u%d", i); fail(K, u, at(i)); }
+	CHECK(peek(K, "x", at(KL + 1), &info) == LV_BANNED && info.kind == LK_KEY && info.remain == 900000u - 2000u, "key ban 1 is 15 min");
+	t = at(KL - 1) + 900000u + 1000u;
+	for (int i = 0; i < KL; i++) { snprintf(u, sizeof u, "v%d", i); fail(K, u, t + (uint64_t)i * 1000u); }
+	CHECK(peek(K, "x", t + (uint64_t)(KL + 1) * 1000u, &info) == LV_BANNED && info.kind == LK_KEY && info.remain == 3600000u - 2000u, "key ban 2 is 1 h (remain %llu)", (unsigned long long)info.remain);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -283,11 +285,11 @@ static void test_reset(void)
 	attempt(K, "alice", true, at(5));                 /* success: the 4 go back to zero */
 	for (int i = 0; i < 4; i++) fail(K, "alice", at(10 + i));
 	CHECK(peek(K, "alice", at(20), NULL) == LV_OK, "success reset (key,user): 4+4 failures do not ban");
-	/* ...but NOT the key's count: 8 failures of alice so far, 4 more from 4 other users make 12 */
-	for (int i = 0; i < 3; i++) { char u[8]; snprintf(u, sizeof u, "o%d", i); fail(K, u, at(21 + i)); }
-	CHECK(peek(K, "z", at(25), NULL) == LV_OK, "11 on the key");
-	fail(K, "o3", at(26));
-	CHECK(peek(K, "z", at(27), &info) == LV_BANNED && info.kind == LK_KEY, "the key counted 12 although alice succeeded in between");
+	/* ...but NOT the key's count: 8 failures of alice so far, KL-8 more from other users make KL */
+	for (int i = 0; i < KL - 9; i++) { char u[8]; snprintf(u, sizeof u, "o%d", i); fail(K, u, at(21 + i)); }
+	CHECK(peek(K, "z", at(25 + KL), NULL) == LV_OK, "%d on the key", KL - 1);
+	fail(K, "olast", at(26 + KL));
+	CHECK(peek(K, "z", at(27 + KL), &info) == LV_BANNED && info.kind == LK_KEY, "the key counted %d although alice succeeded in between", KL);
 
 	/* another user's success does not reset alice */
 	fresh();
@@ -329,14 +331,14 @@ static void test_rotation(void)
 	CHECK(peek(k, "alice", at(6), NULL) == LV_BANNED, "five addresses of ONE /64 are one key: banned at the 5th");
 	key_of("2001:db8:1:3::1", k);
 	CHECK(peek(k, "alice", at(6), NULL) == LV_OK, "another /64 is another key");
-	/* the same rotation with 12 users: the key bans */
+	/* the same rotation with KL users: the key bans */
 	fresh();
-	for (int i = 0; i < 12; i++) {
+	for (int i = 0; i < KL; i++) {
 		char addr[64], u[8]; snprintf(addr, sizeof addr, "2001:db8:1:2:%x::1", i + 1); snprintf(u, sizeof u, "u%d", i);
 		key_of(addr, k); fail(k, u, at(i));
 	}
-	CHECK(rcp_banned("2001:db8:1:2:dead:beef::1", at(13), NULL), "rotation inside a /64 with 12 users: the key is banned");
-	CHECK(!rcp_banned("2001:db8:1:3::1", at(13), NULL), "the neighbour /64 is not");
+	CHECK(rcp_banned("2001:db8:1:2:dead:beef::1", at(KL + 1), NULL), "rotation inside a /64 with %d users: the key is banned", KL);
+	CHECK(!rcp_banned("2001:db8:1:3::1", at(KL + 1), NULL), "the neighbour /64 is not");
 	/* IPv4 is NOT aggregated: neighbours are different keys */
 	fresh();
 	for (int i = 0; i < 5; i++) { char addr[16]; snprintf(addr, sizeof addr, "10.0.0.%d", i + 1); key_of(addr, k); fail(k, "alice", at(i)); }
@@ -380,14 +382,26 @@ static void test_in_flight(void)
 	CHECK(r.inside[LK_USER] == 5 && r.banned[LK_USER] && r.ban_ms[LK_USER] == 900000u, "5th failure bans for 15 min");
 	CHECK(peek(K, "alice", at(7), NULL) == LV_BANNED, "banned");
 
-	/* the key level: 11 failures of 11 users + 1 in flight -> another user is refused (11 + 1 = 12) */
+	/* the key level (1.5): only the FAILURES count, not the attempts in flight.  KL-1 failures of KL-1 users: any number of other users may be in flight
+	 * at once (the (key, user) level still counts its own: 2 at once); the KL-th FAILURE is what refuses */
 	fresh();
 	char u[8];
-	for (int i = 0; i < 11; i++) { snprintf(u, sizeof u, "u%d", i); fail(K, u, at(i)); }
-	CHECK(login_reserve(K, "x", at(12), &info) == LV_OK, "11 failed + 1 in flight");
-	CHECK(login_reserve(K, "y", at(12), &info) == LV_BUSY && info.kind == LK_KEY, "12 = limit of the key: refused on the KEY level");
+	for (int i = 0; i < KL - 1; i++) { snprintf(u, sizeof u, "u%d", i); fail(K, u, at(i)); }
+	CHECK(login_reserve(K, "x", at(KL), &info) == LV_OK, "%d failed + 1 in flight", KL - 1);
+	CHECK(login_reserve(K, "y", at(KL), &info) == LV_OK, "...and a second user in flight: the key does NOT count the attempts in flight");
+	CHECK(login_reserve(K, "z", at(KL), &info) == LV_OK && login_reserve(K, "w", at(KL), &info) == LV_OK, "...and a third and a fourth (eight people logging in together)");
+	CHECK(login_reserve(K, "x", at(KL), &info) == LV_OK, "the same user a second time: 2 in flight is the (key, user) bound");
+	CHECK(login_reserve(K, "x", at(KL), &info) == LV_BUSY && info.kind == LK_USER, "a third for the same user: refused on the USER level, not on the key");
+	{
+		struct login_result rr;
+
+		login_resolve(K, "y", false, at(KL + 1), &rr);       /* one of them FAILS: that is the KL-th failure of the key */
+		CHECK(rr.banned[LK_KEY], "the %dth failure bans the key", KL);
+	}
+	CHECK(login_reserve(K, "q", at(KL + 2), &info) == LV_BANNED && info.kind == LK_KEY, "and then the key is banned for everybody");
+	/* the question did not leave: the booking is given back */
 	login_release(K, "x");
-	CHECK(login_reserve(K, "y", at(12), &info) == LV_OK, "released: allowed again");
+	login_release(K, "x");
 
 	/* the question did not leave: login_release counts nothing */
 	fresh();
@@ -546,13 +560,19 @@ static int banned_now(uint64_t now)
 }
 
 /* an address that fails its way to THREE banned entries (the most one address can get): user "a" 5 times, user "b" 5 times,
- * user "c" twice = 12 failures of the key.  Returns the failures spent. */
+ * and the rest of the KL failures of the key from other users, two each (never five: a third user ban would make four) = KL failures.
+ * Returns the failures spent. */
 static int burn(const char *key, uint64_t t)
 {
 	int spent = 0;
 	for (int i = 0; i < 5; i++, spent++) fail(key, "a", t + (uint64_t)i);
 	for (int i = 0; i < 5; i++, spent++) fail(key, "b", t + 10u + (uint64_t)i);
-	for (int i = 0; i < 2; i++, spent++) fail(key, "c", t + 20u + (uint64_t)i);
+	for (int c = 0; spent < KL; c++) {
+		char who[8];
+
+		snprintf(who, sizeof who, "c%d", c);
+		for (int i = 0; i < 2 && spent < KL; i++, spent++) fail(key, who, t + 20u + (uint64_t)spent);
+	}
 	return spent;
 }
 
@@ -560,7 +580,7 @@ static void v4(char *out, int n) { snprintf(out, 64, "[10.%d.%d.%d]", 100 + n / 
 
 static char *slurp(const char *path);
 
-/* a botnet of `n` addresses that burn 12 failures each, in turns, every `period` s from `from` to `to` (seconds) */
+/* a botnet of `n` addresses that burn KL failures each, in turns, every `period` s from `from` to `to` (seconds) */
 static void botnet(int n, double from, double to, double period)
 {
 	char k[64];
@@ -1038,8 +1058,8 @@ static void test_unblock(void)
 	ban_user(K, "alice", at(0));
 	ban_user(K, "bob", at(10));
 	char u[8];
-	for (int i = 0; i < 12; i++) { snprintf(u, sizeof u, "x%d", i); fail(K, u, at(20 + i)); }
-	CHECK(rcp_banned(K, at(40), NULL) && peek(K, "alice", at(40), NULL) == LV_BANNED, "alice and the key are banned");
+	for (int i = 0; i < KL; i++) { snprintf(u, sizeof u, "x%d", i); fail(K, u, at(20 + i)); }
+	CHECK(rcp_banned(K, at(20 + KL + 1), NULL) && peek(K, "alice", at(20 + KL + 1), NULL) == LV_BANNED, "alice and the key are banned");
 	CHECK(rcp_unblock("1.2.3.4:44", at(41)), "unblock answers «was banned»");
 	CHECK(!rcp_banned(K, at(41), NULL), "key free");
 	CHECK(peek(K, "alice", at(41), NULL) == LV_OK && peek(K, "bob", at(41), NULL) == LV_OK, "every (key,user) free");
@@ -1119,7 +1139,7 @@ static void test_file(void)
 	CHECK(rcp_ban_load(path, at(0)) == 0, "no file yet: zero bans, not an error");
 	ban_user(K, "john smith", at(0));                                  /* U ban 1 (15 min) */
 	char u[8];
-	for (int j = 0; j < 12; j++) { snprintf(u, sizeof u, "k%d", j); fail("[5.5.5.5]", u, at(1 + j)); }   /* K ban */
+	for (int j = 0; j < KL; j++) { snprintf(u, sizeof u, "k%d", j); fail("[5.5.5.5]", u, at(1 + j)); }   /* K ban */
 	char a[64], kk[64];
 	for (int j = 0; j < 30; j++) { snprintf(a, sizeof a, "2001:db8:7:%x::5", j + 1); key_of(a, kk); fail(kk, "alice", at(20 + j)); }  /* N ban */
 	/* a ban that has ended but is remembered: alice on 7.7.7.7 */

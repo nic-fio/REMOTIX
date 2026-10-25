@@ -7,7 +7,7 @@ the 1.0 and is kept as such.  What this file proves now, on the wire:
   · (address, user) level: 5 failures of ONE name ban that name on that address; the
     6th attempt with that name is refused with TOO_MANY_ATTEMPTS, and ANOTHER user from
     the same address still gets in (the ban is not of the address);
-  · address level: 12 failures (12 different names, 5 + 7 here) ban the address, and the
+  · address level: 20 failures (20 different names, 5 + 15 here; it was 12, 5 + 7, before the margins of 1.5) ban the address, and the
     RIGHT password is then refused, in a REJECTED and in the closing code;
   · the page shows the notice and the time left (the first step of the ladder: 15 min);
   · the ban survives the restart (the ban file v2) and the unblock removes it.
@@ -263,7 +263,7 @@ GREEN, RED, YELLOW, GRAY = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 # ── The numbers of the rule, all in one place and all declared ───────────────
 # `RCP.md` §4.4-bis, the user's shape of 10 Aug 2026.
 THRESHOLD_USER = 5            # 5 failures of the same (address, user) within 5 minutes: that user is out
-THRESHOLD_KEY = 12            # 12 failures of the same address (any user) within 5 minutes: the address is out
+THRESHOLD_KEY = 20            # 20 failures of the same address (any user) within 5 minutes: the address is out (1.5: it was 12; the attempts in flight no longer count there)
 THRESHOLD_NET48 = 30          # 30 failures within 10 minutes in an IPv6 /48 (NOT exercised here: see the docstring)
 THRESHOLD = THRESHOLD_KEY     # the number that bans the ADDRESS
 WINDOW_MIN = 5           # ...within five minutes (SLIDING window)
@@ -1561,7 +1561,7 @@ def verdict(a):
     # ── 3. the ban run ──────────────────────────────────────────────────────
     print()
     print("    == ⛔ The ban (1.5 rule): one name 5 times · the same name refused · the real user still gets in "
-          "· 12 failures of the address · the RIGHT password refused")
+          "· 20 failures of the address · the RIGHT password refused")
     cur_round = sorted([r for r in data if r["type"] == "ban"], key=lambda r: r["order"])
     if len(cur_round) != BAN_STEPS:
         print(f"    {RED}NO{GRAY}  ⛔ the ban run has {len(cur_round)} attempts "
