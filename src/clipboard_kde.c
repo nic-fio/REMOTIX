@@ -151,6 +151,15 @@ static void on_type_offered(void *data, struct zwlr_data_control_offer_v1 *proxy
 	/* ⭐ S-R10: bounded in number and in length (see mimecap.h) */
 	if (mime_keep(offer->mime->len, mime))
 		g_ptr_array_add(offer->mime, g_strdup(mime));
+	else if (mime && *mime && !offer_has(offer, mime)) {
+		/* ⭐ Review of 695b0d74: the types we LOOK FOR are always kept, even past the ceiling (a program that lists 64 others first must not hide its text); once each, so the
+		 *    overshoot is at most the three of TEXT_TYPES */
+		for (int i = 0; TEXT_TYPES[i]; i++)
+			if (g_ascii_strcasecmp(mime, TEXT_TYPES[i]) == 0) {
+				g_ptr_array_add(offer->mime, g_strdup(mime));
+				break;
+			}
+	}
 }
 
 static const struct zwlr_data_control_offer_v1_listener offer_listener = { on_type_offered };

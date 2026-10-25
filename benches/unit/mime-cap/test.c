@@ -48,6 +48,7 @@ int main(void)
 		last -= MIME_LINE_WINDOW_MS;
 		CHECK(mime_line_allowed(&last), "6c. after the window it is allowed again");
 	}
+	CHECK(has("src/clipboard_kde.c", "the types we LOOK FOR are always kept"), "7a. clipboard_kde.c keeps TEXT_TYPES past the ceiling");
 	CHECK(has("src/clipboard_kde.c", "mime_keep(offer->mime->len, mime)") && has("src/clipboard_kde.c", "mime_line_allowed(&last_line)"), "7. clipboard_kde.c bounds the list and the line");
 	CHECK(has("src/clipboard.c", "mime_line_allowed(&last_line)") && has("src/clipboard.c", "MIME_LOG_TYPES"), "7b. clipboard.c bounds the line and the listing");
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
