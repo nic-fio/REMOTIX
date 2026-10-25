@@ -1,7 +1,7 @@
 /* test.c — S-R4 for the KEYS (libei path of src/input.c).  The REAL input.c is #included; the libei calls the key path reaches are interposed (they record what
  * would have gone to the compositor); the keymap is the REAL keyboard.c with layout «us».  Linked without libei/libwayland: the other undefined symbols get trap stubs.
  *   1. a key-down repeated: sent once (the second returns 0 and nothing leaves); the up repeated: the same;
- *   2. the bit of an ORPHAN key does not suppress a press (the new device never saw it);
+ *   2. the bit of an ORPHAN key or button does not suppress a press; the accepted press switches the orphan mark off and the release that follows LEAVES (the new device never saw it);
  *   3. input_letter('A') with the user's Shift already DOWN: the letter is pressed and released, Shift is NOT pressed again and NOT released (the old code released it);
  *   4. input_letter('A') with nothing held: Shift down, a down, a up, Shift up — in this order, all released;
  *   5. input_letter('a') right after: nothing is left down (in->keys all clear for the gesture's keys);
@@ -33,6 +33,9 @@ void ei_device_keyboard_key(struct ei_device *d, uint32_t key, bool is_press)
 	(void)d;
 	if (n_events < 64) { events[n_events][0] = (int)key; events[n_events][1] = is_press; n_events++; }
 }
+static int n_buttons;
+void ei_device_button_button(struct ei_device *d, uint32_t button, bool is_press);
+void ei_device_button_button(struct ei_device *d, uint32_t button, bool is_press) { (void)d; (void)button; (void)is_press; n_buttons++; }
 void ei_device_frame(struct ei_device *d, uint64_t t);
 void ei_device_frame(struct ei_device *d, uint64_t t) { (void)d; (void)t; }
 
@@ -73,8 +76,24 @@ int main(void)
 	bit_write(in->orphan_keys, KEY_A, TRUE);
 	send_key(in, KEY_A, 1);
 	CHECK(n_events == 1, "2. an orphan's bit does not suppress the press");
-	bit_write(in->keys, KEY_A, FALSE);
-	bit_write(in->orphan_keys, KEY_A, FALSE);
+	CHECK(!bit_read(in->orphan_keys, KEY_A) && bit_read(in->keys, KEY_A), "2b. the accepted press switches the orphan mark off (the key is a live press on the new device)");
+	in->how_many_orphans = 1; in->how_many_keys = 1;   /* (set by hand above: the count the healing would have made) */
+	n_events = 0;
+	CHECK(send_key(in, KEY_A, 0) == 0 && n_events == 1 && events[0][0] == KEY_A && events[0][1] == 0, "2c. and the release that follows LEAVES (it used to be swallowed)");
+	CHECK(!bit_read(in->keys, KEY_A), "2d. the key is up in the count");
+
+	/* the same for a BUTTON: press on an orphan, then release */
+	in->pointer = (struct ei_device *)(uintptr_t)0x20;
+	in->pointer_active = TRUE;
+	n_buttons = 0;
+	bit_write(in->buttons, 0x110, TRUE);
+	bit_write(in->orphan_buttons, 0x110, TRUE);
+	in->how_many_orphans = 1; in->how_many_buttons = 1;
+	CHECK(send_button(in, 0x110, 1) == 0 && n_buttons == 1, "2e. a button press on an orphan is accepted");
+	CHECK(!bit_read(in->orphan_buttons, 0x110) && in->how_many_orphans == 0, "2f. and it switches the orphan mark off and counts it down");
+	CHECK(send_button(in, 0x110, 0) == 0 && n_buttons == 2 && !bit_read(in->buttons, 0x110), "2g. the release that follows leaves");
+	CHECK(send_button(in, 0x110, 0) == 0 && n_buttons == 2, "2h. a second release is a duplicate again: not sent");
+	n_events = 0;
 
 	/* 3: the user holds Shift */
 	n_events = 0;
@@ -101,6 +120,8 @@ int main(void)
 	CHECK(!bit_read(in->keys, LSHIFT) && !bit_read(in->keys, KEY_A), "5. nothing left down");
 
 	CHECK(has("src/input.c", "a repeated key state was not sent again (%u so far)") && !has("src/input.c", "a repeated key state was not sent again (code"), "6. the skip log is a bare counter");
+	keyboard_close(in->kb_layout);   /* (LeakSanitizer would turn a leak into a red test) */
+	free(in);
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
 	return bad ? 1 : 0;
 }
