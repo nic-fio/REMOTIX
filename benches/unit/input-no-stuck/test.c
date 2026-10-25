@@ -155,24 +155,26 @@ int main(void)
 		free(s);
 
 		/* 3: random sequences */
-		for (int seq = 0; seq < 200; seq++) {
+		unsigned dropped_in_random = 0;
+		for (int seq = 0; seq < 100; seq++) {
 			int pressed_by_client[12] = {0};
 
 			s = fresh();
 			next_id = 0;
 			t = 5000000u + (uint64_t)seq * 100000u;
 			rng_state = 777u + (uint32_t)seq;
-			for (int i = 0; i < 3000; i++) {
+			for (int i = 0; i < 12000; i++) { /* more than the burst of 4000, so that many are dropped */
 				int c = (int)(rnd() % 12);
 				int p = (int)(rnd() & 1);
 
-				if (rnd() % 50 == 0)
+				if (rnd() % 3000 == 0)
 					t += rnd() % 400; /* a pause now and then */
 				send_key(s, kind, (uint16_t)(0x30 + c), p, t);
 				pressed_by_client[c] = p ? 1 : pressed_by_client[c];
 				if (!p)
 					pressed_by_client[c] = 0;
 			}
+			dropped_in_random += 12000u - (reached_press + reached_release);
 			for (int c = 0; c < 12; c++)
 				send_key(s, kind, (uint16_t)(0x30 + c), 0, t); /* the client releases everything */
 			if (*down_n != 0) {
@@ -182,7 +184,8 @@ int main(void)
 			}
 			free(s);
 		}
-		CHECK(1, "3: 200 random sequences ended with nothing pressed");
+		CHECK(1, "3: 100 random sequences ended with nothing pressed");
+		CHECK(dropped_in_random > 100, "3: and the bucket really dropped messages in them (the test is not trivial)");
 
 		/* 4: a flood of releases of keys never pressed */
 		s = fresh();

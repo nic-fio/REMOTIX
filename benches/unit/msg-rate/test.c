@@ -189,13 +189,13 @@ int main(int argc, char **argv)
 		msg_class_rate(MC_POINTER, &p, &b);
 		CHECK(p >= 1000, "7: pointer >= 1000/s");
 		msg_class_rate(MC_LETTER, &p, &b);
-		CHECK(p >= 100, "7: letter >= 100/s");
+		CHECK(p >= 2000 && b >= 4000, "7: letter >= 2000/s, burst 4000 (macros, password managers typing)");
 		msg_class_rate(MC_KEY_POSITION, &p, &b);
-		CHECK(p >= 100, "7: key position >= 100/s");
+		CHECK(p >= 2000 && b >= 4000, "7: key position >= 2000/s, burst 4000 (macros, password managers typing)");
 		msg_class_rate(MC_WHEEL, &p, &b);
 		CHECK(p >= 200, "7: wheel >= 200/s");
 		msg_class_rate(MC_BUTTON, &p, &b);
-		CHECK(p >= 50, "7: button >= 50/s");
+		CHECK(p >= 1000 && b >= 2000, "7: button >= 1000/s, burst 2000");
 	}
 	/* 7b: LAYOUT is the tightest (it replaces a keymap in the compositor), and still above what a hand does */
 	{
