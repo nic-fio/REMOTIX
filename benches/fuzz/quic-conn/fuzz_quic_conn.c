@@ -27,7 +27,9 @@
  *   (`transport_open()`, `transport_keep_secret()`) is not reached.
  *
  * Input: byte 0 = configuration (bit 0: the socket is IPv6 — remote addresses IPv6 and
- * v4-mapped; bits 1-7: the RNG seed), then an op stream (`common.h`):
+ * v4-mapped; bits 1-6: the RNG seed; bit 7: the socket is bound to ONE address, not the wildcard —
+ * `T->bound_any` false: no reply carries a source-address control message, and the oracle then requires that none does),
+ * then an op stream (`common.h`):
  *
  *   op byte: kind = op & 0x1f · sel = op >> 5 (which connection, in order of birth)
  *    0 NEW      a client's Initial with a Retry token: a0 address, a1 dcid length (8 + a1 % 13),
@@ -443,6 +445,7 @@ static uint64_t fnv(const uint8_t *d, size_t n)
 	return h;
 }
 
+static transport *T; /* defined for good with the oracles below; the sendmsg oracle needs T->bound_any */
 static ssize_t rxq_sendmsg(int fd, const struct msghdr *m, int flags)
 {
 	const struct sockaddr *sa = m->msg_name;
@@ -504,6 +507,10 @@ static ssize_t rxq_sendmsg(int fd, const struct msghdr *m, int flags)
 			address_text((const struct sockaddr *)want, wantlen, b, sizeof b);
 			if (again) {
 				/* no source, on purpose: the address is no longer this machine's */
+			} else if (!T->bound_any) {
+				/* a socket bound to ONE address: the kernel's source is already that one, behaviour unchanged — no control message */
+				if (forced)
+					DIE("a packet forced to leave with a source address on a socket bound to ONE address (%s)", whose);
 			} else if (is_wildcard(want)) {
 				if (forced) {
 					address_text((const struct sockaddr *)&src, srclen, a, sizeof a);
@@ -1463,7 +1470,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	v6 = data[0] & 1;
 	addresses();
 	rxq_reset();
-	rxq_rng_seed(data[0] >> 1);
+	rxq_rng_seed((data[0] >> 1) & 0x3f);
 	set_time(1000000);
 	qhead = qtail = 0;
 	send_fail_left = recv_eintr = recv_err = 0;
@@ -1486,7 +1493,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 	/* ⭐ the real socket is bound to the wildcard (transport_open_fd sets this from getsockname()); this T is made by hand, so it must say so, or
 	 *    send_from() never fixes the source address (pktinfo_cmsg(): !bound_any = no control message) and the oracle below would find every reply
 	 *    "without its source address" (the crash of verifica-rami on finale, 25 Oct 2026: 01 0d 09 05 87) */
-	T->bound_any = true;
+	T->bound_any = !(data[0] & 0x80); /* bit 7: a socket bound to ONE address (the source is already fixed: no control message) */
 	for (size_t i = 0; i < sizeof T->secret; i++)
 		T->secret[i] = (uint8_t)(0x5a ^ i);
 	T->cidk = cidkey_new(T->secret, sizeof T->secret);   /* as transport_open_fd() does, after secret_load() */
