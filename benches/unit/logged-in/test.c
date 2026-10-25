@@ -233,7 +233,8 @@ int main(void)
 	s = open_waiting("[10.0.29.2]:1", T, &o, &g);
 	if (s)
 		rcp_verdict(s, 77, false, T + 300);
-	rcp_time(s, T + 1001);
+	/* a refusal by PAM (0x07) leaves not before REJECT_FLOOR (2500 ms, rcp.c; ritardo-uniforme, 25 Oct 2026), no longer after the fixed second */
+	rcp_time(s, T + 2501);
 	require(s && o.rejected == 1 && !rcp_logged_in(s),
 	        "⛔ the check that says NO: a wrong password is never logged in");
 	rcp_free(s);
