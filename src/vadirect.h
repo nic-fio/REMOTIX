@@ -121,6 +121,9 @@ typedef struct VaDirect VaDirect;
 VaDirect *vadirect_open(const VaDevice *d, const VaDirectRequest *r,
                           char *error, size_t error_byte);
 void vadirect_close(VaDirect *v);
+
+/* ⭐ E-R2: the wait for an encode timed out; the context must not be used again (drop and reopen). */
+bool vadirect_lost(const VaDirect *v);
 const VaDirectDeclaration *vadirect_declaration(const VaDirect *v);
 
 /* The next free input surface (NV12 or P010, at the ALIGNED size

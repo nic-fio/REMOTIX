@@ -246,6 +246,7 @@ struct VaDirect {
 	uint64_t last_idr;           /* the order of the last IDR */
 	uint32_t in_gop;              /* frames since the last IDR, inclusive */
 	bool reference_valid;       /* there is a previous frame to predict from */
+	bool lost;                  /* E-R2: the wait for the encode timed out (SYNC_WAIT_NS): not used again, the owner drops it */
 	unsigned rebuilt_current; /* which of the REBUILT receives this frame */
 	unsigned rebuilt_reference;
 	/* H.264 */
@@ -1383,6 +1384,16 @@ static bool read_output(VaDirect *v, char *error, size_t error_byte)
 	return true;
 }
 
+/* ⭐ E-R2 (audit of 25 Oct 2026): `vaSyncBuffer` with a deadline instead of VA_TIMEOUT_INFINITE (nanoseconds).  A frame takes milliseconds; ten seconds is a hang.
+ * ⚠ `vaSyncSurface` (drivers without `vaSyncBuffer`) takes no timeout: that wait stays unbounded there, and only a real GPU can show whether any driver in use
+ *    takes that road. */
+#define SYNC_WAIT_NS 10000000000ull
+
+bool vadirect_lost(const VaDirect *v)
+{
+	return v && v->lost;
+}
+
 bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
                         const uint8_t **data, size_t *byte, char *error, size_t error_byte)
 {
@@ -1396,6 +1407,10 @@ bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
 
 	if (!v || ingress == VA_INVALID_ID) {
 		di(error, error_byte, "vadiretta: nothing to encode");
+		return false;
+	}
+	if (v->lost) {
+		di(error, error_byte, "vadiretta: the previous wait for the encode timed out: this context is lost");
 		return false;
 	}
 	memset(&b, 0, sizeof b);
@@ -1618,9 +1633,11 @@ bool vadirect_encode(VaDirect *v, VASurfaceID ingress, bool key,
 
 	/* ── 6. WAIT, and read the bytes ──────────────────────────────────── */
 	if (v->d.sync_buffer)
-		st = vaSyncBuffer(v->display, v->coded, VA_TIMEOUT_INFINITE);
+		st = vaSyncBuffer(v->display, v->coded, SYNC_WAIT_NS);
 	else
 		st = vaSyncSurface(v->display, ingress);
+	if (st == VA_STATUS_ERROR_TIMEDOUT)
+		v->lost = true;
 	if (st != VA_STATUS_SUCCESS) {
 		di(error, error_byte, "waiting for the encode failed: %s", vaErrorStr(st));
 		return false;

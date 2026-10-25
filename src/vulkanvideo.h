@@ -180,6 +180,9 @@ typedef struct VulkanVideo VulkanVideo;
 VulkanVideo *vulkanvideo_open(VulkanVideoDevice *d, const VulkanVideoRequest *r,
                               char *error, size_t error_byte);
 void vulkanvideo_close(VulkanVideo *v);
+
+/* ⭐ E-R2: a wait on the GPU timed out; the context must not be used again (drop and reopen). */
+bool vulkanvideo_lost(const VulkanVideo *v);
 const VulkanVideoDeclaration *vulkanvideo_declaration(const VulkanVideo *v);
 
 /* The times of a frame, in microseconds, split the way

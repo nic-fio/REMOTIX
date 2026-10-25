@@ -4637,7 +4637,7 @@ bool codificatore_e_morto(const Encoder *c)
 		return true;
 	if (!c->hardware)
 		return false; /* no card context to lose: `open_context()` already refused it at birth */
-	return c->route == ROUTE_VULKAN ? c->vk == NULL : c->va == NULL;
+	return c->route == ROUTE_VULKAN ? (c->vk == NULL || vulkanvideo_lost(c->vk)) : (c->va == NULL || vadirect_lost(c->va));
 }
 
 uint32_t encoder_card_alignment(void)
