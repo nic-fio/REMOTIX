@@ -308,9 +308,18 @@ S5 = p("Three levels of counters, a progressive ban and a key that is the /64 fo
         [c("LADDER_MS"), "15 min · 1 h · 12 h", "The n-th ban of a level lasts the n-th step; the 1.0 duration is now the top of the ladder."],
         [c("FORGET_MS"), "24 h", "Without a ban for 24 hours the memory of the previous bans (the recidivism) is forgotten"],
         [c("MAX_PER_USER_IN_FLIGHT"), "2", "Verifications at once for the same (key, user)"],
-        [c("MAX_ATTEMPTS"), "256", "Entries in the table. A banned entry, or one with an attempt in flight, is <b>never</b> evicted: "
-         "first the entries with nothing to remember are taken back, then the oldest without recidivism (declared in the log); if "
-         "nothing can go the new entry is refused with " + c("TOO_MANY_ATTEMPTS") + ", counted and logged."],
+        [c("MAX_ATTEMPTS"), "256", "Entries in the table. The table is sized for " + c("BAN_QUOTA") + " (160) bans; an entry with an attempt in flight is <b>never</b> evicted. "
+         "<b>A new ban never drops another one</b>: a first version did, and a botnet of about 54 addresses taking turns made its own bans fall after "
+         "about 90 s, with their recidivism, so the ladder never climbed. Priority: first the entries with nothing to remember are taken back, then the "
+         "oldest without recidivism (declared in the log). A key that logged in during the last 30 days always finds a place, and its own ban is given "
+         "even over the quota; those keys are written in the ban file (" + c("G2 &lt;epoch&gt; &lt;key&gt;") + " lines, skipped by the 1.0) and read back at the start, so a restart with "
+         "the quota full does not refuse the owner. The epoch is the <b>real</b> time of the login, and the 30 days are counted on it, so restarts never make a key younger; "
+         "when the secret of the logs is kept in a file the key is written as its HMAC-SHA256 and the file does not tell who the owner is. While 160 bans are in force the <b>unknown</b> keys share " + c("UNKNOWN_LIMIT") + " (5 in "
+         + c("UNKNOWN_WINDOW_MS") + ", 5 min) for all of them together, counting the failures <b>and the attempts in flight</b> (as the limit of attempts at once does); beyond it they are refused with " + c("TOO_MANY_ATTEMPTS")
+         + " (0x08) before PAM, nothing is booked or evicted, until the counter goes down; the unblock command zeroes it. The cost: in that moment a new user from an address that "
+         "never logged in is refused too. Only as a last resort, when the table has no other place, and only for a key that logged in lately, the least valuable ban is dropped (lowest level, then "
+         "nearest expiry, then oldest, then the name), every ban dropped in one outcome is named in the log and the ban file is rewritten; an unknown key is refused instead. A ban file with more than 160 bans keeps the "
+         "most valuable ones whatever the order of its lines; the one displaced, or the line that loses the comparison, is kept as an entry that is not banned, with its recidivism."],
     ], "«TAB» — The ban parameters") + \
     p("The windows <b>slide</b>: the times of the last N failures are kept (N = the limit of the level). Anchored to the "
       "first failure, failures at 0:00, 4:59 and 5:01 would restart the count from one, and whoever guesses slightly "
