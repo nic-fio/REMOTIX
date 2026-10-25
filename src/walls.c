@@ -12,6 +12,10 @@
  *        the recursive read-only step, so that each is a mount of its own
  *        whose read-only bit can be cleared AFTER — a mount made after the
  *        step would copy the bit from its source;
+ *      · ⭐ 1.6 (R8 B): the network side is PID 1 of a PID namespace of its own, born by
+ *        `walls_fork_pidns()` (a `clone` with CLONE_NEWPID, in the root side): the /proc it
+ *        sees is mounted here, new, right after the mounts are made slaves — it lists
+ *        that one process, and no desktop, no root-side process, no other server;
  *      · the private /tmp after the step: a new tmpfs is a new mount, born
  *        writable;
  *      · the network namespace of its own while still root (CLONE_NEWNET needs
@@ -27,12 +31,14 @@
  */
 #include "walls.h"
 
+#include <dirent.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <inttypes.h>
 #include <sched.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -100,6 +106,15 @@ struct walls_landlock_attr {
 	uint64_t handled_access_net;
 	uint64_t scoped;
 };
+
+/* ⭐ 1.6 (R8 B): `fork()` with CLONE_NEWPID.  The child is PID 1 of a new PID namespace (the root side sees it by its real pid and
+ *    can signal and wait for it as for any child); everything it starts in that namespace dies with it, and the kernel kills them
+ *    when it exits.  The raw system call, flags + SIGCHLD and the rest zero: the arguments after the flags differ between x86_64
+ *    and aarch64 and none is used. */
+pid_t walls_fork_pidns(void)
+{
+	return (pid_t)syscall(SYS_clone, CLONE_NEWPID | SIGCHLD, 0, 0, 0, 0);
+}
 
 /* ⭐ The SELinux type of the network side (lane 4's module). */
 #define WALLS_SELINUX_TYPE "remotix_net_t"
@@ -529,6 +544,35 @@ static void scope_abstract_sockets(void)
 	close((int)fd);
 }
 
+/* ⭐ 1.6 (R8 B) — A /PROC OF ITS OWN.  Mounted in the PID namespace the network side is pid 1 of: it lists that process and nothing
+ *    else (no desktop, no root-side process, no other server), so `/proc/<pid>/{environ,cmdline,maps,fd,...}` of anyone else is not
+ *    there to read.  `hidepid=invisible` (Linux 5.8) is a belt on top; where the kernel does not know it the mount is made without.
+ *    ⚠ `hidepid` alone, in the host's PID namespace, would not do: it is an option of the namespace's one /proc superblock and
+ *      would hide processes from every user of the host.  ⛔ Asked back of the kernel: more than one numeric entry in the new /proc
+ *      means this process is not alone in its namespace, and the walls are refused. */
+static int private_proc(char *why, size_t n)
+{
+	const unsigned long fl = MS_NOSUID | MS_NODEV | MS_NOEXEC;
+	struct dirent *e;
+	DIR *d;
+	int pids = 0;
+
+	if (mount("proc", "/proc", "proc", fl, "hidepid=invisible") != 0 &&
+	    (errno != EINVAL || mount("proc", "/proc", "proc", fl, NULL) != 0))
+		return say(why, n, "the private /proc failed (%s)", strerror(errno));
+	d = opendir("/proc");
+	if (!d)
+		return say(why, n, "the private /proc cannot be listed (%s)", strerror(errno));
+	while ((e = readdir(d)) != NULL)
+		if (e->d_name[0] >= '1' && e->d_name[0] <= '9')
+			pids++;
+	closedir(d);
+	if (pids != 1)
+		return say(why, n, "the private /proc lists %d processes, not 1: this process is not alone "
+		           "in its PID namespace", pids);
+	return 0;
+}
+
 static int no_user_namespaces(char *why, size_t n)
 {
 #ifndef WALLS_AUDIT_ARCH
@@ -627,6 +671,12 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	    writable_dir_ok("run", o->net_run_dir, uid, why, why_len) != 0)
 		return -1;
 
+	/* ⭐ 1.6 (R8 B): born by `walls_fork_pidns()`, so PID 1 of its own PID namespace — a network side that shares the host's
+	 *    would read the host's /proc.  No silent fallback. */
+	if (getpid() != 1)
+		return say(why, why_len, "this process is pid %ld: the network side must be PID 1 of a PID "
+		           "namespace of its own (walls_fork_pidns)", (long)getpid());
+
 	/* ⛔ 2 — SELinux, while /proc can still be written. */
 	if (selinux_exec_net(why, why_len) != 0)
 		return -1;
@@ -648,6 +698,9 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	if (mount(NULL, "/", NULL, MS_REC | MS_SLAVE, NULL) != 0)
 		return say(why, why_len, "making / recursively a slave failed (%s)",
 		           strerror(errno));
+	/* ⭐ 1.6 (R8 B): the /proc of this PID namespace, before the tree goes read-only (it becomes read-only with the rest) */
+	if (private_proc(why, why_len) != 0)
+		return -1;
 	if (mount(o->net_state_dir, o->net_state_dir, NULL, MS_BIND | MS_REC, NULL) != 0)
 		return say(why, why_len, "bind of %s onto itself failed (%s)",
 		           o->net_state_dir, strerror(errno));
@@ -755,7 +808,7 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 	scope_abstract_sockets(); /* before the filter, and after NO_NEW_PRIVS; never fatal */
 	if (no_user_namespaces(why, why_len) != 0)
 		return -1;
-	note("own network namespace (loopback only; the inherited sockets work); tree read-only, nosuid, nodev but %s and %s; private /tmp and /dev; uid/gid %ld/%ld, "
+	note("PID 1 of its own PID namespace, /proc of its own; own network namespace (loopback only; the inherited sockets work); tree read-only, nosuid, nodev but %s and %s; private /tmp and /dev; uid/gid %ld/%ld, "
 	     "no groups, no capabilities, no_new_privs; RLIMIT_NPROC %d; seccomp: no user "
 	     "namespaces, sockets only AF_UNIX/AF_INET/AF_INET6, no io_uring/userfaultfd/perf/bpf/keys/ptrace/TIOCSTI", o->net_state_dir,
 	     o->net_run_dir, (long)uid, (long)gid, WALLS_NPROC_MAX);

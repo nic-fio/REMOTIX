@@ -1959,7 +1959,8 @@ static bool network_side_born_right(void)
 	} fds[] = {{FD_ROOT, SOCK_SEQPACKET, "the root channel (SEQPACKET)"},
 	           {FD_UDP, SOCK_DGRAM, "UDP"},
 	           {FD_TCP, SOCK_STREAM, "TCP"}};
-	pid_t parent = getppid();
+	struct ucred peer;
+	socklen_t peer_len = sizeof peer;
 
 	if (getuid() == 0 || geteuid() == 0) {
 		registro_dice(LOG_STARTUP,
@@ -1968,17 +1969,30 @@ static bool network_side_born_right(void)
 		              "(DECISIONS.md §11.50) — never by hand.  Not starting.");
 		return false;
 	}
-	/* ⛔ The kernel clears PR_SET_PDEATHSIG across this exec (uid change,
-	 *    secure exec): armed again here, then the parent checked — if the root
-	 *    side died before this line, nobody would send the signal.
-	 * ⚠ Parent pid 1 is NOT a death by itself: in a container the root side
-	 *   IS pid 1 (`[M]` integration-a, 16 Oct 2026).  A root side dead before
-	 *   `main()` is caught by `rootside_attach()` (no READY from that pid). */
-	if (prctl(PR_SET_PDEATHSIG, SIGTERM) != 0 || getppid() != parent) {
+	/* ⭐ 1.6 (R8 B): the root side starts it as PID 1 of a PID namespace of its own (walls.c, `walls_fork_pidns()`): its parent is
+	 *    outside, so `getppid()` says 0.  A network side that is not pid 1, or has a visible parent, was not started by the root
+	 *    side — and would read the host's /proc. */
+	if (getpid() != 1 || getppid() != 0) {
 		registro_dice(LOG_STARTUP,
-		              "⛔ --network-side: the root side is gone (parent pid %ld) "
-		              "or PR_SET_PDEATHSIG failed.  Not starting.",
-		              (long)getppid());
+		              "⛔ --network-side: this is pid %ld with parent %ld, not PID 1 of its own PID "
+		              "namespace as the root side starts it (DECISIONS.md §11.50).  Not starting.",
+		              (long)getpid(), (long)getppid());
+		return false;
+	}
+	/* ⛔ The kernel clears PR_SET_PDEATHSIG across this exec (uid change, secure exec): armed again here.  The root side's
+	 *    death before this line is caught by `rootside_attach()` (no READY: EOF on fd 3).  ⚠ As PID 1 a signal with the default
+	 *    action is IGNORED — SIGTERM (the root side's stop, PDEATHSIG) works only because `main()` installs its handler before
+	 *    this point; SIGKILL always works. */
+	if (prctl(PR_SET_PDEATHSIG, SIGTERM) != 0) {
+		registro_dice(LOG_STARTUP, "⛔ --network-side: PR_SET_PDEATHSIG failed (%s).  Not starting.",
+		              strerror(errno));
+		return false;
+	}
+	/* ⭐ The root channel's other end belongs to uid 0 (the root side); its pid is not visible from here (SO_PEERCRED says 0) */
+	if (getsockopt(FD_ROOT, SOL_SOCKET, SO_PEERCRED, &peer, &peer_len) != 0 || peer.uid != 0) {
+		registro_dice(LOG_STARTUP,
+		              "⛔ --network-side: the other end of fd %d is not uid 0 (%s).  Not starting.",
+		              FD_ROOT, peer_len == sizeof peer ? "SO_PEERCRED says another uid" : strerror(errno));
 		return false;
 	}
 	for (size_t i = 0; i < sizeof fds / sizeof fds[0]; i++) {

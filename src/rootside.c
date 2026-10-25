@@ -83,6 +83,12 @@ __attribute__((weak)) int walls_apply(const struct rootside_options *o, char *wh
 	snprintf(why, why_len, "walls.c is not linked into this binary");
 	return -1;
 }
+/* ⭐ 1.6 (R8 B): without walls.c the fork is refused too (the stub above refuses the walls anyway) */
+__attribute__((weak)) pid_t walls_fork_pidns(void)
+{
+	errno = ENOSYS;
+	return -1;
+}
 __attribute__((weak)) const char *walls_in_force(void)
 {
 	return "";
@@ -1320,7 +1326,10 @@ static bool cgroup_of(pid_t pid, char *out, size_t cap)
 	return true;
 }
 
-/* ⛔ Review 2, L1: what a dead network side forked is still uid `remotix`,
+/* ⭐ 1.6 (R8 B): the network side is PID 1 of a PID namespace of its own, and when it dies the kernel kills every process in it:
+ *    nothing it forked survives, nothing keeps fds 4/5 or the TLS key.  What follows stays as a net for a leftover that is NOT in
+ *    that namespace (a network side of an older root side, left by an upgrade).
+ * ⛔ Review 2, L1: what a dead network side forked is still uid `remotix`,
  *    and keeps fds 4/5 (the port) and the TLS key across the restart —
  *    `reap_net()` waited only for its pid.  ⇒ Before each start, every
  *    process of uid `remotix` that lives in THIS root side's own cgroup is
@@ -1632,7 +1641,7 @@ static char **net_environment(void)
 static void net_start(uint64_t now)
 {
 	int sv[2], one = 1;
-	pid_t me = getpid(), p;
+	pid_t p;
 	struct rxr_ready r;
 	sigset_t all, before;
 
@@ -1664,7 +1673,8 @@ static void net_start(uint64_t now)
 	 *    (review of §11.50, finding 3). */
 	sigfillset(&all);
 	sigprocmask(SIG_SETMASK, &all, &before);
-	p = fork();
+	/* ⭐ 1.6 (R8 B): a fork whose child is PID 1 of a PID namespace of its own (walls.c); `p` is its pid as THIS side sees it */
+	p = walls_fork_pidns();
 	if (p != 0)
 		sigprocmask(SIG_SETMASK, &before, NULL);
 	if (p < 0) {
@@ -1721,14 +1731,10 @@ static void net_start(uint64_t now)
 		}
 		/* ⭐ review 4 B, finding 6: which walls, said once per birth */
 		registro_dice(LOG_ROOT, "⭐ the network side's walls in force: %s", walls_in_force());
-		/* ⚠ After the uid change, which clears it; and checked against a
-		 *   root side that died in between. */
+		/* ⚠ After the uid change, which clears it.  ⭐ 1.6 (R8 B): the old «getppid() != me» check is gone — in its own PID
+		 *   namespace the parent is not visible (getppid() says 0) — a root side that died in between is seen by the network
+		 *   side at its first read of fd 3 (EOF, `rootside_attach`), and PR_SET_PDEATHSIG is armed again there. */
 		prctl(PR_SET_PDEATHSIG, SIGTERM);
-		if (getppid() != me) {
-			registro_dice(LOG_ROOT, "⛔⛔ the root side died while its network side was "
-			              "being born: it is NOT started");
-			_exit(127);
-		}
 		execve("/proc/self/exe", R.o->net_argv, net_environment());
 		registro_dice(LOG_ROOT, "⛔⛔ execve of the network side failed (%s): it is NOT "
 		              "started", strerror(errno));
@@ -2278,7 +2284,7 @@ bool rootside_attach(int fd, int timeout_ms, struct rxr_ready *ready)
 	uint64_t until = log_now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
 
 	C.fd = fd;
-	C.root_pid = getppid();
+	C.root_pid = getppid(); /* ⭐ 1.6 (R8 B): 0 — the root side is outside this PID namespace; the kernel stamps its packets with pid 0 too */
 	/* ⛔ review 4 B, finding 15: each one checked — without SO_PASSCRED no
 	 *    packet from the root side would carry its stamp, and the line would
 	 *    have been a misleading «no READY» */
