@@ -284,6 +284,10 @@ struct transport {
 	unsigned births_in_window, births_quiet;
 	/* the «packet … NOT sent» lines (SEND_FAIL_LINES per window, linebudget.h) */
 	struct line_budget send_fail;
+	/* ⛔ rilettura (25 Oct 2026): the lines that a stranger can provoke BEFORE any login have a budget each (`noise_take()`): the first
+	 *    NOISE_LINES of every REFUSAL_LOG_S window are written, the rest counted in one line at its end.  Version Negotiation and
+	 *    INVALID_TOKEN here; the path validations and the discarded datagrams of the connections, further down. */
+	struct line_budget noise_nego, noise_invtok, noise_path, noise_dgram;
 	/* the «connection … closed» lines of connections that NEVER logged in (BIRTH_LINES too) */
 	ngtcp2_tstamp close_window_ns;
 	unsigned closes_in_window, closes_quiet;
@@ -303,13 +307,17 @@ struct transport {
 	/* ⭐ R9: and the cap PER ADDRESS in front of it (resetcap.h): the Resets refused to an address in this second, and whether it was said */
 	struct reset_addr reset_addr;
 	unsigned reset_per_address; /* 0 = RESET_PER_ADDRESS; the fuzz harness raises it (op 13) to reach the global cap from a few addresses */
-	unsigned reset_addr_refused;
+	/* ⭐ rilettura M1: and 1 Reset a second PER SIGNED ID (the same table as above, key = the first 16 bytes of the id, limit 1): an id that
+	 *    somebody collected cannot spend more than that of the 100 */
+	struct reset_addr reset_id;
+	unsigned reset_id_refused;
+	unsigned reset_addr_refused; /* rilettura B4: counted until `refusals_report()` writes it (it was zeroed every second and never said) */
 	bool reset_addr_said;
 	/* ⭐ `cid-firmati`: the Resets for ids that do not verify have their own count in the same second */
 	unsigned reset_unverified_count;
 	bool reset_unverified_capped_said;
-	/* the key of the signed ids (cid.h), from `secret`; and how many ids bound to a live connection carry no valid tag:
-	 * 0 in steady state, > 0 only for a connection that came in with a Retry token of the previous binary */
+	/* the key of the signed ids (cid.h), from `secret`.  It only chooses the Reset budget of an UNKNOWN id: the map is always searched.
+	 * ⚠ Residual limit (declared in cid.h): ~100 collected ids (~13 handshakes an hour) still use up the 100 signed Resets a second. */
 	cidkey *cidk;
 	unsigned cid_errors_seen;     /* `cidkey_errors()` at the last line written */
 	uint64_t cid_errors_line_ns;
@@ -381,10 +389,9 @@ static void lk_from_ngtcp2(lk_cid *to, const ngtcp2_cid *from)
 static bool cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
 {
 	lk_cid k;
-	bool plain = !cidkey_ok(t->cidk, cid->data, cid->datalen);
 
 	lk_from_ngtcp2(&k, cid);
-	if (!lk_cid_bind_p(&t->cids, &k, c, plain)) {
+	if (!lk_cid_bind(&t->cids, &k, c)) {
 		registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
 		return false;
 	}
@@ -406,6 +413,55 @@ static void cid_unbind_all(transport *t, connection *c)
 
 /* ------------------------------------------------------------------------ */
 /* The ngtcp2 callbacks.                                                     */
+
+/* ⛔ rilettura (25 Oct 2026): ONE budget of log lines for each thing a stranger can make us write at the rate of his packets
+ *    (`registro_dice()` always writes: the journal of root is the same for everybody).  Same idea as `send_fail` (R12) and
+ *    BIRTH_LINES: the first NOISE_LINES of every REFUSAL_LOG_S window are written, the rest are counted and ONE line says how
+ *    many when the window ends — at the next line of that kind or, with none asking, from `transport_expired()`
+ *    (`noise_flush()`, armed by `transport_wait_ns()`). */
+#define NOISE_LINES 5
+#define NOISE_PATH_LINES 10  /* a user who really moves is rare; the validations of strangers are not */
+#define NOISE_DGRAM_LINES 10 /* for ALL the connections together: each one has its own rule too (the first 3, then every 256th) */
+
+static void noise_say(const char *what, const struct line_budget_closed *c)
+{
+	if (c->hidden)
+		registro_dice(REG_QUIC, "%u more %s in the last %d s, not written one by one (%u written)", c->hidden, what,
+		              REFUSAL_LOG_S, c->written);
+}
+
+/* true = this line may be written (the summary of the window that has just closed, if any, is written first) */
+static bool noise_take(struct line_budget *b, unsigned burst, const char *what)
+{
+	struct line_budget_closed c;
+	bool ok = line_budget_take(b, now_ns(), REFUSAL_LOG_S * NGTCP2_SECONDS, burst, &c);
+
+	noise_say(what, &c);
+	return ok;
+}
+
+static void noise_flush(struct line_budget *b, const char *what, ngtcp2_tstamp now)
+{
+	struct line_budget_closed c;
+
+	line_budget_flush(b, now, REFUSAL_LOG_S * NGTCP2_SECONDS, &c);
+	noise_say(what, &c);
+}
+
+#define NOISE_NEGO "QUIC version negotiations"
+#define NOISE_INVTOK "Initials with an old token (INVALID_TOKEN)"
+#define NOISE_PATH "path validations"
+#define NOISE_DGRAM "datagrams discarded"
+
+/* ⭐ rilettura M1: the epoch of the tags (cid.h): the hour of the UTC clock.  CLOCK_REALTIME, because an id made before a restart must
+ *    still be recognised after it (the secret is the same file), and the monotonic clock starts again at every boot. */
+static uint64_t cid_epoch(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_REALTIME, &ts);
+	return (uint64_t)ts.tv_sec / CID_EPOCH_S;
+}
 
 static ngtcp2_conn *give_me_conn(ngtcp2_crypto_conn_ref *ref)
 {
@@ -430,7 +486,7 @@ static int cb_get_new_cid(ngtcp2_conn *conn, ngtcp2_cid *cid,
 	(void)conn;
 	/* ⭐ `cid-firmati`: every id the server issues carries its tag.  ngtcp2 asks for the length of our first id
 	 *   (SCIDLEN), so the other branch is not expected; it would give an id that does not verify (`plain`), not a failure. */
-	if (cidlen == SCIDLEN ? !cidkey_make(c->t->cidk, cid->data) : RAND_bytes(cid->data, (int)cidlen) != 1)
+	if (cidlen == SCIDLEN ? !cidkey_make(c->t->cidk, cid->data, cid_epoch()) : RAND_bytes(cid->data, (int)cidlen) != 1)
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	cid->datalen = cidlen;
 	if (ngtcp2_crypto_generate_stateless_reset_token(
@@ -588,9 +644,15 @@ static int cb_path_validation(ngtcp2_conn *conn, uint32_t flags,
 	address_text((const struct sockaddr *)path->remote.addr,
 	             (socklen_t)path->remote.addrlen, now, sizeof now);
 	if (res != NGTCP2_PATH_VALIDATION_RESULT_SUCCESS) {
-		registro_dice(REG_QUIC, "⚠ %s: the path towards %s was NOT validated (%s): "
-		              "the traffic stays where it was", c->provenance, now,
-		              res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
+		/* ⛔ rilettura M4: a connection that has not logged in yet can start a validation from any source it likes, one after the other;
+		 *    one budget for all (NOISE_PATH_LINES per window), the rest counted */
+		if (noise_take(&c->t->noise_path, NOISE_PATH_LINES, NOISE_PATH))
+			registro_dice(REG_QUIC, "⚠ %s: the path towards %s was NOT validated (%s): "
+			              "the traffic stays where it was", c->provenance, now,
+			              res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
+		else
+			log_detail(REG_QUIC, "%s: the path towards %s was NOT validated (%s)", c->provenance, now,
+			           res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
 		return 0;
 	}
 	/* the local end follows the validated path even when only IT changed (same remote) */
@@ -600,8 +662,11 @@ static int cb_path_validation(ngtcp2_conn *conn, uint32_t flags,
 	}
 	if (strcmp(now, c->provenance) == 0)
 		return 0;
-	registro_dice(REG_QUIC, "⭐ %s MOVED to %s: new path validated (§2.3 migration)",
-	              c->provenance, now);
+	if (noise_take(&c->t->noise_path, NOISE_PATH_LINES, NOISE_PATH))
+		registro_dice(REG_QUIC, "⭐ %s MOVED to %s: new path validated (§2.3 migration)",
+		              c->provenance, now);
+	else
+		log_detail(REG_QUIC, "%s MOVED to %s: new path validated (§2.3 migration)", c->provenance, now);
 	if (path->remote.addrlen <= sizeof c->remote) {
 		memcpy(&c->remote, path->remote.addr, path->remote.addrlen);
 		c->remotelen = (socklen_t)path->remote.addrlen;
@@ -643,15 +708,22 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 	(void)flags;
 	c->datagrams_seen++;
 	c->datagram_byte += len;
-	if (c->datagrams_seen <= 3 || (c->datagrams_seen % 256) == 0)
-		registro_dice(REG_QUIC,
-		              "⚠ TOLERANCE (§3 exception 2, §6.3): datagram of %zu "
-		              "bytes from %s DISCARDED — in phase 1 there is no audio and "
-		              "no type of §6.3 can be served.  In all: %llu "
-		              "datagrams, %llu bytes",
-		              len, c->provenance,
-		              (unsigned long long)c->datagrams_seen,
-		              (unsigned long long)c->datagram_byte);
+	if (c->datagrams_seen <= 3 || (c->datagrams_seen % 256) == 0) {
+		/* ⛔ rilettura M4: the rule above is PER connection; 200 connections a second, 3 lines each, are 600 lines a second.
+		 *    A global budget over it (NOISE_DGRAM_LINES per window); the counts of the connection are always in the line that is written */
+		if (noise_take(&c->t->noise_dgram, NOISE_DGRAM_LINES, NOISE_DGRAM))
+			registro_dice(REG_QUIC,
+			              "⚠ TOLERANCE (§3 exception 2, §6.3): datagram of %zu "
+			              "bytes from %s DISCARDED — in phase 1 there is no audio and "
+			              "no type of §6.3 can be served.  In all: %llu "
+			              "datagrams, %llu bytes",
+			              len, c->provenance,
+			              (unsigned long long)c->datagrams_seen,
+			              (unsigned long long)c->datagram_byte);
+		else
+			log_detail(REG_QUIC, "datagram of %zu bytes from %s DISCARDED (%llu datagrams, %llu bytes in all)", len, c->provenance,
+			           (unsigned long long)c->datagrams_seen, (unsigned long long)c->datagram_byte);
+	}
 	return 0;
 }
 
@@ -1223,7 +1295,7 @@ static void births_report(transport *t, ngtcp2_tstamp now)
 static void refusals_report(transport *t, ngtcp2_tstamp now)
 {
 	if (!t->refused_full && !t->refused_address && !t->refused_48 && !t->evicted &&
-	    !t->aged && !t->token_replayed && !t->token_forgotten)
+	    !t->aged && !t->token_replayed && !t->token_forgotten && !t->reset_addr_refused && !t->reset_id_refused)
 		return;
 	if (t->refused_ever && now - t->refused_line_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
 		return;
@@ -1234,15 +1306,17 @@ static void refusals_report(transport *t, ngtcp2_tstamp now)
 	              "with nobody to evict (%zu in all / %zu pending), %u over %zu pending "
 	              "from one address, %u over %zu pending from one IPv6 /48; the last "
 	              "refused from %s; %u Retry tokens used again (INVALID_TOKEN each), %u "
-	              "forgotten early (more than %d connections in %d s)",
+	              "forgotten early (more than %d connections in %d s); %u Stateless Resets refused to addresses that already had their %d in a second, %u to a signed id already answered in that second",
 	              t->refused_ever ? " in the last seconds" : "", t->aged, UNLOGGED_MAX_S,
 	              t->evicted,
 	              t->refused_full, cap_conns(t), cap_pending(t), t->refused_address,
 	              cap_per_address(t), t->refused_48, cap_per_48(t),
 	              t->refused_last[0] ? t->refused_last : "-", t->token_replayed,
-	              t->token_forgotten, TOKENS_KEPT, (int)(RETRY_TOKEN_TIMEOUT / NGTCP2_SECONDS));
+	              t->token_forgotten, TOKENS_KEPT, (int)(RETRY_TOKEN_TIMEOUT / NGTCP2_SECONDS), t->reset_addr_refused,
+	              RESET_PER_ADDRESS, t->reset_id_refused);
 	t->refused_full = t->refused_address = t->refused_48 = t->evicted = t->aged = 0;
 	t->token_replayed = t->token_forgotten = 0;
+	t->reset_addr_refused = t->reset_id_refused = 0;
 	t->refused_last[0] = 0;
 	t->refused_ever = true;
 	t->refused_line_ns = now;
@@ -1268,7 +1342,8 @@ static void hs_report(transport *t, ngtcp2_tstamp now)
 	t->hs_line_ns = now;
 }
 
-/* `true` = this new handshake is within the rate limits (a token taken from each bucket); `false` = refused, and the client was told
+/* `true` = this new handshake is within the rate limits (a token taken from the address bucket and the /48 one; the global one is only looked
+ * at, and paid by `hs_charge_all()` in read_packet_1() once `room_for()` has said yes: rilettura M2); `false` = refused, and the client was told
  * with a stateless CONNECTION_CLOSE(CONNECTION_REFUSED), like `room_for()`.  ⚠ Why an answer and not silence: the address has just
  * proved itself with the Retry token (no spoofing, no amplification: the close is ~50 bytes against an Initial of at least 1200), and a
  * browser that is told fails at once instead of waiting out its handshake timeout.  ⚠ The page does NOT retry by itself: the user has to
@@ -1282,7 +1357,7 @@ static bool rate_ok(transport *t, const ngtcp2_pkt_hd *hd, const struct sockaddr
 	int why;
 
 	address_key(remote, key, key48);
-	why = hs_take(&t->hs, &t->hs_lim, key, key48, now_ns());
+	why = hs_take_local(&t->hs, &t->hs_lim, key, key48, now_ns());
 	if (why == HS_OK)
 		return true;
 	t->hs_refused_total++;
@@ -1426,7 +1501,7 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 	address_text(remote, remotelen, c->provenance, sizeof c->provenance);
 
 	c->scid.datalen = SCIDLEN;
-	if (!cidkey_make(t->cidk, c->scid.data)) /* signed: cid.h */
+	if (!cidkey_make(t->cidk, c->scid.data, cid_epoch())) /* signed: cid.h */
 		goto male;
 
 	ngtcp2_settings_default(&settings);
@@ -1606,8 +1681,12 @@ static void nego_version(transport *t, const ngtcp2_version_cid *vc,
 		vc->dcidlen, versions, 1);
 	if (n < 0)
 		return;
-	registro_dice(REG_QUIC, "QUIC version not ours: negotiation towards %s",
-	              "the client");
+	/* ⛔ rilettura: one line per datagram of 21 bytes with a version that is not ours was a way to fill the journal */
+	if (noise_take(&t->noise_nego, NOISE_LINES, NOISE_NEGO))
+		registro_dice(REG_QUIC, "QUIC version not ours: negotiation towards %s",
+		              "the client");
+	else
+		log_detail(REG_QUIC, "QUIC version not ours: negotiation towards %s", "the client");
 	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
@@ -1627,7 +1706,7 @@ static void send_retry(transport *t, const ngtcp2_pkt_hd *hd,
 	ngtcp2_ssize tl, n;
 
 	retry_scid.datalen = SCIDLEN;
-	if (!cidkey_make(t->cidk, retry_scid.data)) { /* signed: the connection that follows is bound to it */
+	if (!cidkey_make_retry(t->cidk, retry_scid.data)) { /* the Retry's own label: bound to the connection that follows, never «signed» for a Reset */
 		registro_dice(REG_QUIC, "⛔ RAND_bytes failed: Retry not sent");
 		return;
 	}
@@ -1662,8 +1741,12 @@ static void send_invalid_token(transport *t, const ngtcp2_pkt_hd *hd,
 		NGTCP2_INVALID_TOKEN, NULL, 0);
 	if (n < 0)
 		return;
-	registro_dice(REG_QUIC, "Initial with a token that is old or not for this "
-	              "address: INVALID_TOKEN");
+	/* ⛔ rilettura: one old valid token, replayed, was one journal line per datagram */
+	if (noise_take(&t->noise_invtok, NOISE_LINES, NOISE_INVTOK))
+		registro_dice(REG_QUIC, "Initial with a token that is old or not for this "
+		              "address: INVALID_TOKEN");
+	else
+		log_detail(REG_QUIC, "Initial with a token that is old or not for this address: INVALID_TOKEN");
 	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
@@ -1712,7 +1795,6 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 		t->reset_capped_said = false;
 		t->reset_unverified_count = 0;
 		t->reset_unverified_capped_said = false;
-		t->reset_addr_refused = 0;
 		t->reset_addr_said = false;
 	}
 	/* ⭐ R9: one address may have RESET_PER_ADDRESS of the RESET_PER_SECOND; what it is refused is not counted against the others.
@@ -1733,6 +1815,16 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 				              "to it are ignored", RESET_PER_ADDRESS, who);
 				t->reset_addr_said = true;
 			}
+			return;
+		}
+	}
+	/* ⭐ rilettura M1: one Reset a second per SIGNED id.  The key is the first 16 bytes of the id (a signed id has all 18). */
+	if (verified) {
+		uint8_t idkey[16];
+
+		memcpy(idkey, vc->dcid, sizeof idkey);
+		if (!reset_addr_take(&t->reset_id, idkey, second, 1)) {
+			t->reset_id_refused++;
 			return;
 		}
 	}
@@ -1817,15 +1909,11 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 		return;
 	}
 
-	/* ⭐ `cid-firmati`: does the destination id carry a valid tag (cid.h)?  If it does not, it is not an id this
-	 *   server issued — except those few bound to a connection that came in with a Retry token of the previous binary
-	 *   (`cids.plain_n`, 0 in steady state) — so the search of the map is skipped: a packet that cannot belong to any
-	 *   connection does not cost a scan of the map, and (below) does not spend the Resets of the signed ids.
-	 *   The first Initial of a client (random destination id, before our Retry) and every packet after the Retry
-	 *   (our signed ids) are routed exactly as before. */
-	bool signed_dcid = cidkey_ok(t->cidk, vc.dcid, vc.dcidlen);
+	/* ⭐ `cid-firmati` + rilettura M1: the map is ALWAYS searched (a hash lookup since ricerche-hash, ~100 ns).  A connection is found by any id
+	 *   it was given, whatever its tag says: the id of the Retry it came in with (its own label, cid.h), the ids of a session older
+	 *   than the hour or two the tags last.  The tag decides only WHICH Reset budget a packet for an UNKNOWN id uses (below). */
 	cid_errors_check(t);
-	c = (signed_dcid || t->cids.plain_n) ? cid_find(t, vc.dcid, vc.dcidlen) : NULL;
+	c = cid_find(t, vc.dcid, vc.dcidlen);
 	/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25): a connection already marked dead (ngtcp2 asked to
 	 *   drop it silently, or it is closing) is no longer read: a second packet of the same
 	 *   burst would reach `ngtcp2_conn_read_pkt` and could answer with the
@@ -1844,7 +1932,11 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 			 *   not tested, we announce grease_quic_bit).  A long header that
 			 *   is not an Initial is ignored, and the line says so. */
 			if (!(data[0] & 0x80)) {
-				send_stateless_reset(t, &vc, remote, remotelen, len, signed_dcid);
+				/* the tag is looked at only here: two HMACs at most, for a packet nobody owns */
+				bool verified = cidkey_ok(t->cidk, vc.dcid, vc.dcidlen, cid_epoch());
+
+				cid_errors_check(t);
+				send_stateless_reset(t, &vc, remote, remotelen, len, verified);
 				return;
 			}
 			log_detail(REG_QUIC,
@@ -1898,6 +1990,9 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 			return;
 		if (!room_for(t, &hd, remote, remotelen, &victim))
 			return;
+		/* ⭐ rilettura M2: the GLOBAL handshake token is paid only now, for a handshake that will be processed: a newcomer refused
+		 *    because the places are full (above) has not taken one from the others */
+		hs_charge_all(&t->hs);
 		c = accept_conn(t, &hd, &odcid, local, localelen, remote, remotelen);
 		if (!c)
 			return;
@@ -2165,7 +2260,7 @@ int64_t transport_wait_ns(const transport *t)
 	}
 	/* ⭐ 1.5: refusals counted and not yet written wake the loop for their line */
 	if ((t->refused_full || t->refused_address || t->refused_48 || t->evicted ||
-	     t->aged || t->token_replayed || t->token_forgotten) &&
+	     t->aged || t->token_replayed || t->token_forgotten || t->reset_addr_refused || t->reset_id_refused) &&
 	    t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
 	if ((t->hs_over_address || t->hs_over_net || t->hs_over_all) &&
@@ -2176,6 +2271,14 @@ int64_t transport_wait_ns(const transport *t)
 	/* ⭐ R12: «NOT sent» lines counted and not yet written (the window of `send_fail`) wake the loop for their line */
 	if (t->send_fail.hidden && t->send_fail.start + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->send_fail.start + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	/* ⛔ rilettura: and the windows of the lines a stranger can provoke (`noise_*`) */
+	{
+		const struct line_budget *nb[] = {&t->noise_nego, &t->noise_invtok, &t->noise_path, &t->noise_dgram};
+
+		for (size_t i = 0; i < sizeof nb / sizeof nb[0]; i++)
+			if (nb[i]->hidden && nb[i]->start + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
+				before = nb[i]->start + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	}
 	/* ⭐ R8: the same for the pre-login lines of ALL addresses (webtransport.c counts in ms; both clocks are CLOCK_MONOTONIC) */
 	{
 		uint64_t pl = wt_prelogin_expiry_ms();
@@ -2391,6 +2494,10 @@ void transport_expired(transport *t)
 	if (t->closes_quiet)
 		closes_report(t, now);
 	send_fail_report(t, now);
+	noise_flush(&t->noise_nego, NOISE_NEGO, now);
+	noise_flush(&t->noise_invtok, NOISE_INVTOK, now);
+	noise_flush(&t->noise_path, NOISE_PATH, now);
+	noise_flush(&t->noise_dgram, NOISE_DGRAM, now);
 	wt_prelogin_flush(now / 1000000ull);
 	transport_write(t);
 }

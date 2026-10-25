@@ -114,7 +114,12 @@ found:
 
 /* One new handshake from `key` (the address) / `key48` at `now` (ns).  HS_OK = go ahead (one token taken from each bucket);
  * otherwise the first bucket that was empty, and nothing is charged. */
-static inline int hs_take(struct hs_rate *h, const struct hs_limits *l, const uint8_t key[16], const uint8_t key48[16], uint64_t now)
+/* ⭐ rilettura (25 Oct 2026, M2): the take is in two halves.  The buckets of the ADDRESS and of the /48 are paid at once — they are
+ *    what stops one source from going on, and the work in front of the caps (`room_for()`, `pick_victim()`) is bounded by them — but
+ *    the GLOBAL one is only LOOKED AT here (an empty one refuses with HS_OVER_ALL, and nothing is paid): it is paid by
+ *    `hs_charge_all()` once the caller knows the handshake will really be processed.  A newcomer refused because the places are
+ *    full never takes a token from everybody else. */
+static inline int hs_take_local(struct hs_rate *h, const struct hs_limits *l, const uint8_t key[16], const uint8_t key48[16], uint64_t now)
 {
 	uint64_t tick = ++h->tick;
 	struct hs_bucket *a = hs_slot(h->addr, HS_ADDR_SLOTS, key, now, tick, l->addr_burst);
@@ -136,8 +141,24 @@ static inline int hs_take(struct hs_rate *h, const struct hs_limits *l, const ui
 		return HS_OVER_ALL;
 	a->milli -= 1000u;
 	n->milli -= 1000u;
-	h->all.milli -= 1000u;
 	return HS_OK;
+}
+
+/* The global token of a handshake that `hs_take_local()` let through and that will be processed (after the places are known). */
+static inline void hs_charge_all(struct hs_rate *h)
+{
+	if (h->all.milli >= 1000u)
+		h->all.milli -= 1000u;
+}
+
+/* Both halves at once (what `hs_take()` always was): the tests and the callers that do not need the split. */
+static inline int hs_take(struct hs_rate *h, const struct hs_limits *l, const uint8_t key[16], const uint8_t key48[16], uint64_t now)
+{
+	int why = hs_take_local(h, l, key, key48, now);
+
+	if (why == HS_OK)
+		hs_charge_all(h);
+	return why;
 }
 
 #endif

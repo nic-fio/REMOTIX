@@ -86,9 +86,10 @@
  *      (cid.h; the stub's `rxq_cid_signed`, written apart from the product's `cidkey_ok`) and never more than
  *      `RXQ_RESETS_UNVERIFIED_PER_SECOND` for the others, written in one second of the clock
  *      (`ngtcp2_pkt_write_stateless_reset2`);
- *    · `cid-firmati`: every id the product gives ngtcp2 or hands to the client (the first id, the Retry's, every
- *      NEW_CONNECTION_ID) verifies; and a short header for a SIGNED id nobody has gets its Reset while the signed budget
- *      has room (a flood of unsigned ids cannot take it: BURST a3 bit 2);
+ *    · `cid-firmati`: every id the product gives ngtcp2 or hands to the client (the first id, every NEW_CONNECTION_ID) verifies as a
+ *      CONNECTION id; the Retry's id carries the Retry's own label and does not count as signed (rilettura M1); and a short header
+ *      for a SIGNED id nobody has gets its Reset while the signed budget has room (a flood of unsigned ids cannot take it: BURST a3
+ *      bit 2), one a second per id; a Retry-labelled unknown id (BURST a3 bit 4) only ever spends the small budget;
  *    · the wait: `transport_wait_ms()` never sleeps past the next age deadline of a live
  *      connection not logged in (`born_ns` + `UNLOGGED_MAX_S`, rounded up to the ms), and
  *      never answers «no timer» (-1) while there is one.
@@ -249,7 +250,9 @@ extern const char *const RXQ_STATE_NAMES[RXQ_ST_N];
 enum { RXQ_TOKEN_GOOD, RXQ_TOKEN_STALE, RXQ_TOKEN_UNREADABLE, RXQ_TOKEN_N };
 
 /* ⭐ `cid-firmati`: the played cid.h (stubs_quic.c) and the oracles' own reading of an id */
-bool rxq_cid_signed(const uint8_t *cid, size_t len);   /* does the id carry the played tag? (apart from cidkey_ok) */
+bool rxq_cid_signed(const uint8_t *cid, size_t len);   /* does the id carry the played CONNECTION tag of this hour or the one before? (apart from cidkey_ok) */
+bool rxq_cid_is_retry(const uint8_t *cid, size_t len); /* ... the played tag of a RETRY id (rilettura M1)? */
+void rxq_cid_make_retry(uint8_t out[18]);              /* a Retry-labelled id the harness invents */
 void rxq_cid_make(uint8_t out[18]);                    /* a signed id the harness invents (an id "nobody has") */
 unsigned rxq_resets_signed_now(void);                  /* Resets for signed ids written in the current second */
 void rxq_expect_signed_reset(bool on);                 /* the next datagram is a signed unknown id: a Reset is owed */

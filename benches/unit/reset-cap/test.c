@@ -12,7 +12,11 @@
  *   4. FIXED MEMORY: 100000 different addresses never use more than 64 entries; declared limit: an attacker with more addresses than entries
  *      gets 5 for each (the global cap of 100 a second still bounds the total);
  *   5. by reading src/transport.c (argv[1], optional): send_stateless_reset() asks reset_addr_take() before the global count and returns
- *      before `reset_count++` when it refuses; the per-address limit is not a bare constant but `t->reset_per_address` (0 = the default).
+ *      before `reset_count++` when it refuses; the per-address limit is not a bare constant but `t->reset_per_address` (0 = the default);
+ *   5b. (rilettura M1) a SIGNED id gets at most 1 Reset a second: send_stateless_reset() asks `reset_addr_take(&t->reset_id, ..., 1)` for it
+ *      before the budgets and counts what it refuses in `reset_id_refused`, written by refusals_report() like the others;
+ *   6. (rilettura B4) the count of the Resets refused to an address is not zeroed every second: `refusals_report()` writes it and zeroes it,
+ *      and it counts for the early return of that function and for the wake-up of `transport_wait_ns()`.
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -128,6 +132,26 @@ int main(int argc, char **argv)
 			      "5c. the limit is t->reset_per_address (0 = the default), so the fuzz harness can raise it");
 			if (take && glob)
 				CHECK(memmem(take, (size_t)(glob - take), "return;", 7) != NULL, "5d. a refusal returns before the global count");
+			if (fn) {
+				char *g = strstr(fn, "if (verified) {");
+				char *idt = g ? strstr(g, "reset_addr_take(&t->reset_id, idkey, second, 1)") : NULL;
+				char *cnt = fn ? strstr(fn, "if (*count >= cap)") : NULL;
+				CHECK(idt && cnt && idt < cnt && strstr(idt, "t->reset_id_refused++;"),
+				      "5e. only for a signed id, a Reset a second per id, before the budgets, and the refusals are counted");
+			}
+			{
+				char *rr = strstr(s, "static void refusals_report(");
+				char *wk = strstr(s, "int64_t transport_wait_ns(");
+				char *sr = fn;
+				CHECK(rr && strstr(rr, "!t->aged && !t->token_replayed && !t->token_forgotten && !t->reset_addr_refused && !t->reset_id_refused"),
+				      "6a. refusals_report() does not return early while Resets are counted as refused");
+				CHECK(rr && strstr(rr, "t->reset_addr_refused,\n\t              RESET_PER_ADDRESS, t->reset_id_refused)") && strstr(rr, "\tt->reset_addr_refused = t->reset_id_refused = 0;\n"),
+				      "6b. ...writes the count in the line and zeroes it after");
+				CHECK(wk && strstr(wk, "t->token_forgotten || t->reset_addr_refused || t->reset_id_refused"), "6c. transport_wait_ns() wakes for it");
+				char *end = sr ? strstr(sr, "\n}\n") : NULL;
+				CHECK(sr && end && !memmem(sr, (size_t)(end - sr), "t->reset_addr_refused = 0;", 26),
+				      "6d. the per-second rollover of send_stateless_reset() no longer zeroes it");
+			}
 			free(s);
 		}
 	}

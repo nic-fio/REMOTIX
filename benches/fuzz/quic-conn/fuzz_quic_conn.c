@@ -84,7 +84,8 @@
  *               tag, 10 for the others — `cid-firmati`), a4 extra length of the short ones (a4 % 64); a3 bit 2 raises the
  *               Stateless Resets PER ADDRESS (resetcap.h, 5 a second in the product) to 1000, so that the global cap of 100 stays
  *               reachable from the 4 addresses of the harness; a3 bit 3 (`cid-firmati`): the unknown dcid CARRIES a valid tag
- *               (oracle: its Reset is owed while the signed budget has room and the address has not used up its own)
+ *               (oracle: its Reset is owed while the signed budget has room and the address has not used up its own); a3 bit 4
+ *               (rilettura M1): the unknown dcid has the label of a RETRY id (it only ever spends the small budget: the stub counts it as unsigned)
  *   14 FLOOD    Retry-validated Initials, each with its own token, each connection dying at once
  *               (DRAINING in its first packet) and its slot of the harness's table given back,
  *               one loop pass (wait, read, expired) each: a0-1 how many (+ 1; at most
@@ -796,9 +797,18 @@ static void on_event_line(const char *text)
 		 * documented ones, written here apart */
 		static const char TAIL[] = " forgotten early (more than 4096 connections in 10 s)";
 		const char *p = strstr(text, TAIL), *q;
-		if (!p || p[sizeof TAIL - 1] != 0)
+		/* ⭐ rilettura B4/M1: after it the line now says, always, "; N Stateless Resets refused to addresses that already had their 5 in a
+		 *    second, M to a signed id already answered in that second" */
+		static const char RESETS[] = "; ", RESETS2[] = " Stateless Resets refused to addresses that already had their ",
+		                  RESETS3[] = " to a signed id already answered in that second";
+		const char *rest;
+		if (!p)
 			DIE("a summary line without «N forgotten early (more than 4096 connections in "
-			    "10 s)» at its end: «%s»", text);
+			    "10 s)»: «%s»", text);
+		rest = p + sizeof TAIL - 1;
+		if (strncmp(rest, RESETS, sizeof RESETS - 1) != 0 || !strstr(rest, RESETS2) || strlen(rest) < sizeof RESETS3 - 1 ||
+		    strcmp(rest + strlen(rest) - (sizeof RESETS3 - 1), RESETS3) != 0)
+			DIE("a summary line whose end is not the Resets refused to an address / to a signed id: «%s»", text);
 		for (q = p; q > text && q[-1] >= '0' && q[-1] <= '9'; q--)
 			;
 		if (q == p || q == text || q[-1] != ' ')
@@ -907,6 +917,12 @@ static void op_new(const uint8_t *a, size_t n)
 		last_dcidlen = dl;
 	} else if ((a2 & 0x40) && last_dcidlen) {
 		dl = last_dcidlen;
+	} else if (a2 & 0x20) {
+		/* ⭐ rilettura M1: the Initial that follows a Retry is addressed to the id the Retry gave: an id with the Retry's label */
+		dl = 18;
+		births++;
+		rxq_cid_make_retry(last_dcid);
+		last_dcidlen = dl;
 	} else {
 		dl = 8 + a1 % 13;
 		births++;
@@ -1015,6 +1031,8 @@ static void op_new(const uint8_t *a, size_t n)
 		     existing = cid_find(T, last_dcid, dl) != NULL;
 		unsigned retries = rxq_retries;
 		unsigned long long hs_before = T->hs_refused_total;
+		bool all_used0 = T->hs.all.used;
+		uint64_t all0 = T->hs.all.milli; /* ⭐ rilettura M2: the global handshake token, before this newcomer */
 		rxq_last_close_code = 0;
 		enqueue(b, i, a0 % 4, ((a4 >> 1) & 3) % 3);
 		deliver(a4 & 1);
@@ -1048,6 +1066,9 @@ static void op_new(const uint8_t *a, size_t n)
 		for (size_t k = births_before; k < rxq_nconns; k++)
 			if (rxq_conns[k].wt_born)
 				newcomer = true;
+		/* ⭐ rilettura M1: the connection is found by the id its Initial was addressed to (the Retry's, whatever its label says) */
+		if (alone && newcomer && T->how_many > before && !existing && !cid_find(T, last_dcid, dl))
+			DIE("a newcomer born, and the id its Initial was addressed to is not found in the map");
 		if (alone && token_good && reused && !existing) {
 			if (newcomer)
 				DIE("a Retry token made a SECOND connection within %d s",
@@ -1096,6 +1117,11 @@ static void op_new(const uint8_t *a, size_t n)
 				    from48, cap_per_48(T), nev);
 			if (T->how_many > before)
 				DIE("a refused connection was born anyway");
+			/* ⭐ rilettura M2: refused for lack of PLACES (not for the rate), it has not paid the global handshake token (the clock
+			 *    does not move inside a delivery: the bucket can only have been refilled, never emptied) */
+			if (all_used0 && T->hs.all.used && T->hs.all.milli < all0)
+				DIE("a newcomer refused for lack of places took a global handshake token (%llu -> %llu thousandths)",
+				    (unsigned long long)all0, (unsigned long long)T->hs.all.milli);
 		}
 		/* ...also a connection refused for the RATE is not born (the rest of the caps oracle does not apply to it) */
 		if (alone && caps_exact && rate_refused && rxq_last_close_code == NGTCP2_CONNECTION_REFUSED && T->how_many > before)
@@ -1382,6 +1408,8 @@ static void op_burst(const uint8_t *a, size_t n)
 			signed_unknown = (a3 & 8) != 0;
 			if (signed_unknown)
 				rxq_cid_make(b + 1);
+			else if (a3 & 0x10)
+				rxq_cid_make_retry(b + 1);
 		}
 		/* the clock moves BEFORE the pass, never after the last one: a clock moved with no
 		 * `transport_expired()` behind it is not the loop's either (15 Oct 2026, the
