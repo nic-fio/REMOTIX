@@ -69,7 +69,9 @@
  *               the code of the CONNECTION_CLOSE that follows the failure.
  *   10 READ     `transport_read()` (delivers what was held)
  *   11 MISC     `transport_count()`, `transport_fd()`, `transport_wait_ms()`, `transport_context()`
- *   12 LIMITS   `transport_limits()`: a0 % 20 connections in all, a1 % 20 not logged in, a2 % 10
+ *   12 LIMITS   `transport_limits()` (and the handshake RATE: a4 bit 0 raises it to 1,000,000 a second everywhere, else the product's
+ *               defaults of hsrate.h; every input starts at the defaults — the caps oracle below ignores the refusals
+ *               for rate, told by `T->hs_refused_total`): a0 % 20 connections in all, a1 % 20 not logged in, a2 % 10
  *               of them per address, a3 % 10 per IPv6 /48 (0 = the default); every input starts
  *               at 6 / 5 / 3 / 4, so that the harness's 16 births reach every refusal and the
  *               eviction (IPv6: remotes 0-2 share a /48, 3 is v4-mapped)
@@ -83,7 +85,9 @@
  *               one loop pass (wait, read, expired) each: a0-1 how many (+ 1; at most
  *               FLOOD_MAX births an input, all floods together), a2 × 10 µs of clock between two,
  *               a3 address — 4097 in < 10 s fill the ring of used tokens (TOKENS_KEPT) and push
- *               the first out early
+ *               the first out early.  ⚠ This op RAISES THE HANDSHAKE RATE LIMITS (hsrate.h) to 1,000,000 a second, for the
+ *               rest of the input (a LIMITS op with a4 bit 0 clear puts the defaults back): with the product's limits a
+ *               single address cannot make 4097 births in 10 s, and the branch of the forgotten tokens would never be reached
  *
  * ⭐ (15 Oct 2026) after every `transport_wait_ms()` the age oracle of the wait
  *    (`wait_oracle()`); after every op the harness marks the connections transport.c counts
@@ -963,6 +967,7 @@ static void op_new(const uint8_t *a, size_t n)
 		bool reused = ts == 1, forgotten = ts == 2,
 		     existing = cid_find(T, last_dcid, dl) != NULL;
 		unsigned retries = rxq_retries;
+		unsigned long long hs_before = T->hs_refused_total;
 		rxq_last_close_code = 0;
 		enqueue(b, i, a0 % 4, ((a4 >> 1) & 3) % 3);
 		deliver(a4 & 1);
@@ -971,6 +976,9 @@ static void op_new(const uint8_t *a, size_t n)
 		 *   was not read (fuzz 15 Oct 2026: «a Retry token used again, and no INVALID_TOKEN»
 		 *   on an Initial still in the queue — a harness false alarm) */
 		alone = alone && qhead == qtail;
+		/* ⭐ R4: a newcomer refused for the RATE of handshakes (hsrate.h, after the token and before room_for()) is a
+		 *    CONNECTION_REFUSED at any time, with free places: it is not a caps violation */
+		bool rate_refused = T->hs_refused_total != hs_before;
 		/* ⚠ and without PKTINFO AND without getsockname() (op 8, a2 = 3) transport_read()
 		 *   has no local address to answer from: it discards the datagram, said in the log
 		 *   («no local address for a packet»), and answers nothing — INVALID_TOKEN included */
@@ -1033,7 +1041,7 @@ static void op_new(const uint8_t *a, size_t n)
 			    from48 < cap_per_48(T))
 				DIE("a newcomer accepted on a full server and nobody EVICTED for it");
 		}
-		if (alone && caps_exact && rxq_last_close_code == NGTCP2_CONNECTION_REFUSED) {
+		if (alone && caps_exact && !rate_refused && rxq_last_close_code == NGTCP2_CONNECTION_REFUSED) {
 			if (from < cap_per_address(T) && from48 < cap_per_48(T) && (!full || nev > 0))
 				DIE("a connection REFUSED with %zu/%zu open, %zu/%zu pending, %zu/%zu "
 				    "pending from its address, %zu/%zu from its /48, %zu evictable",
@@ -1251,6 +1259,8 @@ static void summary_oracle(bool expired)
  * at the rate the fuzzer picks. */
 static void op_flood(const uint8_t *a, size_t n)
 {
+	/* the product's rate limits (hsrate.h) would stop a single address after 16 births: the flood raises them (see the header comment of op 14) */
+	T->hs_lim = (struct hs_limits){ 1000000u, 1000000u, 1000000u, 1000000u, 1000000u, 1000000u };
 	unsigned count = (n > 1 ? ((unsigned)a[0] << 8 | a[1]) : n ? a[0] : 0) + 1u;
 	uint64_t step = (uint64_t)(n > 2 ? a[2] : 0) * 10000u;
 	int addr = n > 3 ? a[3] % 4 : 0;
@@ -1498,6 +1508,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			size_t mc = n > 0 ? a[0] % 20 : 0, mp = n > 1 ? a[1] % 20 : 0,
 			       pa = n > 2 ? a[2] % 10 : 0, p48 = n > 3 ? a[3] % 10 : 0;
 			transport_limits(T, mc, mp, pa, p48);
+			{
+				unsigned big = (n > 4 && (a[4] & 1)) ? 1000000u : 0;
+				struct hs_limits def = HS_LIMITS_DEFAULT, up = { 1000000u, 1000000u, 1000000u, 1000000u, 1000000u, 1000000u };
+
+				T->hs_lim = big ? up : def;
+			}
 			for (connection *c = T->prime; c; c = c->upcoming) {
 				place k, k48;
 				if (!c->unlogged || c->dead_run)

@@ -437,7 +437,10 @@ async def t_flood(flood_srcs, legit):
                 stats["errors"] += 1
                 ends[o] = ends.get(o, 0) + 1
             await c.close()
-            await asyncio.sleep(0.2 + random.random() * 0.3)
+            # ⭐ R4: the pause between two births of a worker.  The default (0.2-0.5 s) is faster than the server's handshake rate
+            #    (4 a second per address): most of the flood is then refused for RATE (CONNECTION_REFUSED too).  --flood-gap S sets
+            #    it, so the births can be slowed under the rate, or the rate left to work.
+            await asyncio.sleep(ARGS.flood_gap if ARGS.flood_gap is not None else 0.2 + random.random() * 0.3)
 
     tasks = [asyncio.ensure_future(worker(s, k)) for s in flood_srcs for k in range(ARGS.cap_address)]
     # let the flood fill every place first
@@ -514,6 +517,8 @@ async def main():
             "evicted_lines": len(re.findall(r"EVICTED \(", t)),
             "aged_lines": len(re.findall(r"not logged in after %d s" % UNLOGGED_MAX_S, t)),
             "pressure_lines": len(summ),
+            "handshake_rate_lines": len(re.findall(r"HANDSHAKE RATE", t)),
+            "handshake_rate_refused": sum(int(m) for m in re.findall(r"(\d+) new handshakes refused for coming too fast", t)),
             "summary_aged": total(r"(\d+) connections closed for not logging in"),
             "summary_evicted": total(r"(\d+) EVICTED to make room"),
             "summary_refused_full": total(r"REFUSED: (\d+) full"),
@@ -574,6 +579,11 @@ def args():
     p.add_argument("--login-gap", type=float, default=2.0)
     p.add_argument("--flood-warmup", type=float, default=None,
                    help="seconds to let the flood fill the places (default: 8, or n-flood x cap-address / 8 if more)")
+    p.add_argument("--flood-gap", type=float, default=None,
+                   help="seconds a flood worker waits between two births (default: 0.2-0.5, random). The server limits new "
+                        "handshakes to 4 a second per address (burst 16): a worker per address that reconnects faster is refused for "
+                        "RATE (the same CONNECTION_REFUSED as a cap); with --cap-address workers per address use a gap of "
+                        "cap-address / 4 s or more to stay under it")
     p.add_argument("--no-age", action="store_true", help="skip the 90 s test")
     p.add_argument("--stage-less", action="store_true",
                    help="the server has no desktop: FAREWELL 0x10 right after CREDENTIALS counts as admitted")

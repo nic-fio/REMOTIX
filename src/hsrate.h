@@ -6,9 +6,12 @@
  *    The Retry already proves the address is real; it does not slow it down.
  *
  * Three token buckets, taken together, AFTER the Retry token is verified and BEFORE accept_conn():
- *   · one per address (IPv4, or IPv6 /64 — transport.c's address_key()):  4 a second, burst 8;
+ *   · one per address (IPv4, or IPv6 /64 — transport.c's address_key()):  4 a second, burst 16;
  *   · one per IPv6 /48 (for IPv4 the key itself):                           16 a second, burst 32;
- *   · one for everybody:                                                   100 a second, burst 32.
+ *   · one for everybody:                                                  200 a second, burst 32
+ *     (tls-gruppi limits the key-exchange groups, so a handshake costs about 1.2 ms at the worst: 200 a second is at most a quarter of the loop;
+ *      with about 50 addresses at 4 a second an attacker therefore uses up the global bucket and the NEW logins are refused for as long as it lasts —
+ *      the sessions already open are not touched).
  * A handshake needs a token from ALL THREE; if any is empty it is refused and NO bucket is charged (a refused attempt costs the
  * attacker nothing more and the honest ones nothing at all).
  *
@@ -35,10 +38,10 @@ struct hs_limits {
 };
 
 #define HS_ADDR_RATE 4
-#define HS_ADDR_BURST 8
+#define HS_ADDR_BURST 16
 #define HS_NET_RATE 16
 #define HS_NET_BURST 32
-#define HS_ALL_RATE 100
+#define HS_ALL_RATE 200
 #define HS_ALL_BURST 32
 #define HS_LIMITS_DEFAULT { HS_ADDR_RATE, HS_ADDR_BURST, HS_NET_RATE, HS_NET_BURST, HS_ALL_RATE, HS_ALL_BURST }
 
@@ -67,11 +70,18 @@ static inline void hs_refill(struct hs_bucket *b, uint64_t now, unsigned rate, u
 		b->last = now;
 		return;
 	}
+	if (!rate)
+		return;
 	add = (now - b->last) * rate / 1000000u;   /* ns × tokens/s = thousandths of a token ÷ 1e6 */
 	if (!add)
 		return;                              /* keep `last`: the fractions are not lost */
-	b->milli = b->milli + add > cap ? cap : b->milli + add;
-	b->last = now;
+	if (b->milli + add >= cap) {                 /* full: the time beyond it buys nothing */
+		b->milli = cap;
+		b->last = now;
+		return;
+	}
+	b->milli += add;
+	b->last += add * 1000000u / rate;            /* only the time those tokens stand for: the remainder of the interval stays */
 }
 
 /* The entry of `key` in `tab` (n slots): the one it already has, else a free one, else the least recently seen — which starts again

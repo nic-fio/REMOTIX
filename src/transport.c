@@ -241,6 +241,8 @@ struct transport {
 	size_t unlogged;
 	/* ⭐ R4: the RATE of new handshakes (hsrate.h): the buckets, and the refusals counted since the last line about them */
 	struct hs_rate hs;
+	struct hs_limits hs_lim;              /* HS_LIMITS_DEFAULT; the fuzz harness raises it (op 12 / op 14) */
+	unsigned long long hs_refused_total;  /* never zeroed: the harness tells a rate refusal by it */
 	unsigned hs_over_address, hs_over_net, hs_over_all;
 	char hs_last[64];
 	bool hs_ever;
@@ -1214,11 +1216,11 @@ static void hs_report(transport *t, ngtcp2_tstamp now)
 	if (t->hs_ever && now - t->hs_line_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
 		return;
 	registro_dice(REG_QUIC,
-	              "⚠ HANDSHAKE RATE%s: %u new handshakes refused for coming too fast (%u over %d a second from one address, "
-	              "%u over %d from one IPv6 /48, %u over %d for all together); the last refused from %s",
+	              "⚠ HANDSHAKE RATE%s: %u new handshakes refused for coming too fast (%u over %u a second from one address, "
+	              "%u over %u from one IPv6 /48, %u over %u for all together); the last refused from %s",
 	              t->hs_ever ? " in the last seconds" : "", t->hs_over_address + t->hs_over_net + t->hs_over_all,
-	              HS_ADDR_RATE, t->hs_over_address, HS_NET_RATE, t->hs_over_net, HS_ALL_RATE, t->hs_over_all,
-	              t->hs_last[0] ? t->hs_last : "-");
+	              t->hs_over_address, t->hs_lim.addr_rate, t->hs_over_net, t->hs_lim.net_rate, t->hs_over_all,
+	              t->hs_lim.all_rate, t->hs_last[0] ? t->hs_last : "-");
 	t->hs_over_address = t->hs_over_net = t->hs_over_all = 0;
 	t->hs_last[0] = 0;
 	t->hs_ever = true;
@@ -1228,20 +1230,21 @@ static void hs_report(transport *t, ngtcp2_tstamp now)
 /* `true` = this new handshake is within the rate limits (a token taken from each bucket); `false` = refused, and the client was told
  * with a stateless CONNECTION_CLOSE(CONNECTION_REFUSED), like `room_for()`.  ⚠ Why an answer and not silence: the address has just
  * proved itself with the Retry token (no spoofing, no amplification: the close is ~50 bytes against an Initial of at least 1200), and a
- * real browser that is told fails at once and the page reconnects, instead of waiting out its handshake timeout.  The token is NOT used up
- * (token_keep() is called only for an accepted connection). */
+ * browser that is told fails at once instead of waiting out its handshake timeout.  ⚠ The page does NOT retry by itself: the user has to
+ * press the button again (a few seconds later the bucket has refilled).  The token is NOT used up (token_keep() is called only for an
+ * accepted connection). */
 static bool rate_ok(transport *t, const ngtcp2_pkt_hd *hd, const struct sockaddr *remote, socklen_t remotelen)
 {
-	static const struct hs_limits LIM = HS_LIMITS_DEFAULT;
 	uint8_t key[16], key48[16];
 	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
 	ngtcp2_ssize n;
 	int why;
 
 	address_key(remote, key, key48);
-	why = hs_take(&t->hs, &LIM, key, key48, now_ns());
+	why = hs_take(&t->hs, &t->hs_lim, key, key48, now_ns());
 	if (why == HS_OK)
 		return true;
+	t->hs_refused_total++;
 	if (why == HS_OVER_ADDRESS) {
 		t->hs_over_address++;
 		key_text(key, 64, t->hs_last, sizeof t->hs_last);
@@ -2491,6 +2494,7 @@ transport *transport_open_fd(int fd, const char *address, const char *port,
 		close(fd);
 		return NULL;
 	}
+	t->hs_lim = (struct hs_limits)HS_LIMITS_DEFAULT;
 	t->fd = fd;
 	t->family = ss.ss_family;
 	/* ⭐ pktinfo: `ss` is the socket's own address (getsockname above): wildcard or one address */
