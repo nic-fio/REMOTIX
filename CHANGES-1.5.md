@@ -120,7 +120,7 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
 - **In `finale` (merged, to be measured)**: branch `rifiniture`: `connect-src` of the CSP narrowed to `'self'` (it was `'self' https:` in `page.c`; the WebTransport behaviour on Chrome
   and Firefox is still to be measured), and the correction of the decoder in `page.html` (`7e49f5b1`, from `b1dea604`): a keyframe rebuilds a decoder that an error closed, also at the
   same size (before, the picture stayed frozen for the rest of the session). **Not in `finale`**: branch `ff-worker` (approved on reading; the live proof is still to do), the port of §11.36 D, the worker route as default **only on desktop Firefox**, with
-  automatic fallback to the main-thread route; written, in review; merged only if the user chooses D2 = A.
+  automatic fallback to the main-thread route; merged only if the user chooses D2 = A.
 - **Not done, optional**: the
   zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
   login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
