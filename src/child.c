@@ -173,6 +173,8 @@
  * now gives to another uid — would stay in the table without anyone having put
  * it to the test again. */
 #define RECHECK_MS 60000
+/* a child that answers «my name no longer resolves» every minute is told in the log once in this time */
+#define NAME_GONE_LOG_MS 600000
 
 #define CHILD_VERSION 1
 
@@ -565,10 +567,9 @@ struct child {
 	uint64_t serial;
 	uint64_t born_ms;
 	uint64_t last_recheck_ms;
-	/* ⭐ When the parent last resolved the NAME to `uid` itself (`name_still_ours()`): at the spawn and at a login, never on
-	 *    a timer — the periodic check is the child's (`body_whoami.name_check`), because with sssd/LDAP a lookup is a
-	 *    network call and this is the loop that delivers every user's video. */
-	uint64_t name_checked_ms;
+	/* ⭐ The last time the child answered «my name no longer resolves» and a line said so (see `handle()`, MSG_INTRO): a
+	 *    line at most every NAME_GONE_LOG_MS per child. */
+	uint64_t name_gone_logged_ms;
 	/* ⭐ 1.5 (§11.50), network mode only (inert in the single-process server):
 	 *    the name as typed at the login when it differs from the canonical one
 	 *    the root side resolved; a close-only child (CLOSE_ORPHAN); the root
@@ -839,7 +840,11 @@ static bool credentials_match(const struct child *g, const struct head *t,
  *         one that delivers every user's video.  Now a slow NSS stalls only the
  *         stage of the child that asks.  A child that lied would only keep its own
  *         (stale) session until someone logs in under the name, and the parent's
- *         login check then kills it. */
+ *         login check then kills it.
+ *       · the child's answer «another uid» costs the child at once; its answer
+ *         «gone» does NOT: the child asks NSS as an ordinary user, and a directory
+ *         that needs root to bind would make every child say «gone» every minute.
+ *         «Gone» is logged (rarely) and left to the login check, made as root. */
 /* ⭐ The lookup itself, shared by the two sides: what NSS says about `user` against `uid`.  It BLOCKS on sssd/LDAP, so it
  *    must never run in the parent's loop except at a login (below): the periodic check is made by the CHILD, which asks
  *    NSS for its own name when the parent's question arrives (`name_check` of `body_whoami`), at the cost of its own
@@ -2531,7 +2536,6 @@ static child_outcome ensure_remote(struct children *f, struct child *g,
 	g->fd = b.fd;
 	g->born_ms = log_now_ms();
 	g->last_recheck_ms = g->born_ms;
-	g->name_checked_ms = g->born_ms;
 	/* ⭐ «SPAWNED after N ms»: the time this loop stood still waiting for the
 	 *    root side (enrolment, render grant, fork) — read by the stress bench. */
 	registro_dice(LOG_CHILD,
@@ -2585,7 +2589,6 @@ child_outcome children_ensure_from(children *f, const char *user, const char *rh
 			child_dismiss(f, g, "its name no longer resolves to its uid");
 			return CHILD_NAME_MOVED;
 		}
-		g->name_checked_ms = log_now_ms();
 	}
 	if (g) {
 		registro_dice(LOG_CHILD,
@@ -2635,7 +2638,6 @@ child_outcome children_ensure_from(children *f, const char *user, const char *rh
 	}
 	g->born_ms = log_now_ms();
 	g->last_recheck_ms = g->born_ms;
-	g->name_checked_ms = g->born_ms; /* resolved just above, before the fork */
 	f->next_serial++;
 	return CHILD_READY;
 }
@@ -3029,7 +3031,24 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		/* ⭐⛔ THE NAME, answered by the child (see `body_whoami`): the periodic check that used to run in the parent's
 		 *    loop.  A name that moved to another uid or vanished costs the child as before — the parent still asks NSS
 		 *    itself at every login, so a child that lied here is found out the moment someone logs in under that name. */
-		if (g->showed_up && (s.name_check == NAME_GONE || s.name_check == NAME_OTHER_UID)) {
+		/* ⚠ ONLY «another uid» costs the child.  «Gone» is NOT acted on here: the child asks NSS as an ordinary user, and a
+		 *   directory that wants root to bind (LDAP, sssd with a protected cache) would make EVERY child answer «gone» and
+		 *   die every minute.  «Gone» is a line in the log, at most one per NAME_GONE_LOG_MS per child; the decision is left
+		 *   to the check the PARENT makes at every login (`children_ensure_from()`, as root), which kills the child the
+		 *   moment someone logs in under a name that really no longer resolves.  A child not yet introduced
+		 *   (`showed_up` false: its birth message, name_check 0) is never judged. */
+		if (g->showed_up && s.name_check == NAME_GONE) {
+			uint64_t now = log_now_ms();
+
+			if (g->name_gone_logged_ms == 0 || now >= g->name_gone_logged_ms + NAME_GONE_LOG_MS) {
+				g->name_gone_logged_ms = now ? now : 1;
+				registro_dice(LOG_CHILD,
+				              "⚠ the child of «%s» says its name does not resolve (it asks NSS as the user, which "
+				              "may not be allowed to): nothing is done now — the check at the next login of «%s» decides",
+				              g->user, g->user);
+			}
+		}
+		if (g->showed_up && s.name_check == NAME_OTHER_UID) {
 			char why[256];
 
 			name_why(g->user, g->uid, (int)s.name_check, (uid_t)s.name_uid, why, sizeof why);

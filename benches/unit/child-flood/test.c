@@ -19,9 +19,11 @@
  *  10. a round is bounded in TIME as well: with a clock that runs 1 ms per look, a round reads 2 messages, not 32;
  *  11. the NAME is not looked up by the parent's loop at all: none for 40 honest messages, none from children_recheck()
  *      (which only sends the «who are you» question); the CHILD's answer (body_whoami.name_check) decides: a name that
- *      holds is left alone, a name given to another uid or one that no longer resolves costs the child (SIGKILL and
- *      farewell), an answer of the old size (no name_check) is accepted; name_resolution() gives the three verdicts and
- *      name_still_ours() (the login's check) does one lookup.
+ *      holds is left alone, a name given to another uid costs the child (SIGKILL and farewell), «gone» does NOT (the child
+ *      asks NSS as an ordinary user: one line in the log, at most every NAME_GONE_LOG_MS, and the login check decides), a child
+ *      not yet introduced is never judged, an answer of the old size (no name_check) is accepted; name_resolution() gives the
+ *      three verdicts; a LOGIN through children_ensure_from() does one lookup and passes, or kills on another uid or a
+ *      vanished name.
  *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -73,7 +75,7 @@ static int rxt_clock_gettime(clockid_t c, struct timespec *ts);
 #undef log_says_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 33
+#define EXPECTED_CHECKS 39
 
 static void require(int cond, const char *desc)
 {
@@ -210,7 +212,7 @@ static bool live_child(struct children *f, struct child *g)
 	g->fd = sv[0];
 	g->serial = 7;
 	g->showed_up = true;
-	g->born_ms = g->last_recheck_ms = g->name_checked_ms = 1000000;
+	g->born_ms = g->last_recheck_ms = 1000000;
 	nss_uid = getuid();
 	nss_gone = false;
 	return true;
@@ -446,7 +448,7 @@ int main(void)
 
 		if (!live_child(&f, &g))
 			return 1;
-		g.name_checked_ms = g.last_recheck_ms = now;
+		g.last_recheck_ms = now;
 		lookups = 0;
 		canvases = 0;
 		for (int k = 0; k < 40; k++)
@@ -480,9 +482,47 @@ int main(void)
 		if (!live_child(&f, &g))
 			return 1;
 		kills = sigkills = 0;
-		require(send_intro(&g, NAME_GONE, 0, sizeof(struct body_whoami)), "the child answers: its name no longer resolves");
+		require(send_intro(&g, NAME_GONE, 0, sizeof(struct body_whoami)), "the child answers: its name does not resolve");
 		one_round(&f, now);
-		require(sigkills >= 1 && g.exiting, "a name that no longer resolves: the same");
+		require(sigkills == 0 && g.used && !g.exiting && g.name_gone_logged_ms != 0,
+		        "«gone» is NOT acted on (the child asks NSS as an ordinary user): the child stays, one line is logged");
+		{
+			uint64_t first = g.name_gone_logged_ms;
+
+			send_intro(&g, NAME_GONE, 0, sizeof(struct body_whoami));
+			one_round(&f, now);
+			require(sigkills == 0 && g.name_gone_logged_ms == first, "and a second «gone» in the window is not logged again");
+		}
+
+		if (!live_child(&f, &g))
+			return 1;
+		g.showed_up = false;
+		kills = sigkills = 0;
+		send_intro(&g, NAME_GONE, 0, sizeof(struct body_whoami));
+		one_round(&f, now);
+		require(sigkills == 0 && g.used && !g.exiting && g.showed_up && g.name_gone_logged_ms == 0,
+		        "a child not yet introduced that says «gone» is ignored (introduced now, nothing logged)");
+		g.showed_up = false;
+		send_intro(&g, NAME_OTHER_UID, (uint32_t)getuid() + 1, sizeof(struct body_whoami));
+		one_round(&f, now);
+		require(sigkills == 0 && g.used && !g.exiting, "...and its birth message is never judged, whatever it says");
+
+		/* a LOGIN under the name: the parent's own check, through children_ensure_from() */
+		if (!live_child(&f, &g))
+			return 1;
+		lookups = 0;
+		require(children_ensure_from(&f, "anna", "127.0.0.1") == CHILD_READY && lookups == 1 && g.used && !g.exiting,
+		        "a login under a name that holds: the child is found, ONE lookup");
+		nss_uid = getuid() + 1;
+		kills = sigkills = 0;
+		require(children_ensure_from(&f, "anna", "127.0.0.1") == CHILD_NAME_MOVED && sigkills >= 1 && g.exiting,
+		        "a login under a name now given to another uid: NAME_MOVED, the child is killed");
+		if (!live_child(&f, &g))
+			return 1;
+		nss_gone = true;
+		kills = sigkills = 0;
+		require(children_ensure_from(&f, "anna", "127.0.0.1") == CHILD_NAME_MOVED && sigkills >= 1 && g.exiting,
+		        "a login under a name that no longer resolves: the same (the decision «gone» was left to this check)");
 
 		/* the lookup itself, and the parent's check at a LOGIN */
 		if (!live_child(&f, &g))
