@@ -1655,9 +1655,24 @@ static output *queue_choose(wt *w, size_t *report)
  *        new one. */
 #define WT_QUEUE_MAX (17u * 1024u * 1024u)
 
+/* ⛔⭐ AND THE NUMBER OF ELEMENTS — audit P-R6/Q-R5 (25 Oct 2026).  The cap above counts BYTES of payload; every element also costs its own
+ *     `output` (about 150 bytes) and one more step in the scans of `queue_choose()` at every pass.  A client that gets the server
+ *     to answer with tiny messages (16 bytes each is the cheapest per byte) could pile up about a million elements under the 17 MiB:
+ *     150 MB of bookkeeping per session and a scan that grows with it.
+ *     16384 is far above anything legitimate (a normal queue holds tens: the audio blocks, the cursor and the frames in flight — even a
+ *     stalled link that fills the 17 MiB with 4 KB audio blocks holds about 4500), and below it the memory of the bookkeeping is
+ *     bounded by about 2.5 MB per session.  Like the byte cap, touching it is a fault of the layer, not a silent loss. */
+#define WT_QUEUE_ITEMS_MAX 16384u
+
 static bool queue_put(wt *w, int64_t id, const uint8_t *d, size_t n, bool fin)
 {
 	output *u;
+	if (w->nqueue - w->head >= WT_QUEUE_ITEMS_MAX) {
+		log_says_of(REG_WT, wt_chi(w),
+		                 "⛔ the output queue has touched the cap of ELEMENTS (%zu in queue, cap %u): not enqueuing",
+		                 w->nqueue - w->head, WT_QUEUE_ITEMS_MAX);
+		return false;
+	}
 	if (w->byte_in_queue + n > WT_QUEUE_MAX) {
 		log_says_of(REG_WT, wt_chi(w),
 		                 "⛔ the output queue has touched the cap (%zu bytes in "
