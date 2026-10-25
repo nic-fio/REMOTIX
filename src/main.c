@@ -2777,7 +2777,7 @@ int main(int argc, char **argv)
 		}
 		me = getpwuid(getuid());
 		registro_dice(LOG_STARTUP,
-		              "⭐ network side: uid %ld (%s), root side pid %ld — this process talks to the network and holds the "
+		              "⭐ network side: uid %ld (%s), parent pid %ld (the root side is outside this PID namespace) — this process talks to the network and holds the "
 		              "TLS key, the ban and the QUIC secret; PAM, the desktops' births and the signals to them are the "
 		              "root side's, asked over the closed list (DECISIONS.md §11.50)",
 		              (long)getuid(), me ? me->pw_name : "?", (long)getppid());

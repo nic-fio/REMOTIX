@@ -228,6 +228,23 @@ gen_require(`
 	type tmp_t, bin_t;
 ')
 allow remotix_t tmp_t:dir mounton;
+# ── [D] ⭐ 1.6 (R8 B): the network side is PID 1 of a PID namespace of its own (`walls_fork_pidns()`: clone with CLONE_NEWPID, which
+#    needs only the sys_admin above) and the fork mounts a NEW /proc over «/proc» (`walls.c`, `private_proc()`:
+#    `mount("proc", "/proc", "proc", MS_NOSUID|MS_NODEV|MS_NOEXEC, "hidepid=invisible")`) before the tree goes read-only: a mount of the
+#    proc filesystem (type proc_t) on the directory /proc (proc_t too).  The read-only step on it is `mount_setattr` (no check of its own,
+#    as for the rest of the tree); the walls read the new /proc back (the only numeric entry must be «1»: list the directory) and the
+#    exec goes through its /proc/self/exe.  NOT TRIED in enforcing (no SELinux machine here): the list of what to try is in
+#    /media/REMOTIX-15/tmp/selinux-da-provare.md.
+gen_require(`
+	type proc_t;
+')
+allow remotix_t proc_t:filesystem { mount getattr };
+allow remotix_t proc_t:dir { mounton search read getattr open };
+allow remotix_t proc_t:lnk_file read;
+kernel_read_system_state(remotix_t)
+# [D] ⭐ 1.6 (R8): the ROOT side looks for the live desktops no child holds (`rediscover_search_files()`: /proc/<pid>/stat and /cgroup of every
+#    process, logind's own files for the sessions) and watches their stages by pidfd — the network side no longer does: it sees only itself.
+domain_read_all_domains_state(remotix_t)
 allow remotix_t { remotix_net_var_lib_t remotix_net_var_run_t }:dir { create getattr setattr search mounton };
 # ⭐ 1.5: `--no-split` (the single-process unit) runs the whole server as remotix_t, and after the 1.0 → 1.5 move its
 #    certificates and ban sit in /var/lib/remotix/net (remotix_net_var_lib_t): it must manage them in enforcing.
@@ -369,14 +386,14 @@ init_read_state(remotix_net_t)
 auth_use_nsswitch(remotix_net_t)
 logging_send_syslog_msg(remotix_net_t)
 
-# ── logind, as any client (`sentinel.c`, `rediscover.c`: ListSessions, Properties.GetAll)
+# ── logind, as any client (`sentinel.c`: ListSessions, Properties.GetAll; ⭐ 1.6 R8: `rediscover.c` runs in the root side now)
 dbus_system_bus_client(remotix_net_t)
 optional_policy(`
 	systemd_dbus_chat_logind(remotix_net_t)
 ')
 
-# ── the desktops found again (T7, `rediscover.c`): /proc/<pid>/stat and /cgroup of the users'
-#    processes.  All domains, as `ps` reads them: the walk opens every /proc entry, and a denial
-#    on a system process would be noise; the DAC rules (uid `remotix`) still hold for anything
-#    beyond stat/cgroup/cmdline.
-domain_read_all_domains_state(remotix_net_t)
+# ── [D] ⭐ 1.6 (R8 B): NO `domain_read_all_domains_state` for the network side any more.  The desktops found again are looked for by the
+#    ROOT side (`remotix_t`, above) and told over the channel; the network side runs as PID 1 of a PID namespace of its own with a
+#    /proc that lists only itself (walls.c), so what it reads there is its own process (`self`, allowed to any domain) and the system's
+#    entries above (kernel_read_system_state: cpuinfo, meminfo, stat…; the network state: /proc/net; the kernel sysctls: /proc/sys).  Were
+#    the namespace ever not there, the policy still keeps it away from the other domains' state.
