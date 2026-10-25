@@ -1068,8 +1068,10 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	}
 	/* ⛔ `resumed` only if it really gets in: with a farewell on its way there
 	 *    is no `SESSION` to fill. */
-	transport_verdict_from(p->t, ticket, admitted, resumed && !without_stage[0], user,
-	                       rhost, lost);
+	/* ⭐ rilettura-fix M1: the name obtained above goes UP with the verdict (only for an admitted one that somebody waits for): the session must not ask again — in the split the birth
+	 *    (`children_ensure_from`, before this line) consumed the entry it would find. */
+	transport_verdict_as(p->t, ticket, admitted, resumed && !without_stage[0], user,
+	                     rhost, lost, (admitted && !lost && user_typed && user_typed[0]) ? user : NULL);
 
 	/* ⛔⭐ AND THE FAREWELL GOES OUT HERE, AFTER THE VERDICT — and the order is
 	 *     measured, not aesthetic.  Three reasons, all necessary:

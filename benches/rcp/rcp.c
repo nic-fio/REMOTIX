@@ -9862,6 +9862,12 @@ bool rcp_canonical_user(const char *typed, char *out, size_t cap)
 bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
                   uint64_t now)
 {
+	return rcp_verdict_as(s, ticket, admitted, now, NULL);
+}
+
+bool rcp_verdict_as(rcp_session *s, uint64_t ticket, bool admitted,
+                    uint64_t now, const char *canonical_given)
+{
 	if (!s || s->state != S_WAIT_VERDICT || !s->expected_verdict)
 		return false;
 	if (s->ticket != ticket)
@@ -9911,8 +9917,16 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 	 *    `main.c` brings the child and the stage to the same name (`delivery_verdict()`). */
 	if (admitted) {
 		char canon[sizeof s->user];
+		bool known;
 
-		if (rcp_canonical_user(s->user, canon, sizeof canon) && strcmp(canon, s->user) != 0) {
+		/* ⭐ rilettura-fix M1: the name `delivery_verdict()` already obtained is used as it is — asking again found nothing in the split (the birth consumed the grant's entry) */
+		if (canonical_given && canonical_given[0] && strlen(canonical_given) < sizeof canon) {
+			snprintf(canon, sizeof canon, "%s", canonical_given);
+			known = true;
+		} else {
+			known = rcp_canonical_user(s->user, canon, sizeof canon);
+		}
+		if (known && strcmp(canon, s->user) != 0) {
 			reg(s, "⚠ the name typed «%s» is the user «%s» of this machine (the system does not tell the two spellings "
 			       "apart): the slot, the session and the desktop go by «%s»",
 			    s->user, canon, canon);

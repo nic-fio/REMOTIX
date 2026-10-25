@@ -12,6 +12,7 @@
  *   4. a VERDICT YES with no canon, a NO, and an expired grant: no entry (false) — the typed name stays;
  *   5. the entry goes with the grant: rootside_spawn() consumes it (single use);
  *   5c. the split with an UPPERCASE typed name (ANNA, the system says anna): the spawn finds the grant by the typed name AND by the system's; another spelling does not;
+ *   5d. THE SEQUENCE of the split: VERDICT, the birth (rootside_spawn consumes the entry), then rcp_verdict_as(): the session of ANNA is «anna» like the child; the old rcp_verdict() ends «ANNA» (contrast);
  *   6. rcp.c: with the hook set rcp_canonical_user() answers from the hook ONLY (a name that really exists in the system, «root», is NOT found when the hook says no — NSS is not asked);
  *      without the hook it asks the system as before (the single-process server);
  *   7. source reading: client_recv() refuses a VERDICT whose canon is not valid; main.c installs the hook in the network side only after the root channel is attached.
@@ -76,6 +77,8 @@ static void verdict(const char *typed, int outcome, const char *canon, uint64_t 
 	field(pk.v.canon, canon);
 	dispatch(&pk, -1);
 }
+
+static void record_none(void *ctx, const char *line) { (void)ctx; (void)line; }
 
 /* the system's lookup that a real NSS would do: used only to show it is NOT reached */
 static int asked;
@@ -180,6 +183,43 @@ int main(void)
 		CHECK(rootside_spawn("Anna", "10.0.0.1", 1280, 720, 10, &born) == ROOTSIDE_NO_GRANT, "5c: another spelling (Anna) of the same person is NOT served by the grant of ANNA");
 		close(sv[0]);
 		C.fd = -1;
+	}
+
+	/* 5d: THE SEQUENCE of the split (rilettura-fix, review of ca2d013e): VERDICT -> the birth (rootside_spawn, which CONSUMES the grant's entry) -> only then rcp_verdict().  The session must come out
+	 * «anna», like the child: delivery_verdict passes the name it already got up to rcp_verdict_as(); asking again, after the birth, found nothing and the session stayed «ANNA». */
+	for (int via = 0; via < 2; via++) {
+		int sv[2];
+		struct rootside_born born;
+		rcp_hooks gh;
+		rcp_session *rs;
+		char canon_now[64];
+
+		verdict("ANNA", RXR_YES, "anna", now);
+		rcp_canonical_hook(rootside_canonical);
+		CHECK(rootside_canonical("ANNA", canon_now, sizeof canon_now), "5d: the name is there before the birth");
+		socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, sv);
+		close(sv[1]);
+		C.fd = sv[0];
+		(void)rootside_spawn("anna", "10.0.0.1", 1280, 720, 10, &born);       /* the birth: the entry goes */
+		close(sv[0]);
+		C.fd = -1;
+		CHECK(!rootside_canonical("ANNA", canon_now, sizeof canon_now), "5d: after the birth the entry is gone (this is why the verdict must carry the name)");
+		memset(&gh, 0, sizeof gh);
+		gh.record = record_none;
+		rs = rcp_open(&gh, "[10.0.0.1]:1", now);
+		rs->state = S_WAIT_VERDICT;
+		rs->expected_verdict = true;
+		rs->ticket = 77;
+		snprintf(rs->user, sizeof rs->user, "ANNA");
+		if (via == 0) {
+			CHECK(rcp_verdict_as(rs, 77, true, now + 300, "anna"), "5d: the verdict with the name is taken");
+			CHECK(strcmp(rs->user, "anna") == 0, "5d: and the session goes by «anna», like the child");
+		} else {
+			CHECK(rcp_verdict(rs, 77, true, now + 300), "5d(contrast): the old form is taken");
+			CHECK(strcmp(rs->user, "ANNA") == 0, "5d(contrast): but, asking again after the birth, finds nothing: the session stays «ANNA» (the bug this fixes)");
+		}
+		rcp_free(rs);
+		rcp_canonical_hook(NULL);
 	}
 
 	/* 6 */

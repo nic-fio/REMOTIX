@@ -627,6 +627,10 @@ bool rcp_time(rcp_session *s, uint64_t now_ms);
  *   now, can arrive before or after it. */
 bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
                   uint64_t now_ms);
+/* ⭐ rilettura-fix M1: the same, with the SYSTEM's name for the typed user ALREADY OBTAINED by whoever delivers the verdict (main.c `delivery_verdict()`): the session goes by it without asking again.
+ * Asking again was a bug in the split: the lookup there is the grant's entry, and the child's birth (`rootside_spawn`, before this call) consumes it — the child was «anna», the session stayed «ANNA».
+ * `canonical` NULL or empty = ask `rcp_canonical_user()` as `rcp_verdict()` does. */
+bool rcp_verdict_as(rcp_session *s, uint64_t ticket, bool admitted, uint64_t now_ms, const char *canonical);
 
 /* ⛔ §8.1: whoever closes MUST send `FAREWELL` with a reason BEFORE closing the
  * WebTransport session, and MUST repeat the reason in the application error

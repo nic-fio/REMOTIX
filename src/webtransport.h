@@ -93,6 +93,7 @@ wt *wt_new(ngtcp2_conn *conn, ngtcp2_ccerr *last_error,
 /* ⭐ D-001: `resumed` = that user's stage already existed (`SESSION` will say
  * `2 = RESUMED`, §4.5). */
 bool wt_verdict(wt *w, uint64_t ticket, bool admitted, bool resumed);
+bool wt_verdict_as(wt *w, uint64_t ticket, bool admitted, bool resumed, const char *canonical);
 /* The helper died with this request in flight: a «no» that is our defect and
  * counts nothing (§4.4-bis B, 24 Oct 2026). */
 bool wt_verdict_lost(wt *w, uint64_t ticket);

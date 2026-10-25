@@ -35,7 +35,7 @@
 #define children_ensure_from fake_children_ensure_from
 #define children_count fake_children_count
 #define children_ask_stage fake_children_ask_stage
-#define transport_verdict_from fake_transport_verdict_from
+#define transport_verdict_as fake_transport_verdict_as   /* (rilettura-fix M1: main.c delivers the verdict with the system's name) */
 #define transport_awaits_verdict fake_transport_awaits_verdict
 #define wt_dismiss_user fake_wt_dismiss_user
 #define budget_on fake_budget_on
@@ -93,9 +93,10 @@ bool fake_children_ask_stage(children *f, const char *user)
 	(void)user;
 	return true;
 }
-void fake_transport_verdict_from(transport *t, uint64_t ticket, bool admitted, bool resumed,
-                                 const char *user, const char *rhost, bool lost)
+void fake_transport_verdict_as(transport *t, uint64_t ticket, bool admitted, bool resumed,
+                               const char *user, const char *rhost, bool lost, const char *canonical)
 {
+	(void)canonical;
 	(void)t;
 	(void)ticket;
 	(void)admitted;

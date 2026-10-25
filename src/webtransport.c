@@ -9013,10 +9013,16 @@ void wt_dismiss(wt *w, uint8_t reason, const char *detail)
  *    died while PAM was answering, and there is nobody left to admit. */
 bool wt_verdict(wt *w, uint64_t ticket, bool admitted, bool resumed)
 {
+	return wt_verdict_as(w, ticket, admitted, resumed, NULL);
+}
+
+/* ⭐ rilettura-fix M1: with the system's name already obtained (see rcp_verdict_as) */
+bool wt_verdict_as(wt *w, uint64_t ticket, bool admitted, bool resumed, const char *canonical)
+{
 	if (!w || !w->rcp)
 		return false;
-	if (!rcp_verdict(w->rcp, ticket, admitted,
-	                  ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS))
+	if (!rcp_verdict_as(w->rcp, ticket, admitted,
+	                     ngtcp2_conn_get_timestamp(w->conn) / NGTCP2_MILLISECONDS, canonical))
 		return false;
 	/* ⛔ Only on the connection that took the request: the others have
 	 *    nothing to do with it, and the fact belongs to this admission. */
