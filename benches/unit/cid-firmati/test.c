@@ -12,14 +12,15 @@
  *   restart     a NEW key from the same secret (a restarted server) accepts ids made before; another secret does not
  *   reuse       interleaved make/ok on one key for 100 000 rounds stay correct (the MAC context is reused between calls)
  *   unique      100 000 ids made are all different
- *   errors      NULL key, NULL / empty secret
+ *   errors      NULL key, NULL / empty secret; a failing HMAC (the context loses its key) counts in cidkey_errors(), makes ok/make say false, and does not
+ *               count a plain forgery
  *
  * BUILD AND RUN (a second; from the root of the tree):
  *   gcc -std=gnu11 -O1 -g -fsanitize=address,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Isrc \
- *       benches/unit/cid-firmati/test.c src/cid.c -lcrypto -o /tmp/cid-test && /tmp/cid-test
+ *       benches/unit/cid-firmati/test.c -lcrypto -o /tmp/cid-test && /tmp/cid-test
  * Exit code 0 = every check passed.
  */
-#include "cid.h"
+#include "cid.c" /* the module itself, to reach its struct (errors) */
 
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -141,6 +142,22 @@ int main(void)
 	CHECK(cidkey_new(NULL, 32) == NULL && cidkey_new(secret, 0) == NULL, "NULL / empty secret");
 	CHECK(!cidkey_make(NULL, id) && !cidkey_ok(NULL, id, CID_LEN), "NULL key");
 	cidkey_free(NULL);
+	CHECK(cidkey_errors(k) == 0 && cidkey_errors(NULL) == 0, "no HMAC failure so far (%u)", cidkey_errors(k));
+	cidkey_ok(k, id, CID_LEN);
+	CHECK(cidkey_errors(k) == 0, "a bad tag is not an HMAC failure");
+	{
+		cidkey *broken = cidkey_new(secret, sizeof secret);
+		uint8_t good[CID_LEN];
+		cidkey_make(broken, good);
+		EVP_MAC_CTX_free(broken->ctx);
+		broken->ctx = EVP_MAC_CTX_new(broken->mac);       /* a context with no key: from here every HMAC fails */
+		CHECK(!cidkey_ok(broken, good, CID_LEN), "an id cannot be verified when the HMAC fails: false");
+		CHECK(!cidkey_make(broken, good), "and none can be made");
+		CHECK(cidkey_errors(broken) == 2, "two failures counted (%u)", cidkey_errors(broken));
+		cidkey_ok(broken, good, CID_LEN - 1);          /* a wrong length is answered before the HMAC: no failure */
+		CHECK(cidkey_errors(broken) == 2, "a wrong length is not an HMAC failure");
+		cidkey_free(broken);
+	}
 	cidkey_free(k);
 	cidkey_free(k2);
 	printf("\n%d checks, %d failed\n", checks, bad);

@@ -40,6 +40,10 @@ typedef struct cidkey cidkey;
 cidkey *cidkey_new(const uint8_t *secret, size_t secretlen);
 void cidkey_free(cidkey *k);
 
+/* How many times the HMAC itself failed (not a bad tag: a failure of OpenSSL).  When it fails, `cidkey_ok()` answers false — the id
+ * is treated as not signed — and `cidkey_make()` false; a counter that grows is what the caller writes in the log (rate limited). */
+unsigned cidkey_errors(const cidkey *k);
+
 /* Fills `cid[0..CID_LEN)` with a fresh signed id.  False if the system RNG fails (nothing usable written). */
 bool cidkey_make(cidkey *k, uint8_t cid[CID_LEN]);
 

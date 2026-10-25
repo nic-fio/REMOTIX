@@ -296,6 +296,8 @@ struct transport {
 	 * 0 in steady state, > 0 only for a connection that came in with a Retry token of the previous binary */
 	cidkey *cidk;
 	size_t plain_bound;
+	unsigned cid_errors_seen;     /* `cidkey_errors()` at the last line written */
+	uint64_t cid_errors_line_ns;
 
 	/* ⭐ The PAM helper (`DECISIONS.md` §1.10): it is not this module's, it is
 	 *    passed in by `main.c`.  It only serves to hand it to every `wt` that
@@ -1708,6 +1710,25 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
+/* ⭐ `cid-firmati`: if the HMAC itself fails (OpenSSL out of memory: never seen), `cidkey_ok()` says false and the id is treated as not signed
+ *   — its Stateless Reset comes from the small budget, no connection is lost — and no id can be issued.  That must not be silent: one line,
+ *   at most every REFUSAL_LOG_S seconds, with how many failures since the last one. */
+static void cid_errors_check(transport *t)
+{
+	unsigned e = cidkey_errors(t->cidk);
+	ngtcp2_tstamp now;
+	if (e == t->cid_errors_seen)
+		return;
+	now = now_ns();
+	if (t->cid_errors_line_ns && now < t->cid_errors_line_ns + (uint64_t)REFUSAL_LOG_S * NGTCP2_SECONDS)
+		return;
+	registro_dice(REG_QUIC, "⛔ the HMAC of the connection ids failed %u time(s) since the last line: ids that cannot be verified are "
+	              "treated as not signed (their Stateless Resets come from the small budget) and none can be issued while it fails",
+	              e - t->cid_errors_seen);
+	t->cid_errors_seen = e;
+	t->cid_errors_line_ns = now;
+}
+
 static void read_packet_1(transport *t, const struct sockaddr *local,
                             socklen_t localelen, const struct sockaddr *remote,
                             socklen_t remotelen, const ngtcp2_pkt_info *pi,
@@ -1736,6 +1757,7 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 	 *   The first Initial of a client (random destination id, before our Retry) and every packet after the Retry
 	 *   (our signed ids) are routed exactly as before. */
 	bool signed_dcid = cidkey_ok(t->cidk, vc.dcid, vc.dcidlen);
+	cid_errors_check(t);
 	c = (signed_dcid || t->plain_bound) ? cid_find(t, vc.dcid, vc.dcidlen) : NULL;
 	/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25): a connection already marked dead (ngtcp2 asked to
 	 *   drop it silently, or it is closing) is no longer read: a second packet of the same

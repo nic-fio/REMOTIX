@@ -1283,6 +1283,7 @@ cidkey *cidkey_new(const uint8_t *secret, size_t secretlen)
 	return k;
 }
 void cidkey_free(cidkey *k) { free(k); }
+unsigned cidkey_errors(const cidkey *k) { (void)k; return 0; } /* the played MAC does not fail; the line is the unit test's (cid-firmati) */
 bool cidkey_make(cidkey *k, uint8_t cid[18])
 {
 	uint64_t h;

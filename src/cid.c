@@ -13,6 +13,7 @@
 struct cidkey {
 	EVP_MAC *mac;
 	EVP_MAC_CTX *ctx; /* the key is set once; EVP_MAC_init(ctx, NULL, ...) restarts the MAC with the same key (~170 ns) */
+	unsigned errors;  /* the times the HMAC itself failed (never seen: OpenSSL out of memory); transport.c writes a line when it grows */
 };
 
 static bool tag_of(cidkey *k, const uint8_t *nonce, uint8_t tag[CID_TAG])
@@ -20,8 +21,10 @@ static bool tag_of(cidkey *k, const uint8_t *nonce, uint8_t tag[CID_TAG])
 	uint8_t full[32];
 	size_t n = 0;
 	if (!EVP_MAC_init(k->ctx, NULL, 0, NULL) || !EVP_MAC_update(k->ctx, nonce, CID_NONCE) ||
-	    !EVP_MAC_final(k->ctx, full, &n, sizeof full) || n < CID_TAG)
+	    !EVP_MAC_final(k->ctx, full, &n, sizeof full) || n < CID_TAG) {
+		k->errors++; /* `cidkey_ok()` then says false (not signed) and `cidkey_make()` false: the caller must not take it for a forgery */
 		return false;
+	}
 	memcpy(tag, full, CID_TAG);
 	OPENSSL_cleanse(full, sizeof full);
 	return true;
@@ -67,6 +70,11 @@ void cidkey_free(cidkey *k)
 	EVP_MAC_CTX_free(k->ctx);
 	EVP_MAC_free(k->mac);
 	free(k);
+}
+
+unsigned cidkey_errors(const cidkey *k)
+{
+	return k ? k->errors : 0;
 }
 
 bool cidkey_make(cidkey *k, uint8_t cid[CID_LEN])
