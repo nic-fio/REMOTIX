@@ -2533,6 +2533,14 @@ void rcp_refusal_unchecked(uint64_t ticket)
 	unchecked_ticket = ticket;
 }
 
+/* ⭐ 1.5 (reading of rcp.c, A1): the ticket whose «no» is the root side's own pause (`rcp_refusal_paused()`, `rcp.h`); 0 = none. */
+static uint64_t paused_ticket;
+
+void rcp_refusal_paused(uint64_t ticket)
+{
+	paused_ticket = ticket;
+}
+
 /* ⛔⭐ A «NO» THAT DOES NOT COUNT — `DECISIONS.md` §11.47 B (the user, 15 Oct
  *     2026).  Both must hold:
  *       1. the helper said «refused while `pam_faillock` had the account
@@ -2560,6 +2568,14 @@ void rcp_refusal_unchecked(uint64_t ticket)
 static bool refusal_uncounted(const struct sink *k, uint64_t ticket,
                               const char *key, uint64_t now)
 {
+	/* ⭐ A1: the root side's own pause.  Always uncounted (it is not PAM's «no» about a password) and it leaves as a plain REFUSED/WRONG_CREDENTIALS
+	 *    at REJECT_FLOOR, because `refusal_is_ours` stays false — the same byte and the same time as a wrong password. */
+	if (paused_ticket && ticket == paused_ticket) {
+		say(k, "⚠ request %llu was NOT asked of PAM: the root side's own pause (too many refused for this user or from this address). It is "
+		       "answered as a refusal at the same floor as any other and is NOT counted towards the ban — the booking is given back",
+		    (unsigned long long)paused_ticket);
+		return true;
+	}
 	if (!locked_ticket || ticket != locked_ticket)
 		return false;
 	if (!good_recent(key, now)) {

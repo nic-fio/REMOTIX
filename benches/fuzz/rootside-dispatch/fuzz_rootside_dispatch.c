@@ -333,7 +333,7 @@ static ssize_t rxr_sendmsg(int fd, const struct msghdr *m, int flags)
 		memcpy(&v, b, sizeof v);
 		ORACLE(req_known(h.request), "VERDICT for request %llu never sent",
 		       (unsigned long long)h.request);
-		ORACLE(v.outcome <= RXR_NOT_CHECKED, "VERDICT outcome %u", v.outcome);
+		ORACLE(v.outcome <= RXR_OUTCOME_MAX, "VERDICT outcome %u", v.outcome);
 		if (v.outcome == RXR_YES) {
 			struct mq *q = NULL;
 			for (int i = 0; i < nqs; i++)

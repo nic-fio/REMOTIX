@@ -61,7 +61,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 137
+#define EXPECTED_CHECKS 142
 
 static void require(int cond, const char *desc)
 {
@@ -802,6 +802,72 @@ int main(void)
 		if (lf >= 0) {
 			close(lf);
 			unlink(logpath);
+		}
+	}
+
+	printf("  1.5 (reading of rcp.c, A1): a pause is answered PAUSED, not «not checked» (no oracle of the name)\n");
+	{
+		static struct rootside_options opts;
+		struct passwd *pw;
+		static char name[64];
+		const char *someone = NULL;
+		int sv[2];
+		struct rxr_verdict v;
+		struct rxr_auth a2;
+		unsigned tk3 = 0;
+
+		setpwent();
+		while ((pw = getpwent()) != NULL)
+			if (pw->pw_uid != 0 && strlen(pw->pw_name) < 64) {
+				snprintf(name, sizeof name, "%s", pw->pw_name);
+				someone = name;
+				break;
+			}
+		endpwent();
+		require(rootside_verdict_outcome_ok(RXR_NO) && rootside_verdict_outcome_ok(RXR_PAUSED) && !rootside_verdict_outcome_ok(RXR_OUTCOME_MAX + 1)
+		        && !rootside_verdict_outcome_ok(255),
+		        "the list of outcomes: 0..RXR_PAUSED are verdicts, anything above is not");
+		opts.denied_users_path = "/nonexistent";
+		R.o = &opts;
+		if (someone && pw && socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sv) == 0) {
+			char ukey2[16];
+			uint64_t t = log_now_ms();
+
+			R.chan = sv[0];
+			rootside_bounds_init(&R.bounds, t);
+			snprintf(ukey2, sizeof ukey2, "%lu", (unsigned long)pw->pw_uid);
+			for (int i = 0; i < ROOTSIDE_LOGIN_PAIR_LIMIT; i++) {
+				(void)rootside_login_admit(&R.bounds, ukey2, "192.0.2.77", t + i, NULL, &tk3);
+				rootside_login_done(&R.bounds, ukey2, "192.0.2.77", t + i, tk3, RXR_LOGIN_REFUSED, NULL);
+			}
+			auth_fill(&a2);
+			snprintf(a2.user, sizeof a2.user, "%s", someone);
+			snprintf(a2.rhost, sizeof a2.rhost, "192.0.2.77");
+			handle_auth(&a2);
+			require(recv(sv[1], &v, sizeof v, MSG_DONTWAIT) == (ssize_t)sizeof v && v.outcome == RXR_PAUSED && R.bounds.in_flight == 0,
+			        "an existing user paused by the root side: PAUSED (a refusal for the page), not NOT_CHECKED, and no place left in flight");
+			auth_fill(&a2);
+			snprintf(a2.user, sizeof a2.user, "rx-no-such-user-%d", (int)getpid());
+			snprintf(a2.rhost, sizeof a2.rhost, "192.0.2.77");
+			handle_auth(&a2);
+			require(recv(sv[1], &v, sizeof v, MSG_DONTWAIT) == (ssize_t)sizeof v && v.outcome == RXR_NO,
+			        "a name that does not exist: NO, a plain refusal — the same family of answer as the pause, never NOT_CHECKED");
+			auth_fill(&a2);
+			snprintf(a2.user, sizeof a2.user, "%s", someone);
+			snprintf(a2.rhost, sizeof a2.rhost, "192.0.2.78"); /* another address: the pair is not paused */
+			R.bounds.tokens = 0;
+			R.bounds.tokens_ms = log_now_ms() + 100000;
+			handle_auth(&a2);
+			require(recv(sv[1], &v, sizeof v, MSG_DONTWAIT) == (ssize_t)sizeof v && v.outcome == RXR_NOT_CHECKED,
+			        "over the AUTH bounds (a fact about the server, not about the name): still NOT_CHECKED");
+			send_verdict(5, 200, NULL, NULL);
+			require(recv(sv[1], &v, sizeof v, MSG_DONTWAIT) == (ssize_t)sizeof v && v.outcome == RXR_NOT_CHECKED,
+			        "the root side never sends an outcome outside the list: it says NOT_CHECKED");
+			close(sv[0]);
+			close(sv[1]);
+			R.chan = -1;
+		} else {
+			printf("    ??  no non-root user in passwd or no socketpair for the PAUSED checks\n");
 		}
 	}
 

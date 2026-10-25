@@ -992,10 +992,18 @@ static void send_refused(uint64_t request, int reason)
 	send_refused_wait(request, reason, 0);
 }
 
+bool rootside_verdict_outcome_ok(unsigned outcome)
+{
+	return outcome <= RXR_OUTCOME_MAX;
+}
+
 static void send_verdict(uint64_t request, int outcome, const uint8_t *grant, const char *canon)
 {
 	struct rxr_verdict v;
 
+	/* the root side's own list: a value outside it is a defect of ours, and the safe thing to say is «not checked» (never counted) */
+	if (outcome < 0 || !rootside_verdict_outcome_ok((unsigned)outcome))
+		outcome = RXR_NOT_CHECKED;
 	memset(&v, 0, sizeof v);
 	head_fill(&v.h, RXR_VERDICT, request);
 	v.outcome = (uint8_t)outcome;
@@ -1057,18 +1065,18 @@ static void on_pam_outcome(void *ctx, uint64_t ticket, int outcome, const char *
 		if (ev.pair_ban)
 			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of «%s» (uid %s) from «%s» refused by PAM in %d "
 			              "min: no AUTH for that user from that address for %llu min (pause %d of 3) "
-			              "— «not checked» meanwhile", ROOTSIDE_LOGIN_PAIR_LIMIT, user, pa->ukey,
+			              "— answered PAUSED meanwhile", ROOTSIDE_LOGIN_PAIR_LIMIT, user, pa->ukey,
 			              pa->rhost, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
 			              (unsigned long long)(ev.pair_ms / 60000), ev.pair_level);
 		if (ev.user_ban)
 			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of «%s» (uid %s) refused by PAM in %d min "
 			              "from any addresses: no AUTH for that user from anywhere for %llu min "
-			              "(fixed) — «not checked» meanwhile", ROOTSIDE_LOGIN_USER_LIMIT, user,
+			              "(fixed) — answered PAUSED meanwhile", ROOTSIDE_LOGIN_USER_LIMIT, user,
 			              pa->ukey, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
 			              (unsigned long long)(ev.user_ms / 60000));
 		if (ev.host_ban)
 			registro_dice(LOG_ROOT, "⛔ R2: %d passwords from «%s» refused by PAM in %d min: no "
-			              "AUTH from it for %llu min (pause %d of 3) — «not checked» meanwhile",
+			              "AUTH from it for %llu min (pause %d of 3) — answered PAUSED meanwhile",
 			              ROOTSIDE_LOGIN_HOST_LIMIT, pa->rhost, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
 			              (unsigned long long)(ev.host_ms / 60000), ev.host_level);
 	}
@@ -1172,12 +1180,16 @@ static void handle_auth(struct rxr_auth *a)
 		static uint32_t paused_hidden;
 
 		rootside_auth_done(&R.bounds);
-		out = RXR_NOT_CHECKED;
+		/* ⛔⭐ A1 of the reading of rcp.c: NOT `RXR_NOT_CHECKED`.  «Not checked» is 0x0E after one second on the page; a name that does not exist
+		 *    is refused 0x07 after 2.5 s; a pause that answered differently would tell whoever can start it (four addresses are enough to
+		 *    refuse five for one name) that the name exists.  PAUSED is a plain refusal for the page, at the same floor, that the network side
+		 *    does not count. */
+		out = RXR_PAUSED;
 		paused_hidden++;
 		if (now >= paused_logged_ms + 1000) {
 			registro_dice(LOG_ROOT, "⛔ AUTH of «%.64s» from «%.64s» not asked of PAM: %s (%llu s "
-			              "to go; %u in the last second) — «not checked», NOT counted towards "
-			              "the network side's ban", a->user, a->rhost,
+			              "to go; %u in the last second) — answered PAUSED: a refusal like any other for the page (0x07 at the "
+			              "same floor), NOT counted by the network side", a->user, a->rhost,
 			              lg == RXR_LOGIN_PAIR_PAUSED  ? "this user from this address is paused"
 			              : lg == RXR_LOGIN_USER_PAUSED ? "the user is paused (too many refused from anywhere)"
 			              : lg == RXR_LOGIN_HOST_PAUSED ? "the address is paused"
@@ -2586,6 +2598,13 @@ static void dispatch(union rpk *pk, int fd)
 		if (k >= 0)
 			C.auths[k].used = false;
 		explicit_bzero(pk->v.grant, sizeof pk->v.grant);
+		/* ⭐ A1: the outcome is one of the list (`RXR_OUTCOME_MAX`).  A value outside it is not a refusal to count: it is said, and taken as
+		 *    «not checked» (never counted, 0x0E) — what a defect of ours deserves. */
+		if (!rootside_verdict_outcome_ok(pk->v.outcome)) {
+			registro_dice(LOG_ROOT, "⛔ a VERDICT for request %llu with outcome %u, which is not in the list (0..%d): taken as «not checked»",
+			              (unsigned long long)pk->h.request, pk->v.outcome, RXR_OUTCOME_MAX);
+			pk->v.outcome = RXR_NOT_CHECKED;
+		}
 		if (C.on_verdict)
 			C.on_verdict(C.verdict_ctx, pk->h.request, pk->v.outcome);
 		break;
