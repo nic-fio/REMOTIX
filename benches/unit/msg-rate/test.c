@@ -197,6 +197,14 @@ int main(int argc, char **argv)
 		msg_class_rate(MC_BUTTON, &p, &b);
 		CHECK(p >= 50, "7: button >= 50/s");
 	}
+	/* 7b: LAYOUT is the tightest (it replaces a keymap in the compositor), and still above what a hand does */
+	{
+		unsigned p, b;
+
+		msg_class_rate(MC_LAYOUT, &p, &b);
+		CHECK(p >= 2 && b >= 10, "7b: LAYOUT allows at least 2 a second and a burst of 10");
+		CHECK(p <= 10, "7b: and no more than 10 a second sustained");
+	}
 	/* 8: a person never meets the limit */
 	{
 		struct msg_gate mouse = {0}, key = {0}, wheel = {0};
@@ -246,6 +254,15 @@ int main(int argc, char **argv)
 			}
 			p = body_of(src, "bool rcp_time(rcp_session *s, uint64_t now)", &n);
 			CHECK(p != NULL && memmem(p, n, "msg_flush_all(s, now)", strlen("msg_flush_all(s, now)")) != NULL, "9: rcp_time flushes the windows");
+			p = body_of(src, "static bool drain(rcp_session *s, uint64_t now)", &n);
+			if (p) {
+				const char *same = memmem(p, n, "strcmp(new_one, s->layout) == 0", strlen("strcmp(new_one, s->layout) == 0"));
+				const char *known = memmem(p, n, "layout_known(s, new_one)", strlen("layout_known(s, new_one)"));
+
+				CHECK(same && known && same < known, "9: LAYOUT: the «already in force» test comes BEFORE the XKB compilation (layout_known)");
+				CHECK(memmem(p, n, "strcmp(new_one, s->layout_unknown) == 0 ||", strlen("strcmp(new_one, s->layout_unknown) == 0 ||")) != NULL,
+				      "9: LAYOUT: a layout already found unknown is not compiled again");
+			}
 			free(src);
 		}
 	}

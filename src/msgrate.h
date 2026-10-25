@@ -53,7 +53,8 @@ struct msg_gate_closed {
 };
 
 /* Sustained rate (per second) and burst (messages) of each kind.  WIDE on purpose: far above what a hand can do (a gaming mouse at
- * 1000 Hz is 1000 events a second, a key held down repeats 30 times a second), so no person ever meets them. */
+ * 1000 Hz is 1000 events a second, a key held down repeats 30 times a second), so no person ever meets them.  LAYOUT: a keyboard
+ * layout is changed by a shortcut a few times in a row at most; every accepted one replaces a keymap in the compositor. */
 static inline void msg_class_rate(enum msg_class c, unsigned *per_s, unsigned *burst)
 {
 	switch (c) {
@@ -65,7 +66,7 @@ static inline void msg_class_rate(enum msg_class c, unsigned *per_s, unsigned *b
 	case MC_REQUEST_KEY:  *per_s = 50;   *burst = 100;  break;
 	case MC_PACE:         *per_s = 100;  *burst = 200;  break;
 	case MC_VIEW:         *per_s = 100;  *burst = 200;  break;
-	case MC_LAYOUT:       *per_s = 20;   *burst = 40;   break;
+	case MC_LAYOUT:       *per_s = 5;    *burst = 20;   break;
 	case MC_FIT_CANVAS:   *per_s = 20;   *burst = 40;   break;
 	default:              *per_s = 100;  *burst = 200;  break;
 	}

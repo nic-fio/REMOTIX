@@ -541,6 +541,8 @@ struct rcp_session {
 	 *    whether it has really changed.  ⚠ 64 bytes plus the NUL: it is the
 	 *    ceiling of §4.5. */
 	char layout[65];
+	/* The last LAYOUT asked while open that this machine does not have: asked again, it is not compiled again (`layout_known()` costs a keymap). */
+	char layout_unknown[65];
 	uint64_t since;   /* when the current state began */
 	/* ⛔⛔⭐ TWO CLOCKS, NOT ONE — and until 16 Aug 2026 there was only one
 	 *      doing the job of both.
@@ -9083,16 +9085,10 @@ static bool drain(rcp_session *s, uint64_t now)
 				        "LAYOUT malformed");
 				return false;
 			}
-			if (!layout_known(s, new_one)) {
-				reg(s, "⚠ LAYOUT «%s»: this machine does not have it.  ⛔ The "
-				       "session is NOT closed (§8.3, «never detach») and keeps "
-				       "«%s»: the previous keyboard still works, and taking away "
-				       "the work for a missing keyboard would cost more than the "
-				       "fault.  ⚠ At `ATTACH` §4.5 wants the farewell, and there it is "
-				       "right: there is no session to save",
-				    new_one, s->layout[0] ? s->layout : "the session's own");
-				break;
-			}
+			/* ⛔⭐ THE CHEAP CHECK FIRST (audit P-R1/Q-R1/S-R2): `layout_known()` compiles a whole XKB keymap in the main loop, the
+			 *    one thread of every user, and until now it ran BEFORE the «already the one in force» test and for every message.
+			 *    The comparison costs nothing, so it comes first; and the last layout this machine turned out not to have is
+			 *    remembered, so that repeating it does not compile it again either. */
 			if (strcmp(new_one, s->layout) == 0) {
 				/* ⚠ It is written all the same: a client that sends the same
 				 *   layout again is not a fault, but a keymap replacement
@@ -9105,9 +9101,21 @@ static bool drain(rcp_session *s, uint64_t now)
 				    new_one);
 				break;
 			}
+			if (strcmp(new_one, s->layout_unknown) == 0 || !layout_known(s, new_one)) {
+				snprintf(s->layout_unknown, sizeof s->layout_unknown, "%s", new_one);
+				reg(s, "⚠ LAYOUT «%s»: this machine does not have it.  ⛔ The "
+				       "session is NOT closed (§8.3, «never detach») and keeps "
+				       "«%s»: the previous keyboard still works, and taking away "
+				       "the work for a missing keyboard would cost more than the "
+				       "fault.  ⚠ At `ATTACH` §4.5 wants the farewell, and there it is "
+				       "right: there is no session to save",
+				    new_one, s->layout[0] ? s->layout : "the session's own");
+				break;
+			}
 			reg(s, "LAYOUT: from «%s» to «%s», with the session OPEN (§7.1 0x0009)",
 			    s->layout[0] ? s->layout : "(none)", new_one);
 			snprintf(s->layout, sizeof s->layout, "%s", new_one);
+			s->layout_unknown[0] = 0;
 			apply_layout(s, "LAYOUT (0x0009)");
 			/* ⛔ And NOTHING is answered on the wire: §7.1 foresees no
 			 *    answer to `LAYOUT`, exactly as for `VIEW`.  A
