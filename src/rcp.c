@@ -227,11 +227,15 @@ enum {
  *    (`pam_listfile`, `requisite`, before the password) was refused in ~1.1 s, i.e. only the fixed second above, while
  *    a real user with a wrong password and a user that does not exist took ~2.0-2.2 s (the failure delay of
  *    `pam_unix`/`pam_faildelay`, which runs INSIDE the helper): the time told whether a name was in the list.
- *    ⇒ A refusal leaves NOT BEFORE this floor, the same for every cause (denied, wrong password, no such user, the
- *    limiter, a check we could not make); a success keeps FIXED_DELAY.  The floor is higher than PAM's failure
- *    delay (random, up to 2.5 s with the default 2 s base): a refusal slower than the floor is paced by PAM, as
- *    before, and only that tail could still be told apart — so the number is a margin to be re-measured with
- *    pam-tempi, not a proof.  It is a FLOOR, like FIXED_DELAY: the verdict arriving later still sets the pace. */
+ *    ⇒ A refusal that goes out as `0x07` (WRONG_CREDENTIALS: PAM's no — denied, wrong password, no such user, a
+ *    locked account —, and the attempt without a verdict) leaves NOT BEFORE this floor; a success keeps FIXED_DELAY.
+ *    ⛔ NOT the others: the limiter's `0x08` and our own `0x0E` already say by their BYTE which road they took, so the
+ *    time reveals nothing more, and a connection in wait-verdict cannot be evicted (transport.c): holding them 2.5 s
+ *    would let ~51 CREDENTIALS per second fill the 128 pre-login places instead of 128 per second.  The floor is higher
+ *    than PAM's failure delay (random, up to 2.5 s with the default 2 s base): a refusal slower than the floor is
+ *    paced by PAM, as before, and only that tail could still be told apart — so the number is a margin to be
+ *    re-measured with pam-tempi, not a proof.  It is a FLOOR, like FIXED_DELAY: the verdict arriving later still
+ *    sets the pace. */
 #define REJECT_FLOOR 2500
 
 /* ⛔⭐ THE VERDICT CEILING — 12 Aug 2026, `DECISIONS.md` §1.10.
@@ -9163,11 +9167,16 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		 *    and the test client, which watches §4.4-bis, left saying
 		 *    «less than a second» (C20 «I could not look» on gnome and kde).
 		 *    The fixed second is a FLOOR: at most 1 ms more is paid. */
-		/* ⛔ A refusal waits for REJECT_FLOOR, a success for FIXED_DELAY: see REJECT_FLOOR.  `cred_good` is final
-		 *    here (the verdict is in, `expected_verdict` is false). */
-		if (now - s->cred_arrival <= (s->cred_good ? FIXED_DELAY : REJECT_FLOOR))
+		/* ⛔ The byte first, because it decides the wait: `0x07` (PAM's no) waits for REJECT_FLOOR; a success, the
+		 *    limiter's `0x08` and our own `0x0E` (refusal_is_ours: the check was not made) wait for FIXED_DELAY.
+		 *    `cred_good` is final here (the verdict is in, `expected_verdict` is false). */
+		uint8_t reason = s->cred_reason;
+		if (s->refusal_is_ours && reason == RCP_WRONG_CREDENTIALS)
+			reason = RCP_SESSION_UNSERVABLE;
+		const uint64_t floor_ms = (s->cred_good || reason != RCP_WRONG_CREDENTIALS) ? FIXED_DELAY : REJECT_FLOOR;
+		if (now - s->cred_arrival <= floor_ms)
 			return true;
-		reg(s, "the fixed second has passed (%llu ms)",
+		reg(s, "the %s has passed (%llu ms)", floor_ms == REJECT_FLOOR ? "refusal floor" : "fixed second",
 		    (unsigned long long)(now - s->cred_arrival));
 		if (s->cred_good) {
 			send_message(s, T_ADMITTED, NULL, 0);
@@ -9200,10 +9209,8 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		 *   login in the last 30 days (§11.47 B, `refusal_uncounted()`), is NOT
 		 *   counted and still goes out as 0x07 — 0x0E would reveal that the
 		 *   account exists. */
-		uint8_t reason = s->cred_reason;
+		/* `reason` was computed above, with the conversion, because the wait depends on it */
 		if (s->refusal_is_ours) {
-			if (reason == RCP_WRONG_CREDENTIALS)
-				reason = RCP_SESSION_UNSERVABLE;
 			reg(s, "⛔ and this REJECTED is OURS, not PAM's: the check was "
 			       "not made — reason %#04x on the wire (§4.4, DECISIONS.md "
 			       "§11.39), and the counters of §4.4-bis were NOT touched "

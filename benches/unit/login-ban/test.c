@@ -829,11 +829,11 @@ static void test_verdict_paths(void)
 	s.expected_verdict = true; s.ticket = 11;
 	CHECK(rcp_verdict_lost(&s, 11), "(wire) the lost verdict is taken");
 	wire_reset();
-	CHECK(rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_n == 0, "(wire) a refusal does not leave after the fixed second alone");
-	CHECK(rcp_time(&s, at(0) + REJECT_FLOOR) && wire_n == 0, "(wire) nothing before the refusal floor is over");
-	CHECK(!rcp_time(&s, at(0) + REJECT_FLOOR + 1) && wire_n == 1 && wire_last == RCP_SESSION_UNSERVABLE
+	CHECK(rcp_time(&s, at(0) + FIXED_DELAY) && wire_n == 0, "(wire) nothing before the fixed second is over");
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_n == 1 && wire_last == RCP_SESSION_UNSERVABLE
 	      && wire_closed == RCP_SESSION_UNSERVABLE,
-	      "(wire) helper dead: REJECTED 0x0E after the fixed second (got %#x, %d messages)", wire_last, wire_n);
+	      "(wire) helper dead: REJECTED 0x0E after the fixed second alone, NOT held to the floor (got %#x, %d messages)",
+	      wire_last, wire_n);
 	CHECK(failures_of(K, "alice") == 0, "(wire) and nothing was counted");
 	/* b. a PAM no: still 0x07 */
 	fresh();
@@ -859,8 +859,9 @@ static void test_verdict_paths(void)
 	s.state = S_WAIT_VERDICT; s.expected_verdict = false; s.cred_good = false; s.cred_reason = RCP_TOO_MANY_ATTEMPTS;
 	s.refusal_is_ours = true; s.cred_arrival = at(0);
 	wire_reset();
-	CHECK(!rcp_time(&s, at(0) + REJECT_FLOOR + 1) && wire_last == RCP_TOO_MANY_ATTEMPTS,
-	      "(wire) a reason other than WRONG_CREDENTIALS is kept (0x08, got %#x)", wire_last);
+	CHECK(!rcp_time(&s, at(0) + FIXED_DELAY + 1) && wire_last == RCP_TOO_MANY_ATTEMPTS,
+	      "(wire) a reason other than WRONG_CREDENTIALS is kept (0x08, got %#x) and goes out at the fixed second, not held to "
+	      "REJECT_FLOOR (the byte already says the road; wait-verdict connections cannot be evicted)", wire_last);
 
 	/* e. ⛔ THE UNIFORM FLOOR (25 Oct 2026, pam-tempi): a denied-list user answered by PAM in 50 ms, a wrong password
 	 *    after PAM's own 2 s and a success: the refusals leave at the same instant, never before REJECT_FLOOR; the
