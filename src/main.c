@@ -1472,6 +1472,7 @@ static size_t max_connections, max_pending, pending_per_address, pending_per_48;
 static struct is_present {
 	char user[257];
 	uint64_t last_input_ms;
+	uint8_t too_soon; /* ⭐ 1.6 (R1): CLOSE_ORPHAN refused TOO_SOON this many times in a row */
 } *present;
 static int how_many_present;
 
@@ -1521,6 +1522,7 @@ static void presence_mark(const char *user, uint64_t now_ms)
 		}
 		if (strcmp(present[i].user, user) == 0) {
 			present[i].last_input_ms = now_ms;
+			present[i].too_soon = 0;
 			return;
 		}
 	}
@@ -1554,6 +1556,7 @@ static void presence_mark(const char *user, uint64_t now_ms)
 	snprintf(present[free_slot].user, sizeof present[free_slot].user, "%s",
 	         user);
 	present[free_slot].last_input_ms = now_ms;
+	present[free_slot].too_soon = 0;
 }
 
 static void presence_forget(const char *user)
@@ -1652,8 +1655,8 @@ static void terminate_in_child(void *ctx, const char *user)
  *    expires it is because nobody was there any more.  But «usually» is not
  *    «never», and whoever is there must read a sentence instead of looking at
  *    a frozen screen. */
-static void abandon_expired(struct bridge *p, const char *user,
-                              uint64_t stalled_ms)
+static uint64_t abandon_expired(struct bridge *p, const char *user,
+                              uint64_t stalled_ms, bool may_retry)
 {
 	size_t amount;
 
@@ -1693,6 +1696,16 @@ static void abandon_expired(struct bridge *p, const char *user,
 		              user);
 		if (children_ensure(p->f, user))
 			found_again_remove(user);
+		else {
+			/* ⭐ 1.6 (R1): the ROOT SIDE keeps its own abandonment clock and said the
+			 *    desktop is not abandoned yet by it (it counts from the moment the
+			 *    network side died, which can be a few seconds after ours).  Not
+			 *    «forgotten»: asked again after what it said, a few times. */
+			uint64_t w = children_retry_after_ms();
+
+			if (w && may_retry)
+				return w;
+		}
 	}
 	if (!children_terminate_session(p->f, user, CHILDREN_EXIT_ABANDON))
 		registro_dice(LOG_STARTUP,
@@ -1705,11 +1718,14 @@ static void abandon_expired(struct bridge *p, const char *user,
 	 *    the first line has already reported.  ⚠ And if a new session is born,
 	 *    its first gesture will put it back in the table. */
 	presence_forget(user);
+	return 0;
 }
 
 /* ⭐ The clock's round.  ⚠ Called at every pass of the loop: it costs nothing
  *    (sixteen comparisons) and an expiry that waits for an event is an expiry
  *    that never triggers — the lesson of `rule_heartbeat`. */
+#define ABANDON_TOO_SOON_RETRIES 3
+
 static void abandon_round(struct bridge *p, uint64_t now_ms)
 {
 	if (!abandon_ms || !p || !p->f)
@@ -1728,7 +1744,23 @@ static void abandon_round(struct bridge *p, uint64_t now_ms)
 			char chi[sizeof present[0].user];
 			memcpy(chi, present[i].user, sizeof chi);
 			chi[sizeof chi - 1] = '\0';
-			abandon_expired(p, chi, now_ms - present[i].last_input_ms);
+			uint64_t again = abandon_expired(p, chi, now_ms - present[i].last_input_ms,
+			                                 present[i].too_soon < ABANDON_TOO_SOON_RETRIES);
+
+			if (again) {
+				/* the clock expires again after what the root side said (+1 s of slack),
+				 * at most a minute and a bit; at most ABANDON_TOO_SOON_RETRIES times */
+				if (again > 60000)
+					again = 60000;
+				again += 1000;
+				present[i].too_soon++;
+				present[i].last_input_ms = now_ms + again - abandon_ms;
+				registro_dice(LOG_STARTUP,
+				              "⭐ §5.3: the root side does not find «%s» abandoned yet: "
+				              "asked again in %llu ms (try %d of %d)", chi,
+				              (unsigned long long)again, present[i].too_soon,
+				              ABANDON_TOO_SOON_RETRIES);
+			}
 		}
 	}
 }
@@ -2227,7 +2259,18 @@ int main(int argc, char **argv)
 		 *     the session gets killed» (the user's decision, 16 Aug 2026).
 		 *     ⚠ `0` = off, and then no session is ever closed on its own. */
 		else if (strcmp(a, "--abandon-s") == 0 && v)
-			abandon_ms = (uint64_t)strtoull(argv[++i], NULL, 10) * 1000;
+		{
+			/* ⭐ 1.6 (R1): at most a year — a longer value is «never» for any real service,
+			 *    and the seconds-to-milliseconds product must not wrap */
+			unsigned long long v_s = strtoull(argv[++i], NULL, 10);
+
+			if (v_s > ROOTSIDE_ABANDON_S_MAX) {
+				fprintf(stderr, "remotix: --abandon-s %llu is above a year: using %llu\n", v_s,
+				        ROOTSIDE_ABANDON_S_MAX);
+				v_s = ROOTSIDE_ABANDON_S_MAX;
+			}
+			abandon_ms = (uint64_t)v_s * 1000;
+		}
 		/* ⛔⭐⭐ PHASE 9 — GHOST EVICTION, and it sits next to the clocks
 		 *      because it belongs to their family, but it is NOT a fourth
 		 *      clock: it does not trigger on its own, it triggers only when a

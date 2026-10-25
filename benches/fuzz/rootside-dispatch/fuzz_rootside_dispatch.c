@@ -184,6 +184,7 @@ struct mgrant { bool used; uint8_t b[RXR_GRANT_BYTES]; char user[RXR_USER_MAX];
                 char rhost[RXR_RHOST_MAX]; uint64_t minted; uint32_t gen; };
 #define FUZZ_ABANDON_MS 1000 /* R1: the abandonment the harness gives the root side */
 static uint64_t orphan_born_ms[5]; /* the last close-only birth per user */
+static uint64_t last_exit_ms[5];   /* R1: when the user was last left without a child (the model) */
 static struct mgrant grants[1024]; /* a ring: the root side keeps 32 */
 static int ngrants;
 struct mq { bool open; uint64_t ticket, request; char user[RXR_USER_MAX]; char rhost[RXR_RHOST_MAX];
@@ -191,7 +192,7 @@ struct mq { bool open; uint64_t ticket, request; char user[RXR_USER_MAX]; char r
 static struct mq qs[64];
 static int nqs;
 struct mkid { bool alive, dead, exited_told; pid_t pid; uint64_t serial; uid_t uid;
-             uint32_t gen; };
+             uint32_t gen; uint64_t orphan_ms; };
 static struct mkid kids[64];
 static int nkids;
 static uint64_t requests_sent[4096]; /* a ring: AUTH has 16 in flight, so 4096 back is plenty */
@@ -411,11 +412,19 @@ static pid_t rxr_waitpid(pid_t pid, int *st, int opt)
 			return 0;
 		net_dead = false;
 		*st = 9; /* killed by SIGKILL */
+		/* R1: the root side marks the children of that network side the moment it sees it die */
+		for (int i = 0; i < nkids; i++)
+			if (kids[i].alive && kids[i].gen == R.generation && !kids[i].orphan_ms)
+				kids[i].orphan_ms = rx_now_ms ? rx_now_ms : 1;
 		return pid;
 	}
 	for (int i = 0; i < nkids; i++)
 		if (kids[i].pid == pid && kids[i].dead && kids[i].alive) {
 			kids[i].alive = false; /* reaped */
+			for (int u = 0; u < 5; u++)
+				if (USERS[u].uid == kids[i].uid)
+					last_exit_ms[u] = kids[i].orphan_ms ? kids[i].orphan_ms
+					                                    : (rx_now_ms ? rx_now_ms : 1);
 			*st = 7 << 8;
 			return pid;
 		}
@@ -464,9 +473,10 @@ static child_outcome rxr_child_birth(const struct birth_opts *b, const char *use
 		ORACLE(!rhost && strcmp(c.user, user) == 0, "CLOSE_ORPHAN of «%s» gave birth to «%s»",
 		       c.user, user);
 		ORACLE(logind_live[ui], "CLOSE_ORPHAN of «%s» without its live remotix session", user);
-		ORACLE(rx_now_ms >= t_start + FUZZ_ABANDON_MS,
-		       "CLOSE_ORPHAN of «%s» accepted %llu ms after the root side started, under the abandon clock",
-		       user, (unsigned long long)(rx_now_ms - t_start));
+		ORACLE(rx_now_ms >= (last_exit_ms[ui] > t_start ? last_exit_ms[ui] : t_start) + FUZZ_ABANDON_MS,
+		       "CLOSE_ORPHAN of «%s» accepted %llu ms after the root side started (last exit of "
+		       "that uid at %llu), under the abandon clock", user,
+		       (unsigned long long)(rx_now_ms - t_start), (unsigned long long)last_exit_ms[ui]);
 		ORACLE(!orphan_born_ms[ui] || rx_now_ms >= orphan_born_ms[ui] + ROOTSIDE_ORPHAN_UID_MS,
 		       "a second close-only child for «%s» %llu ms after the first", user,
 		       (unsigned long long)(rx_now_ms - orphan_born_ms[ui]));
@@ -496,6 +506,7 @@ static child_outcome rxr_child_birth(const struct birth_opts *b, const char *use
 	kids[nkids].serial = serial;
 	kids[nkids].uid = USERS[ui].uid;
 	kids[nkids].gen = R.generation;
+	kids[nkids].orphan_ms = 0;
 	birth_pid = out->pid;
 	nkids++;
 	return CHILD_READY;
@@ -699,6 +710,7 @@ static void setup(void)
 	t_start = rx_now_ms;
 	ngrants = nqs = nkids = nreq = 0;
 	memset(orphan_born_ms, 0, sizeof orphan_born_ms);
+	memset(last_exit_ms, 0, sizeof last_exit_ms);
 	asked_in_flight = asked_total = 0;
 	fail_next_birth = 0;
 	memset(logind_live, 0, sizeof logind_live);

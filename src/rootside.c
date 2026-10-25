@@ -282,7 +282,7 @@ bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint6
 				since = b->exits[i].at_ms;
 			break;
 		}
-	due = since + b->abandon_ms;
+	due = since > UINT64_MAX - b->abandon_ms ? UINT64_MAX : since + b->abandon_ms; /* saturates */
 	if (now_ms >= due)
 		return true;
 	if (left_ms)
@@ -515,6 +515,9 @@ struct own_child {
 	uint32_t generation;  /* of the network side it was born for */
 	uint64_t term_at;     /* ≠ 0: that network side is dead — SIGTERM then */
 	uint64_t kill_at;     /* ≠ 0: SIGTERM sent — SIGKILL then */
+	/* ⭐ 1.6 (R1): ≠ 0: the moment its network side died — the user was left without a client
+	 * THEN, not when this (slow) child is finally reaped */
+	uint64_t orphaned_ms;
 };
 
 struct pending_auth {
@@ -692,14 +695,20 @@ static void send_exited(const struct rxr_child_exited *e)
 	R.outbox[R.nout++] = *e;
 }
 
-static void send_refused(uint64_t request, int reason)
+static void send_refused_wait(uint64_t request, int reason, uint64_t wait_ms)
 {
 	struct rxr_spawn_refused r;
 
 	memset(&r, 0, sizeof r);
 	head_fill(&r.h, RXR_SPAWN_REFUSED, request);
 	r.reason = (uint8_t)reason;
+	r.wait_ms = wait_ms > UINT32_MAX ? UINT32_MAX : (uint32_t)wait_ms;
 	(void)chan_send(&r, sizeof r, -1);
+}
+
+static void send_refused(uint64_t request, int reason)
+{
+	send_refused_wait(request, reason, 0);
 }
 
 static void send_verdict(uint64_t request, int outcome, const uint8_t *grant)
@@ -907,7 +916,7 @@ static void birth(uint64_t request, const char *user, const char *rhost, uint32_
 				              "been without a client for %llu s yet (%llu s to go)", user,
 				              (long)uid, (unsigned long long)(R.bounds.abandon_ms / 1000),
 				              (unsigned long long)((left + 999) / 1000));
-			send_refused(request, RXR_REF_TOO_SOON);
+			send_refused_wait(request, RXR_REF_TOO_SOON, left == UINT64_MAX ? 0 : left);
 			return;
 		}
 	}
@@ -1176,7 +1185,7 @@ static void reap_kids(void)
 		if (k->render_grant)
 			render_grant_remove(k->user, k->uid, k->gid);
 		/* ⭐ 1.6 (R1): the moment the user was left without a client, for CLOSE_ORPHAN */
-		rootside_exit_note(&R.bounds, k->uid, log_now_ms());
+		rootside_exit_note(&R.bounds, k->uid, k->orphaned_ms ? k->orphaned_ms : log_now_ms());
 		registro_dice(LOG_ROOT, "the child of «%s» (pid %ld, serial %llu) is reaped by "
 		              "the root side: %s", k->user, (long)k->pid,
 		              (unsigned long long)k->serial, status_text(st, said, sizeof said));
@@ -1277,8 +1286,11 @@ static void reap_net(uint64_t now)
 	}
 	/* ⛔ Its children: the EOF first, then the signals (`kids_hurry()`). */
 	for (int i = 0; i < R.cap; i++)
-		if (R.kids[i].used && R.kids[i].generation == R.generation && !R.kids[i].term_at)
+		if (R.kids[i].used && R.kids[i].generation == R.generation && !R.kids[i].term_at) {
 			R.kids[i].term_at = now + KIDS_EOF_GRACE_MS;
+			/* ⭐ 1.6 (R1): from here the user has no client, whatever the child takes to leave */
+			R.kids[i].orphaned_ms = now ? now : 1;
+		}
 	if (R.stopping)
 		return;
 	R.deaths_in_row = now - R.net_born_ms < NET_STABLE_MS ? R.deaths_in_row + 1 : 1;
@@ -1640,7 +1652,8 @@ int rootside_main(const struct rootside_options *o)
 		return 1;
 	}
 	rootside_bounds_init(&R.bounds, log_now_ms());
-	R.bounds.abandon_ms = o->abandon_s * 1000;
+	R.bounds.abandon_ms = (o->abandon_s > ROOTSIDE_ABANDON_S_MAX ? ROOTSIDE_ABANDON_S_MAX
+	                                                          : o->abandon_s) * 1000;
 	registro_dice(LOG_ROOT,
 	              "⭐ ROOT SIDE on (pid %ld, DECISIONS.md §11.50): single-threaded, PAM "
 	              "helper and children below it, up to %d children; the network side "
@@ -1786,6 +1799,7 @@ static struct {
 	void *verdict_ctx;
 	RootsideChildExited on_exited;
 	void *exited_ctx;
+	uint32_t last_wait_ms; /* R1: the TOO_SOON answer's wait */
 	struct {
 		bool used;
 		uint64_t request;
@@ -2172,8 +2186,10 @@ static int wait_birth(uint64_t request, int timeout_ms, struct rootside_born *ou
 			continue;
 		if ((pk.h.kind == RXR_SPAWNED || pk.h.kind == RXR_SPAWN_REFUSED)
 		    && pk.h.request == request) {
-			if (pk.h.kind == RXR_SPAWN_REFUSED)
+			if (pk.h.kind == RXR_SPAWN_REFUSED) {
+				C.last_wait_ms = pk.r.reason == RXR_REF_TOO_SOON ? pk.r.wait_ms : 0;
 				return pk.r.reason ? pk.r.reason : RXR_REF_FAILED;
+			}
 			memset(out, 0, sizeof *out);
 			out->serial = pk.s.serial;
 			out->pid = (pid_t)pk.s.pid;
@@ -2217,6 +2233,11 @@ int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
 	}
 	explicit_bzero(s.grant, sizeof s.grant);
 	return wait_birth(s.h.request, timeout_ms, out);
+}
+
+uint64_t rootside_last_wait_ms(void)
+{
+	return C.last_wait_ms;
 }
 
 int rootside_close_orphan(const char *user, int timeout_ms, struct rootside_born *out)

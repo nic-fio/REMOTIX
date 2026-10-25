@@ -57,7 +57,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 65
+#define EXPECTED_CHECKS 69
 
 static void require(int cond, const char *desc)
 {
@@ -525,6 +525,66 @@ int main(void)
 			        && rootside_orphan_abandoned(&fb, 3000, 260000, NULL),
 			        "… and the newcomer has its own");
 		}
+	}
+
+	printf("  1.6 (R1, review): the exit of a child whose network side died, and the overflow\n");
+	{
+		struct rootside_bounds ab;
+		struct own_child kid;
+		pid_t netp, kidp;
+		uint64_t left = 0;
+		int tries;
+
+		/* the sum with abandon_ms saturates instead of wrapping */
+		rootside_bounds_init(&ab, 5000);
+		ab.abandon_ms = UINT64_MAX;
+		require(!rootside_orphan_abandoned(&ab, 1000, 1ull << 62, &left) && left > 0,
+		        "abandon_ms at the maximum: no wrap, nothing is abandoned (it did, once, by wrapping)");
+		/* network side killed, a SLOW child: the clock starts when the network side died,
+		 * not when the child is finally reaped (else an honest request, made from the network
+		 * side's own clock that started at its restart, would come too soon and the desktop
+		 * stay open for good) */
+		netp = fork();
+		if (netp == 0)
+			_exit(0);
+		kidp = fork();
+		if (kidp == 0) {
+			pause();
+			_exit(0);
+		}
+		memset(&kid, 0, sizeof kid);
+		kid.used = true;
+		kid.pid = kidp;
+		kid.uid = 1000;
+		kid.generation = 1;
+		snprintf(kid.user, sizeof kid.user, "anna");
+		R.cap = 1;
+		R.kids = &kid;
+		R.chan = -1;
+		R.net_pid = netp;
+		R.generation = 1;
+		R.stopping = false;
+		rootside_bounds_init(&R.bounds, 1000);
+		R.bounds.abandon_ms = 60000;
+		for (tries = 0; tries < 100 && R.net_pid > 0; tries++) {
+			usleep(20000);
+			reap_net(20000);
+		}
+		require(R.net_pid == 0 && kid.orphaned_ms == 20000,
+		        "the network side's death is written on its children (orphaned_ms)");
+		R.generation = 2; /* the network side was started again */
+		kill(kidp, SIGKILL);
+		for (tries = 0; tries < 100 && kid.used; tries++) {
+			usleep(20000);
+			reap_kids();
+		}
+		require(!kid.used, "the slow child is reaped later");
+		require(!rootside_orphan_abandoned(&R.bounds, 1000, 20000 + 60000 - 1, &left) && left == 1
+		        && rootside_orphan_abandoned(&R.bounds, 1000, 20000 + 60000, NULL),
+		        "… and its uid counts from the network side's death (20 s), not from the reaping");
+		R.kids = NULL;
+		R.cap = 0;
+		R.net_pid = 0;
 	}
 
 	printf("  review 2: a network side that shut its reading end (M2)\n");

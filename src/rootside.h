@@ -195,6 +195,9 @@ struct rootside_born {
 int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
                    uint32_t canvas_h, int timeout_ms, struct rootside_born *out);
 /* The same for a desktop found again (CLOSE_ORPHAN): no grant. */
+/* ⭐ 1.6 (R1): after a `RXR_REF_TOO_SOON` answer, how long (ms) the root side said to wait
+ * (0 = never).  Valid until the next request. */
+uint64_t rootside_last_wait_ms(void);
 int rootside_close_orphan(const char *user, int timeout_ms,
                           struct rootside_born *out);
 /* Whether a grant is kept for (user, rhost) now. */
@@ -298,6 +301,9 @@ void rootside_exit_note(struct rootside_bounds *b, uid_t uid, uint64_t now_ms);
  * on a normal day. */
 bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint64_t now_ms,
                                uint64_t *left_ms);
+/* The largest `--abandon-s` the root side takes (one year): above it the sum with a time
+ * would overflow, and a longer abandonment is the same as «never» for any real service. */
+#define ROOTSIDE_ABANDON_S_MAX 31536000ull
 void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms);
 /* May this AUTH go to PAM now?  `false` = over the in-flight or rate bound
  * (VERDICT NOT_CHECKED).  `true` takes a token and a place in flight. */

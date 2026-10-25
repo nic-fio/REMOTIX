@@ -163,6 +163,10 @@ enum rxr_refusal {
 struct rxr_spawn_refused {
 	struct rxr_head h;
 	uint8_t reason;                   /* enum rxr_refusal */
+	/* ⭐ 1.6 (R1): with RXR_REF_TOO_SOON, how long until the root side would accept the
+	 * CLOSE_ORPHAN (ms, 0 = never: the clock is off); 0 for every other reason.  The
+	 * network side retries after that, a few times (main.c, `abandon_round`). */
+	uint32_t wait_ms;
 };
 
 struct rxr_child_exited {
