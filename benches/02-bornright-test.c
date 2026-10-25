@@ -31,6 +31,17 @@ static void report(bool ok, const char *what)
 		failed++;
 }
 
+/* A descriptor moved above 20 (close-on-exec): fds 3, 4 and 5 are the ones the function looks at, so nothing the test itself holds may
+ * sit there when the child puts the case's descriptors on them (a pipe at 3 and 4 made the close-on-exec check a false red). */
+static int hi(int fd)
+{
+	int n = fd < 0 ? -1 : fcntl(fd, F_DUPFD_CLOEXEC, 20);
+
+	if (fd >= 0)
+		close(fd);
+	return n;
+}
+
 enum { DEFAULT, AS_ROOT, NOT_PID1, PEER_NOT_ROOT, PEER_FAILS, FD4_PIPE, FD5_DGRAM };
 
 /* Runs the function in a child that is PID 1 of a new PID namespace (or a plain fork for NOT_PID1 and AS_ROOT), with the
@@ -44,6 +55,8 @@ static int run_case(int how, bool want_cloexec_check, bool *cloexec_ok)
 
 	if (!rx || pipe(res) != 0)
 		return -1;
+	res[0] = hi(res[0]);
+	res[1] = hi(res[1]);
 	rxuid = rx->pw_uid;
 	/* the descriptors, made by root (the root side), or by rxnet for the wrong-peer case */
 	if (how == PEER_NOT_ROOT && seteuid(rxuid) != 0)
@@ -63,6 +76,15 @@ static int run_case(int how, bool want_cloexec_check, bool *cloexec_ok)
 			return -1;
 		close(u);
 		u = pipefd[0];
+		close(pipefd[1]);
+		pipefd[1] = -1;
+	}
+	sv[0] = hi(sv[0]);
+	sv[1] = hi(sv[1]);
+	u = hi(u);
+	t = hi(t);
+	if (how == FD4_PIPE) {
+		pipefd[0] = u; /* the pipe's read end stands for fd 4 (u was closed above for it) */
 	}
 	p = how == AS_ROOT || how == NOT_PID1 ? fork() : (pid_t)syscall(SYS_clone, CLONE_NEWPID | SIGCHLD, 0, 0, 0, 0);
 	if (p < 0)
@@ -85,15 +107,27 @@ static int run_case(int how, bool want_cloexec_check, bool *cloexec_ok)
 		_exit(ok ? 0 : 1);
 	}
 	close(res[1]);
-	if (waitpid(p, &st, 0) != p || !WIFEXITED(st) || WEXITSTATUS(st) > 1)
-		return -1;
-	if (cloexec_ok) {
-		char c = 0;
+	{
+		int rc = -1;
 
-		*cloexec_ok = read(res[0], &c, 1) == 1 && c == 'y';
+		if (waitpid(p, &st, 0) == p && WIFEXITED(st) && WEXITSTATUS(st) <= 1) {
+			rc = WEXITSTATUS(st) == 0 ? 1 : 0;
+			if (cloexec_ok) {
+				char c = 0;
+
+				*cloexec_ok = read(res[0], &c, 1) == 1 && c == 'y';
+			}
+		}
+		/* the parent keeps nothing between two cases */
+		close(res[0]);
+		close(sv[0]);
+		close(sv[1]);
+		close(u);
+		close(t);
+		if (pipefd[1] >= 0)
+			close(pipefd[1]);
+		return rc;
 	}
-	close(res[0]);
-	return WEXITSTATUS(st) == 0 ? 1 : 0;
 }
 
 int main(void)
