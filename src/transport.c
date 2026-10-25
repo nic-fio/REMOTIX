@@ -100,8 +100,8 @@
  *   · `MAX_PENDING` (128, `--max-pending`): all the connections NOT YET LOGGED IN.
  *     ⇒ The memory held before login is bounded by about 128 × 1 MiB, and at least
  *       128 places stay for connections that have logged in.
- *   · `PENDING_PER_ADDRESS` (8, `--max-pending-per-address`) and `PENDING_PER_48`
- *     (32, `--max-pending-per-48`): not logged in from one place.  The place is the
+ *   · `PENDING_PER_ADDRESS` (16, `--max-pending-per-address`) and `PENDING_PER_48`
+ *     (64, `--max-pending-per-48`): not logged in from one place.  The place is the
  *     rule of `address_key()` (§1.9-bis), the same one `rcp_key_address()` in `rcp.c` applies to the
  *     ban (`benches/unit/address-key` checks that the two agree):
  *       1. `::ffff:a.b.c.d` (v4-mapped)         → a.b.c.d
@@ -150,8 +150,12 @@
  *     one; and the charge lasts at most until login or the ~65 s above. */
 #define MAX_CONNECTIONS 256
 #define MAX_PENDING 128
-#define PENDING_PER_ADDRESS 8
-#define PENDING_PER_48 32
+/* ⭐ 1.5, margins for the 8-user target: eight people behind ONE address each have a connection that has not logged in yet (and a refused try
+ *   leaves one open for 2.5 s while the next is opened): 8 per address was exactly the target and a single try more was refused.  16 per address,
+ *   64 per /48 (the old proportion); MAX_PENDING stays 128, so that at least 128 places remain for the connections that have logged in — the price
+ *   is that 8 addresses (it was 16) can fill the pending room, and then the OLDEST not-yet-logged-in connection of the biggest group is the one closed. */
+#define PENDING_PER_ADDRESS 16
+#define PENDING_PER_48 64
 /* ⭐ The longest a login can honestly take: CAP_HELLO 5 s + CAP_CREDENTIALS 60 s +
  *    VERDICT_CAP 12 s + the fixed second (rcp.c), and the margin for the QUIC and
  *    HTTP/3 handshakes that come BEFORE the RCP clocks start.  ⚠ If rcp.c lengthens
