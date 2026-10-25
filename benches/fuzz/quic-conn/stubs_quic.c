@@ -1259,15 +1259,25 @@ struct cidkey {
 	uint64_t k;
 };
 static uint64_t cid_key_seen;
-static uint64_t cid_mix(uint64_t k, const uint8_t *nonce)
+static uint64_t cid_mix(uint64_t k, int kind, const uint8_t *nonce, uint64_t epoch)
 {
-	uint64_t h = k ^ 0xcbf29ce484222325ull;
+	uint64_t h = k ^ 0xcbf29ce484222325ull ^ ((uint64_t)kind << 56);
 	for (int i = 0; i < 10; i++) {
 		h ^= nonce[i];
 		h *= 0x100000001b3ull;
 		h ^= h >> 29;
 	}
+	if (kind == 'C') { /* the epoch is in a connection id's tag, not in a Retry's */
+		h ^= epoch;
+		h *= 0x100000001b3ull;
+		h ^= h >> 29;
+	}
 	return h;
+}
+static bool cid_match(uint64_t key, int kind, const uint8_t *cid, uint64_t epoch)
+{
+	uint64_t h = cid_mix(key, kind, cid, epoch);
+	return memcmp(cid + 10, &h, 8) == 0;
 }
 cidkey *cidkey_new(const uint8_t *secret, size_t secretlen)
 {
@@ -1284,36 +1294,59 @@ cidkey *cidkey_new(const uint8_t *secret, size_t secretlen)
 }
 void cidkey_free(cidkey *k) { free(k); }
 unsigned cidkey_errors(const cidkey *k) { (void)k; return 0; } /* the played MAC does not fail; the line is the unit test's (cid-firmati) */
-bool cidkey_make(cidkey *k, uint8_t cid[18])
+bool cidkey_make(cidkey *k, uint8_t cid[18], uint64_t epoch)
 {
 	uint64_t h;
 	if (!k || !rxq_rand(cid, 10))
 		return false;
-	h = cid_mix(k->k, cid);
+	h = cid_mix(k->k, 'C', cid, epoch);
 	memcpy(cid + 10, &h, 8);
 	return true;
 }
-bool cidkey_ok(cidkey *k, const uint8_t *cid, size_t len)
+bool cidkey_make_retry(cidkey *k, uint8_t cid[18])
 {
 	uint64_t h;
+	if (!k || !rxq_rand(cid, 10))
+		return false;
+	h = cid_mix(k->k, 'R', cid, 0);
+	memcpy(cid + 10, &h, 8);
+	return true;
+}
+bool cidkey_ok(cidkey *k, const uint8_t *cid, size_t len, uint64_t epoch)
+{
 	if (!k || len != 18)
 		return false;
-	h = cid_mix(k->k, cid);
-	return memcmp(cid + 10, &h, 8) == 0;
+	return cid_match(k->k, 'C', cid, epoch) || (epoch > 0 && cid_match(k->k, 'C', cid, epoch - 1));
 }
+bool cidkey_ok_retry(cidkey *k, const uint8_t *cid, size_t len)
+{
+	return k && len == 18 && cid_match(k->k, 'R', cid, 0);
+}
+/* the ORACLE's own epoch: the hour of the played clock (the product reads CLOCK_REALTIME, which the harness plays with the same clock) */
+static uint64_t oracle_epoch(void) { return rxq_now_ns / NGTCP2_SECONDS / 3600u; }
 bool rxq_cid_signed(const uint8_t *cid, size_t len)
 {
-	uint64_t h;
+	uint64_t e = oracle_epoch();
 	if (len != 18 || !cid_key_seen)
 		return false;
-	h = cid_mix(cid_key_seen, cid);
-	return memcmp(cid + 10, &h, 8) == 0;
+	return cid_match(cid_key_seen, 'C', cid, e) || (e > 0 && cid_match(cid_key_seen, 'C', cid, e - 1));
+}
+bool rxq_cid_is_retry(const uint8_t *cid, size_t len)
+{
+	return len == 18 && cid_key_seen && cid_match(cid_key_seen, 'R', cid, 0);
 }
 void rxq_cid_make(uint8_t out[18])
 {
 	uint64_t h;
 	(void)rxq_rand(out, 10);
-	h = cid_mix(cid_key_seen, out);
+	h = cid_mix(cid_key_seen, 'C', out, oracle_epoch());
+	memcpy(out + 10, &h, 8);
+}
+void rxq_cid_make_retry(uint8_t out[18])
+{
+	uint64_t h;
+	(void)rxq_rand(out, 10);
+	h = cid_mix(cid_key_seen, 'R', out, 0);
 	memcpy(out + 10, &h, 8);
 }
 unsigned rxq_resets_signed_now(void)
@@ -1421,9 +1454,12 @@ ngtcp2_ssize ngtcp2_crypto_write_retry(uint8_t *dest, size_t destlen, uint32_t v
 {
 	size_t n = 7 + dcid->datalen + scid->datalen + tokenlen + 16;
 	(void)version; (void)odcid; (void)token;
-	/* ⭐ `cid-firmati`: the id our Retry gives the client (the one it will address the next Initial to) carries its tag */
-	if (!rxq_cid_signed(scid->data, scid->datalen))
-		DIE("the Retry gave the client an id that does not verify");
+	/* ⭐ `cid-firmati` + rilettura M1: the id our Retry gives the client (the one it will address the next Initial to) carries the Retry's
+	 *    own label, and does NOT count as signed for a Reset (anybody who sends an Initial gets one) */
+	if (!rxq_cid_is_retry(scid->data, scid->datalen))
+		DIE("the Retry gave the client an id that is not a Retry id");
+	if (rxq_cid_signed(scid->data, scid->datalen))
+		DIE("the Retry gave the client an id that counts as a signed connection id");
 	rxq_expect.valid = false;
 	rxq_retries++;
 	if (destlen < n)

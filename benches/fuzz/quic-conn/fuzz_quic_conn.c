@@ -84,7 +84,8 @@
  *               tag, 10 for the others — `cid-firmati`), a4 extra length of the short ones (a4 % 64); a3 bit 2 raises the
  *               Stateless Resets PER ADDRESS (resetcap.h, 5 a second in the product) to 1000, so that the global cap of 100 stays
  *               reachable from the 4 addresses of the harness; a3 bit 3 (`cid-firmati`): the unknown dcid CARRIES a valid tag
- *               (oracle: its Reset is owed while the signed budget has room and the address has not used up its own)
+ *               (oracle: its Reset is owed while the signed budget has room and the address has not used up its own); a3 bit 4
+ *               (rilettura M1): the unknown dcid has the label of a RETRY id (it only ever spends the small budget: the stub counts it as unsigned)
  *   14 FLOOD    Retry-validated Initials, each with its own token, each connection dying at once
  *               (DRAINING in its first packet) and its slot of the harness's table given back,
  *               one loop pass (wait, read, expired) each: a0-1 how many (+ 1; at most
@@ -907,6 +908,12 @@ static void op_new(const uint8_t *a, size_t n)
 		last_dcidlen = dl;
 	} else if ((a2 & 0x40) && last_dcidlen) {
 		dl = last_dcidlen;
+	} else if (a2 & 0x20) {
+		/* ⭐ rilettura M1: the Initial that follows a Retry is addressed to the id the Retry gave: an id with the Retry's label */
+		dl = 18;
+		births++;
+		rxq_cid_make_retry(last_dcid);
+		last_dcidlen = dl;
 	} else {
 		dl = 8 + a1 % 13;
 		births++;
@@ -1050,6 +1057,9 @@ static void op_new(const uint8_t *a, size_t n)
 		for (size_t k = births_before; k < rxq_nconns; k++)
 			if (rxq_conns[k].wt_born)
 				newcomer = true;
+		/* ⭐ rilettura M1: the connection is found by the id its Initial was addressed to (the Retry's, whatever its label says) */
+		if (alone && newcomer && T->how_many > before && !existing && !cid_find(T, last_dcid, dl))
+			DIE("a newcomer born, and the id its Initial was addressed to is not found in the map");
 		if (alone && token_good && reused && !existing) {
 			if (newcomer)
 				DIE("a Retry token made a SECOND connection within %d s",
@@ -1389,6 +1399,8 @@ static void op_burst(const uint8_t *a, size_t n)
 			signed_unknown = (a3 & 8) != 0;
 			if (signed_unknown)
 				rxq_cid_make(b + 1);
+			else if (a3 & 0x10)
+				rxq_cid_make_retry(b + 1);
 		}
 		/* the clock moves BEFORE the pass, never after the last one: a clock moved with no
 		 * `transport_expired()` behind it is not the loop's either (15 Oct 2026, the

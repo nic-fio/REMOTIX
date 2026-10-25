@@ -79,7 +79,6 @@ typedef struct {
 	lk_cid cid;
 	void *c;
 	bool used;
-	bool plain; /* the id carries no valid tag (cid.h): counted in `plain_n` of the map */
 	uint32_t next; /* the next entry of the same bucket, as index + 1; 0 = end */
 } lk_entry;
 
@@ -89,7 +88,6 @@ typedef struct {
 	uint32_t *bucket;    /* index + 1 of the first entry of each bucket; 0 = empty */
 	size_t nb;           /* a power of two, >= 2 * cap, 0 before the first bind */
 	size_t lowest_hole;  /* every index below it is used */
-	size_t plain_n;      /* how many used entries are `plain` (cid-firmati: 0 in steady state) */
 	uint8_t key[16];     /* SipHash key: set by the owner, all zero is valid (the fuzz harness) */
 } lk_cidmap;
 
@@ -138,7 +136,7 @@ static inline bool lk_rebuild(lk_cidmap *m, size_t cap)
 }
 
 /* false = out of memory.  An id that could not be bound must be refused by the caller (see cid_bind()). */
-static inline bool lk_cid_bind_p(lk_cidmap *m, const lk_cid *cid, void *c, bool plain)
+static inline bool lk_cid_bind(lk_cidmap *m, const lk_cid *cid, void *c)
 {
 	size_t i = m->lowest_hole;
 
@@ -162,16 +160,9 @@ static inline bool lk_cid_bind_p(lk_cidmap *m, const lk_cid *cid, void *c, bool 
 	m->e[i].cid = *cid;
 	m->e[i].c = c;
 	m->e[i].used = true;
-	m->e[i].plain = plain;
-	m->plain_n += plain;
 	lk_link(m, i);
 	m->lowest_hole = i + 1;
 	return true;
-}
-
-static inline bool lk_cid_bind(lk_cidmap *m, const lk_cid *cid, void *c)
-{
-	return lk_cid_bind_p(m, cid, c, false);
 }
 
 /* The connection of the entry with this id and the LOWEST index (what a scan from 0 returns), or NULL. */
@@ -197,7 +188,6 @@ static inline void lk_release(lk_cidmap *m, size_t i)
 {
 	lk_unlink(m, i);
 	m->e[i].used = false;
-	m->plain_n -= m->e[i].plain;
 	if (i < m->lowest_hole)
 		m->lowest_hole = i;
 }

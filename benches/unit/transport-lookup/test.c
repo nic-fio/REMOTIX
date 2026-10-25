@@ -15,7 +15,8 @@
  *   4. the token ring against the scan: 20000 keeps, expiry, overwrite of valid ones (forgotten), replays;
  *   5. a miss costs far less than a scan: 2304 entries, 200000 lookups, timed against the scan (not a pass/fail on the clock: the
  *      numbers are printed; the check is that the hash is not slower).
- *   6. plain_n (cid-firmati): ids bound without a valid tag are counted when bound and released with their entry (by id, by connection, on free).
+ *   6. an id is released by its value, by its connection and by the free of the map, and the hole is reused (cid-firmati: the map is
+ *      always searched, whatever the tag of an id says, so a connection is found by any id it was given).
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -378,8 +379,8 @@ static void test_speed(void)
 	free(r.e);
 }
 
-/* the count of ids that carry no valid tag (cid-firmati): bound with lk_cid_bind_p(..., true), released with the entry */
-static void test_plain(void)
+/* the release of ids (cid-firmati, rilettura M1): by value, by connection, and the hole is reused */
+static void test_release(void)
 {
 	lk_cidmap m;
 	lk_cid a = {.datalen = 18}, b = {.datalen = 18}, c = {.datalen = 18}, d = {.datalen = 18};
@@ -390,19 +391,15 @@ static void test_plain(void)
 	b.data[0] = 2;
 	c.data[0] = 3;
 	d.data[0] = 4;
-	CHECK(m.plain_n == 0, "empty map: plain_n 0");
-	CHECK(lk_cid_bind_p(&m, &a, x, true) && lk_cid_bind_p(&m, &b, x, false) && lk_cid_bind_p(&m, &c, y, true) && lk_cid_bind(&m, &d, y),
-	      "four binds");
-	CHECK(m.plain_n == 2, "two plain bound: plain_n %zu", m.plain_n);
-	lk_cid_unbind(&m, &b);
-	CHECK(m.plain_n == 2, "a signed id released: plain_n unchanged (%zu)", m.plain_n);
+	CHECK(lk_cid_bind(&m, &a, x) && lk_cid_bind(&m, &b, x) && lk_cid_bind(&m, &c, y) && lk_cid_bind(&m, &d, y), "four binds");
+	CHECK(lk_cid_find(&m, a.data, 18) == x && lk_cid_find(&m, c.data, 18) == y, "found, whatever the bytes of the id are");
 	lk_cid_unbind(&m, &a);
-	CHECK(m.plain_n == 1 && lk_cid_find(&m, a.data, a.datalen) == NULL, "a plain id released: plain_n 1 (%zu)", m.plain_n);
+	CHECK(lk_cid_find(&m, a.data, 18) == NULL && lk_cid_find(&m, b.data, 18) == x, "an id released by its value, the other of the connection stays");
 	lk_cid_unbind_all(&m, y);
-	CHECK(m.plain_n == 0 && lk_cid_find(&m, c.data, c.datalen) == NULL, "the connection gone with its plain id: plain_n 0 (%zu)", m.plain_n);
-	CHECK(lk_cid_bind_p(&m, &a, x, true) && m.plain_n == 1, "the hole is reused and counted again");
+	CHECK(lk_cid_find(&m, c.data, 18) == NULL && lk_cid_find(&m, d.data, 18) == NULL, "the connection gone with all its ids");
+	CHECK(lk_cid_bind(&m, &a, x) && lk_cid_find(&m, a.data, 18) == x, "the hole is reused");
 	lk_cid_free(&m);
-	CHECK(m.plain_n == 0, "freed map: plain_n 0");
+	CHECK(lk_cid_find(&m, a.data, 18) == NULL, "freed map: nothing found");
 }
 
 int main(void)
@@ -412,7 +409,7 @@ int main(void)
 	test_cid_equivalence();
 	test_chains();
 	test_tokens();
-	test_plain();
+	test_release();
 	test_speed();
 	printf("\n%d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;

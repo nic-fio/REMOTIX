@@ -307,13 +307,16 @@ struct transport {
 	/* ⭐ R9: and the cap PER ADDRESS in front of it (resetcap.h): the Resets refused to an address in this second, and whether it was said */
 	struct reset_addr reset_addr;
 	unsigned reset_per_address; /* 0 = RESET_PER_ADDRESS; the fuzz harness raises it (op 13) to reach the global cap from a few addresses */
+	/* ⭐ rilettura M1: and 1 Reset a second PER SIGNED ID (the same table as above, key = the first 16 bytes of the id, limit 1): an id that
+	 *    somebody collected cannot spend more than that of the 100 */
+	struct reset_addr reset_id;
+	unsigned reset_id_refused;
 	unsigned reset_addr_refused; /* rilettura B4: counted until `refusals_report()` writes it (it was zeroed every second and never said) */
 	bool reset_addr_said;
 	/* ⭐ `cid-firmati`: the Resets for ids that do not verify have their own count in the same second */
 	unsigned reset_unverified_count;
 	bool reset_unverified_capped_said;
-	/* the key of the signed ids (cid.h), from `secret`; and how many ids bound to a live connection carry no valid tag:
-	 * 0 in steady state, > 0 only for a connection that came in with a Retry token of the previous binary */
+	/* the key of the signed ids (cid.h), from `secret`.  It only chooses the Reset budget of an UNKNOWN id: the map is always searched */
 	cidkey *cidk;
 	unsigned cid_errors_seen;     /* `cidkey_errors()` at the last line written */
 	uint64_t cid_errors_line_ns;
@@ -385,10 +388,9 @@ static void lk_from_ngtcp2(lk_cid *to, const ngtcp2_cid *from)
 static bool cid_bind(transport *t, const ngtcp2_cid *cid, connection *c)
 {
 	lk_cid k;
-	bool plain = !cidkey_ok(t->cidk, cid->data, cid->datalen);
 
 	lk_from_ngtcp2(&k, cid);
-	if (!lk_cid_bind_p(&t->cids, &k, c, plain)) {
+	if (!lk_cid_bind(&t->cids, &k, c)) {
 		registro_dice(REG_QUIC, "⛔ out of memory in the CID map");
 		return false;
 	}
@@ -450,6 +452,16 @@ static void noise_flush(struct line_budget *b, const char *what, ngtcp2_tstamp n
 #define NOISE_PATH "path validations"
 #define NOISE_DGRAM "datagrams discarded"
 
+/* ⭐ rilettura M1: the epoch of the tags (cid.h): the hour of the UTC clock.  CLOCK_REALTIME, because an id made before a restart must
+ *    still be recognised after it (the secret is the same file), and the monotonic clock starts again at every boot. */
+static uint64_t cid_epoch(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_REALTIME, &ts);
+	return (uint64_t)ts.tv_sec / CID_EPOCH_S;
+}
+
 static ngtcp2_conn *give_me_conn(ngtcp2_crypto_conn_ref *ref)
 {
 	connection *c = ref->user_data;
@@ -473,7 +485,7 @@ static int cb_get_new_cid(ngtcp2_conn *conn, ngtcp2_cid *cid,
 	(void)conn;
 	/* ⭐ `cid-firmati`: every id the server issues carries its tag.  ngtcp2 asks for the length of our first id
 	 *   (SCIDLEN), so the other branch is not expected; it would give an id that does not verify (`plain`), not a failure. */
-	if (cidlen == SCIDLEN ? !cidkey_make(c->t->cidk, cid->data) : RAND_bytes(cid->data, (int)cidlen) != 1)
+	if (cidlen == SCIDLEN ? !cidkey_make(c->t->cidk, cid->data, cid_epoch()) : RAND_bytes(cid->data, (int)cidlen) != 1)
 		return NGTCP2_ERR_CALLBACK_FAILURE;
 	cid->datalen = cidlen;
 	if (ngtcp2_crypto_generate_stateless_reset_token(
@@ -1282,7 +1294,7 @@ static void births_report(transport *t, ngtcp2_tstamp now)
 static void refusals_report(transport *t, ngtcp2_tstamp now)
 {
 	if (!t->refused_full && !t->refused_address && !t->refused_48 && !t->evicted &&
-	    !t->aged && !t->token_replayed && !t->token_forgotten && !t->reset_addr_refused)
+	    !t->aged && !t->token_replayed && !t->token_forgotten && !t->reset_addr_refused && !t->reset_id_refused)
 		return;
 	if (t->refused_ever && now - t->refused_line_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
 		return;
@@ -1293,17 +1305,17 @@ static void refusals_report(transport *t, ngtcp2_tstamp now)
 	              "with nobody to evict (%zu in all / %zu pending), %u over %zu pending "
 	              "from one address, %u over %zu pending from one IPv6 /48; the last "
 	              "refused from %s; %u Retry tokens used again (INVALID_TOKEN each), %u "
-	              "forgotten early (more than %d connections in %d s); %u Stateless Resets refused to addresses that already had their %d in a second",
+	              "forgotten early (more than %d connections in %d s); %u Stateless Resets refused to addresses that already had their %d in a second, %u to a signed id already answered in that second",
 	              t->refused_ever ? " in the last seconds" : "", t->aged, UNLOGGED_MAX_S,
 	              t->evicted,
 	              t->refused_full, cap_conns(t), cap_pending(t), t->refused_address,
 	              cap_per_address(t), t->refused_48, cap_per_48(t),
 	              t->refused_last[0] ? t->refused_last : "-", t->token_replayed,
 	              t->token_forgotten, TOKENS_KEPT, (int)(RETRY_TOKEN_TIMEOUT / NGTCP2_SECONDS), t->reset_addr_refused,
-	              RESET_PER_ADDRESS);
+	              RESET_PER_ADDRESS, t->reset_id_refused);
 	t->refused_full = t->refused_address = t->refused_48 = t->evicted = t->aged = 0;
 	t->token_replayed = t->token_forgotten = 0;
-	t->reset_addr_refused = 0;
+	t->reset_addr_refused = t->reset_id_refused = 0;
 	t->refused_last[0] = 0;
 	t->refused_ever = true;
 	t->refused_line_ns = now;
@@ -1488,7 +1500,7 @@ static connection *accept_conn(transport *t, const ngtcp2_pkt_hd *hd,
 	address_text(remote, remotelen, c->provenance, sizeof c->provenance);
 
 	c->scid.datalen = SCIDLEN;
-	if (!cidkey_make(t->cidk, c->scid.data)) /* signed: cid.h */
+	if (!cidkey_make(t->cidk, c->scid.data, cid_epoch())) /* signed: cid.h */
 		goto male;
 
 	ngtcp2_settings_default(&settings);
@@ -1693,7 +1705,7 @@ static void send_retry(transport *t, const ngtcp2_pkt_hd *hd,
 	ngtcp2_ssize tl, n;
 
 	retry_scid.datalen = SCIDLEN;
-	if (!cidkey_make(t->cidk, retry_scid.data)) { /* signed: the connection that follows is bound to it */
+	if (!cidkey_make_retry(t->cidk, retry_scid.data)) { /* the Retry's own label: bound to the connection that follows, never «signed» for a Reset */
 		registro_dice(REG_QUIC, "⛔ RAND_bytes failed: Retry not sent");
 		return;
 	}
@@ -1805,6 +1817,16 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 			return;
 		}
 	}
+	/* ⭐ rilettura M1: one Reset a second per SIGNED id.  The key is the first 16 bytes of the id (a signed id has all 18). */
+	if (verified) {
+		uint8_t idkey[16];
+
+		memcpy(idkey, vc->dcid, sizeof idkey);
+		if (!reset_addr_take(&t->reset_id, idkey, second, 1)) {
+			t->reset_id_refused++;
+			return;
+		}
+	}
 	/* ⭐ `cid-firmati`: two budgets in the same second.  `verified` (the destination id carries a valid tag) uses
 	 *   the 100; an id that does not verify uses only RESET_UNVERIFIED_PER_SECOND, so a flood of random ids cannot
 	 *   take the Resets away from the ids this server issued. */
@@ -1886,15 +1908,11 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 		return;
 	}
 
-	/* ⭐ `cid-firmati`: does the destination id carry a valid tag (cid.h)?  If it does not, it is not an id this
-	 *   server issued — except those few bound to a connection that came in with a Retry token of the previous binary
-	 *   (`cids.plain_n`, 0 in steady state) — so the search of the map is skipped: a packet that cannot belong to any
-	 *   connection does not cost a scan of the map, and (below) does not spend the Resets of the signed ids.
-	 *   The first Initial of a client (random destination id, before our Retry) and every packet after the Retry
-	 *   (our signed ids) are routed exactly as before. */
-	bool signed_dcid = cidkey_ok(t->cidk, vc.dcid, vc.dcidlen);
+	/* ⭐ `cid-firmati` + rilettura M1: the map is ALWAYS searched (a hash lookup since ricerche-hash, ~100 ns).  A connection is found by any id
+	 *   it was given, whatever its tag says: the id of the Retry it came in with (its own label, cid.h), the ids of a session older
+	 *   than the hour or two the tags last.  The tag decides only WHICH Reset budget a packet for an UNKNOWN id uses (below). */
 	cid_errors_check(t);
-	c = (signed_dcid || t->cids.plain_n) ? cid_find(t, vc.dcid, vc.dcidlen) : NULL;
+	c = cid_find(t, vc.dcid, vc.dcidlen);
 	/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25): a connection already marked dead (ngtcp2 asked to
 	 *   drop it silently, or it is closing) is no longer read: a second packet of the same
 	 *   burst would reach `ngtcp2_conn_read_pkt` and could answer with the
@@ -1913,7 +1931,11 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 			 *   not tested, we announce grease_quic_bit).  A long header that
 			 *   is not an Initial is ignored, and the line says so. */
 			if (!(data[0] & 0x80)) {
-				send_stateless_reset(t, &vc, remote, remotelen, len, signed_dcid);
+				/* the tag is looked at only here: two HMACs at most, for a packet nobody owns */
+				bool verified = cidkey_ok(t->cidk, vc.dcid, vc.dcidlen, cid_epoch());
+
+				cid_errors_check(t);
+				send_stateless_reset(t, &vc, remote, remotelen, len, verified);
 				return;
 			}
 			log_detail(REG_QUIC,
@@ -2237,7 +2259,7 @@ int64_t transport_wait_ns(const transport *t)
 	}
 	/* ⭐ 1.5: refusals counted and not yet written wake the loop for their line */
 	if ((t->refused_full || t->refused_address || t->refused_48 || t->evicted ||
-	     t->aged || t->token_replayed || t->token_forgotten || t->reset_addr_refused) &&
+	     t->aged || t->token_replayed || t->token_forgotten || t->reset_addr_refused || t->reset_id_refused) &&
 	    t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
 	if ((t->hs_over_address || t->hs_over_net || t->hs_over_all) &&
