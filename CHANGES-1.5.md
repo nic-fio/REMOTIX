@@ -17,6 +17,7 @@
 5. Still open
 6. Fixes of 25 Oct 2026 merged in `finale` (not in `integrazione2`)
 7. What is OFF by default
+8. Upgrading from 1.0
 
 ## 1. What is new for the user
 - **A flood of fake connections no longer costs the server a connection each.** The first packet of every connection must
@@ -27,18 +28,18 @@
   connections per IPv4 address or IPv6 /64, 32 per /48; when the server is full the oldest not-yet-logged-in connection is closed, never one that is
   being checked or logged in; 90 s without login closes the connection (§11.40, under verification; `ffea98a1`, `75ba1f93`).
 - **Changing network keeps the session** (e.g. Wi-Fi to mobile): the packet path follows the one the datagram came on
-  and a validated move updates the connection (§11.29, RCP.md §2.3, under verification; `fa7eac00`, `f606542e`, `eb8d9db2`). Declared limit: until
+  and a validated move updates the connection (§11.29, RCP.md §2.3, under verification; `fa7eac00`, `f606542e`, `eb8d9db2`). Declared limit (QUIC's anti-amplification rule): until
   the new path is validated the server may send up to 3× what it received from it; the ban and the logs keep the birth
   address. Not yet measured on a real network change.
 - **The last row of the picture has the right colour on Chrome** (it was tinted, e.g. green on GNOME): cure (c), the page
   trims the last row when the decoded frame has coded rows below the visible ones (§11.41, verified on gnome, xfce, kde and lxqt, Chrome and Firefox, 25 Oct 2026; `571c8145`, `9b963d77`,
-  earlier steps `78b63549`, `127f69a6`). Cost: the bottom row repeats the row above.
+  earlier steps `78b63549`, `127f69a6`). Cost: the last visible row of pixels of the picture repeats the row above it.
 - **Installer and uninstaller**: the install plan states the port before «Proceed? [y/N]» (`29a4a7ce`); the uninstall removes
-  what upgrades added (§11.6, under verification; `84fdf573`, `b4f0776e`). The site says «Download 1.0.0» (`b2f8161e`).
+  what upgrades added (§11.6, under verification; `84fdf573`, `b4f0776e`). (Separately, and not a 1.5 change: the project site now offers the 1.0.0 download instead of «Coming soon», `b2f8161e`.)
 - **`/diary` is gone** from the installed product and from test builds (§11.10, under verification; `8a46c9c9`, `9af7b82e`).
 - **ACTIVE by default, even with the split OFF (§11.50 D3/D4b, from `rootside-completo`)**: the PAM dispatcher is **re-executed** (`/proc/self/exe --pam-helper`, a fresh memory image, `src/helper.c:170-187`)
   and **restarted by the watchdog** `helper_expired()` with a pause that doubles from 1 s to 60 s (loud after 5 deaths in a row). **The synchronous PAM fallback is gone**: with the helper down, or no helper object,
-  the login is refused with `0x0E`, not counted (`src/main.c:2985`). The single-process product keeps `helper_turn_on()` and `HelperVerdict` (`src/helper.h:153-160`: `admitted` and `lost`): a PAM timeout of 8 s
+  the login is refused with `0x0E`, not counted (`src/main.c:2985`). The single-process product keeps `helper_turn_on()` and `HelperVerdict` (`src/helper.h:153-160`: `admitted` and `lost`): a PAM check that gets no answer within 8 s (the helper's own limit; the server waits at most 12 s for any verdict)
   **counts** as a failed attempt; the death of the dispatcher with the request in flight, or a limit of ours, arrives as `lost` and **does not count** towards the ban.
   The five outcomes of `HelperOutcome` (1 admitted, 0 refused, 2 refused while `pam_faillock` held the account, 3 not checked and not counted, 4 expired in 8 s and counted: `src/helper.h:183-193`) are the form used ONLY with the split on (`helper_turn_on_root()`).
 
@@ -53,7 +54,7 @@
 - Attempts are booked when the credentials arrive (at most 2 checks at once per address and user); a verdict whose
   connection died is still counted; no verdict (PAM timeout, 12 s ceiling) counts as a failure, but a dead helper does not.
 - The ban file holds an HMAC-SHA256 of the user name, never the name (0600, `fsync`ed); log lines name unknown users
-  `unknown user [a1b2c3]`. Old 1.0 lines are read and become a 12 h ban. `UNBLOCK <address>` clears every level.
+  `unknown user [a1b2c3]`. Lines in the 1.0 format (`address expiry`) that have not expired are read and become a ban at the top step (the time left, at most 12 h); expired ones are dropped. `UNBLOCK <address>` clears every level.
 - The page's ban notice and the `0x08` text follow the rule, without a number of attempts (`546fe91c`); manuals and specs updated
   (`47eba75e`, `2cc1b424`, `be61b885`, `798a00a0`). Tests: `benches/unit/login-ban` (`8db14aaa`, `a9c48435`), B8 (`f3733e77`).
 
@@ -98,7 +99,7 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
 - Maximum resolution **3K** instead of the 4K that 1.0 aimed at (the user: «la 1.0 prevedeva il 4K, ma ho abbassato i requisiti»).
-- **At most 8 users** per machine, or the highest number that still works well.
+- **8 users** per machine is the tested target (the highest number that still works well on the test hardware), not a rule of the server: its administrative ceiling stays at 10 sessions (`--session-cap N` changes it) and the real limit is the pixel budget, which refuses with `0x06` before the desktop is born. A ninth user is not refused by a rule of 8.
 - Unchanged: REMOTIX stays IPv4-only as a goal (§11.5: «leviamolo. IPv6 diverra' importante fra 30 anni»). The code only treats an IPv6
   peer address correctly in the ban key and in the connection caps (§1.9-bis closed, §11.53, §11.40).
 
@@ -129,7 +130,7 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
 - **Not done, optional**: the
   zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
   login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
-  `RCP_SESSION_CAP` 10 in `src/rcp.h:94` is the configurable administrative ceiling (`--session-cap`); the maximum of 8 of §4 is the test target (to be settled).
+  `RCP_SESSION_CAP` 10 in `src/rcp.h:94` is the configurable administrative ceiling (`--session-cap`); the maximum of 8 of §4 is the test target (decided 25 Oct 2026: the ceiling stays at 10).
 - **Declared limits**: Retry and INVALID_TOKEN have no per-second cap (CPU only, §11.9); `handshake_timeout` stays at ngtcp2's default
   (§11.52); a live IPv6 test with a real provider is not possible on the test server (unit tests and 01-b10 in a namespace, §1.9-bis note).
 
@@ -161,7 +162,7 @@ These are approved and are **not** in the range above; `finale` has them, merged
 ## 7. What is OFF by default
 - **Root-side / network-side split (§11.50)**: written, reviewed, packaged (service user `remotix`, installer, distro packages, SELinux, seccomp,
   `remotix-net-move --back` with its Arch marker), in `finale` (from `rootside-completo`); the server stays ONE process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`,
-  and `--split` is refused otherwise.
+  and `--split` without it is refused (the server logs why and exits with 78).
   **Build switches of the packages (all OFF unless asked)**: Debian: `REMOTIX_SPLIT=1` (`packaging/debian/rules:30`, passed by `src/build-targets/build-deb.sh`); Arch: `REMOTIX_SPLIT=1`
   (`packaging/arch/build.sh`); rpm: `--with split` (`%bcond_with split`, `packaging/rpm/remotix.spec:37-39`) or `RX_SPLIT=1` for `build-rpm.sh`; any other value leaves the pieces OFF.
   **Inert without the switch**: the system user `remotix` (sysusers), `remotix-net-move`, the `*.split` units and tmpfiles, the rpm SELinux domain, the Arch install script, and their guards in `postinst` / `%post` / `remotix.install`.
@@ -172,3 +173,17 @@ These are approved and are **not** in the range above; `finale` has them, merged
   of the first attempt favoured ON (slow decoder: 26 → 61 photos/min on Firefox 4K), but the default is a change seen by the browser. Needs decision D3.
 - **Firefox worker as default (§11.36)**: written on the branch `ff-worker` (default on desktop Firefox only, fallback to the main-thread route; Chrome and Android
   unchanged), approved on reading, live proof still to do, NOT merged. It enters 1.5 only if the user chooses D2 = A.
+
+## 8. Upgrading from 1.0
+What an administrator will notice, most likely first. Everything here is in the sections above; this is the short list.
+- **Login ban.** The 1.0 rule (3 failures, address out for 12 h) is gone. 5 wrong passwords of one user from one address in 5 min block that user on that address; 12 failures from one address in 5 min block the address; 30 from one IPv6 /48 in 10 min block the /48. Blocks last 15 min, then 1 h, then 12 h, and are forgotten after 24 h without a ban. Everyone behind one NAT shares an address: twelve wrong passwords from different people block them all. The page tells a blocked visitor that the attempts are used up, without a number.
+- **Lifting a ban.** The packaged service does not pass `--command-socket` (the unit calls it a bench option, as in 1.0), so `UNBLOCK <address>` is not available on an installed server; a ban ends by itself.
+- **Ban file and logs.** The file keeps its path and mode (0600) but the format is new (names stored as HMAC-SHA256, never in clear). Unexpired 1.0 lines are read. Going back to 1.0, the new lines are silently ignored (verified in `rcp_ban_load()` of 1.0): bans in force at that moment are lost, nothing breaks. Unknown users appear in the log as `unknown user [a1b2c3]` and the failed-attempt line has a new form: rules written for 1.0 (grep, fail2ban) must be updated.
+- **Login refused with `0x0E`.** The synchronous PAM fallback is gone. If the password-checking helper is down, the login is refused with `0x0E`, and it does not count towards the ban. The helper restarts by itself (pauses of 1 s up to 60 s); if it does not, restart the service and read the log.
+- **Connections.** A new connection costs one more round trip (QUIC Retry). Before login the server is capped: 256 connections, 128 not logged in, 8 per address, 32 per /48; 90 s without login close the connection. Replies leave from the address the client wrote to.
+- **Page.** It is served with a Content-Security-Policy (`connect-src 'self'`), `no-referrer` and a restrictive Permissions-Policy; `/diary` is gone. Behind a reverse proxy the page and the WebTransport connection must stay on the same origin.
+- **Sessions.** A first login no longer closes the user's other sessions (`9167f2f4`); the 30-minute inactivity clock counts only the five user gestures (`806ff0bf`); a user is enrolled only in the group of the render nodes (`/dev/dri/renderD*`, `8205fe12`), no longer in other card groups.
+- **Limits.** 3K at most (not 4K); 8 users is the tested target, the configurable ceiling is 10.
+- **Options.** New: `--max-connections`, `--max-pending`, `--max-pending-per-address`, `--max-pending-per-48`, `--render-node`, `--decoder-pace`, and the split options (`--split`, `--network-user`, `--network-run-dir`, `--network-state-dir`). None of the 1.0 options was removed.
+- **Installer and packages.** The plan states the port before the question; the codes `RX-H264-003`, `RX-H264-004` and `RX-FW-004` are retired and no longer raised (`RX-H264-002` and `RX-FW-002` instead); zlib is a new dependency (the page is compressed).
+- **Unchanged by default.** The root/network split, decoder `PACE` and the Firefox worker are OFF: no new system user, no moved files, no new unit.
