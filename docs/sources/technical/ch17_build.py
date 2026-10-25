@@ -429,7 +429,7 @@ S_INSTALLED = p("The three families install the same pieces in the same places, 
       "users, bench sudoers, " + c("gpu-udev.sh") + ", " + c("restart-*.sh") + ", " + c("provision.sh") + ", "
       + c("ld.so.conf.d") + " entries.") + \
     table(["Removed by the package scripts", ".deb (" + c("postrm purge") + ")", ".rpm (on erase)", "Arch (" + c("post_remove") + ", every removal)"], [
-        ["certificates and ban", "yes", "yes (" + c("%ghost") + ")", "yes"],
+        ["certificates and ban", "yes", "yes (" + c("%ghost") + ")", "yes, except net/ when --back was incomplete (kept, message on stderr)"],
         [c("/run/remotix"), "yes", "ghost", "—"],
         [c("/var/lib/remotix"), "only if empty: the engine's history is not the package's", "rpm removes the empty dirs",
          "only if empty"],
@@ -674,7 +674,8 @@ S_ARCH_BACK = p("Phase F (" + c("DECISIONS-11.md") + " §11.50) moves the networ
     steps([
         "<b>Removal</b> (" + c("pacman -R remotix") + ", " + c("-Rns") + "): nothing to do by hand. " + c("pre_remove") + " runs "
         + c("--back") + " and then " + c("disable --now") + "; " + c("post_remove") + " then deletes the state the service made "
-        "(R6), so after a removal no certificate or ban is left either way.",
+        "(R6), so after a removal no certificate or ban is left either way — unless pacman prints «net/ kept: --back was "
+        "incomplete»: then inspect and remove " + c("/var/lib/remotix/net") + " by hand.",
         "<b>Downgrade to 1.0</b> (" + c("pacman -U remotix-1.0.0-…pkg.tar.zst") + "): <b>before</b> it, as root, run "
         + c("/usr/lib/remotix/remotix-net-move --back") + ". Check its exit status is 0 and read the check list below.",
         "Run " + c("pacman -U") + " on the older package. The service stays stopped after the downgrade (that is the point of "

@@ -60,9 +60,9 @@ post_upgrade() {
 #    the very files --back refused to move.  A --back that succeeds removes the marker.  /run is a tmpfs: the marker
 #    lives for the transaction, which is all post_remove needs.
 net_back() {
-	[ -x /usr/lib/remotix/remotix-net-move ] || return 0
 	local bad= f
 	rm -f /run/remotix/back-incomplete
+	[ -x /usr/lib/remotix/remotix-net-move ] || return 0
 	/usr/lib/remotix/remotix-net-move --back || bad=1
 	for f in certificates ban ban.new; do
 		{ [ -e "/var/lib/remotix/net/$f" ] || [ -L "/var/lib/remotix/net/$f" ]; } && bad=1
