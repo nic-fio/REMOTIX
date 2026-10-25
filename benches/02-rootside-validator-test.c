@@ -3,7 +3,8 @@
  * before PAM.
  *
  * In the build container, from src/ (the product's objects, then the test
- * linked against all of them except main.o and rootside.o), as
+ * linked against all of them except main.o, rootside.o and rediscover.o — the test defines its own
+ * rediscover_* stand-ins, and linking the real object too is a "multiple definition"), as
  * 02-child-strings-test.c says:
  *
  *   make TWIN=none
@@ -11,7 +12,7 @@
  *       libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 \
  *       xkbcommon wayland-client gbm) -o /tmp/rsv \
  *       ../benches/02-rootside-validator-test.c \
- *       $(ls *.o | grep -v -e '^main.o$' -e '^rootside.o$') \
+ *       $(ls *.o | grep -v -e '^main.o$' -e '^rootside.o$' -e '^rediscover.o$') \
  *       -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
  *       $(pkg-config --libs gio-2.0 libpipewire-0.3 libva libva-drm \
  *       libei-1.0 xkbcommon wayland-client gbm opus vulkan) -ldl && /tmp/rsv

@@ -1,6 +1,6 @@
 # rootside-proto: the closed list (src/rootside_proto.h)
 magic="RXR1"
-version="\x01\x00"
+version="\x03\x00"
 auth="\x01\x00"
 spawn="\x02\x00"
 orphan="\x03\x00"

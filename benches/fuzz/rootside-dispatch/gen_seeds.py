@@ -5,9 +5,15 @@ gen_seeds.py — the seed corpus of the `rootside-dispatch` fuzz target.   pytho
 A seed = ops `op, u16 length (big-endian), argument` (common.h); the op stream of fuzz_rootside_dispatch.c (op & 7).
 Moved here from the abandoned attempt's benches/runner/fuzz/gen_seeds.py (this tree has one folder per target).
 """
+import importlib.util
 import os
 import struct
 import sys
+
+# the closed list's VERSION comes from src/rootside_proto.h (../rootside_version.py), never typed here; loaded by path because build-inner.txt runs this with `python3 -I`
+_spec = importlib.util.spec_from_file_location("rootside_version", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rootside_version.py"))
+_rv = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_rv)
 
 
 def op(code, arg=b""):
@@ -28,7 +34,7 @@ def rootside_dispatch():
     def t(n):
         return op(3, struct.pack(">H", min(n // 16, 65535)))  # units of 16 ms
 
-    hdr = struct.pack("<IHHQ", 0x31525852, 1, 2, 5)
+    hdr = struct.pack("<IHHQ", 0x31525852, _rv.version(), 2, 5)   # magic, VERSION (current), kind SPAWN, request
     return [
         # the good road: AUTH anna, PAM yes, SPAWN with that grant, SIGNAL it, it dies
         req(0) + pam(0, 1) + req(1) + req(3, pick=0, idx=0, extra=b"\x02") + op(4, b"\x00"),
