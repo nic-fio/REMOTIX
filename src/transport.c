@@ -2420,10 +2420,12 @@ transport *transport_open_fd(int fd, const char *address, const char *port,
 		if (!HMAC(EVP_sha256(), t->secret, (int)sizeof t->secret, (const unsigned char *)"lookup-key", 10, mac, &maclen) ||
 		    maclen < sizeof t->cids.key) {
 			registro_dice(REG_QUIC, "⛔ cannot derive the key of the CID map");
+			explicit_bzero(mac, sizeof mac);
 			transport_close(t);
 			return NULL;
 		}
 		memcpy(t->cids.key, mac, sizeof t->cids.key);
+		explicit_bzero(mac, sizeof mac);
 	}
 
 	if (ngtcp2_crypto_ossl_init() != 0) {

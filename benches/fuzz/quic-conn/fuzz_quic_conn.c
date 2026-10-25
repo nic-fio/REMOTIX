@@ -107,6 +107,8 @@
 #include <ngtcp2/ngtcp2_crypto.h>
 #include <ngtcp2/ngtcp2_crypto_ossl.h>
 #include <openssl/rand.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
 #include <openssl/ssl.h>
 
 #include "common.h"
@@ -118,6 +120,8 @@
 #define getsockname rxq_getsockname
 #define clock_gettime rxq_clock_gettime
 #define RAND_bytes rxq_RAND_bytes
+#define HMAC rxq_HMAC
+#define EVP_sha256 rxq_EVP_sha256
 #define SSL_new rxq_SSL_new
 #define SSL_free rxq_SSL_free
 #define SSL_set_ex_data rxq_SSL_set_ex_data
@@ -127,6 +131,9 @@ static ssize_t rxq_sendmsg(int fd, const struct msghdr *m, int flags);
 static int rxq_getsockname(int fd, struct sockaddr *sa, socklen_t *len);
 static int rxq_clock_gettime(clockid_t id, struct timespec *ts);
 static int rxq_RAND_bytes(unsigned char *d, int n);
+static unsigned char *rxq_HMAC(const EVP_MD *md, const void *key, int keylen, const unsigned char *d, size_t n,
+                               unsigned char *out, unsigned int *outlen);
+static const EVP_MD *rxq_EVP_sha256(void);
 static SSL *rxq_SSL_new(SSL_CTX *ctx);
 static void rxq_SSL_free(SSL *s);
 static int rxq_SSL_set_ex_data(SSL *s, int idx, void *arg);
@@ -147,6 +154,8 @@ static void rxq_SSL_set_accept_state(SSL *s);
 #undef getsockname
 #undef clock_gettime
 #undef RAND_bytes
+#undef HMAC
+#undef EVP_sha256
 
 #define DIE(...)                                                                             \
 	do {                                                                                 \
@@ -536,6 +545,34 @@ static int rxq_clock_gettime(clockid_t id, struct timespec *ts)
 }
 
 static int rxq_RAND_bytes(unsigned char *d, int n) { return rxq_rand(d, (size_t)n) ? 1 : 0; }
+
+/* The played HMAC-SHA256 of the CID map's key (transport_open_fd): deterministic — FNV-1a over key and data, 32 bytes — so that
+ * a reproducer reproduces; the real one is OpenSSL's and is not what is fuzzed here. */
+static const EVP_MD *rxq_EVP_sha256(void)
+{
+	static const int token;
+
+	return (const EVP_MD *)&token;
+}
+
+static unsigned char *rxq_HMAC(const EVP_MD *md, const void *key, int keylen, const unsigned char *d, size_t n,
+                               unsigned char *out, unsigned int *outlen)
+{
+	uint64_t h = 0xcbf29ce484222325ull;
+
+	(void)md;
+	for (int i = 0; i < keylen; i++)
+		h = (h ^ ((const unsigned char *)key)[i]) * 0x100000001b3ull;
+	for (size_t i = 0; i < n; i++)
+		h = (h ^ d[i]) * 0x100000001b3ull;
+	for (int i = 0; i < 32; i++) {
+		h = (h ^ (uint64_t)i) * 0x100000001b3ull;
+		out[i] = (unsigned char)(h >> 24);
+	}
+	if (outlen)
+		*outlen = 32;
+	return out;
+}
 
 static SSL *rxq_SSL_new(SSL_CTX *ctx)
 {
