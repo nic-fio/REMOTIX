@@ -134,6 +134,8 @@ PKGS=(
     wl-clipboard xclip wtype wlrctl labwc
     # controllo del codice: shellcheck (SC2154 trova i nomi tradotti a meta') e pyflakes
     shellcheck pyflakes3
+    # il banco 30-perf: carico per motore della GPU Intel (intel_gpu_top)
+    intel-gpu-tools
     # per scaricare e per la chiave del repository di Chrome
     curl ca-certificates gnupg
 )
