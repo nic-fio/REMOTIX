@@ -182,6 +182,7 @@ struct rootside_born {
 	uid_t uid;
 	gid_t gid;
 	int fd;                       /* the child's socket end, O_NONBLOCK, SO_PASSCRED */
+	int pidfd;                    /* a pidfd of the child, handed over by the root side with the socket; -1 = none (old kernel) */
 	char user[RXR_USER_MAX];
 };
 /* ⛔ SPAWN with the grant kept for (user, rhost) — consumed, single use.

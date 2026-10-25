@@ -853,13 +853,14 @@ static void head_fill(struct rxr_head *h, int kind, uint64_t request)
  *    again (`outbox_flush()`). */
 static void net_kill(const char *why);
 
-static bool chan_try(const void *p, size_t len, int fd)
+/* ⭐ `fd2` (a pidfd of the child, only with SPAWNED, after the socket) travels in the same SCM_RIGHTS; -1 = none. */
+static bool chan_try2(const void *p, size_t len, int fd, int fd2)
 {
 	struct msghdr m;
 	struct iovec io = { (void *)p, len };
 	union {
 		struct cmsghdr c;
-		char b[CMSG_SPACE(sizeof(int))];
+		char b[CMSG_SPACE(2 * sizeof(int))];
 	} ctl;
 	ssize_t n;
 
@@ -869,14 +870,17 @@ static bool chan_try(const void *p, size_t len, int fd)
 	m.msg_iov = &io;
 	m.msg_iovlen = 1;
 	if (fd >= 0) {
+		int fds[2] = { fd, fd2 };
+		int count = fd2 >= 0 ? 2 : 1;
+
 		memset(&ctl, 0, sizeof ctl);
 		m.msg_control = ctl.b;
-		m.msg_controllen = sizeof ctl.b;
+		m.msg_controllen = CMSG_SPACE(count * sizeof(int));
 		struct cmsghdr *c = CMSG_FIRSTHDR(&m);
 		c->cmsg_level = SOL_SOCKET;
 		c->cmsg_type = SCM_RIGHTS;
-		c->cmsg_len = CMSG_LEN(sizeof(int));
-		memcpy(CMSG_DATA(c), &fd, sizeof fd);
+		c->cmsg_len = CMSG_LEN(count * sizeof(int));
+		memcpy(CMSG_DATA(c), fds, count * sizeof(int));
 	}
 	n = sendmsg(R.chan, &m, MSG_NOSIGNAL | MSG_DONTWAIT);
 	if (n != (ssize_t)len) {
@@ -895,6 +899,11 @@ static bool chan_try(const void *p, size_t len, int fd)
 		return false;
 	}
 	return true;
+}
+
+static bool chan_try(const void *p, size_t len, int fd)
+{
+	return chan_try2(p, len, fd, -1);
 }
 
 static bool chan_send(const void *p, size_t len, int fd)
@@ -1329,12 +1338,21 @@ static void birth(uint64_t request, const char *user, const char *rhost, uint32_
 	/* ⭐ review 4 B, finding 12: chan_try(), not chan_send() — ONE line for this
 	 *    failure, with its consequence and its errno, not chan_send()'s generic
 	 *    «did not leave» as well */
-	if (R.chan < 0 || !chan_try(&s, sizeof s, c.fd)) {
+	/* ⭐ A PIDFD OF THE CHILD travels with the socket (1.5, pidfd-figlio): the network side compares it with the pidfd the kernel attaches
+	 *    to each message (`SCM_PIDFD`), the exact identity of the sender — where the kernel supports it.  `pidfd_open()` on a child we
+	 *    have just forked and not yet reaped (this loop is the only one that reaps it) cannot name another process.  Without the
+	 *    syscall (kernel < 5.3) it is -1 and the packet carries the socket alone, as before. */
+	int child_pidfd = (int)syscall(SYS_pidfd_open, c.pid, 0);
+	if (child_pidfd >= 0)
+		fcntl(child_pidfd, F_SETFD, FD_CLOEXEC);
+	if (R.chan < 0 || !chan_try2(&s, sizeof s, c.fd, child_pidfd)) {
 		registro_dice(LOG_ROOT, "⛔ the child of «%s» is born but its socket could not "
 		              "be handed over (%s): it is killed", c.user,
 		              R.chan < 0 ? "no network side" : strerror(errno));
 		kill(c.pid, SIGKILL);
 	}
+	if (child_pidfd >= 0)
+		close(child_pidfd);
 	/* ⛔ The root side keeps NO end of the child's socket: when the network
 	 *    side dies, the child must see EOF (§11.50: desktops stay, children go). */
 	close(c.fd);
@@ -2344,6 +2362,9 @@ union rpk {
 
 static struct {
 	int fd;
+	/* ⭐ the pidfd of the child that came with the last SPAWNED (1.5, pidfd-figlio), until `rootside_spawn()` claims it */
+	int pidfd;
+	bool has_pidfd;
 	bool attached, lost;
 	pid_t root_pid;
 	uint64_t next_request;
@@ -2424,6 +2445,10 @@ static int client_recv(int timeout_ms, union rpk *pk, int *fd)
 	ssize_t n;
 
 	*fd = -1;
+	if (C.has_pidfd) { /* one nobody claimed: a SPAWNED that nobody waited for */
+		close(C.pidfd);
+		C.has_pidfd = false;
+	}
 	if (C.fd < 0)
 		return -1;
 	if (timeout_ms > 0) {
@@ -2459,7 +2484,10 @@ static int client_recv(int timeout_ms, union rpk *pk, int *fd)
 				memcpy(&d, CMSG_DATA(c) + j * sizeof(int), sizeof d);
 				if (*fd < 0)
 					*fd = d;
-				else
+				else if (nfds == 1 && !C.has_pidfd) { /* the second descriptor of a SPAWNED: the child's pidfd */
+					C.pidfd = d;
+					C.has_pidfd = true;
+				} else
 					close(d);
 				nfds++;
 			}
@@ -2468,7 +2496,7 @@ static int client_recv(int timeout_ms, union rpk *pk, int *fd)
 	if (!has_cred || cred.uid != 0 || cred.pid != C.root_pid || n < (ssize_t)sizeof pk->h
 	    || pk->h.magic != RXR_MAGIC || pk->h.version != RXR_VERSION
 	    || (size_t)n != size_of_event(pk->h.kind)
-	    || (nfds > 0) != (pk->h.kind == RXR_SPAWNED) || nfds > 1) {
+	    || (nfds > 0) != (pk->h.kind == RXR_SPAWNED) || nfds > 2) {
 		registro_dice(LOG_ROOT, "⛔ a packet on the root channel that is not the root "
 		              "side's or not of the list (%zd bytes, kind %u, uid %ld, pid %ld, "
 		              "%d fd): DISCARDED", n, n >= (ssize_t)sizeof pk->h ? pk->h.kind : 0,
@@ -2477,6 +2505,10 @@ static int client_recv(int timeout_ms, union rpk *pk, int *fd)
 		if (*fd >= 0)
 			close(*fd);
 		*fd = -1;
+		if (C.has_pidfd) {
+			close(C.pidfd);
+			C.has_pidfd = false;
+		}
 		return 0;
 	}
 	return 1;
@@ -2572,6 +2604,10 @@ static void dispatch(union rpk *pk, int fd)
 		              (unsigned long long)pk->s.serial);
 		if (fd >= 0)
 			close(fd);
+		if (C.has_pidfd) {
+			close(C.pidfd);
+			C.has_pidfd = false;
+		}
 		(void)rootside_signal(pk->s.serial, SIGKILL);
 		return;
 	default:
@@ -2845,6 +2881,8 @@ static int wait_birth(uint64_t request, int timeout_ms, struct rootside_born *ou
 			out->uid = (uid_t)pk.s.uid;
 			out->gid = (gid_t)pk.s.gid;
 			out->fd = d;
+			out->pidfd = C.has_pidfd ? C.pidfd : -1; /* claimed: the caller owns it now */
+			C.has_pidfd = false;
 			pk.s.user[sizeof pk.s.user - 1] = 0;
 			snprintf(out->user, sizeof out->user, "%s", pk.s.user);
 			return 0;
