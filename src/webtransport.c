@@ -7468,6 +7468,13 @@ static void closed_by_client(wt *w, uint32_t code)
  * of unknown capsules is not an error (RFC 9297 §3.2). */
 static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 {
+	/* ⭐ R2 of the network audit (25 Oct 2026, present since 1.0): the capsules are CONSUMED with a read index and the buffer is
+	 *    compacted ONCE, at the end of the call.  Before, every capsule moved the whole rest of the buffer down
+	 *    (`bytes_remove_head()` in the loop): a 2-byte capsule (type 0, length 0) is enough, so a chunk of L bytes of them cost
+	 *    about L²/4 bytes of `memmove` — 360 KB for a 1.2 KB packet, 17 MB for an 8 KB chunk — from a client that has not logged in
+	 *    and whose credit is widened by every byte it sends (`cb_recv_data()`).  Now the cost of a call is linear in what arrived. */
+	size_t off = 0;
+
 	if (stream_id != w->session || len == 0)
 		return;
 
@@ -7493,12 +7500,12 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 		/* ⚠ Here the buffer cannot grow without end: a variable-length
 		 *   integer is at most 8 bytes, so with 16 bytes type and
 		 *   length are always read. */
-		a = varint_read(&kind, w->capsbuf.d, w->capsbuf.n);
+		a = varint_read(&kind, w->capsbuf.d + off, w->capsbuf.n - off);
 		if (a == 0)
-			return;
-		b = varint_read(&lung, w->capsbuf.d + a, w->capsbuf.n - a);
+			break;
+		b = varint_read(&lung, w->capsbuf.d + off + a, w->capsbuf.n - off - a);
 		if (b == 0)
-			return;
+			break;
 
 		/* ⛔⭐ AND THE LENGTH IS CHECKED HERE, BEFORE WAITING FOR THE BYTES.
 		 *
@@ -7510,7 +7517,7 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 		 *    the client could send without end.  ⛔ On a connection
 		 *    that has not yet passed the RCP handshake. */
 		if (lung > WT_CAPSULE_MAX) {
-			uint64_t here = w->capsbuf.n - a - b;
+			uint64_t here = w->capsbuf.n - off - a - b;
 			uint64_t grabbed = here < lung ? here : lung;
 			log_says_of(REG_WT, wt_chi(w),
 			                 "capsule 0x%llx %llu bytes long, beyond the "
@@ -7519,15 +7526,15 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 			                 (unsigned long long)kind,
 			                 (unsigned long long)lung, WT_CAPSULE_MAX);
 			w->capsule_skip = lung - grabbed;
-			bytes_remove_head(&w->capsbuf, a + b + (size_t)grabbed);
+			off += a + b + (size_t)grabbed;
 			if (w->capsule_skip > 0)
-				return;
+				break;
 			continue;
 		}
-		if (w->capsbuf.n < a + b + lung)
-			return; /* it is below the cap: we can wait */
+		if (w->capsbuf.n - off < a + b + lung)
+			break; /* it is below the cap: we can wait */
 
-		body = w->capsbuf.d + a + b;
+		body = w->capsbuf.d + off + a + b;
 		if (kind == 0x2843 && lung >= 4) {
 			uint32_t code = ((uint32_t)body[0] << 24) |
 			                  ((uint32_t)body[1] << 16) |
@@ -7539,8 +7546,11 @@ static void capsule(wt *w, int64_t stream_id, const uint8_t *data, size_t len)
 			                 code);
 			closed_by_client(w, code);
 		}
-		bytes_remove_head(&w->capsbuf, a + b + (size_t)lung);
+		off += a + b + (size_t)lung;
 	}
+	/* ⭐ the one compaction of the call: what was consumed goes, the incomplete capsule (at most WT_CAPSULE_MAX + 16 bytes) stays */
+	if (off > 0)
+		bytes_remove_head(&w->capsbuf, off);
 }
 
 /* ------------------------------------------------------------------------ */
