@@ -1061,7 +1061,18 @@ static void test_secure_files(void)
 	if (dh)
 		closedir(dh);
 	CHECK(others == 0, "no temporary or .new left in the directory (%d)", others);
-	CHECK(rcp_log_secret_load("/tmp") != -2, "a directory with the sticky bit (/tmp) is accepted");
+	{
+		/* a world-writable directory WITH the sticky bit (as /tmp is), made here so that nothing is left in /tmp itself */
+		char td[] = "/tmp/lg-st-XXXXXX";
+		char tf[200];
+
+		CHECK(mkdtemp(td) != NULL, "mkdtemp (sticky)");
+		chmod(td, 01777);
+		CHECK(rcp_log_secret_load(td) == 0, "a directory with the sticky bit (as /tmp) is accepted");
+		snprintf(tf, sizeof tf, "%s/%s", td, LOG_SECRET_FILE);
+		unlink(tf);
+		rmdir(td);
+	}
 
 	/* 5. the ban file: a link is refused (-1, not «no bans»), a foreign owner is refused, 0644 (the 1.0's) is read, and the
 	 *    saving replaces a planted link without writing through it */

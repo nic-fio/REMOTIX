@@ -1978,27 +1978,30 @@ static bool network_side_born_right(void)
 /* ⛔ The ban file that cannot be read stops the server (invariant I7), and
  *    since 1.5 the most likely reason is an upgrade that did not give it to
  *    `remotix`: the line says owner, mode and the fix, not only «could not». */
-static void ban_unreadable_line(const char *file_ban)
+static void ban_unreadable_line(const char *file_ban, bool network_side)
 {
 	struct stat st;
 	int e = errno;
+	/* the cure depends on who runs: the network side's file belongs to the network user; in the single process it must be a
+	 * regular file (not a link) of root, in a directory nobody else can write to (`rcp_ban_load()`: ELOOP for a link, EPERM for a
+	 * stranger's file or a world-writable directory) */
+	const char *fix = network_side
+	                      ? "Run the upgrade's chown (the file and its directory belong to the network user)."
+	                      : "It must be a regular file (not a link) owned by root, in a directory nobody else can write to.";
 	if (stat(file_ban, &st) == 0)
 		registro_dice(LOG_STARTUP,
 		              "⛔ the ban file %s exists and could NOT be read by uid "
 		              "%ld (%s; owner uid %ld gid %ld, mode %04o): it is not "
 		              "«zero bans», it is the protection of §4.4-bis turned "
-		              "off.  Run the upgrade's chown (the file and its "
-		              "directory belong to the network user).  Not starting.",
+		              "off.  %s  Not starting.",
 		              file_ban, (long)geteuid(), strerror(e), (long)st.st_uid,
-		              (long)st.st_gid, (unsigned)(st.st_mode & 07777));
+		              (long)st.st_gid, (unsigned)(st.st_mode & 07777), fix);
 	else
 		registro_dice(LOG_STARTUP,
 		              "⛔ the ban file %s exists and could NOT be read by uid "
 		              "%ld (%s): it is not «zero bans», it is the protection "
-		              "of §4.4-bis turned off.  Run the upgrade's chown (the "
-		              "file and its directory belong to the network user).  "
-		              "Not starting.",
-		              file_ban, (long)geteuid(), strerror(e));
+		              "of §4.4-bis turned off.  %s  Not starting.",
+		              file_ban, (long)geteuid(), strerror(e), fix);
 }
 
 /* ⛔ Review 4 B, finding 21: «inside --network-state-dir» was a prefix test on
@@ -2920,14 +2923,7 @@ int main(int argc, char **argv)
 			 *    protection turned off with the air of having nothing to
 			 *    protect, that is invariant I7 broken silently.  Not
 			 *    starting. */
-			if (network_side)
-				ban_unreadable_line(file_ban);
-			else
-			registro_dice(LOG_STARTUP,
-			              "⛔ the ban file %s exists and could NOT be "
-			              "read: it is not «zero bans», it is the protection of "
-			              "§4.4-bis turned off.  Not starting.",
-			              file_ban);
+			ban_unreadable_line(file_ban, network_side); /* owner, mode and the cure, in the single process too */
 			return 1;
 		}
 		registro_dice(LOG_STARTUP, "ban: %s, %d addresses loaded", file_ban, n);

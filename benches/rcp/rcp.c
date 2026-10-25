@@ -1786,8 +1786,14 @@ int rcp_log_secret_load(const char *dir)
 		close(dfd);
 		return -1;
 	}
-	bool wrote = write(fd, log_secret, sizeof log_secret) == (ssize_t)sizeof log_secret;
-	wrote = sf_commit(dfd, fd, tmp, base) && wrote; /* the temporary one is removed on failure */
+	if (write(fd, log_secret, sizeof log_secret) != (ssize_t)sizeof log_secret) {
+		/* a short or failed write: the temporary is closed and removed, NEVER renamed over the good name */
+		close(fd);
+		unlinkat(dfd, tmp, 0);
+		close(dfd);
+		return -1;
+	}
+	bool wrote = sf_commit(dfd, fd, tmp, base); /* the temporary one is removed on failure */
 	close(dfd);
 	return wrote ? 0 : -1;
 }
