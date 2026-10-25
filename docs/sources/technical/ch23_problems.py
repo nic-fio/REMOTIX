@@ -44,12 +44,6 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          c("src/rcp.c"),
          "The server answers it with " + c("BENCH_OUTCOME") + " " + c("FEATURE_OFF") + " instead of "
          "not knowing it. (RCP.md's own test table asks for that answer, so the specification contradicts itself.)"],
-        ["<b>Retired installer codes are still raised.</b> " + c("RX-H264-003") + " and " + c("RX-H264-004")
-         + " are marked retired in " + c("codes.go") + " but " + c("codeH264()") + " still returns them for "
-         "Fedora and openSUSE; " + c("RX-FW-004") + " is still returned by the firewall stub for nftables or no "
-         "firewall.",
-         c("installer/engine/preflight.go") + ", " + c("installer/engine/environment.go"),
-         "An administrator may meet a code the catalogue says no longer exists."],
     ], "«TAB» — Open defects in the product")
 
 S2 = p("Comments and log lines in the code that no longer describe what the code does. None changes behaviour, but each "

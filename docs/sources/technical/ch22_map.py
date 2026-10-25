@@ -33,6 +33,13 @@ GRUPPI = [
          "logind session, desktop start, capture, encoding and input inside it"),
         (S + "child.h", "Why the child exists (root cannot join the user's session bus), its invariants and the "
          "parent–child messages"),
+                (S + "rootside.h", "1.5 privilege separation (§11.50): the root side (PAM, desktop birth) and the network side's handle on it; one binary, one channel"),
+        (S + "rootside.c", "The root side built against a hijacked network side: credentials and exact length on every packet, bounds on logins and births, the network side restarted if it breaks the rules"),
+        (S + "rootside_proto.h", "The closed list of messages between the two sides (AUTH, SPAWN, CLOSE_ORPHAN, SIGNAL and the events): fixed sizes, magic and version"),
+        (S + "walls.h", "The network side's walls, in plain words: private read-only mount namespace, no privileges, seccomp, SELinux domain"),
+        (S + "walls.c", "Applies the walls in the fork, in the order that matters, and refuses to start the network side if one fails"),
+        (S + "render_grant.h", "The card for a user manager started before the card groups, without closing the user's sessions (§11.4), with the measurements"),
+        (S + "render_grant.c", "Gives and takes back the ACL on the render nodes, with its record file; runs in the parent as root"),
         (S + "helper.c", "The PAM helper process: verifies passwords off the single thread"),
         (S + "helper.h", "Why the helper exists (PAM blocks 1–2 s per attempt), its three layers and invariant I3"),
         (S + "authentication.c", "PAM conversation and the guard that starts from “denied”; no comparison with "
@@ -63,6 +70,7 @@ GRUPPI = [
         (S + "mutter.h", "The mandatory Mutter sequence and the penalty attached to each step"),
         (S + "kwin.c", "The stage on KDE Plasma: " + c("zkde_screencast_unstable_v1") + " on the virtual output, "
          "and the EIS input channel"),
+                (S + "unchanged.h", "Recognises a KWin frame that changes nothing from its damage, so it is not encoded (KDE delivers ~50 buffers a second, ~90 % identical)"),
         (S + "kwin.h", "What was carried over from v1 for KWin: capture protocol and input channel"),
         (S + "wlroots.c", "Capture on labwc (XFCE, LXQt) with screencopy: from the card via dmabuf, from "
          "memory as a declared fallback"),
@@ -82,6 +90,8 @@ GRUPPI = [
         (S + "encoder.h", "What the encoder is and is not; the contract with capture and transport"),
         (S + "vadirect.c", "H.264 and HEVC on the card with libva used directly: levels, headers bit by bit, "
          "per-frame encode"),
+                (S + "render_node.h", "Which card encodes: the one the compositor draws on (linux-dmabuf main_device), not the first one the kernel numbered"),
+        (S + "render_node.c", "From the compositor's device number to the render node through sysfs, no libdrm"),
         (S + "vadirect.h", "Why libva is used without libavcodec (ffmpeg left the product, phase 18)"),
         (S + "vulkanvideo.c", "H.264 and HEVC with Vulkan Video: device, profiles, session, parameters, "
          "per-frame encode"),
@@ -99,6 +109,7 @@ GRUPPI = [
         (S + "transport.h", "The first of the two listeners on the same port (RCP §2.4)"),
         (S + "webtransport.c", "The WebTransport layer over HTTP/3 (nghttp3): extended CONNECT, streams, "
          "datagrams, and RCP on top"),
+                (S + "pktinfo.h", "The source address of a reply: the control message that makes a reply leave from the address the client wrote to (a socket bound to the wildcard otherwise lets the kernel choose)"),
         (S + "webtransport.h", "Why the WebTransport layer is ours: neither library carries it server side"),
         (S + "rcp.c", "The RCP/1 state machine, server side: handshake, ban, farewell, every rule with its "
          "paragraph number"),
@@ -178,6 +189,7 @@ GRUPPI = [
     ("Installer engine (" + c("installer/") + " = installer, " + c("engine/") + " = engine)", [
         ("installer/cmd/remotix-install/main.go", "The command line: " + c("check") + ", " + c("install")
          + ", " + c("uninstall") + ", " + c("status") + ", " + c("tui") + " and the commands package scripts call"),
+                ("installer/cmd/remotix-install/main_test.go", "The plan states the port before the question: chosen, stock, or none on an upgrade"),
         ("installer/cmd/remotix-install/tui.go", "Starts the text interface"),
         (M + "format.go", "Package entry: object format version, engine version, fingerprints"),
         (M + "states.go", "The operation states and the only valid transitions"),
@@ -216,6 +228,11 @@ GRUPPI = [
         (M + "codes.go", "The catalogue of stable " + c("RX-") + " codes, severity and nature"),
         (M + "language.go", "English only for administrators; " + c("T()") + " looks texts up by key"),
         (M + "texts.go", "The engine's and command line's texts, in English"),
+                (M + "network_side.go", "The network side's system user (§11.50): the preflight refuses a person's account, the plan and the certification check the user and net/, the uninstall removes it"),
+        (M + "action_render_grants.go", "The uninstall takes the render-node ACL entries recorded by the product back out (reversible if cancelled)"),
+        (M + "network_side_test.go", "The network side user: preflight, rollback, certification, one unit only, uninstall"),
+        (M + "card_groups_test.go", "Only the render nodes' groups are given to the user, never the card nodes"),
+        (M + "render_grants_test.go", "The uninstall removes the render grants, puts them back if cancelled, and parses the record"),
         (M + "certify_test.go", "Certification on a deliberately broken machine never says green"),
         (M + "uninstall_test.go", "Uninstall on the fake machine"),
         (M + "epoch_test.go", "RPM epochs: an installed package with an epoch is not «missing»"),
@@ -266,6 +283,10 @@ GRUPPI = [
         ("packaging/debian/copyright", "Copyright declaration of the package"),
         ("packaging/debian/source/format", "Native source format"),
         ("packaging/debian/remotix.service", "The service unit: runs as root, certificate, name"),
+                ("packaging/debian/remotix-net-move", "Moves the network side's files (certificates, ban) from the 1.0 place into net/ before the restart; byte-identical in the three packagings"),
+        ("packaging/debian/remotix.service.split", "The unit the split build installs (the root side is the main PID, no User=); not active by default"),
+        ("packaging/debian/remotix.sysusers", "The system user of the network side, no groups, no login; the same line in the three packagings"),
+        ("packaging/debian/remotix.tmpfiles.split", "The directories of the split build: root state in /var/lib/remotix, the network side's in net/"),
         ("packaging/debian/remotix.conf", "Packaged defaults; the administrator's choices go in "
          + c("/etc/remotix/remotix.conf.d/")),
         ("packaging/debian/remotix.tmpfiles", "The state and runtime directories"),
@@ -282,6 +303,10 @@ GRUPPI = [
         ("packaging/rpm/remotix.spec", "One spec for Fedora, Alma, Tumbleweed and Leap, with conditional branches"),
         ("packaging/rpm/build-rpm.sh", "Builds the .rpm in each target's container"),
         ("packaging/rpm/remotix.service", "The service unit, RPM family"),
+                ("packaging/rpm/remotix-net-move", "Moves the network side's files (certificates, ban) from the 1.0 place into net/ before the restart; byte-identical in the three packagings"),
+        ("packaging/rpm/remotix.service.split", "The unit the split build installs (the root side is the main PID, no User=); not active by default"),
+        ("packaging/rpm/remotix.sysusers", "The system user of the network side, no groups, no login; the same line in the three packagings"),
+        ("packaging/rpm/remotix.tmpfiles.split", "The directories of the split build: root state in /var/lib/remotix, the network side's in net/"),
         ("packaging/rpm/remotix.conf", "Packaged defaults"),
         ("packaging/rpm/remotix.tmpfiles", "The state and runtime directories"),
         ("packaging/rpm/remotix-firewalld.xml", "The firewalld service, defined, not opened"),
@@ -289,6 +314,8 @@ GRUPPI = [
         ("packaging/rpm/org.kde.remotix.desktop", "Grants KWin's screencast interface to the binary"),
         ("packaging/rpm/selinux/remotix.te", "The SELinux module: why it exists and the domain transition to the user"),
         ("packaging/rpm/selinux/remotix.fc", "SELinux file contexts"),
+                ("packaging/rpm/selinux/remotix.fc.split", "File contexts of the split build, with the network side's own directories"),
+        ("packaging/rpm/selinux/remotix.te.split", "The SELinux module of the split build: the remotix_net_t domain of the network side"),
         ("packaging/rpm/selinux/remotix.if", "SELinux interface"),
         ("packaging/rpm/labwc/VERSIONS", "Our labwc for RHEL / Alma 10: version, tarball, sha256 and URL, pinned"),
         ("packaging/rpm/labwc/fetch.sh", "Fetches the labwc tarball and accepts it only if both checksums match"),
@@ -297,6 +324,10 @@ GRUPPI = [
     ("Packaging: Arch", [
         ("packaging/arch/PKGBUILD", "The Arch package, built from the repository in the Arch container"),
         ("packaging/arch/build.sh", "Tarball of one commit, then makepkg and namcap"),
+                ("packaging/arch/remotix-net-move", "Moves the network side's files (certificates, ban) from the 1.0 place into net/ before the restart; byte-identical in the three packagings"),
+        ("packaging/arch/remotix.service.split", "The unit the split build installs (the root side is the main PID, no User=); not active by default"),
+        ("packaging/arch/remotix.sysusers", "The system user of the network side, no groups, no login; the same line in the three packagings"),
+        ("packaging/arch/remotix.tmpfiles.split", "The directories of the split build: root state in /var/lib/remotix, the network side's in net/"),
         ("packaging/arch/remotix.install", "Package scripts: nothing switched on"),
         ("packaging/arch/remotix.service", "The service unit, Arch"),
         ("packaging/arch/remotix.conf", "Packaged defaults, as in the deb and rpm"),
