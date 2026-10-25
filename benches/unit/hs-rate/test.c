@@ -18,7 +18,10 @@
  *   6c. the fractions of a token are kept: asked every 300 µs, a bucket of 4 a second refills 40 tokens in 10 s, not about 33 (the time that
  *      does not make a whole thousandth is not thrown away);
  *   7. by reading src/transport.c (argv[1], optional): rate_ok() is called after token_used() and before room_for() and accept_conn(),
- *      the token is kept only after accept_conn(), and the refusal is a stateless CONNECTION_REFUSED.
+ *      the token is kept only after accept_conn(), and the refusal is a stateless CONNECTION_REFUSED;
+ *   8. (rilettura M2, 25 Oct 2026) the take is in two halves: hs_take_local() pays the address and /48 buckets and only LOOKS at the global
+ *      one; hs_charge_all() pays it, and transport.c calls it after room_for() says yes — a newcomer refused for lack of places has not
+ *      taken a global token (40 /48s at one instant, all let through by the local half; 32 pass once each is charged).
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -218,14 +221,50 @@ int main(int argc, char **argv)
 			CHECK(used && rate && room && acc && keep && used < rate && rate < room && room < acc && acc < keep,
 			      "7. rate_ok() runs after token_used(), before room_for() and accept_conn(); the token is kept only after accept_conn()");
 			char *fn = strstr(t, "static bool rate_ok(");
-			CHECK(fn && strstr(fn, "NGTCP2_CONNECTION_REFUSED") && strstr(fn, "hs_take(&t->hs, &t->hs_lim"),
-			      "7b. the refusal is a stateless CONNECTION_REFUSED, decided by hs_take() with the transport's own limits");
+			CHECK(fn && strstr(fn, "NGTCP2_CONNECTION_REFUSED") && strstr(fn, "hs_take_local(&t->hs, &t->hs_lim"),
+			      "7b. the refusal is a stateless CONNECTION_REFUSED, decided by hs_take_local() with the transport's own limits");
+			char *chg = strstr(t, "hs_charge_all(&t->hs);");
+			CHECK(chg && room && acc && room < chg && chg < acc, "7e. the global token is paid by hs_charge_all() after room_for() and before accept_conn()");
 			CHECK(strstr(t, "t->hs_over_address, t->hs_lim.addr_rate, t->hs_over_net, t->hs_lim.net_rate, t->hs_over_all"),
 			      "7c. the HANDSHAKE RATE line gives the count first and then the rate, for each of the three");
 			CHECK(strstr(t, "t->hs_lim = (struct hs_limits)HS_LIMITS_DEFAULT;"), "7d. the limits start at the product's defaults");
 			free(t);
 		}
 	}
+
+	/* 8: the two halves */
+	h = fresh();
+	ok = 0;
+	for (unsigned i = 0; i < 40; i++) {
+		v6(o, o48, 0x2000 + i, 0);
+		ok += hs_take_local(h, &LIM, o, o48, t0) == HS_OK;
+	}
+	CHECK(ok == 40 && h->all.milli == (uint64_t)HS_ALL_BURST * 1000u,
+	      "8. 40 different /48s, none charged: the local half lets all 40 through and the global bucket is untouched");
+	free(h);
+	h = fresh();
+	ok = 0;
+	for (unsigned i = 0; i < 40; i++) {
+		v6(o, o48, 0x3000 + i, 0);
+		if (hs_take_local(h, &LIM, o, o48, t0) == HS_OK) {
+			hs_charge_all(h);
+			ok++;
+		}
+	}
+	CHECK(ok == HS_ALL_BURST, "8b. ...and charged one by one, the global bucket lets 32 through, as hs_take() does");
+	v4(k, k48, 198, 51, 100, 7);
+	CHECK(hs_take_local(h, &LIM, k, k48, t0) == HS_OVER_ALL, "8c. a global bucket that is empty refuses the local half too (HS_OVER_ALL)");
+	{
+		struct hs_bucket *a = NULL;
+		for (unsigned i = 0; i < HS_ADDR_SLOTS; i++)
+			if (h->addr[i].used && memcmp(h->addr[i].key, k, 16) == 0)
+				a = &h->addr[i];
+		CHECK(a && a->milli == (uint64_t)HS_ADDR_BURST * 1000u, "8d. ...and then it charges nothing to the address bucket");
+	}
+	h->all.milli = 0;
+	hs_charge_all(h);
+	CHECK(h->all.milli == 0, "8e. hs_charge_all() never goes below zero");
+	free(h);
 
 	printf("%d checks, %d bad\n", checks, bad);
 	return bad ? 1 : 0;

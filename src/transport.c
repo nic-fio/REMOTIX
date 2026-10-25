@@ -1309,7 +1309,8 @@ static void hs_report(transport *t, ngtcp2_tstamp now)
 	t->hs_line_ns = now;
 }
 
-/* `true` = this new handshake is within the rate limits (a token taken from each bucket); `false` = refused, and the client was told
+/* `true` = this new handshake is within the rate limits (a token taken from the address bucket and the /48 one; the global one is only looked
+ * at, and paid by `hs_charge_all()` in read_packet_1() once `room_for()` has said yes: rilettura M2); `false` = refused, and the client was told
  * with a stateless CONNECTION_CLOSE(CONNECTION_REFUSED), like `room_for()`.  ⚠ Why an answer and not silence: the address has just
  * proved itself with the Retry token (no spoofing, no amplification: the close is ~50 bytes against an Initial of at least 1200), and a
  * browser that is told fails at once instead of waiting out its handshake timeout.  ⚠ The page does NOT retry by itself: the user has to
@@ -1323,7 +1324,7 @@ static bool rate_ok(transport *t, const ngtcp2_pkt_hd *hd, const struct sockaddr
 	int why;
 
 	address_key(remote, key, key48);
-	why = hs_take(&t->hs, &t->hs_lim, key, key48, now_ns());
+	why = hs_take_local(&t->hs, &t->hs_lim, key, key48, now_ns());
 	if (why == HS_OK)
 		return true;
 	t->hs_refused_total++;
@@ -1947,6 +1948,9 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 			return;
 		if (!room_for(t, &hd, remote, remotelen, &victim))
 			return;
+		/* ⭐ rilettura M2: the GLOBAL handshake token is paid only now, for a handshake that will be processed: a newcomer refused
+		 *    because the places are full (above) has not taken one from the others */
+		hs_charge_all(&t->hs);
 		c = accept_conn(t, &hd, &odcid, local, localelen, remote, remotelen);
 		if (!c)
 			return;

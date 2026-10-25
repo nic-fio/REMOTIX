@@ -1015,6 +1015,8 @@ static void op_new(const uint8_t *a, size_t n)
 		     existing = cid_find(T, last_dcid, dl) != NULL;
 		unsigned retries = rxq_retries;
 		unsigned long long hs_before = T->hs_refused_total;
+		bool all_used0 = T->hs.all.used;
+		uint64_t all0 = T->hs.all.milli; /* ⭐ rilettura M2: the global handshake token, before this newcomer */
 		rxq_last_close_code = 0;
 		enqueue(b, i, a0 % 4, ((a4 >> 1) & 3) % 3);
 		deliver(a4 & 1);
@@ -1096,6 +1098,11 @@ static void op_new(const uint8_t *a, size_t n)
 				    from48, cap_per_48(T), nev);
 			if (T->how_many > before)
 				DIE("a refused connection was born anyway");
+			/* ⭐ rilettura M2: refused for lack of PLACES (not for the rate), it has not paid the global handshake token (the clock
+			 *    does not move inside a delivery: the bucket can only have been refilled, never emptied) */
+			if (all_used0 && T->hs.all.used && T->hs.all.milli < all0)
+				DIE("a newcomer refused for lack of places took a global handshake token (%llu -> %llu thousandths)",
+				    (unsigned long long)all0, (unsigned long long)T->hs.all.milli);
 		}
 		/* ...also a connection refused for the RATE is not born (the rest of the caps oracle does not apply to it) */
 		if (alone && caps_exact && rate_refused && rxq_last_close_code == NGTCP2_CONNECTION_REFUSED && T->how_many > before)
