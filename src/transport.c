@@ -417,6 +417,8 @@ static void cid_unbind_all(transport *t, connection *c)
  *    many when the window ends — at the next line of that kind or, with none asking, from `transport_expired()`
  *    (`noise_flush()`, armed by `transport_wait_ns()`). */
 #define NOISE_LINES 5
+#define NOISE_PATH_LINES 10  /* a user who really moves is rare; the validations of strangers are not */
+#define NOISE_DGRAM_LINES 10 /* for ALL the connections together: each one has its own rule too (the first 3, then every 256th) */
 
 static void noise_say(const char *what, const struct line_budget_closed *c)
 {
@@ -629,9 +631,15 @@ static int cb_path_validation(ngtcp2_conn *conn, uint32_t flags,
 	address_text((const struct sockaddr *)path->remote.addr,
 	             (socklen_t)path->remote.addrlen, now, sizeof now);
 	if (res != NGTCP2_PATH_VALIDATION_RESULT_SUCCESS) {
-		registro_dice(REG_QUIC, "⚠ %s: the path towards %s was NOT validated (%s): "
-		              "the traffic stays where it was", c->provenance, now,
-		              res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
+		/* ⛔ rilettura M4: a connection that has not logged in yet can start a validation from any source it likes, one after the other;
+		 *    one budget for all (NOISE_PATH_LINES per window), the rest counted */
+		if (noise_take(&c->t->noise_path, NOISE_PATH_LINES, NOISE_PATH))
+			registro_dice(REG_QUIC, "⚠ %s: the path towards %s was NOT validated (%s): "
+			              "the traffic stays where it was", c->provenance, now,
+			              res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
+		else
+			log_detail(REG_QUIC, "%s: the path towards %s was NOT validated (%s)", c->provenance, now,
+			           res == NGTCP2_PATH_VALIDATION_RESULT_ABORTED ? "aborted" : "failed");
 		return 0;
 	}
 	/* the local end follows the validated path even when only IT changed (same remote) */
@@ -641,8 +649,11 @@ static int cb_path_validation(ngtcp2_conn *conn, uint32_t flags,
 	}
 	if (strcmp(now, c->provenance) == 0)
 		return 0;
-	registro_dice(REG_QUIC, "⭐ %s MOVED to %s: new path validated (§2.3 migration)",
-	              c->provenance, now);
+	if (noise_take(&c->t->noise_path, NOISE_PATH_LINES, NOISE_PATH))
+		registro_dice(REG_QUIC, "⭐ %s MOVED to %s: new path validated (§2.3 migration)",
+		              c->provenance, now);
+	else
+		log_detail(REG_QUIC, "%s MOVED to %s: new path validated (§2.3 migration)", c->provenance, now);
 	if (path->remote.addrlen <= sizeof c->remote) {
 		memcpy(&c->remote, path->remote.addr, path->remote.addrlen);
 		c->remotelen = (socklen_t)path->remote.addrlen;
@@ -684,15 +695,22 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 	(void)flags;
 	c->datagrams_seen++;
 	c->datagram_byte += len;
-	if (c->datagrams_seen <= 3 || (c->datagrams_seen % 256) == 0)
-		registro_dice(REG_QUIC,
-		              "⚠ TOLERANCE (§3 exception 2, §6.3): datagram of %zu "
-		              "bytes from %s DISCARDED — in phase 1 there is no audio and "
-		              "no type of §6.3 can be served.  In all: %llu "
-		              "datagrams, %llu bytes",
-		              len, c->provenance,
-		              (unsigned long long)c->datagrams_seen,
-		              (unsigned long long)c->datagram_byte);
+	if (c->datagrams_seen <= 3 || (c->datagrams_seen % 256) == 0) {
+		/* ⛔ rilettura M4: the rule above is PER connection; 200 connections a second, 3 lines each, are 600 lines a second.
+		 *    A global budget over it (NOISE_DGRAM_LINES per window); the counts of the connection are always in the line that is written */
+		if (noise_take(&c->t->noise_dgram, NOISE_DGRAM_LINES, NOISE_DGRAM))
+			registro_dice(REG_QUIC,
+			              "⚠ TOLERANCE (§3 exception 2, §6.3): datagram of %zu "
+			              "bytes from %s DISCARDED — in phase 1 there is no audio and "
+			              "no type of §6.3 can be served.  In all: %llu "
+			              "datagrams, %llu bytes",
+			              len, c->provenance,
+			              (unsigned long long)c->datagrams_seen,
+			              (unsigned long long)c->datagram_byte);
+		else
+			log_detail(REG_QUIC, "datagram of %zu bytes from %s DISCARDED (%llu datagrams, %llu bytes in all)", len, c->provenance,
+			           (unsigned long long)c->datagrams_seen, (unsigned long long)c->datagram_byte);
+	}
 	return 0;
 }
 
