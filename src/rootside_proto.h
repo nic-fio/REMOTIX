@@ -49,10 +49,14 @@
  * network side costs PAM nothing).  The grant lives 30 s: a right password is
  * followed by its SPAWN within the same login, `[M]` 1–14 ms (the «SPAWNED
  * after N ms» line); 30 s is the slack for a slow PAM session stack.  `[?]`
- * the rate is a decision, not a measurement. */
+ * the rate is a decision, not a measurement.
+ * ⭐ 1.6 (split audit R2): it was 10 per second, burst 20.  A person types a password every
+ * few seconds and eight users can log in together (burst 8); 3 sustained leaves a hijacked
+ * network side three guesses a second at most before the per-user and per-address pauses
+ * (`rootside_login_admit`) even start. */
 #define RXR_AUTH_IN_FLIGHT_MAX 16
-#define RXR_AUTH_PER_S         10
-#define RXR_AUTH_BURST         20
+#define RXR_AUTH_PER_S         3
+#define RXR_AUTH_BURST         8
 #define RXR_GRANT_LIFE_MS      30000
 
 enum rxr_kind {

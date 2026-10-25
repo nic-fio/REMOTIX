@@ -57,7 +57,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 69
+#define EXPECTED_CHECKS 94
 
 static void require(int cond, const char *desc)
 {
@@ -213,21 +213,29 @@ int main(void)
 	ok_count = 0;
 	for (int i = 0; i < 17; i++)
 		ok_count += rootside_auth_admit(&b, 1000);
-	require(ok_count == RXR_AUTH_IN_FLIGHT_MAX, "17 at once: 16 admitted (in flight)");
-	for (int i = 0; i < 16; i++)
+	require(ok_count == RXR_AUTH_BURST, "17 at once: the burst (8) admitted");
+	for (int i = 0; i < ok_count; i++)
 		rootside_auth_done(&b);
 	ok_count = 0;
 	for (int i = 0; i < 10; i++) {
 		ok_count += rootside_auth_admit(&b, 1000);
 		rootside_auth_done(&b);
 	}
-	require(ok_count == RXR_AUTH_BURST - 16, "burst 20: after 16, only 4 more in the same instant");
+	require(ok_count == 0, "burst 8: none more in the same instant");
 	ok_count = 0;
 	for (int i = 0; i < 30; i++) {
 		ok_count += rootside_auth_admit(&b, 2000);
 		rootside_auth_done(&b);
 	}
-	require(ok_count == RXR_AUTH_PER_S, "one second later: 10 more (10/s)");
+	require(ok_count == RXR_AUTH_PER_S, "one second later: 3 more (3/s)");
+	rootside_bounds_init(&b, 1000);
+	b.tokens = 100; /* a slow PAM, a long quiet before: the in-flight bound is its own */
+	ok_count = 0;
+	for (int i = 0; i < 20; i++)
+		ok_count += rootside_auth_admit(&b, 1000);
+	require(ok_count == RXR_AUTH_IN_FLIGHT_MAX, "20 at once with tokens to spare: 16 in flight");
+	for (int i = 0; i < 16; i++)
+		rootside_auth_done(&b);
 
 	printf("  the names refused before PAM\n");
 	require(rootside_user_refused("root", "/nonexistent", NULL, why, sizeof why) == 1
@@ -352,7 +360,7 @@ int main(void)
 			R.prepam_logged_ms = 0;
 			fflush(stderr);
 			dup2(lf, 2);
-			for (int i = 0; i < 15; i++) {
+			for (int i = 0; i < RXR_AUTH_BURST - 1; i++) {
 				auth_fill(&a);
 				snprintf(a.user, sizeof a.user, "root");
 				handle_auth(&a);
@@ -367,10 +375,10 @@ int main(void)
 				lines += strstr(l, "refused BEFORE PAM") != NULL;
 			if (f)
 				fclose(f);
-			require(nos == 15 && R.bounds.in_flight == 0,
-			        "15 AUTH «root» within the burst: 15 NO, none left in flight");
+			require(nos == RXR_AUTH_BURST - 1 && R.bounds.in_flight == 0,
+			        "7 AUTH «root» within the burst (8): 7 NO, none left in flight");
 			char d[120];
-			snprintf(d, sizeof d, "… and %d «refused BEFORE PAM» line(s) written, not 15", lines);
+			snprintf(d, sizeof d, "… and %d «refused BEFORE PAM» line(s) written, not 7", lines);
 			require(lines == 1, d);
 			close(sv[0]);
 			close(sv[1]);
@@ -585,6 +593,139 @@ int main(void)
 		R.kids = NULL;
 		R.cap = 0;
 		R.net_pid = 0;
+	}
+
+	printf("  1.6 (split audit R2): the root side's own pause for what PAM refused\n");
+	{
+		static struct rootside_bounds lb; /* ~100 KB: not on the stack */
+		struct rootside_login_event ev;
+		uint64_t left = 0;
+		int n_ok = 0;
+
+		rootside_bounds_init(&lb, 1000);
+		/* five refused in a row, one at a time: the fifth starts a 15-minute pause */
+		for (int i = 0; i < 5; i++) {
+			require(rootside_login_admit(&lb, "1000", "192.0.2.1", 10000 + 1000 * i, NULL) == RXR_LOGIN_OK,
+			        "an AUTH is asked while fewer than 5 refused");
+			rootside_login_done(&lb, "1000", "192.0.2.1", 10000 + 1000 * i, RXR_LOGIN_REFUSED, &ev);
+			if (i < 4)
+				require(!ev.user_ban, "… and the refused one starts no pause yet");
+		}
+		require(ev.user_ban && ev.user_level == 1 && ev.user_ms == 900000,
+		        "the fifth refused in 5 min: pause 1 of the ladder, 15 min");
+		require(rootside_login_admit(&lb, "1000", "192.0.2.1", 15000, &left) == RXR_LOGIN_USER_PAUSED
+		        && left == 899000
+		        , "the user is paused: not asked, with the time left");
+		require(rootside_login_admit(&lb, "1001", "192.0.2.2", 15000, NULL) == RXR_LOGIN_OK
+		        && (rootside_login_done(&lb, "1001", "192.0.2.2", 15000, RXR_LOGIN_UNCHECKED, NULL), 1),
+		        "another user from another address is not held up");
+		require(rootside_login_admit(&lb, "1000", "192.0.2.1", 14000 + 900000 + 1, NULL) == RXR_LOGIN_OK,
+		        "after 15 min the user is asked again");
+		rootside_login_done(&lb, "1000", "192.0.2.1", 14000 + 900000 + 1, RXR_LOGIN_UNCHECKED, NULL);
+		/* second pause: 1 h */
+		{
+			uint64_t t = 14000 + 900000 + 10;
+
+			for (int i = 0; i < 5; i++) {
+				(void)rootside_login_admit(&lb, "1000", "192.0.2.1", t + i, NULL);
+				rootside_login_done(&lb, "1000", "192.0.2.1", t + i, RXR_LOGIN_REFUSED, &ev);
+			}
+			require(ev.user_ban && ev.user_level == 2 && ev.user_ms == 3600000,
+			        "five more: pause 2, one hour");
+			for (int k = 3; k <= 4; k++) {
+				t += 3600000 + 10;
+				for (int i = 0; i < 5; i++) {
+					(void)rootside_login_admit(&lb, "1000", "192.0.2.1", t + i, NULL);
+					rootside_login_done(&lb, "1000", "192.0.2.1", t + i, RXR_LOGIN_REFUSED, &ev);
+				}
+			}
+			require(ev.user_ban && ev.user_level == 3 && ev.user_ms == 43200000,
+			        "the third and the fourth: 12 hours, the ladder stops there");
+		}
+		/* in flight counts as a failure to come: a burst cannot step over the limit */
+		rootside_bounds_init(&lb, 1000);
+		n_ok = 0;
+		for (int i = 0; i < 10; i++)
+			n_ok += rootside_login_admit(&lb, "2000", "", 5000, NULL) == RXR_LOGIN_OK;
+		require(n_ok == ROOTSIDE_LOGIN_USER_LIMIT && rootside_login_admit(&lb, "2000", "", 5000, NULL) == RXR_LOGIN_USER_BUSY,
+		        "10 AUTH at once for one user, none answered: 5 asked, the rest «busy» (no PAM)");
+		for (int i = 0; i < n_ok; i++)
+			rootside_login_done(&lb, "2000", "", 5000, RXR_LOGIN_UNCHECKED, NULL);
+		require(rootside_login_admit(&lb, "2000", "", 5000, NULL) == RXR_LOGIN_OK,
+		        "«not checked» answers are not failures: the places come back, nothing counted");
+		rootside_login_done(&lb, "2000", "", 5000, RXR_LOGIN_UNCHECKED, NULL);
+		/* the sliding window: failures 5 min apart do not add up */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 8; i++) {
+			uint64_t t = 1000 + (uint64_t)i * 100000; /* 100 s apart: only 3 inside 5 min */
+			(void)rootside_login_admit(&lb, "3000", "", t, NULL);
+			rootside_login_done(&lb, "3000", "", t, RXR_LOGIN_REFUSED, &ev);
+			if (ev.user_ban)
+				break;
+		}
+		require(!ev.user_ban, "failures 100 s apart: never 5 inside the window, no pause (a slow guess is the network side's)");
+		/* a yes clears that user's failures, not the address's */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 4; i++) {
+			(void)rootside_login_admit(&lb, "4000", "198.51.100.9", 2000 + i, NULL);
+			rootside_login_done(&lb, "4000", "198.51.100.9", 2000 + i, RXR_LOGIN_REFUSED, NULL);
+		}
+		(void)rootside_login_admit(&lb, "4000", "198.51.100.9", 2010, NULL);
+		rootside_login_done(&lb, "4000", "198.51.100.9", 2010, RXR_LOGIN_ACCEPTED, NULL);
+		(void)rootside_login_admit(&lb, "4000", "198.51.100.9", 2020, NULL);
+		rootside_login_done(&lb, "4000", "198.51.100.9", 2020, RXR_LOGIN_REFUSED, &ev);
+		require(!ev.user_ban, "four refused, a yes, one refused: the user's count restarted (no pause)");
+		/* the address: 12 refused in 5 min, from different users, pause the address for everyone */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 12; i++) {
+			char k[16];
+
+			snprintf(k, sizeof k, "%d", 5000 + i);
+			(void)rootside_login_admit(&lb, k, "203.0.113.7", 3000 + i, NULL);
+			rootside_login_done(&lb, k, "203.0.113.7", 3000 + i, RXR_LOGIN_REFUSED, &ev);
+		}
+		require(ev.host_ban && ev.host_level == 1 && !ev.user_ban,
+		        "12 refused from one address (12 different users): the address is paused, not the users");
+		require(rootside_login_admit(&lb, "9999", "203.0.113.7", 4000, NULL) == RXR_LOGIN_HOST_PAUSED
+		        && rootside_login_admit(&lb, "9999", "203.0.113.8", 4000, NULL) == RXR_LOGIN_OK,
+		        "… everybody from that address waits, the others do not");
+		rootside_login_done(&lb, "9999", "203.0.113.8", 4000, RXR_LOGIN_UNCHECKED, NULL);
+		/* recidivism is forgotten after 24 h without a pause */
+		rootside_bounds_init(&lb, 1000);
+		for (int i = 0; i < 5; i++) {
+			(void)rootside_login_admit(&lb, "6000", "", 5000 + i, NULL);
+			rootside_login_done(&lb, "6000", "", 5000 + i, RXR_LOGIN_REFUSED, &ev);
+		}
+		{
+			uint64_t t = 5000 + 900000 + ROOTSIDE_LOGIN_FORGET_MS;
+
+			for (int i = 0; i < 5; i++) {
+				(void)rootside_login_admit(&lb, "6000", "", t + i, NULL);
+				rootside_login_done(&lb, "6000", "", t + i, RXR_LOGIN_REFUSED, &ev);
+			}
+			require(ev.user_ban && ev.user_level == 1, "24 h after the last pause: back to the first rung");
+		}
+		/* a full table: never fail open — a pause in force or an attempt in flight is not
+		 * dropped; idle entries are */
+		rootside_bounds_init(&lb, 1000);
+		n_ok = 0;
+		for (int i = 0; i < ROOTSIDE_LOGIN_USERS + 5; i++) {
+			char k[16];
+
+			snprintf(k, sizeof k, "%d", 7000 + i);
+			n_ok += rootside_login_admit(&lb, k, "", 6000 + (uint64_t)i, NULL) == RXR_LOGIN_OK;
+		}
+		require(n_ok == ROOTSIDE_LOGIN_USERS && rootside_login_admit(&lb, "8000", "", 7000, NULL) == RXR_LOGIN_FULL,
+		        "every place of the table in flight: a newcomer is refused (FULL), no entry is stolen");
+		for (int i = 0; i < ROOTSIDE_LOGIN_USERS; i++) {
+			char k[16];
+
+			snprintf(k, sizeof k, "%d", 7000 + i);
+			rootside_login_done(&lb, k, "", 7000, RXR_LOGIN_UNCHECKED, NULL);
+		}
+		require(rootside_login_admit(&lb, "8000", "", 7001, NULL) == RXR_LOGIN_OK,
+		        "… and once they are idle the oldest is taken back");
+		rootside_login_done(&lb, "8000", "", 7001, RXR_LOGIN_UNCHECKED, NULL);
 	}
 
 	printf("  review 2: a network side that shut its reading end (M2)\n");

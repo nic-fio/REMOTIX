@@ -184,6 +184,10 @@ struct mgrant { bool used; uint8_t b[RXR_GRANT_BYTES]; char user[RXR_USER_MAX];
                 char rhost[RXR_RHOST_MAX]; uint64_t minted; uint32_t gen; };
 #define FUZZ_ABANDON_MS 1000 /* R1: the abandonment the harness gives the root side */
 static uint64_t orphan_born_ms[5]; /* the last close-only birth per user */
+/* R2: the model of the root side's pause — the times of the last 5 refusals (PAM's 0 or 4) per
+ * user, cleared by a yes; PAM must not be asked while all 5 are inside the 5-minute window */
+static uint64_t refused_ms[5][ROOTSIDE_LOGIN_USER_LIMIT];
+static int refused_n[5];
 static uint64_t last_exit_ms[5];   /* R1: when the user was last left without a child (the model) */
 static struct mgrant grants[1024]; /* a ring: the root side keeps 32 */
 static int ngrants;
@@ -526,6 +530,10 @@ static bool rxr_helper_ask_bare(helper *a, const char *user, const char *passwor
 	       "PAM asked for «%s» (uid 0, denied, unknown or unresolvable)", user);
 	asked_in_flight++;
 	asked_total++;
+	ORACLE(!(refused_n[ui] == ROOTSIDE_LOGIN_USER_LIMIT
+	         && rx_now_ms - refused_ms[ui][0] <= ROOTSIDE_LOGIN_WINDOW_MS),
+	       "PAM asked for «%s» after %d refusals inside %d min (the root side's pause)", user,
+	       ROOTSIDE_LOGIN_USER_LIMIT, ROOTSIDE_LOGIN_WINDOW_MS / 60000);
 	ORACLE(asked_in_flight <= RXR_AUTH_IN_FLIGHT_MAX, "%d questions to PAM in flight",
 	       asked_in_flight);
 	ORACLE(asked_total <= RXR_AUTH_BURST + RXR_AUTH_PER_S * (int)((rx_now_ms - t_start) / 1000 + 1),
@@ -711,6 +719,7 @@ static void setup(void)
 	ngrants = nqs = nkids = nreq = 0;
 	memset(orphan_born_ms, 0, sizeof orphan_born_ms);
 	memset(last_exit_ms, 0, sizeof last_exit_ms);
+	memset(refused_n, 0, sizeof refused_n);
 	asked_in_flight = asked_total = 0;
 	fail_next_birth = 0;
 	memset(logind_live, 0, sizeof logind_live);
@@ -839,6 +848,22 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 			qs[k].outcome = outc;
 			asked_in_flight--;
 			cur = NULL;
+			{
+				int ui_ = user_index(qs[k].user);
+
+				if (ui_ >= 0) {
+					if (outc == 1) {
+						refused_n[ui_] = 0;
+					} else if (outc == 0 || outc == 4) {
+						if (refused_n[ui_] == ROOTSIDE_LOGIN_USER_LIMIT) {
+							memmove(refused_ms[ui_], refused_ms[ui_ ] + 1,
+							        (ROOTSIDE_LOGIN_USER_LIMIT - 1) * sizeof refused_ms[0][0]);
+							refused_n[ui_]--;
+						}
+						refused_ms[ui_][refused_n[ui_]++] = rx_now_ms;
+					}
+				}
+			}
 			on_pam_outcome(NULL, qs[k].ticket, outc, qs[k].user, qs[k].rhost);
 			qs[k].outcome = -1; /* answered: a later VERDICT YES for it is no longer PAM's */
 			break;

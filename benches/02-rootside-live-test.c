@@ -261,7 +261,7 @@ static int net_side(void)
 			no += v_out[20 + i] == RXR_NO;
 		}
 		char d[160];
-		snprintf(d, sizeof d, "25 AUTH at once: %d NO, %d not checked (16 in flight max)", no, nc);
+		snprintf(d, sizeof d, "25 AUTH at once for anna: %d NO, %d not checked (burst 8, and 5 refused-or-in-flight per user)", no, nc);
 		check(no <= 16 && nc >= 9 && no + nc == 25, d);
 	}
 	fprintf(out, "%s\n", fails ? "RED" : "GREEN");
