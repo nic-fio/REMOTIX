@@ -106,6 +106,9 @@
  *   phase closes — it is a seam, and seams are kept by the coordinator.
  */
 #define LOG_KEYBOARD "keyboard"
+/* S-R1: the line «a character is not producible» (RCP.md §7.3): this many per window, the rest counted */
+#define KB_NOLETTER_LINES 5
+#define KB_NOLETTER_WINDOW_MS 10000
 
 /* XKB numbers keys starting from 8, evdev from 0 (`RCP.md` §7.3). */
 #define EVDEV_DA_XKB(k) ((uint16_t)((k) - 8))
@@ -936,10 +939,32 @@ int keyboard_positions_for(Keyboard *t, uint32_t character,
 		 *     here we know WHICH layout it is — which is the only thing that
 		 *     whoever reads the log six hours later needs.
 		 */
-		registro_dice(LOG_KEYBOARD,
-		              "a character is not producible with layout %s: NOTHING "
-		              "sent (RCP.md §7.3; which one, is not written — phase 16 §12)",
-		              t->name);
+		/* ⭐ S-R1: the line RCP.md §7.3 requires, but not one per message: the first KB_NOLETTER_LINES of every KB_NOLETTER_WINDOW_MS are written, the rest
+		 *    counted and said once, at the end of the window (a flood of LETTER U+10FFFF used to write a line each, in the child's log) */
+		{
+			static uint64_t window_at, hidden;
+			static unsigned written;
+			uint64_t now = log_now_ms();
+
+			if (!window_at || now - window_at >= KB_NOLETTER_WINDOW_MS) {
+				if (hidden)
+					registro_dice(LOG_KEYBOARD, "%llu more characters not producible with layout %s in the last %d s, "
+					              "not written one by one: NOTHING sent", (unsigned long long)hidden, t->name,
+					              KB_NOLETTER_WINDOW_MS / 1000);
+				window_at = now;
+				written = 0;
+				hidden = 0;
+			}
+			if (written < KB_NOLETTER_LINES) {
+				written++;
+				registro_dice(LOG_KEYBOARD,
+				              "a character is not producible with layout %s: NOTHING "
+				              "sent (RCP.md §7.3; which one, is not written — phase 16 §12)",
+				              t->name);
+			} else {
+				hidden++;
+			}
+		}
 		return 0;
 	}
 
