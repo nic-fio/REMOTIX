@@ -18,6 +18,7 @@
 #include "audio.h"
 #include "rcp.h"
 #include "log.h"
+#include "linebudget.h"
 
 #include <assert.h>
 #include <math.h>
@@ -1007,10 +1008,68 @@ static bool wt_logged_in(wt *w)
 	return w && w->was_logged_in;
 }
 
+/* ⛔ R8 (audit of 25 Oct 2026): ONE budget for ALL addresses, over the per-address ones.  Those are 20 lines every 10 s for each of
+ *    128 addresses: whoever has many addresses (or rotates them: an IPv6 /48 is 65536 keys) gets a fresh budget for each and writes
+ *    20 × N lines, and the journal of root fills up — exactly what the budget was for.  So every line the address's budget would
+ *    allow must also fit WT_PRELOGIN_GLOBAL_BURST per window for the whole server; the rest is counted, and ONE line says how many.
+ *    The summaries of evicted keys go through it too (a rotation would otherwise write one summary per key). */
+#define WT_PRELOGIN_GLOBAL_BURST 100
+static struct line_budget prelogin_all;
+static uint64_t prelogin_folded; /* hidden lines whose per-address summary the global budget did not allow */
+
+static void prelogin_all_say(const struct line_budget_closed *c)
+{
+	if (!c->hidden && !prelogin_folded)
+		return;
+	log_says_of(REG_WT, NULL,
+	            "⛔ %llu more lines before the login from ALL addresses together in the last %d s, not written one by one "
+	            "(the first %d of every %d s are written; %llu of them were already hidden under one address)",
+	            (unsigned long long)c->hidden + (unsigned long long)prelogin_folded, WT_PRELOGIN_WINDOW_MS / 1000,
+	            WT_PRELOGIN_GLOBAL_BURST, WT_PRELOGIN_WINDOW_MS / 1000, (unsigned long long)prelogin_folded);
+	prelogin_folded = 0;
+}
+
+static bool prelogin_all_may(uint64_t now)
+{
+	struct line_budget_closed c;
+	bool ok = line_budget_take(&prelogin_all, now, WT_PRELOGIN_WINDOW_MS, WT_PRELOGIN_GLOBAL_BURST, &c);
+
+	if (c.hidden || (prelogin_folded && c.written)) /* c.written: a window really closed, not a line in the middle of one */
+		prelogin_all_say(&c); /* before the caller writes the first line of the new window */
+	return ok;
+}
+
+/* ⭐ The timer's half (transport.c): the window of the global budget closes and its line is written even when no line is asking.
+ *    `now_ms` is `log_now_ms()`'s clock (CLOCK_MONOTONIC, like transport.c's nanoseconds / 1e6). */
+void wt_prelogin_flush(uint64_t now_ms)
+{
+	struct line_budget_closed c;
+
+	line_budget_flush(&prelogin_all, now_ms, WT_PRELOGIN_WINDOW_MS, &c);
+	if (c.hidden || (prelogin_folded && c.written)) /* c.written: a window really closed */
+		prelogin_all_say(&c);
+}
+
+/* When that window ends, in milliseconds of the same clock, or UINT64_MAX if nothing is waiting to be said (for transport_wait_ns()). */
+uint64_t wt_prelogin_expiry_ms(void)
+{
+	if (!prelogin_all.hidden && !prelogin_folded)
+		return UINT64_MAX;
+	return prelogin_all.start + WT_PRELOGIN_WINDOW_MS;
+}
+
 static void prelogin_summary(int i, uint64_t now)
 {
 	if (!prelogin[i].hidden)
 		return;
+	if (!prelogin_all_may(now)) { /* the global budget is spent: the count is not lost, it joins the global line */
+		/* the take that was just refused counted THIS summary as one more hidden line: it is not one of the N, take it back */
+		if (prelogin_all.hidden)
+			prelogin_all.hidden--;
+		prelogin_folded += prelogin[i].hidden;
+		prelogin[i].hidden = 0;
+		return;
+	}
 	log_says_of(REG_WT, NULL,
 	            "⛔ %s: %llu more lines before the login in the last %llu ms, not "
 	            "written one by one (the first %d of every %d s per address are)",
@@ -1059,6 +1118,8 @@ static bool prelogin_may_log(wt *w)
 		prelogin[i].written = 0;
 	}
 	if (prelogin[i].written < WT_PRELOGIN_BURST) {
+		if (!prelogin_all_may(now))
+			return false; /* counted by the global budget */
 		prelogin[i].written++;
 		return true;
 	}

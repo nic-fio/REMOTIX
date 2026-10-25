@@ -20,7 +20,11 @@
  *      counted (here as the 9th request: closed);
  *   6. wt_max_size_of() and wt_tenants_served() count only sessions that
  *      LOGGED IN: a stranger still waiting for PAM under the owner's name, with
- *      a bigger max_size, changes neither.
+ *      a bigger max_size, changes neither;
+ *   7. (R8, 25 Oct 2026) the budget for ALL addresses: 300 addresses with one line each in one window write exactly
+ *      WT_PRELOGIN_GLOBAL_BURST lines, not 300; the timer (wt_prelogin_flush) alone closes the window with ONE line that counts
+ *      the 200, and wt_prelogin_expiry_ms() tells transport_wait_ns() when; a per-address summary refused by the spent budget
+ *      joins that count as N, not N+1.
  *
  * BUILD AND RUN (a full build of the product first, about as long as `make`: the test links every object but main.o and webtransport.o; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
@@ -56,7 +60,7 @@ static uint64_t rxt_now(void);
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 18
+#define EXPECTED_CHECKS 24
 
 static void require(int cond, const char *desc)
 {
@@ -264,6 +268,57 @@ int main(void)
 		require(wt_tenants_served() == 1, "wt_tenants_served(): one tenant, not two");
 		stranger->rcp = NULL;
 		owner->rcp = NULL;
+	}
+	printf("  7. one budget for all the addresses (R8)\n");
+	{
+		ngtcp2_ccerr eg;
+		char prov[48];
+
+		memset(&eg, 0, sizeof eg);
+		/* a fresh world: nothing of the steps above can add a line to the count */
+		memset(prelogin, 0, sizeof prelogin);
+		memset(&prelogin_all, 0, sizeof prelogin_all);
+		prelogin_folded = 0;
+		fake_now += 2 * WT_PRELOGIN_WINDOW_MS;
+		says = 0;
+		summary[0] = 0;
+		for (int k = 0; k < 300; k++) {
+			snprintf(prov, sizeof prov, "[10.%d.%d.7]:1", k / 250, k % 250);
+			wt *wk = wt_new(NULL, &eg, prov, NULL);
+			hook_log(wk, "a line from one of many addresses");
+		}
+		require(says == WT_PRELOGIN_GLOBAL_BURST,
+		        "300 addresses, one line each: exactly 100 written (the global budget), not 300");
+		require(prelogin_all.hidden == 200 && wt_prelogin_expiry_ms() == prelogin_all.start + WT_PRELOGIN_WINDOW_MS,
+		        "200 counted, and the timer knows when the window ends");
+		fake_now += WT_PRELOGIN_WINDOW_MS;
+		says = 0;
+		wt_prelogin_flush(fake_now);
+		require(says == 1 && strstr(summary, "200 more lines before the login from ALL addresses") != NULL,
+		        "the timer alone closes the window: ONE line, 200 not written, no line asking");
+		require(wt_prelogin_expiry_ms() == UINT64_MAX, "and nothing is waiting afterwards");
+		/* a per-address summary that the spent global budget refuses joins the global line as N, not N+1 */
+		memset(&prelogin_all, 0, sizeof prelogin_all);
+		prelogin_all.start = fake_now;
+		prelogin_all.written = WT_PRELOGIN_GLOBAL_BURST;
+		prelogin_folded = 0;
+		memset(prelogin, 0, sizeof prelogin);
+		prelogin[0].used = true;
+		snprintf(prelogin[0].key, sizeof prelogin[0].key, "[10.8.8.8]");
+		prelogin[0].window_ms = fake_now;
+		prelogin[0].hidden = 7;
+		prelogin_summary(0, fake_now);
+		require(prelogin_folded == 7 && prelogin_all.hidden == 0,
+		        "a per-address summary refused by the spent global budget joins the global line as 7, not 8");
+		/* ...and a line from a NEW address in the same window writes nothing, and no global line comes out in the middle of the window */
+		{
+			wt *wn = wt_new(NULL, &eg, "[10.7.7.7]:1", NULL);
+
+			says = 0;
+			hook_log(wn, "a line in the same window");
+			require(says == 0 && prelogin_folded == 7,
+			        "a new address in the same window: nothing written, the folded count still waits for the end of the window");
+		}
 	}
 	require(true, "the end was reached");
 	(void)w2;
