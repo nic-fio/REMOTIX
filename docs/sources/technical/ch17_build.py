@@ -685,8 +685,9 @@ S_ARCH_BACK = p("Phase F (" + c("DECISIONS-11.md") + " §11.50) moves the networ
     ]) + \
     h4("What happens if the package is removed or downgraded without --back") + \
     ul([
-        "<b>Removal:</b> no harm to the administrator. " + c("post_remove") + " deletes " + c("/var/lib/remotix/net") + " and the 1.0 "
-        "paths anyway; the only effect of a failed " + c("--back") + " is a warning on stderr from pacman.",
+        "<b>Removal:</b> no harm to the administrator. " + c("post_remove") + " deletes the 1.0 paths, and " + c("net/") + " too unless "
+        + c("--back") + " was incomplete (then " + c("net/") + " is kept and the message says so); a failed " + c("--back")
+        + " also prints a warning on stderr from pacman.",
         "<b>Downgrade:</b> the 1.0 server looks for " + c("ban") + " and " + c("certificates/") + " in " + c("/var/lib/remotix")
         + ", finds nothing, and makes new ones: the <b>ban list is reset</b> (an attacker's failures are forgotten) and the "
         "<b>certificate fingerprint changes</b> (every browser must trust it again). The old files are not lost: "
@@ -709,16 +710,16 @@ loginctl list-sessions                                         # the desktop ses
     warn("a «⚠ … more than one hard link» line means the ban was left in " + c("net/") + " on purpose (a hard link could be "
          "an attack on a root-owned file): inspect it by hand before the downgrade. A «⛔ … not a directory» line means "
          + c("net/") + " is a link or a plain file: nothing was moved.") + \
-    warn("<b>Gap in the Arch scripts.</b> " + c("post_remove") + " runs " + c("rm -rf /var/lib/remotix/net") + " whatever "
-         + c("pre_remove") + " achieved, so a " + c("--back") + " that stopped halfway (hard-linked ban, both copies present) loses "
-         "the files it refused to move. .deb (only at " + c("purge") + ") and .rpm (" + c("%ghost") + ") do not have this problem "
-         "on a plain remove. Proposed correction: " + c("net_back()") + " returns non-zero and creates a marker "
-         "(for example " + c("/run/remotix/back-incomplete") + ") when " + c("--back") + " fails, and " + c("post_remove")
-         + " skips " + c("rm -rf /var/lib/remotix/net") + " when the marker exists, printing «remotix: net/ kept: "
-         "--back was incomplete». Optional: a " + c("pre_upgrade") + " that detects " + c("$2") + " (the incoming version) lower than "
-         "the installed one and runs " + c("--back") + ", as .deb and .rpm do; pacman passes the new version as " + c("$1")
-         + " and the old as " + c("$2") + " to " + c("pre_upgrade") + ", but that function belongs to the package being "
-         "installed — so it only helps from 1.5 onwards, on a 1.5 → 1.5.x downgrade, never for 1.0.", "Open point.")
+    note(c("post_remove") + " used to run " + c("rm -rf /var/lib/remotix/net") + " whatever " + c("pre_remove")
+         + " had achieved, which lost the files a partial " + c("--back") + " refused to move. Now " + c("net_back()")
+         + " creates " + c("/run/remotix/back-incomplete") + " when " + c("--back") + " exits non-zero <b>or</b> exits 0 but "
+         "leaves " + c("certificates") + ", " + c("ban") + " or " + c("ban.new") + " in " + c("net/") + " (a hard-linked ban, both "
+         "copies present); a " + c("--back") + " that succeeds removes the marker. " + c("post_remove") + " then skips the "
+         "deletion of " + c("net/") + " and prints «net/ kept: --back was incomplete»: the administrator inspects the files "
+         "and removes " + c("/var/lib/remotix/net") + " by hand. The marker is in " + c("/run") + " (a tmpfs): it lives for "
+         "the transaction. Checked, without podman or root, by " + c("benches/02-arch-install-back.sh") + ". Still open: a "
+         + c("pre_upgrade") + " that runs " + c("--back") + " on a downgrade cannot help a downgrade to 1.0, because pacman runs "
+         "the scripts of the package being installed, so that case stays manual (step 2 above).", "Fixed gap.")
 
 
 CHAPTER = ("Build and release", [

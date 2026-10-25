@@ -55,9 +55,22 @@ post_upgrade() {
 # ⚠ A DOWNGRADE cannot be done from here: pacman runs the NEW package's scripts (the older one's pre_upgrade), never this
 #    one's.  Before `pacman -U <older package>` the administrator runs `/usr/lib/remotix/remotix-net-move --back`
 #    (it stops the service; the desktops stay) — the same command, idempotent.
+# ⭐ The marker /run/remotix/back-incomplete: --back failed, OR exited 0 but left certificates/ or a ban in net/ (a
+#    hard-linked ban, both copies present — it says so and leaves them).  post_remove then KEEPS net/ instead of deleting
+#    the very files --back refused to move.  A --back that succeeds removes the marker.  /run is a tmpfs: the marker
+#    lives for the transaction, which is all post_remove needs.
 net_back() {
 	[ -x /usr/lib/remotix/remotix-net-move ] || return 0
-	/usr/lib/remotix/remotix-net-move --back || echo "remotix: ⚠ the move of /var/lib/remotix/net back is incomplete" >&2
+	local bad= f
+	rm -f /run/remotix/back-incomplete
+	/usr/lib/remotix/remotix-net-move --back || bad=1
+	for f in certificates ban ban.new; do
+		{ [ -e "/var/lib/remotix/net/$f" ] || [ -L "/var/lib/remotix/net/$f" ]; } && bad=1
+	done
+	if [ -n "$bad" ]; then
+		echo "remotix: ⚠ the move of /var/lib/remotix/net back is incomplete" >&2
+		install -d -m 0755 /run/remotix 2>/dev/null && : > /run/remotix/back-incomplete
+	fi
 	return 0
 }
 
@@ -73,7 +86,13 @@ post_remove() {
 	# ⭐ R6: the state the SERVICE created by itself (certificates, ban) goes
 	#    away with the package.  /etc/remotix/denied-users and /etc/pam.d/remotix are
 	#    handled by pacman (backup=: with -n they vanish, without they stay as .pacsave).
-	rm -rf /var/lib/remotix/net /var/lib/remotix/certificates
+	#    ⛔ Not net/ when --back left something there (the marker of net_back()): those files are the administrator's.
+	if [ -e /run/remotix/back-incomplete ]; then
+		echo "remotix: net/ kept: --back was incomplete (/var/lib/remotix/net)" >&2
+	else
+		rm -rf /var/lib/remotix/net
+	fi
+	rm -rf /var/lib/remotix/certificates
 	rm -f /var/lib/remotix/ban /var/lib/remotix/ban.new /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
 	rmdir /var/lib/remotix 2>/dev/null
 	systemctl daemon-reload 2>/dev/null
