@@ -115,7 +115,6 @@
 /* ⭐ the renames: they reach `transport.c` only (its headers are already in) */
 #define recvmsg rxq_recvmsg
 #define sendmsg rxq_sendmsg
-#define sendto rxq_sendto
 #define getsockname rxq_getsockname
 #define clock_gettime rxq_clock_gettime
 #define RAND_bytes rxq_RAND_bytes
@@ -125,11 +124,6 @@
 #define SSL_set_accept_state rxq_SSL_set_accept_state
 static ssize_t rxq_recvmsg(int fd, struct msghdr *m, int flags);
 static ssize_t rxq_sendmsg(int fd, const struct msghdr *m, int flags);
-static ssize_t rxq_sendto(int fd, const void *buf, size_t len, int flags, const struct sockaddr *sa,
-                          socklen_t salen);
-/* ⭐ this branch's `send_msg()` uses `sendto` and gives no source address (`put_source()` is not ported):
- *    the destination and the one-packet checks of `rxq_sendmsg` hold, the source ones are skipped */
-static bool rxq_no_source;
 static int rxq_getsockname(int fd, struct sockaddr *sa, socklen_t *len);
 static int rxq_clock_gettime(clockid_t id, struct timespec *ts);
 static int rxq_RAND_bytes(unsigned char *d, int n);
@@ -150,7 +144,6 @@ static void rxq_SSL_set_accept_state(SSL *s);
 
 #undef recvmsg
 #undef sendmsg
-#undef sendto
 #undef getsockname
 #undef clock_gettime
 #undef RAND_bytes
@@ -167,7 +160,7 @@ static bool v6;
 static struct sockaddr_storage REMOTE[4], LOCAL[3];
 static socklen_t REMOTELEN[4], LOCALLEN[3];
 /* ⭐ the interface each local address is on, as the kernel's PKTINFO says it (the product keeps
- *    it for the link-local one only: `put_source()`) */
+ *    it for the link-local one only: `pktinfo_cmsg()`) */
 static const unsigned IFINDEX[3] = {2, 2, 3};
 
 static void addresses(void)
@@ -434,23 +427,6 @@ static uint64_t fnv(const uint8_t *d, size_t n)
 	return h;
 }
 
-static ssize_t rxq_sendto(int fd, const void *buf, size_t len, int flags, const struct sockaddr *sa,
-                          socklen_t salen)
-{
-	struct iovec iov = { (void *)buf, len };
-	struct msghdr m;
-	ssize_t r;
-	memset(&m, 0, sizeof m);
-	m.msg_name = (void *)sa;
-	m.msg_namelen = salen;
-	m.msg_iov = &iov;
-	m.msg_iovlen = 1;
-	rxq_no_source = true;
-	r = rxq_sendmsg(fd, &m, flags);
-	rxq_no_source = false;
-	return r;
-}
-
 static ssize_t rxq_sendmsg(int fd, const struct msghdr *m, int flags)
 {
 	const struct sockaddr *sa = m->msg_name;
@@ -507,7 +483,7 @@ static ssize_t rxq_sendmsg(int fd, const struct msghdr *m, int flags)
 			wantlen = rxq_rx.locallen;
 			whose = "the datagram it answers";
 		}
-		if (want && !rxq_no_source) {
+		if (want) {
 			char a[80], b[80];
 			address_text((const struct sockaddr *)want, wantlen, b, sizeof b);
 			if (again) {

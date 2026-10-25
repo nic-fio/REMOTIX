@@ -18,6 +18,9 @@
  *   9. by reading src/transport.c (argv[1], optional): read_packet() clears `rx_local` after handling the datagram
  *      (`rx_locallen = 0` after the call to read_packet_1), and send_on() — what every connection uses — never goes
  *      through `rx_local`.
+ *  10. by reading src/transport.c: the log line of a refused source begins with «⚠ the kernel refused » and is written at the
+ *      1st-3rd refusal and every 256th, through the hook that pktinfo_sendmsg() runs BETWEEN the two attempts — the order and the
+ *      cadence the quic-conn fuzz oracle (benches/fuzz/quic-conn, on_event_line / rxq_sendmsg) demands.
  *   7. the kernel, for real (loopback, IPv4): a socket on 0.0.0.0 that sends with the cmsg for 127.0.0.2 is seen by the
  *      receiver as coming FROM 127.0.0.2 (without the cmsg it comes from 127.0.0.1).
  *
@@ -35,6 +38,16 @@
 #include <unistd.h>
 
 static int checks, bad;
+
+/* the on_refused hook: counts the calls and keeps the errno and whether the cmsg was still on the message */
+static struct { int calls, err; bool had_ctl; struct msghdr *mh; } hook;
+static void on_refused(void *ctx, int err)
+{
+	(void)ctx;
+	hook.calls++;
+	hook.err = err;
+	hook.had_ctl = hook.mh && hook.mh->msg_control != NULL;
+}
 #define CHECK(cond, ...) do { checks++; if (!(cond)) { bad++; printf("FAIL: "); printf(__VA_ARGS__); printf("\n"); } } while (0)
 
 static struct sockaddr_in6 v6(const char *text, unsigned scope)
@@ -199,6 +212,8 @@ int main(int argc, char **argv)
 			struct iovec iov = {(void *)"ping", 4};
 			struct msghdr mh;
 			int fb = -1;
+			hook.mh = &mh;
+			hook.calls = 0;
 			ssize_t r;
 			memset(&mh, 0, sizeof mh);
 			mh.msg_name = &rxa;
@@ -210,8 +225,10 @@ int main(int argc, char **argv)
 			mh.msg_control = &ctl;
 			mh.msg_controllen = n;
 			if (c == 0) {          /* refused source: one retry, the datagram arrives */
-				r = pktinfo_sendmsg(tx, &mh, n, &fb);
+				r = pktinfo_sendmsg(tx, &mh, n, on_refused, NULL);
+				fb = hook.err;
 				CHECK(r == 4 && pktinfo_refusal(fb), "refused source: result %zd, first errno %d (%m)", r, fb);   /* the kernel says ENETUNREACH here */
+				CHECK(hook.calls == 1 && hook.had_ctl, "the hook ran %d times, cmsg still set at the call: %d (it must run BETWEEN the two attempts)", hook.calls, hook.had_ctl);
 				fl = sizeof from;
 				CHECK(recvfrom(rx, buf, sizeof buf, MSG_DONTWAIT, (struct sockaddr *)&from, &fl) == 4,
 				      "the retried datagram did not arrive: %m");
@@ -223,15 +240,17 @@ int main(int argc, char **argv)
 				mh.msg_name = &far;
 				close(tx);
 				tx = socket(AF_INET, SOCK_DGRAM, 0);
-				r = pktinfo_sendmsg(tx, &mh, 0, &fb);
-				CHECK(fb == 0, "retried with no cmsg asked");
+				r = pktinfo_sendmsg(tx, &mh, 0, on_refused, NULL);
+				CHECK(hook.calls == 0, "retried with no cmsg asked");
+				(void)fb;
 				(void)r;
 			} else {               /* an error that is not about the source: not retried (EMSGSIZE) */
 				static char big[70000];
 				struct iovec iovb = {big, sizeof big};
 				mh.msg_iov = &iovb;
-				r = pktinfo_sendmsg(tx, &mh, n, &fb);
-				CHECK(r < 0 && fb == 0 && errno == EMSGSIZE, "EMSGSIZE: result %zd, first errno %d, errno %d", r, fb, errno);
+				r = pktinfo_sendmsg(tx, &mh, n, on_refused, NULL);
+				CHECK(r < 0 && hook.calls == 0 && errno == EMSGSIZE, "EMSGSIZE: result %zd, hook calls %d, errno %d", r, hook.calls, errno);
+				(void)fb;
 			}
 		}
 		if (rx >= 0)
@@ -262,6 +281,20 @@ int main(int argc, char **argv)
 		b = a ? strstr(a, "\n}\n") : NULL;
 		c2 = a ? strstr(a, "rx_local") : NULL;
 		CHECK(a && b && (!c2 || c2 > b), "send_on() uses rx_local");
+	}
+	if (argc > 1) {
+		FILE *f = fopen(argv[1], "r");
+		static char src[4 << 20];
+		size_t got = f ? fread(src, 1, sizeof src - 1, f) : 0;
+		const char *a;
+		if (f)
+			fclose(f);
+		src[got] = 0;
+		a = strstr(src, "static void pktinfo_refused_line(");
+		CHECK(a != NULL, "pktinfo_refused_line() not found");
+		CHECK(a && strstr(a, "refusals <= 3 || refusals % 256 == 0") != NULL, "cadence is not «1st-3rd and every 256th»");
+		CHECK(a && strstr(a, "\"⚠ the kernel refused ") != NULL, "the line does not begin with «⚠ the kernel refused »");
+		CHECK(strstr(src, "pktinfo_sendmsg(t->fd, &mh, ctllen, pktinfo_refused_line, NULL)") != NULL, "send_from() does not pass the hook");
 	}
 	printf("pktinfo: %d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;

@@ -97,18 +97,19 @@ static inline bool pktinfo_refusal(int err)
 
 /* sendmsg() with the control message of pktinfo_cmsg() (`ctllen` > 0), and ONE retry without it when the kernel
  * refuses the source (pktinfo_refusal()).  Otherwise that connection would stay mute for ever, where before this file
- * the kernel chose a source.  `*refused_errno` is 0, or the errno of the FIRST attempt when the retry happened (the
- * caller writes ONE log line, rate limited, with it).  Returns the result of the last sendmsg(); errno is that
- * attempt's. */
-static inline ssize_t pktinfo_sendmsg(int fd, struct msghdr *mh, size_t ctllen, int *refused_errno)
+ * the kernel chose a source.  `on_refused(ctx, errno_of_the_first_attempt)`, when not NULL, is called BETWEEN the two
+ * attempts (the log line goes out before the packet is sent again: the fuzz oracle of quic-conn reads them in that order).
+ * Returns the result of the last sendmsg(); errno is that attempt's. */
+static inline ssize_t pktinfo_sendmsg(int fd, struct msghdr *mh, size_t ctllen,
+                                      void (*on_refused)(void *ctx, int err), void *ctx)
 {
 	ssize_t n;
-	*refused_errno = 0;
 	do {
 		n = sendmsg(fd, mh, 0);
 	} while (n < 0 && errno == EINTR);
 	if (n < 0 && ctllen && pktinfo_refusal(errno)) {
-		*refused_errno = errno;
+		if (on_refused)
+			on_refused(ctx, errno);
 		mh->msg_control = NULL;
 		mh->msg_controllen = 0;
 		do {

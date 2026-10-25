@@ -230,7 +230,6 @@ struct transport {
 	 *    the stateless answers (Version Negotiation, Retry, CONNECTION_CLOSE, Stateless Reset),
 	 *    which are written while that datagram is being read and have no connection. */
 	bool bound_any;
-	unsigned pktinfo_fallbacks;
 	struct sockaddr_storage rx_local;
 	socklen_t rx_locallen;
 	SSL_CTX *ctx;
@@ -632,6 +631,19 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 /* ------------------------------------------------------------------------ */
 /* Sending.                                                                  */
 
+/* The kernel refused the source address we asked for: said BEFORE the packet goes again without it,
+ * the 1st, 2nd and 3rd time and then every 256th (not one line per packet).  The counter is the process's. */
+static void pktinfo_refused_line(void *ctx, int err)
+{
+	static unsigned long refusals;
+	(void)ctx;
+	refusals++;
+	if (refusals <= 3 || refusals % 256 == 0)
+		registro_dice(REG_QUIC, "⚠ the kernel refused the source address of a reply (%s): sent again "
+		              "without fixing it (refusal no. %lu) — an address just removed from the interface?",
+		              strerror(err), refusals);
+}
+
 /* ⭐ Every datagram leaves with its SOURCE address fixed to `local` (pktinfo.h: the kernel's
  *   own choice is not the address the client wrote to on a host with several addresses).
  *   `local` NULL / empty, or a socket bound to one address: a plain `sendto()` as before. */
@@ -641,7 +653,7 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 {
 	ssize_t n;
 	union pktinfo_ctl ctl;
-	int refused_errno, err;
+	int err;
 	size_t ctllen = pktinfo_cmsg(t->family, t->bound_any, local, locallen, &ctl);
 	struct iovec iov = {(void *)data, len};
 	struct msghdr mh;
@@ -654,17 +666,8 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 		mh.msg_control = &ctl;
 		mh.msg_controllen = ctllen;
 	}
-	n = pktinfo_sendmsg(t->fd, &mh, ctllen, &refused_errno);
+	n = pktinfo_sendmsg(t->fd, &mh, ctllen, pktinfo_refused_line, NULL);
 	err = errno;   /* the last attempt's, before registro_dice() can change it */
-	/* ⛔ `err` is the LAST attempt's errno (the one the «NOT sent» line below names);
-	 *    the first one's is `refused_errno`. */
-	if (refused_errno) {
-		/* one line at the first fall-back and then every 1024th: not one per packet */
-		if (t->pktinfo_fallbacks++ % 1024 == 0)
-			registro_dice(REG_QUIC, "the kernel refused the reply's source address (%s): "
-			              "sent without fixing it (%u times so far) — an address just "
-			              "removed from the interface?", strerror(refused_errno), t->pktinfo_fallbacks);
-	}
 	if (n < 0) {
 		/* ⚠ DECLARED FALLBACK (`CODER.md` §4.2): if the socket is full the
 		 *   packet is lost, and QUIC retransmits it on its own — loss is the
