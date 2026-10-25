@@ -54,10 +54,17 @@
  *    their use), and one seen again is answered INVALID_TOKEN (no connection, nothing
  *    kept): whoever wants another connection starts over — an Initial without a token,
  *    a Retry, a round trip at a real address.  ⚠ Bounded: TOKENS_KEPT entries
- *    in a ring.  Past TOKENS_KEPT connections in 10 s (≈ 400 a second) the oldest is
- *    forgotten early — its token could make a second connection — and the summary line
- *    counts it; refusing instead would answer every token with a Retry, and nobody
- *    could connect. */
+ *    in a ring.  Past TOKENS_KEPT connections in 10 s the oldest is forgotten early —
+ *    its token could make a second connection — and the summary line counts it;
+ *    refusing instead would answer every token with a Retry, and nobody could connect.
+ *    ⭐ R6 (audit of 25 Oct 2026, «the ring forgets tokens that have not expired»): with the
+ *    RATE of new handshakes limited (hsrate.h: HS_ALL_RATE a second for everybody, burst
+ *    HS_ALL_BURST) at most HS_ALL_BURST + HS_ALL_RATE × 10 = 2032 connections are born in
+ *    any 10 s, half of TOKENS_KEPT: the ring can no longer overflow with live tokens (the
+ *    _Static_assert after token_hash() keeps it so if those numbers are changed).  A hash table
+ *    with an expiry instead of a ring would hold the same 4096 live tokens at the limit: the
+ *    cure is the rate, not the structure.  Only a raised limit (the fuzz harness does it, op 12
+ *    / op 14) reaches the forgotten-early branch again, which is why it stays. */
 #define TOKENS_KEPT 4096
 /* The first this many new connections in a REFUSAL_LOG_S window are written one by
  * one; the rest are counted in one line at the end of the window (a churn must not
@@ -1183,6 +1190,9 @@ static uint64_t token_hash(const transport *t, const uint8_t *tok, size_t len)
 /* ⭐ The ring is indexed by the token's own hash (already keyed with the secret), so a lookup is one short chain, not the
  *    4096 entries (~3.8 us) the scan cost for every Initial with a valid token — and for every replay of a used one. */
 _Static_assert(TOKENS_KEPT == LK_TOKENS, "the ring of lookup.h is the ring of this file");
+/* ⭐ R6: the connections born in any RETRY_TOKEN_TIMEOUT never outnumber the ring (hsrate.h bounds the births; see the box on TOKENS_KEPT) */
+_Static_assert(HS_ALL_BURST + HS_ALL_RATE * (RETRY_TOKEN_TIMEOUT / NGTCP2_SECONDS) < TOKENS_KEPT,
+               "the handshake rate must leave room in the ring of used Retry tokens: raise TOKENS_KEPT (and LK_TOKENS) with it");
 
 static bool token_used(const transport *t, uint64_t h, ngtcp2_tstamp now)
 {
