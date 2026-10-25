@@ -4,6 +4,7 @@
 #   prova     xfce, chrome+firefox, tutti i casi con d a 3 utenti, senza guasti (~25 min)
 #   completo  xfce: tutti i casi a-f (d con 8 utenti), con i guasti; poi gnome, kde, lxqt: casi a,b,c,e,f
 #             (d con 8 sessioni desktop e' pesante: solo su xfce, il piu' leggero); chrome+firefox ovunque (~2 h 30)
+#   reset     solo il caso b (H-RESET) sui 4 desktop, chrome+firefox, con il guasto (~20 min)
 #   -h|--help questo testo.
 # Uscita: 1 se qualche corsa ha dato FAIL, altrimenti 3 se qualcuna BLOCKED, altrimenti 0 (2 = uso/preflight).
 # I risultati sono in <base>/<desktop>/riepilogo.txt; la riga «RISULTATO» e' l'ultima di ognuno.
@@ -21,8 +22,8 @@ while [ $# -gt 0 ]; do
 done
 case $MODO in
 -h|--help) sed -n '2,/^set -uo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 0 ;;
-prova|completo) ;;
-*) echo "uso: bash 15-h1-catena.sh prova|completo [--out BASE]  (vedi --help)"; exit 2 ;;
+prova|completo|reset) ;;
+*) echo "uso: bash 15-h1-catena.sh prova|completo|reset [--out BASE]  (vedi --help)"; exit 2 ;;
 esac
 mkdir -p "$BASE"
 worst=0; CH=""
@@ -60,6 +61,8 @@ corsa() {   # corsa <desktop> [opzioni di 15-h1-run.py]
 }
 if [ "$MODO" = prova ]; then
 	corsa xfce --prova
+elif [ "$MODO" = reset ]; then
+	for d in xfce gnome kde lxqt; do corsa "$d" --case b; done
 else
 	corsa xfce
 	for d in gnome kde lxqt; do corsa "$d" --case a,b,c,e,f; done
