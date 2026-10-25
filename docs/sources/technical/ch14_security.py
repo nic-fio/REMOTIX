@@ -313,7 +313,8 @@ S5 = p("Three levels of counters, a progressive ban and a key that is the /64 fo
          "about 90 s, with their recidivism, so the ladder never climbed. Priority: first the entries with nothing to remember are taken back, then the "
          "oldest without recidivism (declared in the log). A key that logged in during the last 30 days always finds a place, and its own ban is given "
          "even over the quota; those keys are written in the ban file (" + c("G2 &lt;epoch&gt; &lt;key&gt;") + " lines, skipped by the 1.0) and read back at the start, so a restart with "
-         "the quota full does not refuse the owner. While 160 bans are in force the <b>unknown</b> keys share " + c("UNKNOWN_LIMIT") + " (5 in "
+         "the quota full does not refuse the owner. The epoch is the <b>real</b> time of the login, and the 30 days are counted on it, so restarts never make a key younger; "
+         "when the secret of the logs is kept in a file the key is written as its HMAC-SHA256 and the file does not tell who the owner is. While 160 bans are in force the <b>unknown</b> keys share " + c("UNKNOWN_LIMIT") + " (5 in "
          + c("UNKNOWN_WINDOW_MS") + ", 5 min) for all of them together, counting the failures <b>and the attempts in flight</b> (as the limit of attempts at once does); beyond it they are refused with " + c("TOO_MANY_ATTEMPTS")
          + " (0x08) before PAM, nothing is booked or evicted, until the counter goes down; the unblock command zeroes it. The cost: in that moment a new user from an address that "
          "never logged in is refused too. Only as a last resort, when the table has no other place, and only for a key that logged in lately, the least valuable ban is dropped (lowest level, then "

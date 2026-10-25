@@ -492,7 +492,7 @@ static void test_table(void)
 	unsigned dropped0 = login_bans_dropped;
 	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_FULL, "over the quota, an UNKNOWN key finds no place: LV_FULL (the last resort is for known keys)");
 	CHECK(login_refused_full == before + 1 && login_bans_dropped == dropped0 && info.dropped[0] == 0, "counted, and no ban dropped");
-	good_put("[9.9.9.9]", at(0));
+	good_put("[9.9.9.9]", NULL, at(0), (long long)time(NULL));
 	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_OK, "the same key once KNOWN gets in");
 	CHECK(login_bans_dropped == dropped0 + 2 && strncmp(info.dropped, "BAN of", 6) == 0 &&
 	      strstr(info.dropped + 6, "BAN of") != NULL,
@@ -818,6 +818,69 @@ static void test_quota(void)
 		snprintf(p3, sizeof p3, "%s.new", p2);
 		unlink(p3);
 		rmdir(d2);
+	}
+
+	/* 6d. the REAL epoch of the login is what the file keeps and what the 30 days are counted on: restarts do not rejuvenate it */
+	{
+		char d3[] = "/tmp/lg-epoch-XXXXXX";
+		CHECK(mkdtemp(d3) != NULL, "mkdtemp");
+		char p3[128], p3n[140];
+		snprintf(p3, sizeof p3, "%s/ban", d3);
+		snprintf(p3n, sizeof p3n, "%s.new", p3);
+		long long nowe = (long long)time(NULL), e29 = nowe - 29 * 86400;
+		FILE *f3 = fopen(p3, "w");
+		fprintf(f3, "G2 %lld [7.7.7.7]\nG2 %lld [8.8.8.8]\n", e29, nowe - 31 * 86400);
+		fclose(f3);
+		for (int round = 0; round < 3; round++) {            /* three restarts, each with a small monotonic clock */
+			fresh();
+			rcp_ban_load(p3, at(0));
+			CHECK(good_recent("[7.7.7.7]", at(1)), "restart %d: the key of 29 days ago is still known", round);
+			CHECK(!good_recent("[8.8.8.8]", at(1)), "restart %d: the one of 31 days is not read", round);
+			save_ban(NULL, at(2));
+			char *tx = slurp(p3);
+			long long saved = 0;
+			char *g2 = strstr(tx, "G2 ");
+			if (g2) sscanf(g2 + 3, "%lld", &saved);
+			CHECK(saved == e29, "restart %d: the epoch written is the real one of the login (%lld, wanted %lld)", round, saved, e29);
+			CHECK(strstr(tx, "[8.8.8.8]") == NULL, "restart %d: and the stale line is gone", round);
+		}
+		/* the real days go by: 2 more days and the key is gone, from memory and from the file */
+		int g7 = good_find("[7.7.7.7]");
+		CHECK(g7 >= 0, "the entry is there");
+		good_keys[g7].epoch -= 2 * 86400;
+		CHECK(!good_recent("[7.7.7.7]", at(3)), "31 real days after the login the key is no longer known");
+		save_ban(NULL, at(4));
+		CHECK(strstr(slurp(p3), "G2 ") == NULL, "and it is not written back");
+		/* the HMAC form, when the secret survives a restart */
+		fresh();
+		log_secret_persistent = true;
+		rcp_ban_load(p3, at(0));
+		login_reserve(G, "alice", at(1), &info);
+		struct login_result rr;
+		login_resolve(G, "alice", true, at(1), &rr);
+		save_ban(NULL, at(2));
+		char *tx = slurp(p3);
+		char *g2 = strstr(tx, "G2 ");
+		CHECK(g2 != NULL && strstr(tx, G) == NULL, "persistent secret: the address of the owner is not on disk");
+		char mac[80] = "";
+		long long ep = 0;
+		if (g2) sscanf(g2 + 3, "%lld %79s", &ep, mac);
+		CHECK(strlen(mac) == 64 && strspn(mac, "0123456789abcdef") == 64, "a G2 line holds a 64-digit HMAC (%s)", mac);
+		fresh();
+		rcp_ban_load(p3, at(0));
+		int gi = -1;
+		for (int i = 0; i < GOOD_KEYS; i++) if (good_keys[i].mac[0]) gi = i;
+		CHECK(gi >= 0 && good_keys[gi].key[0] == 0, "after the restart the entry knows only the HMAC");
+		CHECK(good_recent(G, at(5)), "the owner is recognised by the HMAC");
+		CHECK(!good_recent("[198.51.100.10]", at(5)), "another address is not");
+		CHECK(gi >= 0 && strcmp(good_keys[gi].key, G) == 0, "and the entry now has its key");
+		save_ban(NULL, at(6));
+		CHECK(strstr(slurp(p3), mac) != NULL, "rewritten as the same HMAC, with the same epoch kept");
+		log_secret_persistent = false;
+		memset(good_keys, 0, sizeof good_keys);
+		unlink(p3);
+		unlink(p3n);
+		rmdir(d3);
 	}
 
 	/* 7. a ban file with more bans than the quota keeps the most valuable, whatever the ORDER of its lines */

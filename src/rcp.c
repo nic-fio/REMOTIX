@@ -1311,64 +1311,122 @@ static struct lentry attempts[MAX_ATTEMPTS];
  *    ⭐ AND ON DISK (review of 25 Oct 2026): a restart used to forget them, and a restart
  *    with `BAN_QUOTA` bans or more in force then refused the owner too (an unknown key
  *    goes through the common counter).  They are now written in the ban file, one line
- *    each — `G2 <epoch> <key>`, the real time of the last login — and read back at the
- *    start; a line older than 30 days is not read.  The 1.0 reads «<word> <number>» and
- *    skips a line whose number is not in the future: the epoch of a login is in the past.
- *    ⚠ After a restart the monotonic clock is smaller than the age of a login: the stamp is
- *    clamped to 1 and the key is trusted a little longer than it should be.  The file is
- *    rewritten when a key is new or its stamp is a day old, not at every login. */
+ *    each — `G2 <epoch> <key or HMAC>`, the REAL time of the last login (`time(NULL)`, kept in
+ *    `good_keys[].epoch`) — and read back at the start; the 30 days are counted on that real
+ *    time, so a restart never rejuvenates a key (the first version wrote the time of the
+ *    restart, and with frequent restarts a key never expired).  A line older than 30 days is
+ *    not read.  The 1.0 reads «<word> <number>» and skips a line whose number is not in the
+ *    future: the epoch of a login is in the past.
+ *    ⭐ When the secret of the logs survives a restart (`rcp_log_secret_load()` returned 0 or 1)
+ *    the key is written as its HMAC-SHA256, "G2|" + key, in hex: the file does not tell who
+ *    the owner is.  An entry read like that keeps only the HMAC until an attempt from that
+ *    address hashes to it.  With a secret of this run only the key is written as itself (a
+ *    HMAC would never match again).
+ *    ⚠ The monotonic stamp of a loaded entry is clamped to 1 if the login is older than the
+ *    process: only the real epoch counts for the 30 days.  The file is rewritten when a key
+ *    is new or its stamp is a day old, not at every login. */
 #define GOOD_KEYS 64
 #define GOOD_AGE 2592000000ull /* 30 days, ms */
 #define GOOD_REFRESH_MS 86400000ull /* a stamp younger than this is not rewritten to the file */
-static struct { char key[64]; uint64_t when, filed; } good_keys[GOOD_KEYS]; /* filed: the stamp last asked to be written */
+/* ⭐ Each known key has TWO clocks.  `when` is the monotonic one (the age within this run); `epoch` is the REAL
+ *    time of the login (`time(NULL)`), the one written to the file and the one the 30 days are counted on: after a
+ *    restart the monotonic clock starts again, and a stamp made from it would become "the time of the restart" and be
+ *    rewritten, so with frequent restarts a key would never expire.  `mac` is the HMAC of the key under the secret of
+ *    the logs (`rcp_log_secret_load()`), the form in which the key is written when that secret survives a restart:
+ *    the file does not tell who the owner is.  An entry read from such a line has `mac` and no `key` until the key
+ *    comes back (the first attempt of that address hashes to it: the key is then filled in). */
+static struct { char key[64]; char mac[65]; uint64_t when, filed; long long epoch; } good_keys[GOOD_KEYS];
+/* `filed`: the stamp last asked to be written */
 
-/* Puts a key in the ring with the stamp `when`.  Returns true if the file must be rewritten: the key is new,
- * or its previous stamp is a day old. */
-static bool good_put(const char *key, uint64_t when)
+static void good_mac(const char *key, char out[65]); /* below, with the secret */
+
+/* The place of a key (by itself, or by its HMAC if it was read from the file), or -1. */
+static int good_find(const char *key)
 {
-	int pick = 0;
+	bool pending = false;
+	for (int k = 0; k < GOOD_KEYS; k++) {
+		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0)
+			return k;
+		if (!good_keys[k].key[0] && good_keys[k].mac[0])
+			pending = true;
+	}
+	if (pending) {
+		char m[65];
+		good_mac(key, m);
+		for (int k = 0; k < GOOD_KEYS; k++)
+			if (!good_keys[k].key[0] && good_keys[k].mac[0] && strcmp(good_keys[k].mac, m) == 0) {
+				snprintf(good_keys[k].key, sizeof good_keys[k].key, "%s", key);
+				return k;
+			}
+	}
+	return -1;
+}
+
+/* Puts a key in the ring: `key`, or only its `mac` (a line of the file), with the monotonic stamp `when` and the
+ * real `epoch` of the login.  Returns true if the file must be rewritten: the key is new, or its previous stamp is
+ * a day old. */
+static bool good_put(const char *key, const char *mac, uint64_t when, long long epoch)
+{
+	int pick = -1;
 	bool fresh_key = true, changed;
-	for (int k = 0; k < GOOD_KEYS; k++) {
-		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0) {
-			pick = k;
-			fresh_key = false;
-			goto found;
+	if (key)
+		pick = good_find(key);
+	else
+		for (int k = 0; k < GOOD_KEYS; k++)
+			if (good_keys[k].mac[0] && strcmp(good_keys[k].mac, mac) == 0)
+				pick = k;
+	if (pick >= 0) {
+		fresh_key = false;
+	} else {
+		pick = 0;
+		for (int k = 0; k < GOOD_KEYS; k++) {
+			if (!good_keys[k].key[0] && !good_keys[k].mac[0]) {
+				pick = k;
+				break;
+			}
+			if (good_keys[k].when < good_keys[pick].when)
+				pick = k;
 		}
 	}
-	for (int k = 0; k < GOOD_KEYS; k++) {
-		if (!good_keys[k].key[0]) {
-			pick = k;
-			goto found;
+	changed = fresh_key || when < good_keys[pick].filed || when - good_keys[pick].filed >= GOOD_REFRESH_MS;
+	if (fresh_key) {
+		memset(&good_keys[pick], 0, sizeof good_keys[pick]);
+		if (key) {
+			snprintf(good_keys[pick].key, sizeof good_keys[pick].key, "%s", key);
+			good_mac(key, good_keys[pick].mac);
+		} else {
+			snprintf(good_keys[pick].mac, sizeof good_keys[pick].mac, "%s", mac);
 		}
-		if (good_keys[k].when < good_keys[pick].when)
-			pick = k;
 	}
-found:
-	changed = fresh_key || !good_keys[pick].key[0] || when < good_keys[pick].filed ||
-	          when - good_keys[pick].filed >= GOOD_REFRESH_MS;
-	if (changed) {
-		snprintf(good_keys[pick].key, sizeof good_keys[pick].key, "%s", key);
+	if (changed)
 		good_keys[pick].filed = when;
-	}
 	good_keys[pick].when = when;
+	good_keys[pick].epoch = epoch;
 	return changed;
 }
 
 static bool good_note(const char *key, uint64_t now)
 {
-	return good_put(key, now);
+	return good_put(key, NULL, now, (long long)time(NULL));
+}
+
+/* Is entry `g` still valid: within 30 days on the monotonic clock AND on the real one. */
+static bool good_alive(int g, uint64_t now)
+{
+	/* ⚠ A login stamped LATER than `now` is recent, not 584 million
+	 *   years old: `login_resolve()` may run with the helper's clock,
+	 *   a few hundred ms ahead of a connection's `now`, and the
+	 *   unsigned subtraction would wrap (fresh-eyes review 24c7b668). */
+	if (!(good_keys[g].when >= now || now - good_keys[g].when <= GOOD_AGE))
+		return false;
+	long long t = (long long)time(NULL);
+	return good_keys[g].epoch >= t || (unsigned long long)(t - good_keys[g].epoch) * 1000u <= GOOD_AGE;
 }
 
 static bool good_recent(const char *key, uint64_t now)
 {
-	for (int k = 0; k < GOOD_KEYS; k++)
-		if (good_keys[k].key[0] && strcmp(good_keys[k].key, key) == 0)
-			/* ⚠ A login stamped LATER than `now` is recent, not 584 million
-			 *   years old: `login_resolve()` may run with the helper's clock,
-			 *   a few hundred ms ahead of a connection's `now`, and the
-			 *   unsigned subtraction would wrap (fresh-eyes review 24c7b668). */
-			return good_keys[k].when >= now || now - good_keys[k].when <= GOOD_AGE;
-	return false;
+	int g = good_find(key);
+	return g >= 0 && good_alive(g, now);
 }
 
 /* ⭐ Set only around the call to `ask_verify` (`rcp.h`). */
@@ -1727,7 +1785,17 @@ static bool log_secret_random(void)
  * Returns 1 = read, 0 = made and written, -1 = the secret of this run only
  * (memory): the tags change at every restart, and the caller says so;
  * -2 = no secret at all (the tags are «??????»). */
+static bool log_secret_persistent; /* the secret is in a file: it is the same after a restart */
+static int log_secret_load_inner(const char *dir);
+
 int rcp_log_secret_load(const char *dir)
+{
+	int rc = log_secret_load_inner(dir);
+	log_secret_persistent = rc == 0 || rc == 1;
+	return rc;
+}
+
+static int log_secret_load_inner(const char *dir)
 {
 	log_secret_ready = false;
 	if (!dir || !*dir) {
@@ -1806,6 +1874,19 @@ static const char *log_user(const char *user, char *out, size_t cap, bool lookup
 	snprintf(out, cap, "%suser [%02x%02x%02x]", lookup ? "unknown " : "", mac[0],
 	         mac[1], mac[2]);
 	return out;
+}
+
+/* The HMAC (hex) of a known key for the `G2` lines of the ban file; "G2|" keeps it apart from the names. */
+static void good_mac(const char *key, char out[65])
+{
+	uint8_t mac[32];
+	char msg[96];
+	if (!log_secret_ready)
+		log_secret_ready = log_secret_random();
+	snprintf(msg, sizeof msg, "G2|%s", key);
+	hmac_sha256(log_secret, sizeof log_secret, msg, strlen(msg), mac);
+	for (int i = 0; i < 32; i++)
+		snprintf(out + 2 * i, 3, "%02x", mac[i]);
 }
 
 /* The key of a name inside the counters and the ban file: the FULL HMAC-SHA256
@@ -2384,7 +2465,7 @@ static void login_report(const struct sink *k, const char *key, const char *user
  * the next periodic save is a ban that a sudden restart takes away (I7).
  *
  * THE FORMAT (since 24 Oct 2026):   B2 <U|K|N> <level> <epoch> <key>[ <user>]
- *   and, after them, one line per key that logged in lately:  G2 <epoch> <key>
+ *   and, after them, one line per key that logged in lately:  G2 <epoch of the login> <key | HMAC-SHA256 hex of the key>
  *   U = (key, user), K = key, N = IPv6 /48; `level` = bans suffered (0..2);
  *   `epoch` = when the ban ends (in the past for a ban that has ended and is
  *   only remembered); the user, last because it may contain spaces, only for U.
@@ -2432,12 +2513,14 @@ static void save_ban(const struct sink *k, uint64_t now)
 		if (is_banned(e, now))
 			amount++;
 	}
-	/* ⭐ the keys that logged in lately (`G2 <epoch> <key>`): the 1.0 skips them (the epoch is in the past) */
+	/* ⭐ the keys that logged in lately (`G2 <epoch> <key or HMAC>`): the 1.0 skips them (the epoch is in the past).
+	 *    The REAL epoch of the login is written, not one made from the monotonic clock (see `good_keys`); the key is
+	 *    written as its HMAC when the secret of the logs survives a restart, else as itself. */
 	for (int g = 0; g < GOOD_KEYS; g++) {
-		if (!good_keys[g].key[0] || !good_recent(good_keys[g].key, now))
+		if ((!good_keys[g].key[0] && !good_keys[g].mac[0]) || !good_alive(g, now))
 			continue;
-		uint64_t ago = good_keys[g].when >= now ? 0 : (now - good_keys[g].when) / 1000u;
-		fprintf(f, "G2 %lld %s\n", (long long)t_now - (long long)ago, good_keys[g].key);
+		bool as_mac = good_keys[g].mac[0] && (log_secret_persistent || !good_keys[g].key[0]);
+		fprintf(f, "G2 %lld %s\n", good_keys[g].epoch, as_mac ? good_keys[g].mac : good_keys[g].key);
 	}
 	/* ⚠ fsync BEFORE the rename: a rename that survives a crash with a file
 	 *    that does not is the «truncated ban file» this function exists to avoid. */
@@ -2586,14 +2669,19 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 		if (strncmp(line, "G2 ", 3) == 0) {
 			/* a key that logged in lately (`good_keys`, the box above `GOOD_KEYS`): not a ban, not counted */
 			long long when_epoch = 0;
-			char gk[64], gn[64];
-			if (sscanf(line + 3, "%lld %63s", &when_epoch, gk) != 2 || when_epoch < 0 || when_epoch > (long long)t_now)
+			char gk[96], gn[64];
+			if (sscanf(line + 3, "%lld %95s", &when_epoch, gk) != 2 || when_epoch < 0 || when_epoch > (long long)t_now)
 				continue; /* not a line, or a login "from the future" */
 			uint64_t age = (uint64_t)((long long)t_now - when_epoch) * 1000u;
 			if (age > GOOD_AGE)
-				continue; /* older than 30 days */
-			rcp_key_address(gk, gn, sizeof gn);
-			good_put(gn, age < now ? now - age : 1);
+				continue; /* older than 30 days (REAL time) */
+			uint64_t when = age < now ? now - age : 1;
+			if (gk[0] == '[') {
+				rcp_key_address(gk, gn, sizeof gn);
+				good_put(gn, NULL, when, when_epoch);
+			} else if (strlen(gk) == 64 && strspn(gk, "0123456789abcdef") == 64) {
+				good_put(NULL, gk, when, when_epoch);
+			}
 			continue;
 		}
 		if (strncmp(line, "B2 ", 3) == 0) {
