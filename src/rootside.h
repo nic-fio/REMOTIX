@@ -279,7 +279,7 @@ struct rootside_grant {
  * levels, the first two as rcp.c's, the third WIDER and SHORTER:
  *   · (uid, address)   5 refused in 5 min → no AUTH for that user from that address for 15 min,
  *                      then 1 h, then 12 h; forgotten after 24 h without a pause   (rcp.c LK_USER)
- *   · address         12 refused in 5 min → the same ladder, for any user          (rcp.c LK_KEY)
+ *   · address         20 refused in 5 min → the same ladder, for any user          (rcp.c LK_KEY; it was 12)
  *   · uid alone       15 refused in 5 min, from any addresses → no AUTH for that user for 15 min,
  *                      FIXED: it never grows and is never 12 h — a stranger who knows a name must
  *                      not be able to keep its owner out for good.  What a network side that
@@ -297,8 +297,13 @@ struct rootside_grant {
 #define ROOTSIDE_LOGIN_PAIRS 512
 #define ROOTSIDE_LOGIN_HOSTS 128
 #define ROOTSIDE_LOGIN_PAIR_LIMIT 5
-#define ROOTSIDE_LOGIN_HOST_LIMIT 12
+#define ROOTSIDE_LOGIN_HOST_LIMIT 20 /* 1.5: it was 12; and the attempts in flight no longer count at this level (see rootside_login_admit) */
 #define ROOTSIDE_LOGIN_USER_LIMIT 15
+/* the failures kept per entry: the widest of the three limits */
+#define ROOTSIDE_LOGIN_TIMES 20
+_Static_assert(ROOTSIDE_LOGIN_TIMES >= ROOTSIDE_LOGIN_PAIR_LIMIT && ROOTSIDE_LOGIN_TIMES >= ROOTSIDE_LOGIN_HOST_LIMIT &&
+                   ROOTSIDE_LOGIN_TIMES >= ROOTSIDE_LOGIN_USER_LIMIT,
+               "the table of failure times must hold the widest limit");
 #define ROOTSIDE_LOGIN_USER_PAUSE_MS 900000u
 #define ROOTSIDE_LOGIN_WINDOW_MS 300000u
 #define ROOTSIDE_LOGIN_FORGET_MS 86400000u
@@ -307,7 +312,7 @@ struct rootside_grant {
 struct rootside_fail {
 	bool used;
 	char key[ROOTSIDE_LOGIN_KEY_MAX];
-	uint64_t times[ROOTSIDE_LOGIN_USER_LIMIT]; /* the last failures, oldest first */
+	uint64_t times[ROOTSIDE_LOGIN_TIMES];      /* the last failures, oldest first */
 	int n;
 	int pending;                  /* AUTH asked to PAM, not answered */
 	uint64_t until_ms;            /* paused until */
