@@ -715,14 +715,15 @@ static int net_side(void)
 		(void)rootside_auth(base_req + 20 + i, "anna", "wrong", "192.0.2.1");
 	pump(20000, bounds_answered);
 	{
-		int nc = 0, no = 0;
+		int nc = 0, no = 0, pa = 0;
 		for (int i = 0; i < nbounds; i++) {
 			nc += v_out[20 + i] == RXR_NOT_CHECKED;
 			no += v_out[20 + i] == RXR_NO;
+			pa += v_out[20 + i] == RXR_PAUSED; /* 1.5 (reading of rcp.c, A1): a pause of the root side is its own outcome now */
 		}
-		char d[160];
-		snprintf(d, sizeof d, "25 AUTH at once for anna: %d NO, %d not checked (burst 8; 5 refused-or-in-flight per user and address)", no, nc);
-		check(no <= ROOTSIDE_LOGIN_PAIR_LIMIT && no + nc == 25, d);
+		char d[200];
+		snprintf(d, sizeof d, "25 AUTH at once for anna: %d NO, %d paused, %d not checked (burst 8; 5 refused-or-in-flight per user and address)", no, pa, nc);
+		check(no <= ROOTSIDE_LOGIN_PAIR_LIMIT && no + pa + nc == 25, d);
 	}
 	fprintf(out, "%s\n", fails ? "RED" : "GREEN");
 	fprintf(out, "MALFORMED_SENT\n");
