@@ -8726,12 +8726,36 @@ static void judge_after_end(rcp_session *s, const uint8_t *data,
 
 /* Extracts from the buffer all the whole messages that are there.  `false` = the
  * session is over, and the caller must not buffer anything else. */
+/* ⛔⭐ THE MESSAGES ARE CONSUMED BY AN OFFSET, NOT BY SLIDING THE REST DOWN (audit P-R2/Q-R2).  Until now every message ended with a
+ *     `memmove` of everything still in the buffer: a piece of 256 KiB made of 2-byte-body messages cost about L²/12 bytes moved, in the one
+ *     thread of every user — the same shape already cured for the capsules (`43fdc3f1`).  Now `drain_at()` walks the buffer with
+ *     `*off` and zeroes each message as soon as it has been consumed (a CREDENTIALS is the password in clear, finding R9.8), and
+ *     `drain()` slides the remainder down ONCE per call, whatever the way out — so that the buffer is, on return, what it always was:
+ *     the unconsumed bytes at the start, and nothing but zeros after them. */
+static bool drain_at(rcp_session *s, uint64_t now, size_t *off);
+
 static bool drain(rcp_session *s, uint64_t now)
 {
+	size_t off = 0;
+	bool ok = drain_at(s, now, &off);
+
+	if (off) {
+		size_t before = s->acc_len;
+
+		memmove(s->acc, s->acc + off, s->acc_len - off);
+		s->acc_len -= off;
+		/* ⛔ AND THE TAIL IS ZEROED, as it always was — finding R9.8: the `memmove` leaves a copy of the unconsumed bytes there. */
+		explicit_bzero(s->acc + s->acc_len, before - s->acc_len);
+	}
+	return ok;
+}
+
+static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
+{
 	for (;;) {
-		if (s->acc_len < 6)
+		if (s->acc_len - *off < 6)
 			return true;
-		reader hdr = {s->acc, s->acc_len, 0, false};
+		reader hdr = {s->acc + *off, s->acc_len - *off, 0, false};
 		uint16_t kind = le_u16(&hdr);
 		uint32_t lung = le_u32(&hdr);
 		/* ⛔ The length is checked BEFORE allocating: whoever allocates and then
@@ -8743,7 +8767,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			dismiss(s, RCP_PROTOCOL_ERROR, "message over 1 MiB");
 			return false;
 		}
-		if (s->acc_len < 6u + lung)
+		if (s->acc_len - *off < 6u + lung)
 			return true; /* the body has not all arrived */
 
 		/* §2.5: on the control channel the high byte of the type is 0x00. */
@@ -8754,7 +8778,7 @@ static bool drain(rcp_session *s, uint64_t now)
 		/* ⛔ AND HERE, BEFORE ANY EFFECT: the declared length must be the one of
 		 * the type's fields (§6.1).  See `measure_fields()`. */
 		size_t wait = 0;
-		if (measure_fields(kind, s->acc + 6, lung, &wait) && wait != lung) {
+		if (measure_fields(kind, s->acc + *off + 6, lung, &wait) && wait != lung) {
 			char d[128];
 			snprintf(d, sizeof d,
 			         "type %#06x: the length declares %u bytes and the "
@@ -8763,7 +8787,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			dismiss(s, RCP_PROTOCOL_ERROR, d);
 			return false;
 		}
-		reader l = {s->acc + 6, lung, 0, false};
+		reader l = {s->acc + *off + 6, lung, 0, false};
 		bool keep_going = true;
 		/* ⛔ The frequency ceiling (msgrate.h): over the rate, the message is consumed WITHOUT effect, as if it had not been sent. */
 		{
@@ -9445,15 +9469,11 @@ static bool drain(rcp_session *s, uint64_t now)
 			        "the body has more bytes than the expected fields");
 			return false;
 		}
-		size_t before = s->acc_len;
-		memmove(s->acc, s->acc + 6 + lung, s->acc_len - 6 - lung);
-		s->acc_len -= 6 + lung;
-		/* ⛔ AND THE TAIL IS ZEROED — finding R9.8.  The `memmove` slid the
-		 * remainder down and left the bytes of the message just consumed where
-		 * they were: those of a `CREDENTIALS` are the password in clear, and
-		 * they stayed in the session until the end of the connection.
-		 * §4.4: «it must be zeroed as soon as PAM has answered». */
-		explicit_bzero(s->acc + s->acc_len, before - s->acc_len);
+		/* ⛔ AND THE MESSAGE JUST CONSUMED IS ZEROED NOW — finding R9.8: those of a `CREDENTIALS` are the password in clear, and
+		 *    they must not stay in the session until the end of the connection.  §4.4: «it must be zeroed as soon as PAM has
+		 *    answered».  Only its own 6 + `lung` bytes: the rest is not touched (that was the quadratic cost). */
+		explicit_bzero(s->acc + *off, 6 + (size_t)lung);
+		*off += 6 + (size_t)lung;
 		s->since = now;
 	}
 }

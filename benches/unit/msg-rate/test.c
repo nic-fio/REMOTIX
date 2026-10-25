@@ -247,8 +247,8 @@ int main(int argc, char **argv)
 				CHECK(adm && id && adm < id, "9: and before it reads the id");
 				CHECK(count_in(p, n, "msg_line(s, input_class(kind))") == 2, "9: both log lines are behind msg_line()");
 			}
-			p = body_of(src, "static bool drain(rcp_session *s, uint64_t now)", &n);
-			CHECK(p != NULL, "9: drain found");
+			p = body_of(src, "static bool drain_at(rcp_session *s, uint64_t now, size_t *off)\n{", &n);
+			CHECK(p != NULL, "9: drain_at found");
 			if (p) {
 				CHECK(memmem(p, n, "s->state == S_ACTIVE && !msg_admit(s, mc, now)", strlen("s->state == S_ACTIVE && !msg_admit(s, mc, now)")) != NULL,
 				      "9: drain gates the control requests, only in S_ACTIVE");
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
 			}
 			p = body_of(src, "bool rcp_time(rcp_session *s, uint64_t now)", &n);
 			CHECK(p != NULL && memmem(p, n, "msg_flush_all(s, now)", strlen("msg_flush_all(s, now)")) != NULL, "9: rcp_time flushes the windows");
-			p = body_of(src, "static bool drain(rcp_session *s, uint64_t now)", &n);
+			p = body_of(src, "static bool drain_at(rcp_session *s, uint64_t now, size_t *off)\n{", &n);
 			if (p) {
 				const char *same = memmem(p, n, "strcmp(new_one, s->layout) == 0", strlen("strcmp(new_one, s->layout) == 0"));
 				const char *known = memmem(p, n, "layout_known(s, new_one)", strlen("layout_known(s, new_one)"));
@@ -284,8 +284,22 @@ int main(int argc, char **argv)
 				}
 			}
 			{
+				size_t nd2, nw;
+				const char *da = body_of(src, "static bool drain_at(rcp_session *s, uint64_t now, size_t *off)\n{", &nd2);
+				const char *dw = body_of(src, "static bool drain(rcp_session *s, uint64_t now)\n{", &nw);
+
+				CHECK(da && dw, "9: drain() and drain_at() found");
+				CHECK(da && !memmem(da, nd2, "memmove", 7), "9: drain_at slides NOTHING down (no memmove per message: not quadratic)");
+				CHECK(dw && count_in(dw, nw, "memmove(") == 1, "9: drain() slides the remainder down once per call");
+				CHECK(dw && memmem(dw, nw, "if (off) {", 10) != NULL, "9: and only when something was consumed");
+				CHECK(da && memmem(da, nd2, "explicit_bzero(s->acc + *off, 6 + (size_t)lung)", strlen("explicit_bzero(s->acc + *off, 6 + (size_t)lung)")) != NULL,
+				      "9: each message is zeroed as soon as it is consumed (CREDENTIALS = the password)");
+				CHECK(dw && memmem(dw, nw, "explicit_bzero(s->acc + s->acc_len, before - s->acc_len)", strlen("explicit_bzero(s->acc + s->acc_len, before - s->acc_len)")) != NULL,
+				      "9: and the tail left by the slide is zeroed");
+			}
+			{
 				const char *cc = body_of(src, "static enum msg_class control_class(uint16_t kind)", &n);
-				const char *dr = body_of(src, "static bool drain(rcp_session *s, uint64_t now)", &n);
+				const char *dr = body_of(src, "static bool drain_at(rcp_session *s, uint64_t now, size_t *off)\n{", &n);
 				size_t nd = n;
 				const char *shortcut, *gate, *hook;
 
