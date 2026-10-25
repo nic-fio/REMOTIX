@@ -24,7 +24,9 @@
  *               climbs (level 2, 1 hour); the owner (a known key) always gets in and his own ban drops nobody; the unknown keys
  *               share a counter of 5 failures in 5 min at the quota (LV_QUOTA, nothing created or evicted, back after the window,
  *               not used below the quota); attempts and single failures from 4000 keys erase no ban; 16 bookings never LV_FULL;
- *               the log names every ban dropped; a ban file with more bans than the quota keeps the most valuable in ANY order
+ *               the attempts IN FLIGHT count in the common counter, UNBLOCK zeroes it; the known keys are written to the ban file
+ *               (G2 lines, skipped by the 1.0) and read back after a restart with the quota full; the last resort is for known
+ *               keys only (an unknown one gets LV_FULL); the log names every ban dropped; a ban file with more bans than the quota keeps the most valuable in ANY order
  *               (ascending, descending, two shuffles) and the displaced ones keep their level
  *   unblock     removes every level of the address (user, key, /48) and the recidivism
  *   file        the old format is converted, the new one round-trips (ban, user with spaces, recidivism), -1 on a bad path
@@ -41,6 +43,7 @@
 #include "rcp.c"
 
 #include <stdio.h>
+#include <sys/stat.h>
 #include "common.h"
 
 static int checks, bad;
@@ -58,7 +61,7 @@ static int checks, bad;
 
 static uint64_t at(double seconds) { return 1000000u + (uint64_t)(seconds * 1000.0); }
 
-static void fresh(void) { rcp_reset_session_log(); ban_path[0] = 0; }
+static void fresh(void) { rcp_reset_session_log(); ban_path[0] = 0; memset(good_keys, 0, sizeof good_keys); }
 
 /* one complete attempt: book, then the verdict.  Returns what the booking said. */
 static enum login_verdict attempt(const char *key, const char *user, bool ok, uint64_t now)
@@ -487,14 +490,17 @@ static void test_table(void)
 	}
 	before = login_refused_full;
 	unsigned dropped0 = login_bans_dropped;
-	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_OK, "over the quota: the new key gets in");
-	CHECK(login_refused_full == before, "and nothing was refused");
+	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_FULL, "over the quota, an UNKNOWN key finds no place: LV_FULL (the last resort is for known keys)");
+	CHECK(login_refused_full == before + 1 && login_bans_dropped == dropped0 && info.dropped[0] == 0, "counted, and no ban dropped");
+	good_put("[9.9.9.9]", at(0));
+	CHECK(login_reserve("[9.9.9.9]", "u", at(1), &info) == LV_OK, "the same key once KNOWN gets in");
 	CHECK(login_bans_dropped == dropped0 + 2 && strncmp(info.dropped, "BAN of", 6) == 0 &&
 	      strstr(info.dropped + 6, "BAN of") != NULL,
 	      "one ban dropped for each entry the key needs (user and key), BOTH named: «%s»", info.dropped);
 	CHECK(lfind(LK_KEY, "[10.2.0.1]", NULL) < 0 && lfind(LK_KEY, "[10.2.0.2]", NULL) < 0, "the ones dropped are the nearest to their expiry");
 	CHECK(lfind(LK_KEY, "[10.2.1.56]", NULL) >= 0 && peek("[10.2.1.56]", "u", at(2), NULL) == LV_BANNED, "and the last ban still bans");
 	login_release("[9.9.9.9]", "u");
+	memset(good_keys, 0, sizeof good_keys);
 
 	/* full of FAILURES (not banned): the oldest is evicted, and it is declared */
 	fresh();
@@ -537,6 +543,8 @@ static int burn(const char *key, uint64_t t)
 }
 
 static void v4(char *out, int n) { snprintf(out, 64, "[10.%d.%d.%d]", 100 + n / 65000, (n / 250) % 250, n % 250 + 1); }
+
+static char *slurp(const char *path);
 
 /* a botnet of `n` addresses that burn 12 failures each, in turns, every `period` s from `from` to `to` (seconds) */
 static void botnet(int n, double from, double to, double period)
@@ -702,6 +710,116 @@ static void test_quota(void)
 	CHECK(strstr(captured, "[1.2.3.4]") && strstr(captured, "[5.6.7.8]") && strstr(captured, "[9.9.9.9]"),
 	      "the line names all three bans: %s", captured);
 
+	/* 6b. the attempts IN FLIGHT count in the common counter, as LV_BUSY does */
+	fresh();
+	botnet(54, 1, 2, 10);
+	double u0 = 400;                                        /* the botnet's own failures have left the window */
+	int okb = 0;
+	for (int i = 0; i < 12; i++) {
+		snprintf(k, sizeof k, "[203.0.114.%d]", i + 1);
+		if (login_reserve(k, "u", at(u0), &info) == LV_OK) okb++;
+	}
+	CHECK(okb == UNKNOWN_LIMIT, "12 unknown bookings at once: only %d pass (%d)", UNKNOWN_LIMIT, okb);
+	CHECK(unknown_flights() == UNKNOWN_LIMIT, "and they are counted in flight (%d)", unknown_flights());
+	snprintf(k, sizeof k, "[203.0.114.1]");
+	login_release(k, "u");
+	CHECK(unknown_flights() == UNKNOWN_LIMIT - 1, "a booking given back frees its place (%d)", unknown_flights());
+	snprintf(k, sizeof k, "[203.0.114.2]");
+	{
+		struct login_result rr;
+		login_resolve(k, "u", false, at(u0 + 1), &rr);
+	}
+	CHECK(unknown_flights() == UNKNOWN_LIMIT - 2 && unknown_inside(at(u0 + 1)) == 1, "a failure turns its place in flight into one in the window (%d, %d)",
+	      unknown_flights(), unknown_inside(at(u0 + 1)));
+	snprintf(k, sizeof k, "[203.0.114.77]");
+	CHECK(login_reserve(k, "u", at(u0 + 2), &info) == LV_OK, "the freed place is used by another key");
+	CHECK(login_reserve("[203.0.114.78]", "u", at(u0 + 2), &info) == LV_QUOTA, "and then it is full again");
+	/* UNBLOCK zeroes the common counter (not the bookings) */
+	fresh();
+	botnet(54, 1, 2, 10);
+	for (int i = 0; i < UNKNOWN_LIMIT; i++) {
+		snprintf(k, sizeof k, "[203.0.115.%d]", i + 1);
+		fail(k, "u", at(400 + i));
+	}
+	CHECK(peek("[203.0.115.99]", "u", at(410), NULL) == LV_QUOTA, "the common counter is full");
+	rcp_unblock("[8.8.8.8]", at(411));
+	CHECK(unknown_inside(at(411)) == 0 && peek("[203.0.115.99]", "u", at(411), NULL) == LV_OK, "UNBLOCK zeroed it");
+
+	/* 6c. the known keys on disk: a restart with the quota full does not refuse the owner */
+	{
+		char d2[] = "/tmp/lg-good-XXXXXX";
+		CHECK(mkdtemp(d2) != NULL, "mkdtemp");
+		char p2[128];
+		snprintf(p2, sizeof p2, "%s/ban", d2);
+		fresh();
+		memset(good_keys, 0, sizeof good_keys);
+		CHECK(rcp_ban_load(p2, at(0)) == 0, "no file yet");
+		struct login_result rr;
+		login_reserve(G, "alice", at(1), &info);
+		login_resolve(G, "alice", true, at(1), &rr);
+		CHECK(rr.good_changed, "a new known key says the file must be rewritten");
+		login_reserve(G, "alice", at(2), &info);
+		login_resolve(G, "alice", true, at(2), &rr);
+		CHECK(!rr.good_changed, "...and not again within the day");
+		botnet(54, 3, 4, 10);
+		save_ban(NULL, at(5));
+		char *txt = slurp(p2);
+		CHECK(strstr(txt, "\nG2 ") != NULL && strstr(txt, G) != NULL, "the file has a G2 line for the owner");
+		/* the 1.0 loader skips it: its test is «<word> <number>» with the number in the future */
+		int old_loads = 0;
+		{
+			char lines[32768];
+			snprintf(lines, sizeof lines, "%s", txt);
+			for (char *ln = strtok(lines, "\n"); ln; ln = strtok(NULL, "\n")) {
+				char addr[64];
+				long long ex = 0;
+				if (strncmp(ln, "G2 ", 3) == 0 && sscanf(ln, "%63s %lld", addr, &ex) == 2 && ex > (long long)time(NULL))
+					old_loads++;
+			}
+		}
+		CHECK(old_loads == 0, "the 1.0 reads no G2 line as a ban (%d)", old_loads);
+		struct stat sb;
+		CHECK(stat(p2, &sb) == 0 && (sb.st_mode & 0777) == 0600, "file mode 0600");
+		/* RESTART: nothing in memory but the file */
+		fresh();
+		memset(good_keys, 0, sizeof good_keys);
+		CHECK(!good_recent(G, at(10)), "a restart forgets the known keys...");
+		int nl = rcp_ban_load(p2, at(10));
+		CHECK(nl >= BAN_QUOTA - 3 && good_recent(G, at(10)), "...and the file brings them back (%d bans loaded)", nl);
+		for (int i = 0; i < UNKNOWN_LIMIT; i++) {
+			snprintf(k, sizeof k, "[203.0.116.%d]", i + 1);
+			fail(k, "u", at(11 + i));
+		}
+		CHECK(peek("[203.0.116.99]", "u", at(20), NULL) == LV_QUOTA, "after the restart the unknown keys meet the quota...");
+		CHECK(peek(G, "alice", at(20), NULL) == LV_OK, "...and the owner gets in");
+		/* a stale, a future and a nonsense line are not read */
+		FILE *f2 = fopen(p2, "w");
+		long long nowe = (long long)time(NULL);
+		fprintf(f2, "G2 %lld [1.1.1.1]\nG2 %lld [2.2.2.2]\nG2 nonsense [3.3.3.3]\nG2 %lld [4.4.4.4]\n", nowe - 40 * 86400, nowe + 1000, nowe - 3600);
+		fclose(f2);
+		fresh();
+		memset(good_keys, 0, sizeof good_keys);
+		CHECK(rcp_ban_load(p2, at(0)) == 0, "G2 lines are not bans");
+		CHECK(!good_recent("[1.1.1.1]", at(1)) && !good_recent("[2.2.2.2]", at(1)) && !good_recent("[3.3.3.3]", at(1)) &&
+		      good_recent("[4.4.4.4]", at(1)), "only the line of an hour ago is read");
+		/* a ban dropped as a last resort rewrites the file (the report) */
+		captured[0] = 0;
+		{
+			struct sink sk = {NULL, capture, NULL};
+			struct login_result r2;
+			memset(&r2, 0, sizeof r2);
+			say_append(r2.dropped, sizeof r2.dropped, "BAN of the address [1.2.3.4] (level 1, 3 s left)");
+			login_report(&sk, "[1.2.3.4]", "alice", false, &r2, at(1));
+		}
+		CHECK(strstr(captured, "the ban file is up to date") != NULL, "a ban dropped rewrites the file: %s", captured);
+		memset(good_keys, 0, sizeof good_keys);
+		unlink(p2);
+		char p3[140];
+		snprintf(p3, sizeof p3, "%s.new", p2);
+		unlink(p3);
+		rmdir(d2);
+	}
+
 	/* 7. a ban file with more bans than the quota keeps the most valuable, whatever the ORDER of its lines */
 	char dir[] = "/tmp/lg-quota-XXXXXX";
 	CHECK(mkdtemp(dir) != NULL, "mkdtemp");
@@ -757,6 +875,15 @@ static void test_quota(void)
 			}
 			CHECK(displaced > 0, "in ascending order the ones displaced keep their level (%d)", displaced);
 		}
+		if (pass == 1) {
+			int loser = 0;
+			for (int i = 0; i < 300; i++) {
+				snprintf(k, sizeof k, "[10.9.%d.%d]", i / 250, i % 250 + 1);
+				int ix = lfind(LK_KEY, k, NULL);
+				if (!want[i] && ix >= 0 && attempts[ix].level > 0 && !is_banned(&attempts[ix], at(0))) loser++;
+			}
+			CHECK(loser > 0, "in descending order the lines that lose are loaded as entries that are not banned, with their level (%d)", loser);
+		}
 	}
 	unlink(path);
 	rmdir(dir);
@@ -804,7 +931,7 @@ static void test_unblock(void)
 /* ------------------------------------------------------------------------ */
 static char *slurp(const char *path)
 {
-	static char buf[8192];
+	static char buf[32768];
 	FILE *f = fopen(path, "r");
 	buf[0] = 0;
 	if (!f) return buf;
