@@ -37,6 +37,7 @@ extern char **environ;
 int rcp_authenticate_judged(const char *user, const char *password,
                             const char *rhost);
 void rcp_refusal_locked(uint64_t ticket); /* rcp.c / rcp.h */
+void rcp_refusal_paused(uint64_t ticket); /* rcp.c / rcp.h */
 void rcp_log_tag(const char *user, char out[8]); /* rcp.c / rcp.h (R3); weak: the root side does not link rcp.c */
 #pragma weak rcp_log_tag
 void rcp_refusal_unchecked(uint64_t ticket); /* rcp.c / rcp.h (D4b) */
