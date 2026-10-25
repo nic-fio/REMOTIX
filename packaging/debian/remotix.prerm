@@ -11,6 +11,20 @@ if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
 	deb-systemd-invoke stop remotix.service >/dev/null || true
 fi
 
+# ⭐ R-1 of the page audit (25 Oct 2026): the ACL the server puts on /dev/dri/renderD* for a user's private group (card grants,
+#    DECISIONS-11 §11.4) are taken back HERE, with the service already stopped and BEFORE the record (/var/lib/remotix/render-grants,
+#    deleted by postrm at purge) and the binary go: nobody else would — a desktop that survives the stop keeps its ACL, and the
+#    sweep of the next start-up never comes.  `purge` of an installed package runs `prerm remove` first, so one place covers both.
+#    Not on upgrade (the new version's start-up sweeps).  A failure is said, leaves the marker postrm reads (the record is then
+#    kept), and never makes dpkg fail.
+if [ "$1" = remove ] && [ -x /usr/libexec/remotix/remotix ]; then
+	rm -f /run/remotix/render-grants-kept
+	if ! /usr/libexec/remotix/remotix --drop-render-grants; then
+		echo "remotix: ⚠ the card grants (ACL on /dev/dri/renderD*) could not all be taken back: they vanish at the next boot" >&2
+		install -d -m 0755 /run/remotix 2>/dev/null && : > /run/remotix/render-grants-kept
+	fi
+fi
+
 # ⭐ DECISIONS-11.md §11.50 (PHASE F): the network side's files go back to the 1.0 paths (`remotix-net-move --back`) on a
 #    DOWNGRADE (the version being installed is LOWER than this one) and on a removal — never on an upgrade.  A purge deletes
 #    them afterwards (postrm).  INERT unless the package carries remotix-net-move (a REMOTIX_SPLIT=1 build).  A failure is

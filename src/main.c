@@ -116,6 +116,7 @@
  *     channel, 4 = UDP, 5 = TCP.  The network side is the rest of this file: it talks to the internet, never forks, and
  *     asks the root side for every root operation over the closed list of `rootside_proto.h`. */
 #include "rootside.h"
+#include "render_grant.h"
 
 /* ⭐ The network side's three inherited descriptors (DECISIONS.md §11.50). */
 #define FD_ROOT ROOTSIDE_FD_CHANNEL
@@ -2150,6 +2151,22 @@ int main(int argc, char **argv)
 	 *    sessions.  The contract is in `child.h`. */
 	if (argc >= 2 && strcmp(argv[1], "--encoding-test") == 0)
 		return child_test_encoding(argc - 2, argv + 2);
+	/* ⭐ R-1 of the page audit: the removal scripts of the packages take the card grants (ACL on /dev/dri/renderD*) back
+	 *    BEFORE they delete the record and the binary.  Root only; nothing else is opened; exit 0 = none left, 1 = some ACL could
+	 *    not be removed (the record keeps its line: the script must not delete it), 2 = not root or the record is unreadable. */
+	if (argc >= 2 && strcmp(argv[1], "--drop-render-grants") == 0) {
+		int r;
+
+		if (geteuid() != 0) {
+			fprintf(stderr, "remotix --drop-render-grants: needs root\n");
+			return 2;
+		}
+		r = render_grant_drop_all();
+		fprintf(stderr, "remotix --drop-render-grants: %s\n",
+		        r == 0 ? "no card grant left" : r > 0 ? "some card grants could NOT be taken back (kept in the record)"
+		                                              : "the record of the card grants could not be read or written");
+		return r == 0 ? 0 : r > 0 ? 1 : 2;
+	}
 	/* ⭐ 11 Oct 2026 (`DECISIONS.md` §10.40) — the start line of KWin on
 	 *    Plasma: labwc without a screen, then KWin nested in it (`kwin.h`).
 	 *    It runs as the USER, inside `plasma-kwin_wayland.service`, and it

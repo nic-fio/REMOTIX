@@ -13,7 +13,14 @@ set -e
 
 case "$1" in
 purge)
-	rm -rf /var/lib/remotix/net /var/lib/remotix/certificates /var/lib/remotix/ban /var/lib/remotix/ban.new /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new /run/remotix
+	# ⭐ R-1: the record of the card grants is deleted only if prerm took the grants back (else it still says which are left)
+	keep=
+	if [ -e /run/remotix/render-grants-kept ]; then
+		keep=1
+		echo "remotix: /var/lib/remotix/render-grants kept: the card grants could not all be taken back" >&2
+	fi
+	rm -rf /var/lib/remotix/net /var/lib/remotix/certificates /var/lib/remotix/ban /var/lib/remotix/ban.new /run/remotix
+	[ -n "$keep" ] || rm -f /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
 	rmdir /var/lib/remotix 2>/dev/null || true
 	;;
 remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

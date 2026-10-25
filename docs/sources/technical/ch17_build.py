@@ -384,7 +384,7 @@ S_ARCH = p(c("packaging/arch/PKGBUILD") + " is built by " + c("packaging/arch/bu
          + " so ngtcp2's asserts do not carry " + c("$srcdir") + "; " + c("!lto !debug")],
         [c("check()"), c("#define BANCO_ACCESO 0") + " (see " + rif("The Debian package") + "); " + c("ldd") + " shows no ngtcp2/nghttp3 and nothing missing"],
         [c("remotix.install"), "post_install prints a notice only; post_upgrade " + c("systemctl try-restart")
-         + " then " + c("post-upgrade") + "; pre_remove " + c("remotix-net-move --back") + " (split builds, see " + rif("Arch: rolling back the network-side move") + ") then " + c("disable --now") + "; post_remove removes certificates "
+         + " then " + c("post-upgrade") + "; pre_remove " + c("remotix-net-move --back") + " (split builds, see " + rif("Arch: rolling back the network-side move") + ") then " + c("disable --now") + " then " + c("remotix --drop-render-grants") + " (see " + rif("Removing the card grants") + "); post_remove removes certificates "
          "and ban"],
         ["Reproducible", c("SOURCE_DATE_EPOCH") + " = commit time (without it, same binary but different packages "
          "for " + c("builddate") + " and mtree dates, measured 29 Sep)"],
@@ -723,6 +723,33 @@ loginctl list-sessions                                         # the desktop ses
          "the scripts of the package being installed, so that case stays manual (step 2 above).", "Fixed gap.")
 
 
+S_GRANTS = p("A user's private group gets an ACL entry (" + c("group:<gid>:rw-") + ") on " + c("/dev/dri/renderD*") + " so that "
+             "a user manager born before the card groups can draw on the card without closing anything (DECISIONS-11 §11.4). The "
+             "server records each grant in " + c("/var/lib/remotix/render-grants") + " and takes it back when the desktop ends; a "
+             "desktop that survives the stop of the service keeps its ACL (wanted), and the sweep of the next start-up takes it "
+             "back. A <b>removal</b> of the package has no next start-up: the record and the binary go with it, and the ACL would "
+             "stay on the device node until the next boot, which matters if the account is deleted and its gid reused first "
+             "(finding R-1 of the page audit).", lead=True) + \
+    table(["Packaging", "Where", "When", "If it fails"], [
+        ["Debian", c("prerm") + " (" + c("remove") + "; a " + c("purge") + " of an installed package runs it first)",
+         "after the service is stopped, before the files go; not on upgrade", "warning, marker " + c("/run/remotix/render-grants-kept")
+         + ", " + c("postrm purge") + " keeps the record"],
+        ["Arch", c("pre_remove") + " (function " + c("drop_render_grants()") + ")", "after " + c("disable --now"),
+         "warning, the same marker, " + c("post_remove") + " keeps the record"],
+        ["RPM", c("%preun") + " with " + c("$1") + " = 0", "after the service macro, before the files go; not on upgrade",
+         "warning only: rpm removes its " + c("%ghost") + " record anyway, the ACLs vanish at the next boot"],
+    ], "«TAB» — Who takes the card grants back on removal") + \
+    p("All three run " + c("remotix --drop-render-grants") + " (root only; it opens nothing else). It removes every recorded "
+      "grant from every " + c("renderD*") + " <b>even if the user's desktop is alive</b> (unlike the start-up sweep): exit 0 = no grant "
+      "left and the record empty; exit 1 = some ACL could not be removed and its line stays in the record; exit 2 = not root, or the "
+      "record cannot be read or written. A render node that disappeared counts as removed. The function is " + c("render_grant_drop_all()")
+      + ". A desktop that is still alive when the package goes loses nothing it already has open: the ACL only matters for the next "
+      "open. By hand: " + c("/usr/libexec/remotix/remotix --drop-render-grants") + " (Arch: " + c("/usr/lib/remotix/remotix") + "). "
+      "The installer's own uninstall step (" + c("remove-render-grants") + ") does the same through the engine and is not replaced.") + \
+    p("Tests: " + c("benches/02-render-grants-drop.sh") + " (the three packagings with a stub binary: once, before the record is deleted, "
+      "not on upgrade, the failure keeps the record) and checks 35-40 of " + c("benches/unit/render-grant") + " (two grants, a node that "
+      "refuses, the retry, an empty record).")
+
 CHAPTER = ("Build and release", [
     ("The build roads", S_ROADS),
     ("Declared build dependencies", S_DEPS),
@@ -735,6 +762,7 @@ CHAPTER = ("Build and release", [
     ("The RPM package", S_RPM),
     ("The Arch package", S_ARCH),
     ("Arch: rolling back the network-side move", S_ARCH_BACK),
+    ("Removing the card grants", S_GRANTS),
     ("What the packages install", S_INSTALLED),
     ("Building the installer engine", S_ENGINE),
     ("The release command", S_RELEASE),

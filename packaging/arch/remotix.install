@@ -74,11 +74,25 @@ net_back() {
 	return 0
 }
 
+# ⭐ R-1 of the page audit (25 Oct 2026): the card grants (ACL on /dev/dri/renderD*, DECISIONS-11 §11.4) are taken back with the
+#    service stopped and BEFORE post_remove deletes the record and the binary goes.  A failure is said and leaves the marker
+#    /run/remotix/render-grants-kept: post_remove then keeps the record.  Never fails the transaction.
+drop_render_grants() {
+	rm -f /run/remotix/render-grants-kept
+	[ -x /usr/lib/remotix/remotix ] || return 0
+	if ! /usr/lib/remotix/remotix --drop-render-grants; then
+		echo "remotix: ⚠ the card grants (ACL on /dev/dri/renderD*) could not all be taken back: they vanish at the next boot" >&2
+		install -d -m 0755 /run/remotix 2>/dev/null && : > /run/remotix/render-grants-kept
+	fi
+	return 0
+}
+
 pre_remove() {
 	net_back
 	# A remote-access server does not stay listening with its binary deleted,
 	# nor does an enable link stay behind for a unit that disappears.
 	systemctl --no-reload disable --now remotix.service 2>/dev/null
+	drop_render_grants
 	return 0
 }
 
@@ -93,7 +107,12 @@ post_remove() {
 		rm -rf /var/lib/remotix/net
 	fi
 	rm -rf /var/lib/remotix/certificates
-	rm -f /var/lib/remotix/ban /var/lib/remotix/ban.new /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
+	rm -f /var/lib/remotix/ban /var/lib/remotix/ban.new
+	if [ -e /run/remotix/render-grants-kept ]; then
+		echo "remotix: render-grants kept: the card grants could not all be taken back" >&2
+	else
+		rm -f /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
+	fi
 	rmdir /var/lib/remotix 2>/dev/null
 	systemctl daemon-reload 2>/dev/null
 	return 0

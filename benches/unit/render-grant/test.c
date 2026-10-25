@@ -27,6 +27,11 @@
  *   (7) 34     the record folder is not root's (uid 1000), or is writable by others (mode 0777): render_grant_add()
  *                returns false and no node carries an ACL at the end — grants_load() fails before any ACL is written.
  *
+ *   (8) 35-40  render_grant_drop_all() (the package removal, R-1 of the page audit): two grants, every ACL gone from every
+ *                renderD* (card0 untouched) and the record empty; if one node refuses the write, it returns 1, the other node
+ *                is cleaned and the record KEEPS both lines; a retry once the node answers returns 0 with an empty record; an empty
+ *                record returns 0 and writes nothing.
+ *
  * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && PK="gio-2.0" &&
@@ -91,7 +96,7 @@ int fake_fstat(int fd, struct stat *st);
 #undef fstat
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 34
+#define EXPECTED_CHECKS 40
 
 static void require(int cond, const char *desc)
 {
@@ -134,6 +139,7 @@ static char tmp_root[128], group_path[200], passwd_path[200], grants_dir[200], g
 static int readdir_at;
 static struct dirent the_dirent;
 static char dir_sentinel;
+static int fail_set_on = -1;             /* >= 0: lsetxattr on this node fails with EACCES */
 static long force_len = -1;              /* >= 0: lgetxattr answers this many bytes of a fixed pattern */
 
 static struct vnode *find_node(const char *path)
@@ -210,6 +216,10 @@ int fake_lsetxattr(const char *path, const char *name, const void *value, size_t
 	(void)flags;
 	if (!v) {
 		errno = ENOENT;
+		return -1;
+	}
+	if (fail_set_on >= 0 && v == &nodes_tab[fail_set_on]) {
+		errno = EACCES;
 		return -1;
 	}
 	memcpy(v->acl, value, size);
@@ -462,6 +472,39 @@ int main(void)
 		fstat_uid = -1;
 		fstat_mode_or = 0;
 		require(refused && stray == 0, "34. folder owned by uid 1000, or mode 0777: false, no ACL on any node");
+	}
+
+	printf("  (8) render_grant_drop_all\n");
+	{
+		bool setup;
+		int r;
+
+		reset_world();
+		setup = render_grant_add("anna", 1001, 1001) && render_grant_add("bob", 1002, 1002) && grants_rows() == 2 &&
+		        group_perm(V_R128, 1001) >= 0 && group_perm(V_R129, 1002) >= 0;
+		nodes_tab[V_CARD].sets = 0;
+		r = render_grant_drop_all();
+		require(setup && r == 0, "35. two grants recorded: drop_all returns 0");
+		require(group_perm(V_R128, 1001) == -1 && group_perm(V_R128, 1002) == -1 && group_perm(V_R129, 1001) == -1 &&
+		            group_perm(V_R129, 1002) == -1 && nodes_tab[V_CARD].sets == 0,
+		        "36. no ACL entry of either gid on any renderD*; card0 untouched");
+		require(grants_rows() == 0, "37. the record is empty");
+
+		reset_world();
+		setup = render_grant_add("anna", 1001, 1001) && render_grant_add("bob", 1002, 1002) && grants_rows() == 2;
+		fail_set_on = V_R129;
+		r = render_grant_drop_all();
+		fail_set_on = -1;
+		require(setup && r == 1 && group_perm(V_R128, 1001) == -1 && group_perm(V_R129, 1001) >= 0 && grants_rows() == 2 &&
+		            row_of(1001, 1001) && row_of(1002, 1002),
+		        "38. one node refuses the write: returns 1, the other node is cleaned, both lines stay in the record");
+		r = render_grant_drop_all();
+		require(r == 0 && grants_rows() == 0 && group_perm(V_R129, 1001) == -1 && group_perm(V_R129, 1002) == -1,
+		        "39. the retry, once the node answers: 0, ACLs gone, record empty");
+
+		reset_world();
+		r = render_grant_drop_all();
+		require(r == 0 && total_sets() == 0, "40. an empty record: 0 and nothing written");
 	}
 
 	{
