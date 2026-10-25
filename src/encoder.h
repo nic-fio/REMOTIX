@@ -701,6 +701,11 @@ bool codificatore_comprimi_scheda(Encoder *cod, const EncoderSurface *surface,
  *    (`LESSONS.md` §1.11).  Whoever chooses the capture route asks here. */
 bool codificatore_in_hardware(const Encoder *cod);
 
+/* ⭐ E-R1 (audit of 25 Oct 2026, part E): is this encoder DEAD — no card context any more (a quality change or a drain whose reopening
+ * failed leaves `va`/`vk` NULL) or one that «did not obey» and will never obey?  Every frame it is given fails, and nothing inside
+ * brings it back.  The owner drops it (`codificatore_libera`) and `encoder_of()` makes a new one with its backoff. */
+bool codificatore_e_morto(const Encoder *cod);
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * ⛔⛔⛔ THE DMA-BUF STRIDE MUST BE A MULTIPLE OF 64 — and without this
  *       guard the defect GIVES NO ERROR: it gives a **blurred desktop sheared

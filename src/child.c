@@ -7348,6 +7348,31 @@ static void stretches_count(const CaptureStopped *fo, const EncoderFrame *fg,
 	}
 }
 
+/* ⭐ E-R1 (audit of 25 Oct 2026, part E): an encoder that FAILED and is dead — its card context could not be reopened after a
+ * quality change or a drain (VRAM taken by others, driver error, lost device) — would be given every frame, refuse it, and write
+ * three lines each: the video of that user frozen until the end of the session, and the log growing at 60-180 lines a second.
+ * It is dropped here, the next frame is a key (`key_debt`), and `encoder_of()` makes a new one with the backoff that already
+ * exists for a failed opening (500 ms, doubling up to 10 s: no context opened and closed sixty times a second).  A frame that
+ * fails while the encoder is still alive (a transient error) does NOT drop it. */
+static void encoder_drop_if_dead(uint8_t nr, CodecVideo codec)
+{
+	if (nr >= CODEC_MAX || !enc[nr] || !codificatore_e_morto(enc[nr]))
+		return;
+	enc_wait_ms[nr] = enc_wait_ms[nr] ? enc_wait_ms[nr] * 2 : ENC_RETRY_MIN_MS;
+	if (enc_wait_ms[nr] > ENC_RETRY_MAX_MS)
+		enc_wait_ms[nr] = ENC_RETRY_MAX_MS;
+	enc_retry_ms[nr] = log_now_ms() + enc_wait_ms[nr];
+	registro_dice(LOG_CHILD,
+	              "⛔⛔ encoder %u (codec %d) is DEAD after a failure (no card context any more): dropping it, "
+	              "the next frame will be a KEYFRAME, and it is made again in %llu ms — not frame after frame",
+	              nr, (int)codec, (unsigned long long)enc_wait_ms[nr]);
+	codificatore_libera(enc[nr]);
+	enc[nr] = NULL;
+	enc_profile[nr] = 0;
+	enc_level[nr] = 0;
+	key_debt[nr] = true;
+}
+
 /* Encodes a frame with the LIVE encoder of that codec and sends it to the
  * parent.  ⛔ `key` is not assumed: it is what the encoder read from the
  * stream (`fg.key`), and §6.2 writes it in the `kind` field. */
@@ -7471,6 +7496,7 @@ static bool encode_and_send(const CaptureStopped *fo, CodecVideo codec,
 			              "«this one is not sent»",
 			              (int)codec);
 			cycle_faults++;
+			encoder_drop_if_dead(nr, codec);
 			return false;
 		}
 	} else if (!codificatore_comprimi(cod, fo->pixel, fo->stride, &fg)) {
@@ -7480,6 +7506,7 @@ static bool encode_and_send(const CaptureStopped *fo, CodecVideo codec,
 		              "sent»",
 		              (int)codec);
 		cycle_faults++;
+		encoder_drop_if_dead(nr, codec);
 		return false;
 	}
 	c = codificatore_confessione(cod);

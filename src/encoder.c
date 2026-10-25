@@ -4629,6 +4629,17 @@ bool codificatore_in_hardware(const Encoder *c)
 	return c ? c->hardware : false;
 }
 
+bool codificatore_e_morto(const Encoder *c)
+{
+	if (!c)
+		return false;
+	if (!c->conf.has_obeyed)
+		return true;
+	if (!c->hardware)
+		return false; /* no card context to lose: `open_context()` already refused it at birth */
+	return c->route == ROUTE_VULKAN ? c->vk == NULL : c->va == NULL;
+}
+
 uint32_t encoder_card_alignment(void)
 {
 	return CARD_ALIGNMENT;
