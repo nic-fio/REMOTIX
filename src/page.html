@@ -1319,9 +1319,97 @@ const VIA_MSE = new URLSearchParams(location.search).get("draw") === "mse";
  *     `http.server` or from a `file://`.  ⛔ Removing it now would mean
  *     removing the only route that holds if that comparison broke again, and
  *     the two are checked in a single expression. */
-const VIDEO_WORKER =
-  new URLSearchParams(location.search).get("video") === "worker" ||
-  new URLSearchParams(location.hash.replace(/^#/, "")).get("video") === "worker";
+/* ⭐⭐ AND ON DESKTOP FIREFOX THE WORKER IS THE DEFAULT — PROPOSAL for
+ *     `DECISIONS.md` §11.36, option D (branch `proposal/firefox-worker-default`,
+ *     15 Oct 2026; NOT decided, NOT on `main`).
+ *
+ *   `[M]` 15 Oct 2026, F-013 Firefox 153 at 4K: the main-thread route gave
+ *   28–56 % of the sound, `#video=worker` gave 100 %.  ⇒ On DESKTOP Firefox
+ *   the switch turns itself on, and the old route stays one fragment away.
+ *
+ *   ⭐ THE RULE, in this order (the first that answers wins):
+ *     1. `video=worker` (query or fragment)  ⇒ worker, as before, everywhere;
+ *     2. `video=main`   (query or fragment)  ⇒ main thread, everywhere;
+ *     3. `?draw=mse`                          ⇒ main thread (MSE does not
+ *        cross the worker boundary, see `VW` below);
+ *     4. desktop Firefox WITH what the route needs (`VideoDecoder`, `Worker`,
+ *        `transferControlToOffscreen`)        ⇒ worker;
+ *     5. everyone else (Chrome, AABrowser, Firefox for Android) ⇒ main
+ *        thread, unchanged.
+ *   ⛔ "Desktop Firefox" is the ENGINE (Gecko: `-moz-` CSS, `Firefox/` and
+ *      `Gecko/` in the `userAgent`) AND not a phone or tablet (`Android`,
+ *      `Mobile`, `Tablet` absent).  ⚠ Firefox for Android has no
+ *      `VideoDecoder` (`[M]` Firefox 154, §7.18): rule 4 asks for it, so even
+ *      a «desktop site» `userAgent` on Android stays on its route.
+ *   ⚠ And the worker is not trusted blindly: if it paints nothing, or breaks,
+ *     the page goes back to the main thread for the rest of the session ONCE,
+ *     and writes it in the page's log — see `worker_fall_back()`. */
+const VIDEO_ASKED = (function () {
+  const q = new URLSearchParams(location.search).get("video");
+  const h = new URLSearchParams(location.hash.replace(/^#/, "")).get("video");
+  return (q === "worker" || h === "worker") ? "worker"
+       : (q === "main" || h === "main") ? "main" : null;
+})();
+const DESKTOP_FIREFOX = (function () {
+  const ua = navigator.userAgent || "";
+  let gecko = false;
+  try { gecko = !!(window.CSS && CSS.supports("-moz-appearance", "none")); }
+  catch (e) { gecko = false; }
+  return gecko && /\bFirefox\/\d/.test(ua) && /\bGecko\/\d/.test(ua)
+      && !/Android|Mobile|Tablet/i.test(ua);
+})();
+const WORKER_CAPABLE = typeof VideoDecoder !== "undefined"
+  && typeof Worker !== "undefined" && typeof OffscreenCanvas !== "undefined"
+  && typeof HTMLCanvasElement !== "undefined"
+  && typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function";
+const VIDEO_WORKER = VIDEO_ASKED === "worker"
+  || (VIDEO_ASKED === null && !VIA_MSE && DESKTOP_FIREFOX && WORKER_CAPABLE);
+/* ⭐ WHY this route, said once in the log and readable by the benches
+   (`stretches().video_route`): a route nobody can name is a number nobody
+   can read. */
+const VIDEO_ROUTE = {
+  asked: VIDEO_ASKED, desktop_firefox: DESKTOP_FIREFOX, capable: WORKER_CAPABLE,
+  /* ⚠ `video=worker` with `?draw=mse` leaves the worker OFF (see `VW`) */
+  chosen: (VIDEO_WORKER && !VIA_MSE) ? "worker" : "main",
+  why: VIDEO_ASKED ? "asked with video=" + VIDEO_ASKED
+     : VIA_MSE ? "?draw=mse"
+     : VIDEO_WORKER ? "default: desktop Firefox (§11.36 D, proposal)"
+     : "default",
+  fell_back: null,
+};
+note("video route: " + VIDEO_ROUTE.chosen + " — " + VIDEO_ROUTE.why);
+
+/* ⛔ TEST-ONLY: a broken worker on purpose, to prove the fall back on a box.
+   `#video_fault=die` throws in the worker at every stream; `mute` throws
+   the streams away unread; `blind` reads the keyframe and paints nothing.
+   ⚠ Read from the FRAGMENT only (it never reaches the server, and a link
+   with a query cannot carry it) and only with `?logbook` in the address, the
+   page's explicit opt-in to diagnostics: the build has no bench marker in the
+   page since 8a46c9c9 removed `/diary` and its `DIARY` flag, so a link with
+   only the fragment cannot break anybody's video.  The bench adds `?logbook`
+   to the URL together with `#video_fault=…`.  Absent = nothing changes. */
+const VIDEO_FAULT = (function () {
+  if (location.search.indexOf("logbook") < 0) return null;
+  const v = new URLSearchParams(location.hash.replace(/^#/, "")).get("video_fault");
+  return (v === "die" || v === "mute" || v === "blind") ? v : null;
+})();
+/* ⭐ The watchdog's two clocks (see `V.arm` in `start_worker`).  ⚠ 5 s from
+   the first keyframe is generous: `[M]` the worker's first 4K picture comes
+   in well under a second when it works; it is the "never" being caught. */
+const WORKER_PAINT_S = 5, WORKER_KEY_S = 8;
+/* ⚠ The second review (15 Oct 2026): WORKER_KEY_S runs from the END of the
+   first video stream the worker read — a 2–3 MB 4K keyframe on a slow line
+   can take longer than 8 s to arrive, and that is the line's time, not the
+   worker's.  A worker that reports NO video stream at all (it reads nothing)
+   gets WORKER_SILENT_S from the first stream handed to it. */
+const WORKER_SILENT_S = 30;
+/* ⭐ The failure rule (review of 15 Oct 2026): ONE stray exception in the
+   worker does not move the route — the main-thread route logs a broken stream
+   and goes on, and the worker must not be stricter.  It falls back when the
+   worker is DEAD (an error before it said "ready": its source did not even
+   start), when the failures REPEAT (WORKER_FAILS of them within
+   WORKER_FAILS_S seconds), or when it paints nothing (the two clocks). */
+const WORKER_FAILS = 3, WORKER_FAILS_S = 10;
 
 /* ⛔ Generated by `benches/02-page-codec-probe.py` — not written by hand, and
    remade with that program (which certifies itself: healthy → faulty →
@@ -5592,6 +5680,11 @@ function stretches() {
     "9_10_callback_glass": _stretch(s.total_ms),
     /* ⚠ It is not the lit pixel: it is the first instant at which it CAN light up */
     "11_glass_next_frame": _stretch(s.next_frame_ms),
+    /* ⭐ 15 Oct 2026 (proposal §11.36 D): WHY this route, and whether the
+       worker fell back — at the END, the old names untouched.  ⚠ `age_ms`
+       above is the worker's own since the same day (the mirror receives its
+       samples), so the two routes are read under the same name. */
+    video_route: Object.assign({}, VIDEO_ROUTE),
   };
 }
 
@@ -7792,6 +7885,12 @@ function start_audio(wt) {
        + " classic " + (typeof cl_in_effect !== "undefined" && cl_in_effect ? "si" : "NO")
        + " viewer " + (document.body.dataset.viewer || "-")
        + " painted " + (viewer && viewer.counts ? viewer.counts.painted : "?")
+       /* ⭐ 15 Oct 2026 (§11.36 D): which thread paints, and if it fell back */
+       + " vroute " + (function () {
+           let w = null;
+           try { w = VW; } catch (e) { /* before `VW` is born (TDZ) */ }
+           return w ? "worker" : VIDEO_ROUTE.fell_back ? "main-fellback" : "main";
+         })()
        /* ⛔⭐ AND THE VIDEO ALSO SAYS **WHAT IT DID NOT PAINT** — 17 Aug 2026.
         *
         *     `painted` alone is a number that rises, and a number that rises
@@ -8333,7 +8432,7 @@ async function clipboard_send(type, body) {
  *    instant of `writeText`.  ⛔ Synchronous, inside try/catch, no `await` before
  *    the call: it must not move the gesture's timing.  No `readText` (it would
  *    ask for a permission).  The lines start with "clipboard ·" so the bench's
- *    diary filter picks them up. */
+ *    log filter picks them up. */
 let clip_diag_arrival = null;
 function clip_diag_state() {
   try {
@@ -9271,7 +9370,7 @@ function start_video(wt, dismiss) {
          rules, `decode()` and the two `drawImage` live over there (`STUDIES.md`
          §web §6.1).  ⛔ What remains on this side, per frame, is the `read()`
          above and this transfer. */
-      if (VW) { VW.send_stream(r.value); continue; }
+      if (VW && VW.send_stream(r.value)) continue;
       const stream = r.value;
       chain = chain.then(function () {
         return read_one_stream(stream, dismiss);
@@ -9367,6 +9466,9 @@ let devicePixelRatio = 1;          /* ⛔ it does not exist in the worker: the o
 let __view = [1, 1];              /* the view MEASURED by the main thread */
 let __oc = null, viewer = null;
 let __already_said = false;           /* the video fault is said ONCE */
+let __key_said = false;    /* the first keyframe of this session was said over there */
+let __video_said = false;  /* the first video stream of this session was said over there */
+let __sess = 0;            /* which session: +1 at every \`restart\`, the same count as over there */
 let __chain = Promise.resolve();  /* the delivery order, §5.1 (22 Sep 2026) */
 
 /* ⚠ \`trasferisci\` came with phase 7: a clipboard text can weigh a million
@@ -9460,9 +9562,29 @@ function __summary(a) {
   const b = a.slice().sort(function (x, y) { return x - y; });
   return { n: b.length, med: b[Math.floor(b.length / 2)], worst: b[b.length - 1] };
 }
+/* ⭐⭐ THE PICTURE AGE CROSSES TOO — 15 Oct 2026, proposal §11.36 D.
+   ⛔ Until today \`stretches().age_ms\` was EMPTY on this route: the samples
+   lived over here and the mirror sent only summaries, so the worker's lag
+   could not be measured — and lag is half of what D must prove.
+   ⇒ The NEW samples since the last mirror cross (a few per 100 ms, not the
+   two hundred of the window), and over there they go into the SAME arrays
+   of the mirror instance: \`age_ms\`, \`recv_ms\`, \`dec_ms\`.  ⭐ So the
+   audio log line and \`stretches()\` compute them with the same code as the
+   main-thread route, under the same names (form E2 of \`REVIEWER.md\`).
+   ⚠ The arrays are never re-created by \`Viewer\` (only its constructor
+   makes them), so wrapping their \`push\` here holds for the session. */
+const __fresh = { age: [], recv: [], dec: [] };
+function __tap(arr, into) {
+  arr.push = function (x) { into.push(x); if (into.length > 400) into.shift();
+                            return Array.prototype.push.call(this, x); };
+}
 function specchia() {
   if (!viewer) return;
-  __post({ t: "counts", counts: Object.assign({}, viewer.counts),
+  __post({ t: "counts", sess: __sess, counts: Object.assign({}, viewer.counts),
+    fresh: { age: __fresh.age.splice(0), recv: __fresh.recv.splice(0),
+             dec: __fresh.dec.splice(0) },
+    queue_deliv: viewer.queue_deliv.slice(), queue_out: viewer.queue_out.slice(),
+    skip_age100: viewer.skip_age100,
     state: { view_w: viewer.view_w, view_h: viewer.view_h,
              dec_w: viewer.dec_w, dec_h: viewer.dec_h,
              canvas_w: viewer.canvas_w, canvas_h: viewer.canvas_h,
@@ -9519,11 +9641,37 @@ self.onmessage = function (ev) {
     /* ⚠ The same global name as over there, for the same reason: a bench that
        needs to look inside looks at \`REMOTIX.viewer\`, not at a new name. */
     self.REMOTIX = { viewer: viewer, read_one_stream: read_one_stream };
+    __tap(viewer.age_ms, __fresh.age); __tap(viewer.recv_ms, __fresh.recv);
+    __tap(viewer.dec_ms, __fresh.dec);
+    /* ⭐ The first keyframe of each session is SAID over there: it starts the
+       fall-back clock (the worker has N seconds from it to paint).  ⚠ Once
+       per \`restart\`, one message, not one per frame. */
+    const __deliver = viewer.deliver;
+    viewer.deliver = function (i, data) {
+      if (i && i.type === 0x0301 && !__key_said) {
+        __key_said = true; __post({ t: "first_key", number: i.number, sess: __sess });
+      }
+      if (VIDEO_FAULT === "blind") return;
+      return __deliver.call(viewer, i, data);
+    };
+    const __restart = viewer.restart;
+    /* ⭐ And the first VIDEO stream read to its end (not a clipboard one, not
+       one still arriving): from here the no-keyframe clock runs over there. */
+    const __stream_video = viewer.stream_video;
+    viewer.stream_video = function (byte, complete) {
+      if (!__video_said) { __video_said = true; __post({ t: "video_seen", sess: __sess }); }
+      return __stream_video.call(viewer, byte, complete);
+    };
+    viewer.restart = function () { __key_said = false; __video_said = false; __sess++;
+                                   return __restart.apply(viewer, arguments); };
     setInterval(specchia, 100);
     __post({ t: "ready" });
     return;
   }
   if (!viewer) return;
+  /* ⭐ \`back_to_form()\`: the canvas goes back to 16×16 — over here, because
+     over there it can no longer be resized (it was transferred). */
+  if (m.t === "blank") { if (__oc) { __oc.width = 16; __oc.height = 16; } return; }
   if (m.t === "view") {
     devicePixelRatio = m.dpr || 1; __view = m.view;
     viewer.fit_view(); specchia(); return;
@@ -9547,16 +9695,25 @@ self.onmessage = function (ev) {
    * ⛔ It is said ONCE and not at every frame: thirty lines per second would
    *    be a second silence. */
   if (m.t === "stream") {
+    /* ⛔ TEST-ONLY faults (\`#video_fault=\`), to prove the fall back. */
+    if (VIDEO_FAULT === "die") throw new Error("video_fault=die: the worker dies on purpose");
+    if (VIDEO_FAULT === "mute") {
+      try { m.stream.cancel(); } catch (e) { /* already gone */ }
+      return;
+    }
     /* ⛔ Same rule as the main thread: delivery in the order the server
      *    opened the streams, not the one in which they finish — see
      *    \`start_video\`.  The \`postMessage\` calls already arrive in that order. */
     __chain = __chain.then(function () {
       return read_one_stream(m.stream, dismiss);
     }).catch(function (e) {
+      /* ⭐ Said to the main thread as a FACT at EVERY failure (failures are
+         rare, so it costs nothing on the healthy path): over there REPEATED
+         failures send the video back to the main thread (WORKER_FAILS). */
+      __post({ t: "broke", why: "" + (e && (e.message || e)) });
       if (__already_said) return;
       __already_said = true;
-      note("⛔ the video path in the worker broke, and from here on "
-           + "it paints NOTHING more: " + (e && (e.message || e))
+      note("⛔ the video path in the worker broke: " + (e && (e.message || e))
            + " — this line is written only once");
     });
     return;
@@ -9587,6 +9744,8 @@ function worker_source() {
        breaks **mute**.  ⚠ And no check says so: the source is COMPOSED, so
        there is no `import` that fails. */
     "const VIA_MSE = " + JSON.stringify(VIA_MSE) + ";",
+    /* ⛔ The test-only fault switch must cross too, or the worker breaks mute. */
+    "const VIDEO_FAULT = " + JSON.stringify(VIDEO_FAULT) + ";",
     "const CODEC_NAME = " + JSON.stringify(CODEC_NAME) + ";",
     "const CHANNEL = " + JSON.stringify(CHANNEL) + ";",
     "const REASON = " + JSON.stringify(REASON) + ";",
@@ -9601,10 +9760,14 @@ function worker_source() {
 
 /* The worker, seen from the main thread. */
 function start_worker() {
-  const V = { ready: false, streams: 0, w: null, check_done: false };
+  const V = { ready: false, streams: 0, w: null };
   const url = URL.createObjectURL(
     new Blob([worker_source()], { type: "text/javascript" }));
   V.w = new Worker(url);
+  try { return start_worker_wire(V); }
+  catch (e) { try { V.w.terminate(); } catch (e2) { /* already gone */ } throw e; }
+}
+function start_worker_wire(V) {
   V.call = function (method, args) {
     V.w.postMessage({ t: "call", method: method, args: args || [] });
   };
@@ -9620,30 +9783,89 @@ function start_worker() {
    * without a line.  ⛔ The declared fallback below did not fire, because its
    * premise is false: `postMessage` does NOT throw — the stream transfers
    * perfectly well, and it is what the worker does with it that breaks.
-   * ⇒ A check on the RESULT is needed, not on the call: if after N streams
-   *   transferred nothing has been painted, it is SAID — loudly,
-   *   in the page's log.
-   * ⚠ And it is just said, it does NOT fall back: falling back to the main
-   *   thread would mean measuring one route and calling it by the other's
-   *   name. */
-  V.check = function () {
-    if (V.check_done || V.streams < 60) return;
-    if (viewer.counts.painted > 0) { V.check_done = true; return; }
-    V.check_done = true;
-    const r = "⛔ MEASURE: the worker received " + V.streams + " video "
-            + "streams and painted NOTHING.  ⇒ `?video=worker` on this "
-            + "engine does not work: go back to `/` without the query string.";
-    note(r);
+   * ⇒ A check on the RESULT is needed, not on the call.
+   * ⛔⭐ Until 15 Oct 2026 it was "60 streams and nothing painted ⇒ say so".
+   *     As the default route (proposal §11.36 D) it is a CLOCK instead, and
+   *     it FALLS BACK, once: 60 streams are one second at 60 fps, they count
+   *     clipboard streams too, and they judged a mirror up to 100 ms old.
+   *     The old line here said "falling back would be measuring one route
+   *     and calling it by the other's name" — true while the worker was a
+   *     switch someone turned on to MEASURE; as a default it is the user's
+   *     picture.  ⇒ The fall back is NAMED instead of hidden: one line in the page's log,
+   *     the route in `stretches()` becomes the main thread's, and
+   *     `stretches().video_route.fell_back` says when and why. */
+  V.sess = 0;                 /* +1 at every `restart`, the worker counts the same */
+  V.fails = [];               /* instants of the worker's failures (WORKER_FAILS) */
+  V.failed = function (why) {
+    if (VW !== V) return;
+    const now = performance.now();
+    V.fails = V.fails.filter(function (t) { return now - t < WORKER_FAILS_S * 1000; });
+    V.fails.push(now);
+    note("⚠ video worker failure " + V.fails.length + " of " + WORKER_FAILS
+         + " within " + WORKER_FAILS_S + " s: " + why);
+    if (V.fails.length >= WORKER_FAILS)
+      worker_fall_back(WORKER_FAILS + " worker failures within " + WORKER_FAILS_S
+                       + " s, the last: " + why);
   };
+  /* ⭐⭐ THE WATCHDOG, three clocks, each judged on "painted nothing":
+   *   · WORKER_PAINT_S from the first keyframe the worker read;
+   *   · WORKER_KEY_S from the END of the first video stream it read, if no
+   *     keyframe came — the server opens a session with a keyframe (§5.2);
+   *   · WORKER_SILENT_S from the first stream handed to it, if it never
+   *     reported a video stream at all (the 21 Aug 2026 defect: it reads
+   *     nothing).
+   *   Armed again at every `restart` (a new session), never on a closed one,
+   *   and messages of an older session (`sess`) are ignored. */
+  V.armed = false; V.key_t = null; V.timers = [];
+  V.disarm = function () {
+    for (const t of V.timers) clearTimeout(t);
+    V.timers = []; V.armed = false; V.key_t = null; V.video_t = null;
+  };
+  V.painted_check = function (why) {
+    if (VW !== V) return;
+    if (viewer.counts.painted > 0) return;
+    worker_fall_back(why);
+  };
+  V.video_t = null;
+  V.arm = function () {
+    if (V.armed || viewer.is_closed) return;
+    V.armed = true;
+    V.timers.push(setTimeout(function () {
+      if (V.video_t === null && V.key_t === null)
+        V.painted_check("the worker reported no video stream within " + WORKER_SILENT_S
+                        + " s of the first stream handed to it");
+    }, WORKER_SILENT_S * 1000));
+  };
+  V.video_seen = function (sess) {
+    if (sess !== V.sess || !V.armed || V.video_t !== null) return;
+    V.video_t = performance.now();
+    V.timers.push(setTimeout(function () {
+      if (V.key_t === null)
+        V.painted_check("the worker read no keyframe within " + WORKER_KEY_S
+                        + " s of the end of the first video stream");
+    }, WORKER_KEY_S * 1000));
+  };
+  V.first_key = function (sess) {
+    /* ⛔ A keyframe of an OLD session (its message crossed a `restart`)
+       does not start the new session's clock. */
+    if (sess !== V.sess || !V.armed || V.key_t !== null) return;
+    V.key_t = performance.now();
+    V.timers.push(setTimeout(function () {
+      V.painted_check("the worker painted nothing within " + WORKER_PAINT_S
+                      + " s of the first keyframe");
+    }, WORKER_PAINT_S * 1000));
+  };
+  /* ⭐ `true` = the worker took it; `false` = it is the main thread's
+     (the route fell back, now or before), and the caller reads it itself. */
   V.send_stream = function (f) {
+    if (VW !== V) return false;
     try { V.w.postMessage({ t: "stream", stream: f }, [f]); V.streams++;
-          V.check(); }
+          V.arm(); return true; }
     catch (e) {
-      note("⛔ the video stream could not be transferred to the worker ("
-           + e + "): this session's video does NOT arrive.  ⚠ And I do not fall back "
-           + "to the main thread: that would be measuring one thing and calling it "
-           + "another.");
-      V.broken = true;
+      /* ⚠ A refused transfer leaves the stream on this side: it is not lost. */
+      worker_fall_back("the video stream could not be transferred to the worker ("
+                       + e + ")");
+      return false;
     }
   };
   V.view = function () {
@@ -9653,12 +9875,25 @@ function start_worker() {
     V.w.postMessage({ t: "view", view: v, dpr: devicePixelRatio || 1 });
   };
   V.w.onerror = function (e) {
-    note("⛔ the video worker died: " + (e.message || e));
-    V.broken = true;
+    const why = "" + (e.message || e);
+    /* ⛔ Before "ready" the worker's source did not even start: it is dead,
+       and there is nothing to wait for. */
+    if (!V.ready) {
+      V.broken = true;
+      worker_fall_back("the video worker could not start: " + why);
+      return;
+    }
+    V.failed("an exception in the video worker: " + why);
+  };
+  V.w.onmessageerror = function () {
+    V.failed("a message from the video worker could not be read");
   };
   V.w.onmessage = function (ev) {
     const m = ev.data;
     if (m.t === "ready") { V.ready = true; return; }
+    if (m.t === "first_key") { V.first_key(m.sess); return; }
+    if (m.t === "video_seen") { V.video_seen(m.sess); return; }
+    if (m.t === "broke") { V.failed("a video stream broke in the worker: " + m.why); return; }
     if (m.t === "line") {
       note("video · " + m.line);
       return;
@@ -9671,12 +9906,35 @@ function start_worker() {
     }
     if (m.t === "style") { $("viewer").style[m.key] = m.value; return; }
     if (m.t === "counts") {
+      /* ⛔ A mirror of an OLDER session (posted before the worker read the
+         `restart`) would put its counts — `painted` above all — on the new
+         one: dropped. */
+      if (m.sess !== V.sess) return;
       /* The mirror: from here the benches read `REMOTIX.viewer.counts`. */
       Object.assign(viewer.counts, m.counts);
+      /* ⭐ The picture age and its neighbours (see `__fresh` in the shell):
+         the new samples go into the mirror's OWN arrays, with the same cap
+         (200) the `Viewer` keeps — so the audio log line and `stretches()`
+         read them as on the main-thread route. */
+      if (m.fresh) {
+        for (const [k, a] of [["age", viewer.age_ms], ["recv", viewer.recv_ms],
+                              ["dec", viewer.dec_ms]]) {
+          const n = m.fresh[k] || [];
+          for (let j = 0; j < n.length; j++) a.push(n[j]);
+          if (a.length > 200) a.splice(0, a.length - 200);
+        }
+      }
+      if (m.queue_deliv) viewer.queue_deliv = m.queue_deliv;
+      if (m.queue_out) viewer.queue_out = m.queue_out;
+      if (typeof m.skip_age100 === "number") viewer.skip_age100 = m.skip_age100;
       const s = m.state || {};
-      for (const k of ["view_w", "view_h", "dec_w", "dec_h", "canvas_w",
-                       "canvas_h", "last_delivered", "expected", "on_hold",
-                       "canvas_waits", "format", "painted_rect"])
+      /* ⚠ `canvas_w`/`canvas_h`/`canvas_waits` are NOT taken from here since
+         15 Oct 2026: the shadow (`redirect_viewer_to_worker`) keeps them on
+         this side exactly, and a mirror up to 100 ms old would undo a
+         `CANVAS` just applied. */
+      for (const k of ["view_w", "view_h", "dec_w", "dec_h",
+                       "last_delivered", "expected", "on_hold",
+                       "format", "painted_rect"])
         if (k in s) viewer[k] = s[k];
       if (s.errors) viewer.errors = s.errors;
       /* ⭐ `SCENE` lives on this side because the pointer movements are on
@@ -9719,6 +9977,11 @@ function start_worker() {
       return;
     }
     if (m.t === "pace") {
+      /* ⭐ The cap the worker decided is ALSO this instance's (its pace runs
+         from the shadow `pace_enable`): after a fall back its windows start
+         from the cap in force, and calm can lift it — with `fps` left at 0
+         here the cap stayed on for the rest of the session. */
+      if (viewer.pace) { viewer.pace.fps = m.fps; viewer.pace.calm = 0; }
       if (viewer.on_pace) viewer.on_pace(m.fps);
       return;
     }
@@ -9755,7 +10018,12 @@ function start_worker() {
       first reconfiguration — which is exactly the fault family that cost
       eight days on 21 August.  ⚠ MSE wins, because it is the route that on an
       engine without WebCodecs is the ONLY one. */
-const VW = (function () {
+/* ⚠ `let` and not `const` since 15 Oct 2026: `worker_fall_back()` sets it
+   to `null`, and from that instant every `if (VW)` of this page takes the
+   main-thread road — the stream loop, `stretches()`, the audio log line. */
+const CANVAS_LISTENERS = [];          /* see `track_canvas_listeners` */
+let VW = start_video_worker();
+function start_video_worker() {
   if (!VIDEO_WORKER) return null;
   if (VIA_MSE) {
     note("⛔ `?video=worker` and `?draw=mse` together are NOT possible: the "
@@ -9764,8 +10032,25 @@ const VW = (function () {
        + "LEAVING the worker off.");
     return null;
   }
-  return start_worker();
-})();
+  /* ⭐ The canvas listeners are RECORDED from now on (see
+     `track_canvas_listeners`): a fall back must give them to the new canvas. */
+  track_canvas_listeners($("viewer"));
+  /* ⛔ And a worker that cannot even be BUILT (the source composition, the
+     `Blob`, the transfer) must not take the page down with it: this line runs
+     at load on every desktop Firefox.  ⇒ The main-thread route, said once,
+     on a new canvas (the old one may already belong to a worker). */
+  try { return start_worker(); }
+  catch (e) {
+    VIDEO_ROUTE.chosen = "main";
+    VIDEO_ROUTE.fell_back = { why: "the video worker could not be built: " + e,
+                              at_ms: Math.round(performance.now()),
+                              streams_to_worker: 0, painted_by_worker: 0 };
+    note("⛔ VIDEO the worker route could not start, the main thread paints: " + e);
+    try { viewer_take_canvas(swap_viewer_canvas()); }
+    catch (e2) { note("⛔ VIDEO and the canvas could not be given back: " + e2); }
+    return null;
+  }
+}
 
 /* ⭐ From here a bench reads how the worker path is doing — how many streams
    were transferred to it, whether it is alive, and the drawing cost already
@@ -9786,60 +10071,174 @@ if (window.REMOTIX) { window.REMOTIX.video = VW; window.REMOTIX.round_trip = ROU
  *   — that is measuring a worker while the main thread does the same work.
  *   ⛔ It would be an "after" slower than the "before" because of the
  *   measurement. */
-if (VW) {
+if (VW) redirect_viewer_to_worker();
+
+/* ⭐⭐ THE SHADOW — review of 15 Oct 2026 (proposal §11.36 D).
+ *   The session's bookkeeping calls (`negotiate`, `fit_canvas_requested`,
+ *   `canvas_adapted`, `canvas_refused`, `restart`, `close`, `pace_enable`)
+ *   are run ON THIS SIDE TOO, by the prototype, with the lines muted (the
+ *   worker writes them already).  ⛔ Without it the tolerance of §6.2 —
+ *   `tolerated`, `historical`, `window`, `canvas_waits` — lived ONLY in the
+ *   worker, and a fall back in the middle of a canvas change judged the next
+ *   frame at the old or pending size against an empty tolerance:
+ *   `PROTOCOL_ERROR`, session closed.  ⇒ Now this instance holds a tolerance
+ *   AT LEAST AS LOOSE as the worker's — not equal: its change window closes
+ *   only at ITS OWN keyframe, and none comes here while the worker paints —
+ *   so a fall back has nothing to replay, and errs on the lenient side.
+ *   ⚠ They touch no decoder and no canvas (the mirror has neither), and they
+ *   are a handful per session: nothing is paid per frame.
+ *   ⭐ This also keeps on this side the three fields the layouts need —
+ *   `canvas_w`/`canvas_h` (the input coordinates are ON the canvas, `RCP.md`
+ *   §7.3: phase-4 seam of 14 Aug 2026) and `session` (`renegotiate_view()`
+ *   starts with `if (!viewer.session) return;`: the defect found the night of
+ *   15 Aug 2026) — which before were kept by two hand-written overrides. */
+const WORKER_SHADOWED = ["restart", "negotiate", "canvas_adapted", "canvas_refused",
+                         "fit_canvas_requested", "close", "pace_enable"];
+function redirect_viewer_to_worker() {
   for (const method of ["restart", "negotiate", "view", "canvas_adapted",
                         "canvas_refused", "fit_canvas_requested",
                         "stream_video", "close", "pace_enable"]) {
     viewer[method] = (function (m) {
-      return function () { VW.call(m, Array.prototype.slice.call(arguments)); };
+      return function () {
+        const args = Array.prototype.slice.call(arguments);
+        /* ⭐ A new session (or its end) stops the watchdog; a new session
+           counts one more, as the worker does. */
+        if (m === "restart" || m === "close") VW.disarm();
+        if (m === "restart") VW.sess++;
+        /* ⛔ The worker's call goes out WHATEVER this side's copy does: the
+           worker paints, this side only keeps the books. */
+        if (WORKER_SHADOWED.indexOf(m) >= 0) {
+          viewer.line = function () { /* muted: the worker says it */ };
+          try { Viewer.prototype[m].apply(viewer, args); }
+          catch (e) { note("⚠ the main-thread copy of «" + m + "» threw: " + e); }
+          finally { delete viewer.line; }
+        }
+        VW.call(m, args);
+      };
     })(method);
-  }
-  /* ⛔ D-003: `is_closed` must hold ON THIS SIDE too, where the "on" messages arrive. */
-  for (const [method, value] of [["close", true], ["restart", false]]) {
-    viewer[method] = (function (before) {
-      return function () { viewer.is_closed = value;
-                           return before.apply(null, arguments); };
-    })(viewer[method]);
   }
   /* `fit_view()` is the only one that must MEASURE on this side before leaving. */
   viewer.fit_view = function () { VW.view(); return view_size(); };
+}
 
-  /* ⛔⭐ AND TWO MUST LEAVE THE SIZE ON THIS SIDE TOO — phase 4 seam, 14 Aug
-   *     2026, asked for by the classic-mode link.
-   *
-   *     With the video in the worker, `negotiate` and `canvas_adapted` sent the
-   *     canvas **over there** and nothing else.  ⛔ But the input coordinates
-   *     are **on the canvas** (`RCP.md` §7.3), and the two layouts, which live
-   *     **on this side**, convert them: without this line they would read the
-   *     previous canvas and the pointer would end up **in the wrong place**,
-   *     ⚠ without any error anywhere — which is the defect form this phase
-   *     has already met three times. */
-  viewer.negotiate = function (codec, prof, string, tl, ta) {
-    viewer.canvas_w = tl;
-    viewer.canvas_h = ta;
-    VW.call("negotiate", [codec, prof, string, tl, ta]);
+/* ⛔⭐⭐ THE FALL BACK — proposal §11.36 D, 15 Oct 2026.
+ *
+ * ⭐ When: the worker died (`onerror`), broke (its stream chain threw), could
+ *   not be handed a stream, or painted NOTHING within WORKER_PAINT_S seconds
+ *   of the first keyframe (WORKER_KEY_S of the first stream, if it never read
+ *   one).  ⚠ ONCE per page: there is no third route to go to, and a page
+ *   that bounced between two would be a third defect.
+ *
+ * ⭐ How, and every step is a thing the worker had taken away:
+ *   1. the worker is stopped and its messages no longer heard;
+ *   2. the CANVAS is replaced: `transferControlToOffscreen()` gave the real
+ *      one to the worker for ever — no context can be asked of it again.  The
+ *      new one has the same attributes and the same LISTENERS (recorded since
+ *      load by `track_canvas_listeners`, or input would die with the canvas);
+ *   3. the mirror instance gets a real context on it, the same choice its
+ *      constructor makes (`?canvas=gl` → WebGL2, else `bitmaprenderer`, else
+ *      2D) — written here so that `class Viewer` does not change by a byte
+ *      (`benches/03-b16-dipinti.py` cuts it by text);
+ *   4. the redirected methods are removed: the prototype's answer again;
+ *   5. the session is replayed: the last `negotiate`, the pace switch, the
+ *      view — and a gap (§5.2) asks the server for a keyframe NOW, instead of
+ *      waiting for a delta to discover that this decoder does not exist.
+ * ⚠ The frames that were inside the worker are lost: that is the gap, and
+ *   the keyframe closes it.  ⛔ And it is SAID: one line in the page's log, the route in
+ *   `stretches()`, and `stretches().video_route.fell_back`. */
+function worker_fall_back(why) {
+  const V = VW;
+  if (!V || VIDEO_ROUTE.fell_back) return false;
+  VIDEO_ROUTE.fell_back = { why: why, at_ms: Math.round(performance.now()),
+                            streams_to_worker: V.streams,
+                            painted_by_worker: viewer.counts.painted };
+  V.fell_back = VIDEO_ROUTE.fell_back;
+  VIDEO_ROUTE.chosen = "main";
+  V.disarm();
+  VW = null;
+  /* ⚠ The dead worker's object is no longer offered as the route in force;
+     the why stays in `stretches().video_route.fell_back`. */
+  if (window.REMOTIX) window.REMOTIX.video = null;
+  try { V.w.onmessage = null; V.w.onerror = null; V.w.onmessageerror = null;
+        V.w.terminate(); } catch (e) { /* already gone */ }
+  const line = "⛔ VIDEO the worker route FELL BACK to the main thread, once, for "
+             + "the rest of this page: " + why;
+  note(line);                     /* ⛔ ⇒ `note()` writes it in the page's log */
+  /* ⛔ The redirections go FIRST: if the canvas swap below threw, they would
+     be left pointing at a worker that no longer exists (`VW` is null), and
+     every call of the session would throw. */
+  for (const k of Object.keys(viewer))
+    if (typeof viewer[k] === "function" && k in Viewer.prototype) delete viewer[k];
+  try {
+    const c = swap_viewer_canvas();
+    viewer_take_canvas(c);
+    /* ⭐ Nothing to replay: the shadow kept the negotiation, the tolerance
+       and the pace on this side (see `redirect_viewer_to_worker`). */
+    if (viewer.session && !viewer.is_closed) {
+      viewer.on_hold = false; viewer.held = [];
+      viewer.hole("the video moved from the worker to the main thread");
+    }
+    viewer.view_w = 0; viewer.view_h = 0;
+    viewer.fit_view();
+  } catch (e) {
+    const l2 = "⛔ VIDEO the fall back itself failed: " + (e && (e.stack || e));
+    VIDEO_ROUTE.fell_back.failed = "" + e;
+    note(l2);
+  }
+  return true;
+}
+
+/* ⭐ The listeners of `<canvas id="viewer">` — the classic and the touch
+   layout attach theirs on it (`cl_enter`, `enter_touch`) — are recorded,
+   and removed from the record when removed, so that a fall back can give the
+   new canvas exactly the set in force.  ⚠ Only with the worker route on. */
+function track_canvas_listeners(el) {
+  const cap = function (o) { return typeof o === "boolean" ? o : !!(o && o.capture); };
+  el.addEventListener = function (t, f, o) {
+    if (!CANVAS_LISTENERS.some(function (x) { return x[0] === t && x[1] === f
+                                                  && cap(x[2]) === cap(o); }))
+      CANVAS_LISTENERS.push([t, f, o]);
+    return EventTarget.prototype.addEventListener.call(this, t, f, o);
   };
-  viewer.canvas_adapted = function (tl, ta) {
-    viewer.canvas_w = tl;
-    viewer.canvas_h = ta;
-    VW.call("canvas_adapted", [tl, ta]);
+  el.removeEventListener = function (t, f, o) {
+    for (let j = CANVAS_LISTENERS.length - 1; j >= 0; j--) {
+      const x = CANVAS_LISTENERS[j];
+      if (x[0] === t && x[1] === f && cap(x[2]) === cap(o)) CANVAS_LISTENERS.splice(j, 1);
+    }
+    return EventTarget.prototype.removeEventListener.call(this, t, f, o);
   };
-  /* ⛔⭐ AND ALSO `session`, which is the third field that must stay ON THIS
-   *     SIDE — defect found by refuting, the night of 15 Aug 2026, and older
-   *     than this work.
-   *
-   *     `this.session = true` sits inside `negotiate()`, which with the worker
-   *     on is redirected over there: on this side the field stayed **false
-   *     forever**.  ⛔ And `renegotiate_view()` starts with
-   *     `if (!viewer.session) return;` ⇒ with `?video=worker` the window
-   *     resize no longer re-adapted ANYTHING, neither the view nor (since
-   *     tonight) the canvas — and it did not say so. */
-  viewer.negotiate = (function (before) {
-    return function (codec, prof, string, tl, ta) {
-      viewer.session = true;
-      before(codec, prof, string, tl, ta);
-    };
-  })(viewer.negotiate);
+}
+function swap_viewer_canvas() {
+  const old = $("viewer");
+  const c = document.createElement("canvas");
+  for (const a of Array.from(old.attributes)) c.setAttribute(a.name, a.value);
+  for (const x of CANVAS_LISTENERS)
+    EventTarget.prototype.addEventListener.call(c, x[0], x[1], x[2]);
+  track_canvas_listeners(c);
+  const focused = document.activeElement === old;
+  old.replaceWith(c);
+  if (focused && c.focus) c.focus();
+  return c;
+}
+function viewer_take_canvas(c) {
+  const v = viewer;
+  v.canvas = c;
+  v.gl = null; v.gl_tex = null; v.gl_lost = false; v.gl_broken = false;
+  v.bm = null; v.brush = null;
+  v.staging = null; v.staging_p = null; v.painted_rect = null;
+  if (CANVAS_GL) v.gl_turn_on(c);
+  if (!v.gl && !CANVAS_2D && typeof createImageBitmap === "function") {
+    try { v.bm = c.getContext("bitmaprenderer"); }
+    catch (e) { v.bm = null; }
+  }
+  if (!v.bm && !v.gl)
+    v.brush = c.getContext("2d", { alpha: false, desynchronized: DESYNCHRONIZED });
+  /* ⭐ The drawing route is said, as the constructor says it — this instance
+     was born on a detached canvas and its first line described that one. */
+  v.line(v.gl ? "MEASURE canvas gl · after the fall back: WebGL2"
+         : v.bm ? "⭐ after the fall back the canvas is painted with `bitmaprenderer`"
+         : "⚠ after the fall back the canvas is painted on the 2D route"
+           + (CANVAS_2D ? " (`?canvas=2d`)" : " — this browser has no `bitmaprenderer`"));
 }
 
 /* ==========================================================================
@@ -9934,8 +10333,18 @@ function back_to_form() {
   catch (e) { /* likewise */ }
 
   /* 4. the canvas goes back to the size it is born with in the document. */
+  /* ⛔ With the worker route the canvas was TRANSFERRED: resizing it here
+     throws `InvalidStateError`, and everything below (the dialog, the flag,
+     the focus, the line) was skipped.  ⇒ The worker does it, on its side;
+     and on either route a refusal does not stop the return to the form. */
   const canvas = $("viewer");
-  if (canvas) { canvas.width = 16; canvas.height = 16; }
+  let blank_vw = null;
+  try { blank_vw = VW; } catch (e) { /* before `VW` is born (TDZ) */ }
+  if (blank_vw) blank_vw.w.postMessage({ t: "blank" });
+  else if (canvas) {
+    try { canvas.width = 16; canvas.height = 16; }
+    catch (e) { note("⚠ the canvas could not be emptied: " + e); }
+  }
 
   logout_show(false);
   logout_in_progress = false;

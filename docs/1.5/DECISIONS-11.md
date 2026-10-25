@@ -16,7 +16,7 @@ tree». Status of 25 Oct 2026, after the ports:
   KWin size (`port-kde`). All of them built and unit-tested there (`verifica-rami` 28/28); the live checks are listed in CHANGES-1.5.md.
 - **In the branch `finale`, not in `integrazione2`**: §11.50 the root-side split (merged from `rootside-completo`, OFF by default behind
   `REMOTIX_SPLIT_EXPERIMENTAL=1`; it still waits for the user's decision D1), `pktinfo` (replies leave from the address the client wrote to), and `rifiniture` (CSP `connect-src 'self'`; the decoder rebuilt by a keyframe after an error).
-- **In neither**: §11.36 the Firefox worker (written on the branch `ff-worker`, approved on reading with the live proof still to do, merged only if the user chooses D2 = A).
+- **Also in the branch `finale-ff` (D2 = A)**: §11.36 the Firefox worker, merged from `ff-worker` (default on desktop Firefox only, with fallback; live proof in a browser still to do).
 What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
 An entry without the marker may still cite hashes of the discarded attempt; read the hash against `git log` before trusting it.
 
@@ -751,7 +751,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.36 ✅ Firefox at 4K with video: what to change (15 Oct 2026) — DECIDED D
 
-> ⚠ NOT in this tree (25 Oct 2026): `728acd22`, the Firefox worker default, is written on the branch `ff-worker` (default on desktop Firefox only, with fallback; approved on reading, live proof still to do) but NOT merged: it waits for the user's decision D2. Chrome does not need it.
+> ✅ `ff-worker` merged (D2 = A, in the branch `finale-ff`; NOT in `finale`): `5a16858f` + `d24a3683` + `728acd22`, the Firefox worker default (desktop Firefox only, with fallback to the main-thread route), as one commit, plus `4c9c78ee` (the decoder rebuild, the same change as `7e49f5b1` of `rifiniture`: one copy in `page.html`). Live proof in a browser still to do.
 
 - `[M]` §11.31: the page's main thread stalls 55–64 % of the time (gaps in the sound); §11.32: the decoder queue
   ≥ 5 for 80 % of the frames, decode delay median 1.35 s, the picture 1.4 s old or more. Chrome is fine.
