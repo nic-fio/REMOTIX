@@ -1616,6 +1616,16 @@ bool wt_prelogin_may_log(wt *w, const char *provenance)
 		W(w, __func__, false);
 	return true;
 }
+/* the pre-login lines counted for ALL addresses (webtransport.c, log-tetti R8): played as "nothing counted";
+ * transport.c only asks when to wake up for their line, and flushes them */
+uint64_t wt_prelogin_expiry_ms(void)
+{
+	return UINT64_MAX;
+}
+void wt_prelogin_flush(uint64_t now_ms)
+{
+	(void)now_ms;
+}
 const char *wt_pending_reason(const wt *w)
 {
 	W((wt *)w, __func__, false);
