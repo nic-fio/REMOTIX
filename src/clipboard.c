@@ -882,7 +882,8 @@ void clipboard_reply(Clipboard *clipboard, uint32_t serial, const char *text,
 
 			if (t_now < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
 			{
-				if (xfer_wait(fd, POLLOUT, deadline, 1000))
+				/* the whole of what is left of the deadline, not a fixed second (review of 87a88b5c): POLLOUT arrives as soon as the reader makes room */
+				if (xfer_wait(fd, POLLOUT, deadline, XFER_TOTAL_MS))
 					continue;
 				registro_dice(LOG_CLIPBOARD,
 				              "⛔ whoever is pasting does not read: %zu bytes of %zu "

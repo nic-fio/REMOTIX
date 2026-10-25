@@ -145,7 +145,7 @@ int main(void)
 		close(p[0]);
 	}
 
-	CHECK(has("src/clipboard.c", "xfer_wait(fd, POLLIN, deadline, WAIT_READ_MS)") && has("src/clipboard.c", "xfer_wait(fd, POLLOUT, deadline, 1000)") && has("src/clipboard.c", "O_NONBLOCK"), "5. clipboard.c: slurp_fd and the GNOME reply use it");
+	CHECK(has("src/clipboard.c", "xfer_wait(fd, POLLIN, deadline, WAIT_READ_MS)") && has("src/clipboard.c", "xfer_wait(fd, POLLOUT, deadline, XFER_TOTAL_MS)") && has("src/clipboard.c", "O_NONBLOCK"), "5. clipboard.c: slurp_fd and the GNOME reply use it");
 	CHECK(has("src/clipboard_kde.c", "xfer_left_ms(deadline, WAIT_TRANSFER_MS)") && has("src/clipboard_kde.c", "ready(pipe_fd[0], POLLIN, deadline)") && has("src/clipboard_kde.c", "ready(fd, POLLOUT, deadline)") && has("src/clipboard_kde.c", "O_NONBLOCK"), "5b. clipboard_kde.c: read_type and the reply use it, the fd is non-blocking");
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
 	return bad ? 1 : 0;
