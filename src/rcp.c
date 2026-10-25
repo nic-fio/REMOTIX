@@ -1336,6 +1336,15 @@ static struct lentry attempts[MAX_ATTEMPTS];
  *    the owner is.  An entry read like that keeps only the HMAC until an attempt from that
  *    address hashes to it.  With a secret of this run only the key is written as itself (a
  *    HMAC would never match again).
+ *    ⭐ A WRONG CLOCK at the start.  A line dated in the FUTURE (the clock was behind when the file was
+ *    written, or is wrong now) is read as a recent login with its date brought back to now, not discarded:
+ *    `good_alive()` already treats an entry stamped ahead as recent, and discarding would lose the known
+ *    keys exactly when a restart with a full quota needs them (the file is rewritten without them at the
+ *    next change).  Bringing the date back keeps the trust bounded: 30 days from this start, never from the
+ *    far future.  If the clock was BEHIND and is later put right, those keys age from the wrong date and
+ *    can expire up to the size of the error early: the cautious side (less trust, never more).  A line
+ *    that is not a number, or is negative, is skipped.  The same key can be in the file twice (as itself and
+ *    as its HMAC, after the secret of the logs changed from this run's to a persistent one): the newer date wins.
  *    ⚠ The monotonic stamp of a loaded entry is clamped to 1 if the login is older than the
  *    process: only the real epoch counts for the 30 days.  The file is rewritten when a key
  *    is new or its stamp is a day old, not at every login. */
@@ -1401,6 +1410,17 @@ static bool good_put(const char *key, const char *mac, uint64_t when, long long 
 			if (good_keys[k].when < good_keys[pick].when)
 				pick = k;
 		}
+	}
+	/* ⭐ The same key can come twice from the file (as itself and as its HMAC): the NEWER date wins, whatever the
+	 *   order of the lines, for BOTH clocks — the greater epoch and the greater `when` are kept; a login older than
+	 *   what is already known never ages an entry.  The call is never skipped: a login with an epoch that went BACK
+	 *   (the system clock was put right backwards) still refreshes the monotonic stamp, so the entry does not
+	 *   expire under a key that has just logged in. */
+	if (!fresh_key) {
+		if (epoch < good_keys[pick].epoch)
+			epoch = good_keys[pick].epoch;
+		if (when < good_keys[pick].when)
+			when = good_keys[pick].when;
 	}
 	changed = fresh_key || when < good_keys[pick].filed || when - good_keys[pick].filed >= GOOD_REFRESH_MS;
 	if (fresh_key) {
@@ -2837,8 +2857,13 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 			/* a key that logged in lately (`good_keys`, the box above `GOOD_KEYS`): not a ban, not counted */
 			long long when_epoch = 0;
 			char gk[96], gn[64];
-			if (sscanf(line + 3, "%lld %95s", &when_epoch, gk) != 2 || when_epoch < 0 || when_epoch > (long long)t_now)
-				continue; /* not a line, or a login "from the future" */
+			if (sscanf(line + 3, "%lld %95s", &when_epoch, gk) != 2 || when_epoch < 0)
+				continue; /* not a line */
+			/* ⭐ A login "from the future" means the clock was wrong when the file was written or is wrong now: it is
+			 *   read as a RECENT login (the rule `good_alive()` already follows for an entry stamped ahead), with the date
+			 *   brought back to now, so the trust runs 30 days from this start and no further.  See the box above `GOOD_KEYS`. */
+			if (when_epoch > (long long)t_now)
+				when_epoch = (long long)t_now;
 			uint64_t age = (uint64_t)((long long)t_now - when_epoch) * 1000u;
 			if (age > GOOD_AGE)
 				continue; /* older than 30 days (REAL time) */
