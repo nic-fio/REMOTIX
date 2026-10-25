@@ -14,7 +14,7 @@ tree». Status of 25 Oct 2026, after the ports:
   (`port-pagina`), §11.33 rpm `%ghost` (`port-pacchetti`), §11.32 `PACE` (OFF by default), §11.45 encoder padding, §11.33 key receipts
   (`port-varie`), §11.37 / §11.38 render nodes (`port-scheda`), the KDE «unchanged» filter, the nested `remotix-capture` name and the nested
   KWin size (`port-kde`). All of them built and unit-tested there (`verifica-rami` 28/28); the live checks are listed in CHANGES-1.5.md.
-- **NOT in `integrazione2`**: §11.36 the Firefox worker (a proposal, not decided, nothing built: user decision D2) and §11.50 the
+- **NOT in `integrazione2`**: §11.36 the Firefox worker (written on the branch `ff-worker`, in review, merged only if the user chooses D2 = A) and §11.50 the
   root-side split, which is written, reviewed and packaged on the branch `rootside-completo` (OFF by default behind
   `REMOTIX_SPLIT_EXPERIMENTAL=1`) and waits for the user's decision D1 and for its merge.
 What IS in the code is listed in `CHANGES-1.5.md` and in §11.6, §11.9, §11.29 (migration part), §11.40, §11.41, §11.51-§11.53.
@@ -751,7 +751,7 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
 
 ### 11.36 ✅ Firefox at 4K with video: what to change (15 Oct 2026) — DECIDED D
 
-> ⚠ NOT in this tree (25 Oct 2026): `728acd22`, the Firefox worker default, is not built and not decided (user decision D2); no branch exists yet. Chrome does not need it.
+> ⚠ NOT in this tree (25 Oct 2026): `728acd22`, the Firefox worker default, is written on the branch `ff-worker` (default on desktop Firefox only, with fallback; in review) but NOT merged: it waits for the user's decision D2. Chrome does not need it.
 
 - `[M]` §11.31: the page's main thread stalls 55–64 % of the time (gaps in the sound); §11.32: the decoder queue
   ≥ 5 for 80 % of the frames, decode delay median 1.35 s, the picture 1.4 s old or more. Chrome is fine.

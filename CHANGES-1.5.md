@@ -115,8 +115,11 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
   `PIANO.md` and on `f031-a-p1b`, to be tested on the phone) and NVIDIA (a rented server, `PIANO.md`): both excluded from this release's closing.
 - **Three decisions of the user** (opinions collected from Argon, gpt-oss and Laguna in `tmp/dom5.txt`, none taken): **D1** the root-side
   split ON or OFF in 1.5 (§11.50); **D2** the Firefox worker as default (§11.36); **D3** decoder `PACE` ON by default (§11.32). Without
-  a decision the release is the safe one: D1 OFF, D2 not built, D3 OFF (section 7).
-- **Not done, optional**: `connect-src` of the CSP narrowed to `'self'` (now `'self' https:`, page.c, «not measured» with WebTransport); the
+  a decision the release is the safe one: D1 OFF, D2 `ff-worker` not merged, D3 OFF (section 7).
+- **Written, in review, not merged**: branch `rifiniture`: `connect-src` of the CSP narrowed to `'self'` (now `'self' https:` in `page.c`; the WebTransport behaviour on Chrome
+  and Firefox is to be measured before the merge). Branch `ff-worker`: the port of §11.36 D, the worker route as default **only on desktop Firefox**, with
+  automatic fallback to the main-thread route; merged only if the user chooses D2 = A.
+- **Not done, optional**: the
   zero-byte test moved before the UTF-8 check also in `clipboard.c` for GNOME (behaviour correct, only the log line); a uniform delay for
   login refusals (`pam-tempi` on 1.0: a denied user answers in ~1.1 s, other refusals in ~2.0-2.2 s: a design choice, §11.53); the constant
   of 10 users in `src/webtransport.h` against the maximum of 8 of §4 (to be settled).
@@ -125,7 +128,7 @@ State of 25 Oct 2026. Queued runs are those of the evening chains (`coda-giorno3
 
 ## 6. Fixes of 25 Oct 2026 on branches not yet merged
 These are approved (or built) and are **not** in the range above; they will be merged in this order. Each has its queue run listed in section 5.
-- **Branch `pktinfo` (`52c3b599`, `5601b8e3`, two commits over `integrazione2`; approved with minor remarks: `errno` after the fallback, `ENODEV`):
+- **Branch `pktinfo` (a few commits over `integrazione2`, in review; the minor remarks `errno` after the fallback and `ENODEV` are corrected on it, and its fallback log line follows the `quic-conn` fuzz oracle):
   replies leave from the address the client wrote to** (`IP_PKTINFO` / `IPV6_PKTINFO`). The UDP socket is bound to the wildcard and every
   reply was a plain `sendto()`, so the kernel chose the source address; on a host with several addresses (global + ULA + temporary IPv6, or
   multi-homed IPv4) the reply may come from another address, a QUIC client does not accept it and the handshake never completes. **A defect
@@ -141,7 +144,7 @@ These are approved (or built) and are **not** in the range above; they will be m
     had achieved, losing the files a half-done `--back` had refused to move. `net_back()` now writes the marker `/run/remotix/back-incomplete`
     when `--back` fails or leaves `certificates/`, `ban` or `ban.new` in `net/`; `post_remove` then keeps `net/` and says so. Test `benches/02-arch-install-back.sh`.
 - **Merge order**: `pktinfo` first (small; it also repairs a defect of 1.0), then `rootside-completo` (conflict in `src/transport.c` with
-  `pktinfo`, to be resolved at that merge; then `verifica-rami` again), then, only if decided, a Firefox worker branch (not yet created).
+  `pktinfo`, to be resolved at that merge; then `verifica-rami` again), then, only if the user chooses D2 = A, the branch `ff-worker` (below). The branch `rifiniture` (CSP `connect-src 'self'`, in review) is independent and can go at any point after the runs.
   `integrazione2` itself is measured at the moment and receives no commit until the runs of section 5 are read.
 - Already in `integrazione2` since the 24 Oct run: `61ea9a6c` (the 429 for a second session counted as chatter), `879cf5fa` (a name clash of `rcp_logged_in`),
   `549a9e06` (the product build declared five capabilities in HERE_I_AM and wrote four), `0b4d3bda`/`4be3a981` (tests of the six failing units),
@@ -154,4 +157,5 @@ These are approved (or built) and are **not** in the range above; they will be m
   −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. Needs decision D1.
 - **Decoder `PACE` (§11.32)**: present (`4895f2ad`, `c7bfef17`), enabled with `--decoder-pace`; the page declares `video.pace` only then. The measures
   of the first attempt favoured ON (slow decoder: 26 → 61 photos/min on Firefox 4K), but the default is a change seen by the browser. Needs decision D3.
-- **Firefox worker as default (§11.36)**: not built (a proposal). Needs decision D2.
+- **Firefox worker as default (§11.36)**: written on the branch `ff-worker` (default on desktop Firefox only, fallback to the main-thread route; Chrome and Android
+  unchanged), in review, NOT merged. It enters 1.5 only if the user chooses D2 = A.
