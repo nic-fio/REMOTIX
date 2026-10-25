@@ -987,6 +987,9 @@ struct VulkanVideo {
 	uint8_t *output;
 	size_t output_capabilities, output_byte;
 
+	/* ⭐ E-R2 (audit of 25 Oct 2026): a wait on the GPU timed out (GPU_WAIT_NS): the fence is still pending, so NOTHING may be submitted or reset
+	 *    on this context any more — the frames are refused and the owner drops the encoder (`codificatore_e_morto()`). */
+	bool lost;
 	/* the sequence */
 	bool session_reset;       /* the RESET has been issued */
 	uint64_t order;
@@ -1963,16 +1966,37 @@ static void barriers(VkCommandBuffer cb, const VkImageMemoryBarrier2 *b, uint32_
 	vkCmdPipelineBarrier2(cb, &d);
 }
 
+/* ⭐ E-R2: how long a GPU wait may last.  A frame takes milliseconds; ten seconds is a hang, not slowness (`UINT64_MAX` used to hold the child
+ * of ONE user forever, with nobody noticing).
+ * ⚠ ONLY THIS WAIT is bounded.  `vkDeviceWaitIdle()` in `vulkanvideo_close()` and in `prepare_rgb()` still waits WITHOUT a limit: on a truly hung
+ *    GPU a lost context is dropped by the owner (E-R1) but its CLOSE can still block the child until the driver resets the device.  Only a real
+ *    GPU hang can show whether that happens; there is no bounded equivalent that also makes destroying the objects safe. */
+#define GPU_WAIT_NS 10000000000ull
+
+bool vulkanvideo_lost(const VulkanVideo *v)
+{
+	return v && v->lost;
+}
+
 static bool send_and_wait(VulkanVideo *v, VkQueue queue, VkCommandBuffer cb, VkFence fence, char *error,
                             size_t error_byte)
 {
 	VkCommandBufferSubmitInfo ci = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO, .commandBuffer = cb };
 	VkSubmitInfo2 yes = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2, .commandBufferInfoCount = 1,
 		                 .pCommandBufferInfos = &ci };
+	VkResult waited;
+
+	if (v->lost)
+		FAIL("the GPU did not answer within %llu s on a previous frame: this context is lost", GPU_WAIT_NS / 1000000000ull);
 	VK_OR_FAIL(vkEndCommandBuffer(cb), "vkEndCommandBuffer");
 	VK_OR_FAIL(vkResetFences(v->d->device, 1, &fence), "vkResetFences");
 	VK_OR_FAIL(vkQueueSubmit2(queue, 1, &yes, fence), "vkQueueSubmit2");
-	VK_OR_FAIL(vkWaitForFences(v->d->device, 1, &fence, VK_TRUE, UINT64_MAX), "vkWaitForFences");
+	waited = vkWaitForFences(v->d->device, 1, &fence, VK_TRUE, GPU_WAIT_NS);
+	if (waited == VK_TIMEOUT) {
+		v->lost = true;
+		FAIL("vkWaitForFences: the GPU did not answer in %llu s (hang?): this context is lost", GPU_WAIT_NS / 1000000000ull);
+	}
+	VK_OR_FAIL(waited, "vkWaitForFences");
 	return true;
 }
 
