@@ -26,11 +26,12 @@ prova|completo|reset) ;;
 *) echo "uso: bash 15-h1-catena.sh prova|completo|reset [--out BASE]  (vedi --help)"; exit 2 ;;
 esac
 mkdir -p "$BASE"
-worst=0; CH=""
+worst=0; CH=""; PARALLELE=""
 # Pulizia SEMPRE (uscita, SIGTERM): toglie le tabelle nft del banco (inet remotix_g7_861x) e ferma il secondo server dei 4 box.
 pulizia() {
 	trap - EXIT TERM INT HUP
 	if [ -n "$CH" ] && kill -0 "$CH" 2>/dev/null; then kill -TERM "$CH" 2>/dev/null; wait "$CH" 2>/dev/null; fi
+	local q; for q in $PARALLELE; do kill -TERM "$q" 2>/dev/null; done; for q in $PARALLELE; do wait "$q" 2>/dev/null; done
 	local pw d p
 	pw=${REMOTIX_SUDO_PASSWORD:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}
 	for p in 8611 8612 8613 8614; do
@@ -58,6 +59,7 @@ corsa() {   # corsa <desktop> [opzioni di 15-h1-run.py]
 	CH=""
 	echo "=== $(date -u +%T) corsa $d: rc=$rc ($BASE/$d/riepilogo.txt)"
 	note $rc
+	return $rc   # for the parallel runs: their note is in a subshell, the caller notes the rc again
 }
 if [ "$MODO" = prova ]; then
 	corsa xfce --prova
@@ -65,7 +67,20 @@ elif [ "$MODO" = reset ]; then
 	for d in xfce gnome kde lxqt; do corsa "$d" --case b; done
 else
 	corsa xfce
-	for d in gnome kde lxqt; do corsa "$d" --case a,b,c,e,f; done
+	# ⭐ gnome, kde, lxqt IN PARALLEL (25 Oct 2026): each desktop has its own server port (861x), its own nft table,
+	#   its own labwc and its own debug ports, as in 15-round.py; xfce goes first ALONE because case d opens 8 sessions.
+	#   H1_SERIE=1 runs them one after the other, as before.
+	if [ "${H1_SERIE:-0}" = 1 ]; then
+		for d in gnome kde lxqt; do corsa "$d" --case a,b,c,e,f; done
+	else
+		for d in gnome kde lxqt; do
+			corsa "$d" --case a,b,c,e,f > "$BASE/corsa-$d.txt" 2>&1 &
+			PARALLELE="$PARALLELE $!"
+		done
+		for q in $PARALLELE; do wait "$q"; note $?; done
+		PARALLELE=""
+		cat "$BASE"/corsa-gnome.txt "$BASE"/corsa-kde.txt "$BASE"/corsa-lxqt.txt
+	fi
 fi
 echo "=== FINE (rc=$worst)"
 exit $worst
