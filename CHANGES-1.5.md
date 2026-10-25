@@ -141,6 +141,8 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **A button pressed twice is sent once** (audit of the session, S-R4, 25 Oct 2026): `send_button()` on Mutter/KWin resent the state already known (the wlroots path already filtered it: «the seat would count two presses»), so a press
   sent twice and released once could leave the seat at 1 and the desktop without clicks until the EIS channel fell. Now the duplicate is not sent (an orphan after a device replacement still goes through). Test `benches/unit/button-dedupe`
   (source reading: input.c cannot be linked without a compositor). Keys are left as they are: their path has the receipts of the latency measure, and a repeated key press may be a legitimate auto-repeat.
+- **An audio chunk outside its buffer is dropped** (audit of the session, S-R8, 25 Oct 2026): `sound.c` read `offset` and `size` of the PipeWire chunk without comparing them with the buffer. Now the block is used only if `offset + size`
+  fits in `maxsize` (64-bit sum) and the offset keeps the samples aligned (`src/audiochunk.h`, test `benches/unit/audio-chunk`).
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
