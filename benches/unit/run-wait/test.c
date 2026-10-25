@@ -6,7 +6,12 @@
  *   5. descriptors: a fork+exec built like the child of run_as_root() (close_range(3, ~0U) before the exec, as in sessione-e) shows ONLY 0, 1, 2 (+ the one `ls` opens itself) in /proc/self/fd, while
  *      a socket the parent holds open is NOT among them; the same fork without the close_range DOES inherit it (contrast);
  *   6. source reading of src/child.c: run_as_root() uses close_range and run_wait.
- * Build: cc -std=gnu11 -D_GNU_SOURCE -fsanitize=address,undefined -fno-sanitize-recover=undefined -I src benches/unit/run-wait/test.c -o t && ./t  (from the root of the tree) */
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/run-wait/test.c -o /tmp/test && /tmp/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include "runwait.h"
 #include <fcntl.h>
 #include <stdio.h>

@@ -172,6 +172,8 @@ static char *read_one(size_t *len)
 	char *text;
 
 	memset(&k, 0, sizeof k);
+	memset(&offer, 0, sizeof offer);
+	offer.refs = 1;     /* the session's own reference (k.current): read_text() takes and drops ITS OWN, so the fake proxy is never destroyed (it is not a real wl_proxy) */
 	offer.proxy = (struct zwlr_data_control_offer_v1 *)(void *)&offer;     /* never dereferenced: receive() is replaced */
 	offer.mime = g_ptr_array_new_with_free_func(g_free);
 	for (int i = 0; i < NT; i++)                 /* only the types that deliver something are OFFERED */
@@ -179,6 +181,8 @@ static char *read_one(size_t *len)
 			g_ptr_array_add(offer.mime, g_strdup(MIME[i]));
 	k.current = &offer;
 	text = read_text(&k, len);
+	if (offer.refs != 1)
+		fprintf(stderr, "read_text() left the offer with %d references, not 1\n", offer.refs), abort();
 	g_ptr_array_unref(offer.mime);
 	return text;
 #else

@@ -16,11 +16,12 @@
  *      somebody waits for, before it uses the name for the child, and its final transport_verdict_from() still gets the name it was
  *      handed when nobody waits.
  *
- * BUILD AND RUN (a few seconds; from the root of the tree):
- *   F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -Isrc -Ibenches/fuzz/rcp-msg" &&
- *   gcc $F -c benches/unit/user-canonical/test.c -o /tmp/uc-t.o && gcc $F -c src/rcp.c -o /tmp/uc-r.o &&
- *   gcc $F -c benches/fuzz/rcp-msg/stubs_log.c -o /tmp/uc-l.o && gcc -fsanitize=address,undefined /tmp/uc-t.o /tmp/uc-r.o /tmp/uc-l.o -o /tmp/uc-test &&
- *   /tmp/uc-test src/rcp.c src/main.c
+ * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg" &&
+ *     clang $F -c /albero/benches/unit/user-canonical/test.c -o t.o && clang $F -c /albero/src/rcp.c -o r.o &&
+ *     clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o && clang -fsanitize=address,undefined t.o r.o l.o -o test &&
+ *     cd /albero && /tmp/test src/rcp.c src/main.c'
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "rcp.h"

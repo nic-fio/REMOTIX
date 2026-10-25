@@ -7,8 +7,20 @@
  *   3. 8 threads take and drop references in a loop while the base reference is dropped: destroyed exactly once, after all of them;
  *   4. NULL is accepted;
  *   5. read_text() takes the reference under the lock BEFORE releasing it (source order) and every return releases it (3 offer_free(held) in read_text).
- * Build: gcc -g -O1 -fsanitize=address,undefined -std=gnu11 -D_GNU_SOURCE -I src -I <generated wayland protocol headers> $(pkg-config --cflags gio-2.0 wayland-client)
- * test.c + benches/fuzz/child-msg/stubs_log.c + trap stubs for the remaining undefined symbols; run from the root of the tree. */
+ * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     mkdir -p /tmp/g && cd /tmp/g && for p in wlr-data-control-unstable-v1 ext-data-control-v1; do
+ *       f=/albero/src/protocols/$p.xml; wayland-scanner client-header $f $p-client-protocol.h; done &&
+ *     PK="gio-2.0 gio-unix-2.0 wayland-client" &&
+ *     F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/child-msg -I/tmp/g $(pkg-config --cflags $PK)" &&
+ *     L="$(pkg-config --libs $PK) -lpthread -lm" &&
+ *     clang $F -c /albero/benches/unit/offer-refs/test.c -o t.o && clang $F -c /albero/benches/fuzz/child-msg/stubs_log.c -o l.o &&
+ *       { clang -fsanitize=address,undefined t.o l.o $L -o t0 2> link1.log || true; } &&
+ *       { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
+ *         while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
+ *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o l.o s.o $L -o test && cd /albero && /tmp/g/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include "clipboard_kde.c"
 
 #include <stdio.h>

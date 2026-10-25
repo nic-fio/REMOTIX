@@ -11,8 +11,10 @@
  *   5. the byte cap is still there and still tested first or alongside (both limits stay).
  * And the arithmetic: the bookkeeping at the cap is below 4 MiB per session for a 150-byte element.
  *
- * BUILD AND RUN (a second; from the root of the tree):
- *   gcc -O1 -std=gnu11 -D_GNU_SOURCE -Wall -Wextra benches/unit/wt-queue-items/test.c -o /tmp/wt-queue-items-test && /tmp/wt-queue-items-test src/webtransport.c
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/wt-queue-items/test.c -o /tmp/test && /tmp/test src/webtransport.c'
  * Exit code 0 = every check passed, 1 = a check failed, 2 = no source given.
  */
 #include <stdio.h>

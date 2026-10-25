@@ -4,7 +4,12 @@
  *   2. the same for SIGHUP and SIGQUIT, which now set the flag instead of killing the process (a process that still lives after raise() proves the handler is there);
  *   3. the mask is back to the original after the pattern: a child forked afterwards starts with the four signals OPEN (checked in a real fork);
  *   4. source reading of src/main.c: the four signals are handled, and the ppoll takes `&original` (no NULL mask left on the main ppoll).
- * Build: cc -std=gnu11 -D_GNU_SOURCE -fsanitize=address,undefined -fno-sanitize-recover=undefined benches/unit/stop-signals/test.c -o t && ./t  (from the root of the tree) */
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/stop-signals/test.c -o /tmp/test && /tmp/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include <errno.h>
 #include <poll.h>
 #include <signal.h>

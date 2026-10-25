@@ -1,7 +1,12 @@
 /* test.c — S-R4 (audit of the session): send_button() of src/input.c does not resend the state already known.  input.c needs libei and a compositor, so this is a
  * SOURCE-READING check of the integration point (the same method as the other unit tests that cannot link the real file): in the body of send_button(), after the
  * orphan-release branch and BEFORE ei_device_button_button(), there is a test that compares the requested state with in->buttons, and it excludes orphans.
- * Run from the root of the tree:  cc -std=gnu11 benches/unit/button-dedupe/test.c -o t && ./t src/input.c */
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
+ *        -Isrc benches/unit/button-dedupe/test.c -o /tmp/test && /tmp/test src/input.c'
+ * Exit code 0 = every check passed, 1 = a check failed.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

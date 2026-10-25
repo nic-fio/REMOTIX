@@ -10,9 +10,12 @@
  *   4. 1000 ANNOUNCE in one instant: the same bucket, the first ones handled (transfer ids 1..), the rest ignored — the last id seen is not 1000;
  *   5. source reading of src/keyboard.c: the «not producible» line is behind a window budget (KB_NOLETTER_LINES per KB_NOLETTER_WINDOW_MS).
  *
- * BUILD AND RUN (from the root of the tree; see the header of benches/unit/login-ban/test.c for the podman form; on the tablet plain gcc/clang):
- *   cc -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter -I src -I benches/fuzz/rcp-msg \
- *      -c benches/unit/session-caps/test.c -o t.o && cc ... -c benches/fuzz/rcp-msg/stubs_log.c -o l.o && cc -fsanitize=address,undefined t.o l.o -o test && ./test
+ * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter -I/albero/src -I/albero/benches/fuzz/rcp-msg" &&
+ *     clang $F -c /albero/benches/unit/session-caps/test.c -o t.o && clang $F -c /albero/benches/fuzz/rcp-msg/stubs_log.c -o l.o &&
+ *     clang -fsanitize=address,undefined t.o l.o -o test && cd /albero && /tmp/test'
+ * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "rcp.c"
 
