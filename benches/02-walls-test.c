@@ -153,7 +153,6 @@ static uint64_t status_value(const char *key)
 	return v;
 }
 
-/* 0 = blind, else the walls were applied and checked */
 /* ── ⭐ 1.6: the private network and the Landlock scope, in a fork ────────── */
 
 static void rep(int out, bool ok, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
@@ -166,6 +165,8 @@ static void rep(int out, bool ok, const char *fmt, ...)
 	va_start(ap, fmt);
 	n += vsnprintf(b + n, sizeof b - (size_t)n - 2, fmt, ap);
 	va_end(ap);
+	if ((size_t)n > sizeof b - 2) /* vsnprintf returns what it WOULD have written */
+		n = (int)sizeof b - 2;
 	b[n++] = '\n';
 	if (write(out, b, (size_t)n) < 0)
 		_exit(70);
@@ -316,8 +317,11 @@ static void net_child(int out, int ready)
 	/* a NEW socket cannot reach the host's loopback */
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	to.sin_port = htons(f.port_tcp);
-	rep(out, s >= 0 && connect(s, (struct sockaddr *)&to, sizeof to) != 0,
-	    "after: a new socket cannot connect to the host's 127.0.0.1 listener (errno %d)", errno);
+	{
+		int rc = s >= 0 ? connect(s, (struct sockaddr *)&to, sizeof to) : 0, ce = errno;
+
+		rep(out, s >= 0 && rc != 0, "after: a new socket cannot connect to the host's 127.0.0.1 listener (errno %d)", ce);
+	}
 	/* the private loopback is up: a UDP socket talks to itself */
 	{
 		int u = socket(AF_INET, SOCK_DGRAM, 0);
@@ -338,6 +342,7 @@ static void net_child(int out, int ready)
 	rep(out, getaddrinfo("localhost", "7447", &hints, &res) == 0, "after: getaddrinfo(\"localhost\") answers (NSS, /etc/hosts)");
 	if (res)
 		freeaddrinfo(res);
+	unlink(f.path);
 	_exit(0);
 }
 
@@ -357,7 +362,7 @@ static void landlock_child(int out)
 	}
 	notes[0] = '\0';
 	scope_abstract_sockets();
-	scoped = strstr(notes, "scoped") != NULL;
+	scoped = strstr(notes, "abstract unix sockets scoped") != NULL; /* ⚠ not «not scoped» */
 	if (scoped) {
 		int e = connect_abstract(f.abs_name);
 
@@ -366,6 +371,7 @@ static void landlock_child(int out)
 	} else {
 		rep(out, true, "landlock: (skipped) %s", notes);
 	}
+	unlink(f.path);
 	_exit(0);
 }
 
@@ -440,7 +446,12 @@ static void families_child(int out)
 	struct addrinfo hints, *res = NULL;
 	char why[256] = "";
 	int s, sv[2], e;
+	bool v6_before;
 
+	s = socket(AF_INET6, SOCK_DGRAM, 0); /* before the filter: a kernel without IPv6 must not make the check lie */
+	v6_before = s >= 0;
+	if (s >= 0)
+		close(s);
 	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 || no_user_namespaces(why, sizeof why) != 0) {
 		rep(out, false, "the seccomp filter could not be installed (%s)", why);
 		_exit(0);
@@ -449,13 +460,17 @@ static void families_child(int out)
 	rep(out, s >= 0, "seccomp: socket(AF_UNIX) allowed"), close(s);
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	rep(out, s >= 0, "seccomp: socket(AF_INET) allowed"), close(s);
+	rep(out, true, "seccomp: (AF_INET6 %s before the filter)", v6_before ? "works" : "is not available here");
 	s = socket(AF_INET6, SOCK_DGRAM, 0);
 	e = errno;
-	rep(out, s >= 0 || e == EAFNOSUPPORT || e == EPROTONOSUPPORT, "seccomp: socket(AF_INET6) allowed by the filter (errno %d)", s >= 0 ? 0 : e);
-	close(s);
+	rep(out, !v6_before || s >= 0, "seccomp: socket(AF_INET6) still works after the filter (errno %d)", s >= 0 ? 0 : e);
+	if (s >= 0)
+		close(s);
 	rep(out, socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sv) == 0, "seccomp: socketpair(AF_UNIX) allowed");
 	errno = 0;
-	rep(out, socketpair(AF_NETLINK, SOCK_DGRAM, 0, sv) != 0 && errno == EAFNOSUPPORT, "seccomp: socketpair(AF_NETLINK) refused with EAFNOSUPPORT (errno %d)", errno);
+	s = socketpair(AF_NETLINK, SOCK_DGRAM, 0, sv);
+	e = errno;
+	rep(out, s != 0 && e == EAFNOSUPPORT, "seccomp: socketpair(AF_NETLINK) refused with EAFNOSUPPORT (errno %d)", e);
 	for (size_t i = 0; i < sizeof no / sizeof no[0]; i++) {
 		errno = 0;
 		s = socket(no[i].af, SOCK_DGRAM, 0);
@@ -510,6 +525,7 @@ static void case_landlock(void)
 	(void)waitpid(p, &st, 0);
 }
 
+/* 0 = blind, else the walls were applied and checked */
 static int case_root(const struct passwd *nb)
 {
 	char base[] = "/var/tmp/remotix-walls-test.XXXXXX";
