@@ -2845,6 +2845,18 @@ bool codificatore_ridimensiona(Encoder *c, uint32_t width, uint32_t height,
 		di(error, error_byte, "%ux%u: 4:2:0 wants even sizes", width, height);
 		return false;
 	}
+	/* ⭐ E-R3 (audit of 25 Oct 2026): `open_device()` checks zero and the driver's maximum only at birth; a resize to a size the
+	 *    driver declared it cannot encode used to be found out by the reopening (a failed open, the encoder dropped), after the
+	 *    surfaces had already been asked for.  Refused here, before touching anything: the encoder stays as it was. */
+	if (width == 0 || height == 0) {
+		di(error, error_byte, "%ux%u: a size with a zero side", width, height);
+		return false;
+	}
+	if ((c->conf.max_size_w && width > c->conf.max_size_w) || (c->conf.max_size_h && height > c->conf.max_size_h)) {
+		di(error, error_byte, "%ux%u is beyond the %ux%u the driver declared for this encoder", width, height,
+		   c->conf.max_size_w, c->conf.max_size_h);
+		return false;
+	}
 
 	/* ═══════════════════════════════════════════════════════════════════════
 	 * ⛔⛔ NOT WITH A PACKET IN HAND — it is the ONLY place in the file where

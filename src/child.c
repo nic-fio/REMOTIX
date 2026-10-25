@@ -96,6 +96,7 @@
 #include "sentinel.h"
 #include "sound.h"
 #include "encoder.h"
+#include "dimcheck.h"
 #include "input.h"
 #include "mutter.h"
 #include "kwin.h"
@@ -10988,21 +10989,27 @@ void child_alive(int argc, char **argv)
 			 *   that region.  ⛔ A stride shorter than the declared width would
 			 *   make the GPU read beyond the object, which is the same defect as
 			 *   before with another reader. */
-			if (!fo.width || !fo.height || !fo.stride
-			    || fo.stride < (guint64) fo.width * 4u
-			    || fo.byte < (guint64) fo.stride * fo.height) {
+			/* ⭐ E-R3 (audit of 25 Oct 2026): and the size is the one the product can
+			 *    carry.  The RCP requests are clamped to RCP_CANVAS_MAX_W x _H, but the size
+			 *    of a frame is the COMPOSITOR's: a wlroots output of 16000x4000 would have had
+			 *    every encoder reopened at that size (hundreds of MB of VRAM/RAM for one user).
+			 *    Such a frame is not encoded and the encoders are not touched. */
+			if (!dim_frame_ok(fo.width, fo.height, fo.stride, fo.byte, RCP_CANVAS_MAX_W,
+			                  RCP_CANVAS_MAX_H)) {
 				inconsistent_frames++;
 				if (inconsistent_frames == 1)
 					registro_dice(LOG_CHILD,
 					              "⛔ frame DISCARDED: it declares %ux%u with stride %u "
 					              "and carries %llu bytes — whoever compresses it would read "
 					              "beyond the copy (stride >= %llu and bytes >= "
-					              "%llu are needed).  ⚠ It is the window between a renegotiation and "
+					              "%llu are needed), or it is larger than the canvas maximum "
+					              "(%ux%u, E-R3).  ⚠ It is the window between a renegotiation and "
 					              "the new buffers",
 					              fo.width, fo.height, fo.stride,
 					              (unsigned long long)fo.byte,
 					              (unsigned long long)((guint64)fo.width * 4u),
-					              (unsigned long long)((guint64)fo.stride * fo.height));
+					              (unsigned long long)((guint64)fo.stride * fo.height),
+					              RCP_CANVAS_MAX_W, RCP_CANVAS_MAX_H);
 				capture_stopped_free(&fo);
 				continue;
 			}

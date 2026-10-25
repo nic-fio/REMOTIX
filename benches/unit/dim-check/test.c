@@ -5,12 +5,12 @@
  *   2. dim_object_size: offset + stride * height over 2^32 is refused (it used to wrap to a small size); the largest fitting value passes; zeros refused;
  *   3. dim_frame_ok: consistent frame passes; stride too short, bytes too few, zero sizes fail; over the maximum canvas fails (E-R3), at the maximum passes, max 0 = no maximum;
  *      stride * height over 2^32 with enough 64-bit bytes passes (no wrap in the product);
- *   4. by reading the sources (argv[1] = src/encoder.c, argv[2] = src/capture.c, optional): the places the audit named use the header
+ *   4. by reading the sources (argv[1] = src/encoder.c, argv[2] = src/capture.c, argv[3] = src/child.c, optional): the places the audit named use the header
  *      and no longer the 32-bit expressions.
  *
  * BUILD AND RUN (a second; run from the root of the tree):
  *   gcc -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
- *      -Isrc benches/unit/dim-check/test.c -o /tmp/dim-check && /tmp/dim-check src/encoder.c src/capture.c
+ *      -Isrc benches/unit/dim-check/test.c -o /tmp/dim-check && /tmp/dim-check src/encoder.c src/capture.c src/child.c
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "dimcheck.h"
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
 	check(dim_frame_ok(16000, 4000, 64000, (uint64_t)64000 * 4000, 0, 0), "max 0 = no maximum");
 	check(dim_frame_ok(2, 0x20000000u, 8, (uint64_t)8 * 0x20000000u, 0, 0), "stride * height over 2^32 with the 64-bit bytes present: no wrap in the product");
 
-	for (int i = 1; i < argc && i <= 2; i++) {
+	for (int i = 1; i < argc && i <= 3; i++) {
 		char *t = slurp(argv[i]);
 
 		if (!t) {
@@ -89,10 +89,14 @@ int main(int argc, char **argv)
 		if (i == 1) {
 			check(strstr(t, "dim_object_size(") != NULL, "encoder.c imports the DMA-BUF through dim_object_size()");
 			check(strstr(t, "s->offset + s->stride * s->height") == NULL, "encoder.c no longer computes the object size in 32 bits");
+			check(strstr(t, "beyond the %ux%u the driver declared") != NULL, "encoder.c: codificatore_ridimensiona() checks zero and the driver maximum (E-R3)");
 		} else if (i == 2) {
 			check(strstr(t, "dim_stride_ok(step, capture->fmt.size.width)") != NULL, "capture.c: the memory-route guard uses dim_stride_ok()");
 			check(strstr(t, "step < capture->fmt.size.width * 4u") == NULL, "capture.c: the 32-bit comparison is gone");
 			check(strstr(t, "st < w * 4u") == NULL, "capture.c: the 32-bit comparison in the damage code is gone");
+		} else {
+			check(strstr(t, "dim_frame_ok(fo.width, fo.height, fo.stride, fo.byte, RCP_CANVAS_MAX_W") != NULL,
+			      "child.c: the frame guard uses dim_frame_ok() with the canvas maximum (E-R3)");
 		}
 		free(t);
 	}
