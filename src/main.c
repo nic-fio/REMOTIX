@@ -346,8 +346,9 @@ static void help(const char *name)
 	        "                    user remotix behind walls (DECISIONS.md §11.50).\n"
 	        "                    ON by default when started as root; this asks for\n"
 	        "                    it explicitly (and refuses to start if not root).\n"
+	        "                    Needs the system user remotix (see --network-user)\n"
 	        "  --no-split        the way back: ONE process, as 1.0 (also as root)\n"
-	        "                    Needs root and the user\n"
+	        "                    (the single-process unit passes it)\n"
 	        "  --network-user NAME\n"
 	        "                    the network side's user (default remotix)\n"
 	        "  --network-state-dir DIR\n"
@@ -2132,7 +2133,7 @@ int main(int argc, char **argv)
 	const char *dir_cert = "/var/lib/remotix/certificates";
 	const char *file_html = "page.html";
 	const char *file_ban = "/var/lib/remotix/ban";
-	/* ⭐ 1.5 (§11.50), all inert without `--split`. */
+	/* ⭐ 1.5 (§11.50): the split is the default as root; `--no-split` is the way back.  The three options below only matter when split. */
 	bool split = false, network_side = false, cert_given = false, ban_given = false;
 	int split_choice = -1; /* ⭐ 1.5: -1 not said (on if root), 1 --split, 0 --no-split */
 	const char *net_user = "remotix";
@@ -2533,9 +2534,9 @@ int main(int argc, char **argv)
 		              "⚠ --journal requested but the socket does not open (%s): the "
 		              "log stays ONLY here",
 		              strerror(journal_errno));
-	/* ⭐⭐ 1.5 (DECISIONS.md §11.50) — THE SPLIT, ONLY IF ASKED FOR.  Everything in this block is skipped when `--split` is
-	 *     absent: the server then goes on exactly as in 1.0 (one process).
-	 *     With `--split` there are two halves of this one binary:
+	/* ⭐⭐ 1.5 (DECISIONS.md §11.50) — THE SPLIT, ON BY DEFAULT AS ROOT.  Everything in this block is skipped when the server is
+	 *     not split (`--no-split`, or started as an ordinary user): it then goes on exactly as in 1.0 (one process).
+	 *     When split there are two halves of this one binary:
 	 *       · started by hand/systemd as root: the ROOT SIDE — it binds the port, hands everything to `rootside_main()`
 	 *         (probe, PAM helper, births, network side behind its walls) and never returns here;
 	 *       · re-executed with `--network-side` as the user remotix: the NETWORK SIDE — it waits for READY and then

@@ -13,8 +13,8 @@
 #      here, with the version and date of the commit (the date becomes
 #      SOURCE_DATE_EPOCH: same source, same package — R23);
 #   3. `dpkg-buildpackage -b` in the container, then lintian (REMOTIX_SPLIT=0 in the environment, to build WITHOUT the split, is passed through to
-#      debian/rules: DECISIONS-11 §11.50, phase F, the network side's user, directories and unit.  ⛔ OFF by default: the
-#      pieces are useless, and would break today's 1.5, until phase D exists);
+#      debian/rules: DECISIONS-11 §11.50, the network side's user, directories, unit and AppArmor profile.  ⭐ ON by default
+#      since 25 Oct 2026; REMOTIX_SPLIT=0 builds the single-process package, whose unit passes --no-split);
 #   4. the checks on the FINISHED package, not on the tree:
 #        R13  the bench function is not in the binary extracted from the .deb, and
 #             is in an rcp.o built with BENCH_ON 1 (the positive

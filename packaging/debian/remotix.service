@@ -31,7 +31,7 @@ EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
 WorkingDirectory=/
 # ⚠ `sh` only to expand the EnvironmentFile variables, then `exec`: the
 #   server stays the main process.  `$$` = one `$` for the shell.
-ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port "$${REMOTIX_PORT}" --certificates /var/lib/remotix/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --journal $${REMOTIX_OPTIONS}'
+ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port "$${REMOTIX_PORT}" --certificates /var/lib/remotix/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --no-split --journal $${REMOTIX_OPTIONS}'
 # ⭐ `mixed`: SIGTERM to the parent only, then SIGKILL to whatever is left of the unit.
 #    The desktops live OUTSIDE the unit (setsid --fork) and survive
 #    the stop: measured in T2 (phases/17 §5.2), 10 runs out of 10.

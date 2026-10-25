@@ -75,6 +75,13 @@ for f in arch debian rpm; do
 	! grep -qE '^(User|Group|DynamicUser)=' <<<"$u" \
 		|| { echo "⛔ packaging/$f/remotix.service.split: User=/Group= on the unit (§11.50: the desktops would inherit it)"; exit 1; }
 done
+for f in arch debian rpm; do
+	u=$(git -C "$TREE" show "$COMMIT:packaging/$f/remotix.service")
+	grep -q -- ' --no-split ' <<<"$u" \
+		|| { echo "⛔ packaging/$f/remotix.service: the single-process unit without --no-split (1.5: the binary splits by default as root)"; exit 1; }
+	grep -q '^RestartPreventExitStatus=78$' <<<"$u" \
+		|| { echo "⛔ packaging/$f/remotix.service: no RestartPreventExitStatus=78 (EXIT_CONFIG would loop)"; exit 1; }
+done
 echo "split pieces (sysusers, tmpfiles.split, remotix-net-move) identical; split units on net/, no User= (§11.50: installed unless REMOTIX_SPLIT=0)"
 
 rm -rf "$WORKDIR"; mkdir -p "$WORKDIR/tmp"

@@ -43,9 +43,16 @@ const NetUserPreexistingFile = "net-user-preexisting"
 // ⭐ TRUE since 25 Oct 2026 (the user decided: the split is on by default in 1.5; D7, §11.50) — the packages carry
 // the split unless built with REMOTIX_SPLIT=0 / `--without split`: debian `REMOTIX_SPLIT=1` (build-deb.sh), rpm `--with split` (`RX_SPLIT=1` for build-rpm.sh), Arch `REMOTIX_SPLIT=1`
 // (build.sh) — those switches install remotix.sysusers, remotix.tmpfiles.split, remotix-net-move and remotix.service.split
-// (ExecStart with `--split`).  It is a plain bool: turning it on is a one-line change next to those switches (or a build-tag
-// file `//go:build split` that sets it in init()), never a runtime guess.
-var PackageCarriesNetUser = true
+// (ExecStart with `--split`).  It follows packageSplit below, never a runtime guess.
+var PackageCarriesNetUser = packageSplit != "0"
+
+// packageSplit: "1" (default) when the packages this installer installs carry the split; a build of the installer for
+// the single-process packages (REMOTIX_SPLIT=0 / `--without split` / RX_SPLIT=0) sets it with the linker:
+//
+//	go build -ldflags "-X remotix/installer/engine.packageSplit=0" ./cmd/remotix-install
+//
+// so the installer follows the KIND of package it ships, never a runtime guess.
+var packageSplit = "1"
 
 // NetUserRemovable (uninstall --purge): the network side's user is ours to remove — the 1.5
 // package's sysusers file is installed AND the install record does not say the user was already

@@ -229,6 +229,11 @@ gen_require(`
 ')
 allow remotix_t tmp_t:dir mounton;
 allow remotix_t { remotix_net_var_lib_t remotix_net_var_run_t }:dir { create getattr setattr search mounton };
+# ⭐ 1.5: `--no-split` (the single-process unit) runs the whole server as remotix_t, and after the 1.0 → 1.5 move its
+#    certificates and ban sit in /var/lib/remotix/net (remotix_net_var_lib_t): it must manage them in enforcing.
+manage_dirs_pattern(remotix_t, remotix_net_var_lib_t, remotix_net_var_lib_t)
+manage_files_pattern(remotix_t, remotix_net_var_lib_t, remotix_net_var_lib_t)
+manage_sock_files_pattern(remotix_t, remotix_net_var_run_t, remotix_net_var_run_t)
 filetrans_pattern(remotix_t, remotix_var_lib_t, remotix_net_var_lib_t, dir, "net")
 filetrans_pattern(remotix_t, remotix_var_run_t, remotix_net_var_run_t, dir, "net")
 fs_mount_tmpfs(remotix_t)

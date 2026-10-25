@@ -35,7 +35,7 @@ WorkingDirectory=/
 # ⭐ The program directly, as in the .rpm: `${REMOTIX_PORT}` is a single word;
 #    `$REMOTIX_OPTIONS` without braces is split into words, and when empty yields
 #    none (systemd.service, «Command lines»).
-ExecStart=/usr/lib/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPTIONS
+ExecStart=/usr/lib/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --no-split --journal $REMOTIX_OPTIONS
 # ⭐ The three properties the product has always been measured with
 #    (src/restart-7900.sh): KillMode=mixed (T2, §5.2: the desktops survive
 #    the stop), the real-time priority and the children's nice.
@@ -43,6 +43,7 @@ KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11
 Restart=on-failure
+RestartPreventExitStatus=78
 RestartSec=2
 
 [Install]

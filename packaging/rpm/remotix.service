@@ -39,11 +39,12 @@ WorkingDirectory=/
 #    shell in between would run in `unconfined_service_t` and its `exec` would stay there.
 #    `${REMOTIX_PORT}` is a single word; `$REMOTIX_OPTIONS` without braces is split
 #    into words, and when empty yields none (systemd.service, «Command lines»).
-ExecStart=/usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --journal $REMOTIX_OPTIONS
+ExecStart=/usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port ${REMOTIX_PORT} --certificates /var/lib/remotix/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --no-split --journal $REMOTIX_OPTIONS
 KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11
 Restart=on-failure
+RestartPreventExitStatus=78
 RestartSec=2
 
 [Install]
