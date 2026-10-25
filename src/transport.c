@@ -316,7 +316,8 @@ struct transport {
 	/* ⭐ `cid-firmati`: the Resets for ids that do not verify have their own count in the same second */
 	unsigned reset_unverified_count;
 	bool reset_unverified_capped_said;
-	/* the key of the signed ids (cid.h), from `secret`.  It only chooses the Reset budget of an UNKNOWN id: the map is always searched */
+	/* the key of the signed ids (cid.h), from `secret`.  It only chooses the Reset budget of an UNKNOWN id: the map is always searched.
+	 * ⚠ Residual limit (declared in cid.h): ~100 collected ids (~13 handshakes an hour) still use up the 100 signed Resets a second. */
 	cidkey *cidk;
 	unsigned cid_errors_seen;     /* `cidkey_errors()` at the last line written */
 	uint64_t cid_errors_line_ns;

@@ -18,6 +18,12 @@
  *      for ever and could spend the 100 Resets a second of the ids this server issued.  Now it counts as signed for 1 to 2 epochs
  *      (1 to 2 hours) and then as any unknown id (the small budget).  A long session keeps working: the tag only chooses WHICH
  *      Reset budget an UNKNOWN id uses, never whether a packet finds its connection (transport.c always searches its map);
+ *    ⚠ THE LIMIT THAT REMAINS (declared, not closed): a handshake gives the client `active_connection_id_limit` = 7 ids, each one «signed»
+ *      for 1 to 2 hours, and each may be answered once a second (transport.c, `reset_id`).  So about 100 collected ids — some 13-15
+ *      handshakes an hour, well under what `hsrate.h` allows one address (4 a second) — can still use up the 100 Resets a second of
+ *      the signed budget, from spoofed sources.  What it costs the clients: a session that lost the server then gets its Reset from
+ *      the budget of the unsigned ids (10 a second) or waits the 30 s of idle timeout; with at most 8 users that is enough.
+ *      Closing it would take a budget per source that cannot be spoofed, and there is none before the handshake.
  *    · the id of the RETRY has its own label ('R', no epoch): it is bound to the connection that follows, and is found there,
  *      but it never counts as signed for a Reset — it is given to anybody who sends an Initial, with no handshake behind it.
  *
