@@ -87,6 +87,16 @@ int main(void)
 	CHECK(s->app_peer_id >= 1 && s->app_peer_id <= CLIPBOARD_BURST, "4. 1000 ANNOUNCE in one instant: only the first ones were taken in");
 	free(s);
 
+	/* the summary of the window comes from msg_flush_all() even if nothing arrives any more */
+	s = session();
+	s->app_my_id = 1;
+	for (int i = 0; i < 100; i++)
+		handle_clipboard(s, T_CLIPBOARD_ASK, ask, 4, 200000);
+	CHECK(over_lines == 0, "4b. no summary inside the window");
+	msg_flush_all(s, 200000 + MSG_WINDOW_MS + 5);
+	CHECK(over_lines == 1, "4c. msg_flush_all() writes the clipboard gate's summary when the window has ended");
+	free(s);
+
 	CHECK(has("src/keyboard.c", "KB_NOLETTER_LINES") && has("src/keyboard.c", "KB_NOLETTER_WINDOW_MS") && has("src/keyboard.c", "written < KB_NOLETTER_LINES"),
 	      "5. keyboard.c: the «not producible» line has a window budget");
 	printf("%d checks, %d bad\n", checks, bad);

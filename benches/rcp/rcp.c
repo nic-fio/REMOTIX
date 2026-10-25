@@ -3247,6 +3247,16 @@ static bool msg_admit(rcp_session *s, enum msg_class c, uint64_t now)
 static bool msg_line(rcp_session *s, enum msg_class c) { return msg_gate_line(&s->gate[c]); }
 
 /* The periodic call: a window that has ended gets its summary even if no message of that kind arrives any more. */
+#define CLIPBOARD_PER_SECOND 10u
+#define CLIPBOARD_BURST 20u
+
+static void clip_report(rcp_session *s, const struct msg_gate_closed *cl)
+{
+	if (cl->dropped)
+		reg(s, "⚠ CLIPBOARD: in the last %u s %u ANNOUNCE/ASK over %u a second (burst %u) were IGNORED", MSG_WINDOW_MS / 1000u, cl->dropped,
+		    CLIPBOARD_PER_SECOND, CLIPBOARD_BURST);
+}
+
 static void msg_flush_all(rcp_session *s, uint64_t now)
 {
 	for (int c = 0; c < MC_COUNT; c++) {
@@ -3256,6 +3266,13 @@ static void msg_flush_all(rcp_session *s, uint64_t now)
 			continue;
 		msg_gate_flush(&s->gate[c], now, &cl);
 		msg_report(s, (enum msg_class)c, &cl);
+	}
+	/* ⭐ the clipboard gate too (review of ecf90638): its window gets its summary even if no ANNOUNCE/ASK arrives any more */
+	if (s->clip_gate.started) {
+		struct msg_gate_closed cl;
+
+		msg_gate_flush(&s->clip_gate, now, &cl);
+		clip_report(s, &cl);
 	}
 }
 
@@ -7568,17 +7585,12 @@ static void clipboard_serve_pending(rcp_session *s, const char *text,
 /* ⭐ S-R7 (audit of the session, 25 Oct 2026): ANNOUNCE and ASK were unlimited.  An ASK sends the whole text (up to RCP_CLIPBOARD_CAP) back and an ANNOUNCE makes the parent
  *   take the desktop selection (a round trip with the child): a client repeating either at link speed kept the loop and the uplink busy.  One bucket per session for both,
  *   of the same kind as those of msgrate.h: CLIPBOARD_PER_SECOND, burst CLIPBOARD_BURST; the rest is ignored (session kept), counted, and the window summary says how many. */
-#define CLIPBOARD_PER_SECOND 10u
-#define CLIPBOARD_BURST 20u
-
 static bool clipboard_over_rate(rcp_session *s, uint64_t now)
 {
 	struct msg_gate_closed cl;
 	bool ok = msg_gate_admit(&s->clip_gate, now, CLIPBOARD_PER_SECOND, CLIPBOARD_BURST, &cl);
 
-	if (cl.dropped)
-		reg(s, "⚠ CLIPBOARD: in the last %u s %u ANNOUNCE/ASK over %u a second (burst %u) were IGNORED", MSG_WINDOW_MS / 1000u, cl.dropped,
-		    CLIPBOARD_PER_SECOND, CLIPBOARD_BURST);
+	clip_report(s, &cl);
 	return !ok;
 }
 
