@@ -6,6 +6,8 @@
  */
 #include "rcp.h"
 #include "msgrate.h" /* the token buckets of what a logged-in client can send as often as it likes */
+#define LWW_KINDS 3 /* VIEW, LAYOUT, PACE */
+#define LWW_MAX 512 /* the longest body kept: a LAYOUT name is 64 bytes, the others a few */
 
 #include <arpa/inet.h> /* the ban key: IPv4 whole, IPv6 the /64 (`rcp_key_address`) */
 #include <errno.h> /* §4.4-bis: «there is no file yet» and «I could not
@@ -946,6 +948,15 @@ struct rcp_session {
 	uint64_t canvas_mismatch_wait;
 	/* ⛔ One token bucket per kind of message that can be dropped (msgrate.h): see `msg_admit()`. */
 	struct msg_gate gate[MC_COUNT];
+	/* ⭐ "LAST ONE WINS" MESSAGES KEPT, NOT DROPPED (reading of rcp.c, B1): VIEW, LAYOUT and PACE are state, and the last of a burst is the one that matters. Over the rate the
+	 *    server keeps the LAST of each kind and applies it when the bucket has a token again (`lww_apply()`, from `rcp_time()`), instead of staying on the old state. */
+	struct {
+		bool has;
+		uint16_t kind;
+		uint32_t lung;
+		uint8_t body[LWW_MAX];
+	} lww[LWW_KINDS];
+	bool replaying; /* a kept message is being applied: the bucket has already been paid */
 	/* ⭐ S-R7: the ceiling on clipboard ANNOUNCE / ASK (not among the classes of msgrate.h: the clipboard is not input) */
 	struct msg_gate clip_gate;
 };
@@ -3251,8 +3262,9 @@ static void msg_report(rcp_session *s, enum msg_class c, const struct msg_gate_c
 	if (!cl->dropped && !cl->hidden)
 		return;
 	msg_class_rate(c, &per_s, &burst);
-	reg(s, "⚠ %s: in the last %u s %u messages over %u a second (burst %u) were DROPPED and %u log lines were not written",
-	    MC_NAMES[c], MSG_WINDOW_MS / 1000u, cl->dropped, per_s, burst, cl->hidden);
+	reg(s, "⚠ %s: in the last %u s %u messages over %u a second (burst %u) were DROPPED%s and %u log lines were not written",
+	    MC_NAMES[c], MSG_WINDOW_MS / 1000u, cl->dropped, per_s, burst,
+	    c == MC_VIEW || c == MC_LAYOUT || c == MC_PACE ? " (the LAST of them is kept and applied when the bucket has a token)" : "", cl->hidden);
 }
 
 static bool msg_admit(rcp_session *s, enum msg_class c, uint64_t now)
@@ -3353,6 +3365,17 @@ static bool input_admit(rcp_session *s, uint16_t kind, const uint8_t *body, uint
  * same as one the client never sent; a LAYOUT or VIEW over the rate is a client that is not a person.  ⛔ NOT FIT_CANVAS: §7.1 wants
  * one `CANVAS` answer for each, the client counts the unanswered ones, and a request consumed in silence would hold its frames back
  * for ever — that one is gated in its own handler, and answered. */
+/* the kinds merged to "the last one" (index in `lww[]`), -1 for the others */
+static int lww_index(uint16_t kind)
+{
+	switch (kind) {
+	case T_VIEW:   return 0;
+	case T_LAYOUT: return 1;
+	case T_PACE:   return 2;
+	default:       return -1;
+	}
+}
+
 static enum msg_class control_class(uint16_t kind)
 {
 	switch (kind) {
@@ -3361,6 +3384,58 @@ static enum msg_class control_class(uint16_t kind)
 	case T_VIEW:         return MC_VIEW;
 	case T_LAYOUT:       return MC_LAYOUT;
 	default:             return MC_COUNT;
+	}
+}
+
+static bool drain(rcp_session *s, uint64_t now);
+
+/* ⭐ Applies the "last one wins" messages kept while the bucket was empty (reading of rcp.c, B1), when it has a token again.  The kept message goes through the
+ *    SAME path as one that came from the wire — `drain()` on a private buffer, swapped for the session's own for the length of the call (the wire's partial message
+ *    stays where it is) — with `replaying` set so that the bucket is not charged twice.  Called from `rcp_time()`; nothing here is a sign of life. */
+static void lww_apply(rcp_session *s, uint64_t now)
+{
+	static const enum msg_class cls[LWW_KINDS] = {MC_VIEW, MC_LAYOUT, MC_PACE};
+
+	for (int i = 0; i < LWW_KINDS; i++) {
+		uint8_t frame[6 + LWW_MAX];
+		uint8_t *save_acc;
+		size_t save_len, save_cap;
+		uint64_t save_since;
+		uint32_t n;
+
+		if (!s->lww[i].has)
+			continue;
+		if (s->state != S_ACTIVE) {
+			s->lww[i].has = false;
+			continue;
+		}
+		if (!msg_admit(s, cls[i], now))
+			continue; /* still no token: it stays kept */
+		n = s->lww[i].lung;
+		frame[0] = (uint8_t)(s->lww[i].kind >> 8);
+		frame[1] = (uint8_t)s->lww[i].kind;
+		frame[2] = (uint8_t)(n >> 24);
+		frame[3] = (uint8_t)(n >> 16);
+		frame[4] = (uint8_t)(n >> 8);
+		frame[5] = (uint8_t)n;
+		memcpy(frame + 6, s->lww[i].body, n);
+		s->lww[i].has = false;
+		save_acc = s->acc;
+		save_len = s->acc_len;
+		save_cap = s->acc_cap;
+		save_since = s->since;
+		s->acc = frame;
+		s->acc_len = 6 + n;
+		s->acc_cap = sizeof frame;
+		s->replaying = true;
+		(void)drain(s, now);
+		s->replaying = false;
+		s->acc = save_acc;
+		s->acc_len = save_len;
+		s->acc_cap = save_cap;
+		s->since = save_since;
+		if (s->state != S_ACTIVE)
+			return;
 	}
 }
 
@@ -8921,7 +8996,16 @@ static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
 		{
 			enum msg_class mc = control_class(kind);
 
-			if (mc != MC_COUNT && s->state == S_ACTIVE && !msg_admit(s, mc, now)) {
+			if (mc != MC_COUNT && s->state == S_ACTIVE && !s->replaying && !msg_admit(s, mc, now)) {
+				int li = lww_index(kind);
+
+				/* ⭐ a "last one wins" message is KEPT (the older one of its kind is replaced) and applied when the bucket has a token */
+				if (li >= 0 && lung <= LWW_MAX) {
+					s->lww[li].has = true;
+					s->lww[li].kind = kind;
+					s->lww[li].lung = lung;
+					memcpy(s->lww[li].body, s->acc + *off + 6, lung);
+				}
 				l.i = lung;
 				goto message_done;
 			}
@@ -10005,6 +10089,7 @@ bool rcp_time(rcp_session *s, uint64_t now)
 	/* ⏳ §13.5: a `PACE` held back by the 250 ms window goes out here. */
 	pace_flush(s, now);
 	msg_flush_all(s, now);
+	lww_apply(s, now);
 	/* ⛔ A REQUEST_KEY DEFERRED BY THE GAP IS SERVED HERE, not lost (see `V_KEY_ASK_GAP_MS`): unless a keyframe has gone out since it came,
 	 *    which answers it too. */
 	if (s->key_deferred) {
