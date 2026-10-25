@@ -110,9 +110,10 @@ enum rxr_outcome {
 	                       * towards the ban (§11.39: 0x0E on the page) */
 	RXR_PAUSED      = 4,  /* ⭐ 1.5 (reading of rcp.c, A1): the root side's OWN pause (R2: this user, this address, or the failures table)
 	                       * kept it from asking PAM.  For the page it is a plain REFUSAL — 0x07 at the same 2.5 s floor as a wrong
-	                       * password and as a name that does not exist — but the network side does NOT count it as a failure in its
-	                       * tables.  It must not be `RXR_NOT_CHECKED` (0x0E at 1 s): a different byte and a different time would tell
-	                       * anybody who can provoke the pause (four addresses are enough) that the name EXISTS (§4.4, §11.39). */
+	                       * password and as a name that does not exist — and the network side counts it by the rule of §11.47 B (uncounted only
+	                       * for a key that logged in lately, otherwise as any refusal).  It must not be `RXR_NOT_CHECKED` (0x0E at 1 s): a
+	                       * different byte and a different time would tell anybody who can provoke the pause (four addresses are enough) that
+	                       * the name EXISTS (§4.4, §11.39).  Part of RXR_VERSION 3; its `canon` field is empty (all zero). */
 };
 /* the largest value a VERDICT may carry; anything above is a broken channel's, not a verdict */
 #define RXR_OUTCOME_MAX RXR_PAUSED

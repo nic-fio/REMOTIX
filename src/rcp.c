@@ -2581,12 +2581,20 @@ void rcp_refusal_paused(uint64_t ticket)
 static bool refusal_uncounted(const struct sink *k, uint64_t ticket,
                               const char *key, uint64_t now)
 {
-	/* ⭐ A1: the root side's own pause.  Always uncounted (it is not PAM's «no» about a password) and it leaves as a plain REFUSED/WRONG_CREDENTIALS
-	 *    at REJECT_FLOOR, because `refusal_is_ours` stays false — the same byte and the same time as a wrong password. */
+	/* ⭐ A1: the root side's own pause leaves as a plain REFUSED/WRONG_CREDENTIALS at REJECT_FLOOR (`refusal_is_ours` stays false): the same byte and the same
+	 *    time as a wrong password.  ⛔ And it is counted by the RULE OF §11.47 B, not always uncounted: only a REAL account can be paused, so «never counted»
+	 *    for everybody would be the name oracle again (a name that does not exist is banned after its failures, one that is paused is not).  For a key
+	 *    that never logged in lately it counts as any refusal; for the owner who logged in during the last 30 days it is not counted (he does not ban himself). */
 	if (paused_ticket && ticket == paused_ticket) {
-		say(k, "⚠ request %llu was NOT asked of PAM: the root side's own pause (too many refused for this user or from this address). It is "
-		       "answered as a refusal at the same floor as any other and is NOT counted towards the ban — the booking is given back",
-		    (unsigned long long)paused_ticket);
+		if (!good_recent(key, now)) {
+			say(k, "request %llu was NOT asked of PAM: the root side's own pause (too many refused for this user or from this address); %s never logged in "
+			       "(30 days), so it COUNTS as a failed attempt, like any refusal (DECISIONS.md §11.47 B)",
+			    (unsigned long long)paused_ticket, key);
+			return false;
+		}
+		say(k, "⚠ request %llu was NOT asked of PAM: the root side's own pause (too many refused for this user or from this address); %s logged in lately, so it is "
+		       "NOT counted towards the ban — the booking is given back (§11.47 B)",
+		    (unsigned long long)paused_ticket, key);
 		return true;
 	}
 	if (!locked_ticket || ticket != locked_ticket)

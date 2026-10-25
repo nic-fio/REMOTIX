@@ -7,9 +7,10 @@
  *
  *   1. a wrong password: nothing before 2.5 s, then REJECTED 0x07;
  *   2. a PAUSED verdict: the SAME byte (0x07) at the SAME instant (nothing at 2499 ms, REJECTED just after 2500 ms), and not the 0x0E of «not checked»;
- *   3. the pause is NOT counted: twenty in a row from one key and one name ban nobody (always 0x07, never the ban's 0x08), while five real wrong
- *      passwords do ban (the control: the same loop with wrong passwords gets 0x08);
- *   4. the same on the orphan road (the client hung up): the pause is not counted either, a plain refusal is;
+ *   3. the pause is counted by the rule of §11.47 B: from a key that NEVER logged in it counts as any refusal (repeated pauses ban after exactly as many tries as wrong
+ *      passwords do — otherwise a name that does not exist would be banned and a paused one not: the oracle again); from a key that logged in during the last 30 days
+ *      it is not counted (twenty ban nobody);
+ *   4. the same on the orphan road (the client hung up);
  *   5. a «not checked» is still 0x0E at the fixed second (unchanged), so the two outcomes stay distinct for the right reasons.
  *
  * BUILD AND RUN (a few seconds; the real rcp.c of BOTH trees; run from the root of the tree):
@@ -24,7 +25,7 @@
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 10
+#define EXPECTED_CHECKS 11
 
 static void require(int cond, const char *desc)
 {
@@ -172,14 +173,57 @@ int main(void)
 	require(s && o.rejected == 1 && o.reason == 0x07 && !rcp_logged_in(s), "…REJECTED 0x07 just after 2500 ms: the same byte and the same instant as a wrong password");
 	rcp_free(s);
 
-	printf("  the pause is not counted\n");
+	printf("  the pause is counted by the rule of §11.47 B (an unknown key: like any refusal; a key that logged in lately: not)\n");
 	{
-		bool banned = false;
+		int paused_until_ban = -1, wrong_until_ban = -1;
 
-		for (int k = 0; k < 20 && !banned; k++) {
+		for (int k = 0; k < 20 && paused_until_ban < 0; k++) {
 			uint64_t t = T + 10000 + (uint64_t)k * 5000;
 
 			s = open_waiting("[10.0.31.3]:1", t, &o, &g);
+			if (!s) {
+				paused_until_ban = k;
+				break;
+			}
+			rcp_refusal_paused(77);
+			rcp_verdict(s, 77, false, t + 300);
+			rcp_refusal_paused(0);
+			rcp_time(s, t + 2501);
+			if (o.reason != 0x07)
+				paused_until_ban = k;
+			rcp_free(s);
+		}
+		for (int k = 0; k < 20 && wrong_until_ban < 0; k++) {
+			uint64_t t = T + 10000 + (uint64_t)k * 5000;
+
+			s = open_waiting("[10.0.31.4]:1", t, &o, &g);
+			if (!s) {
+				wrong_until_ban = k;
+				break;
+			}
+			rcp_verdict(s, 77, false, t + 300);
+			rcp_time(s, t + 2501);
+			if (o.reason != 0x07)
+				wrong_until_ban = k;
+			rcp_free(s);
+		}
+		require(paused_until_ban >= 0 && paused_until_ban == wrong_until_ban,
+		        "from a key that never logged in, repeated pauses BAN after exactly as many tries as wrong passwords do (no oracle: a name that does not exist and a paused one are banned alike)");
+	}
+	{
+		bool banned = false;
+
+		rcp_unblock("[10.0.31.7]", T);
+		s = open_waiting("[10.0.31.7]:1", T, &o, &g);
+		if (s)
+			rcp_verdict(s, 77, true, T + 300);
+		rcp_time(s, T + 1001);
+		require(s && o.admitted == 1, "(setup) the key logs in once: it is a KNOWN key now");
+		rcp_free(s);
+		for (int k = 0; k < 20 && !banned; k++) {
+			uint64_t t = T + 20000 + (uint64_t)k * 5000;
+
+			s = open_waiting("[10.0.31.7]:1", t, &o, &g);
 			if (!s) {
 				banned = true;
 				break;
@@ -191,30 +235,11 @@ int main(void)
 			banned = o.reason != 0x07;
 			rcp_free(s);
 		}
-		require(!banned, "twenty pauses in a row from one key and one name ban nobody (always 0x07, never the ban's 0x08)");
-	}
-	{
-		bool banned = false;
-
-		for (int k = 0; k < 12 && !banned; k++) {
-			uint64_t t = T + 10000 + (uint64_t)k * 5000;
-
-			s = open_waiting("[10.0.31.4]:1", t, &o, &g);
-			if (!s) {
-				banned = true;
-				break;
-			}
-			rcp_verdict(s, 77, false, t + 300);
-			rcp_time(s, t + 2501);
-			banned = o.reason != 0x07;
-			rcp_free(s);
-		}
-		require(banned, "the control: the same loop with wrong passwords DOES ban (0x08 appears)");
+		require(!banned, "from a key that logged in lately twenty pauses ban nobody (§11.47 B: the owner does not ban himself)");
 	}
 
 	printf("  the orphan road (the client hung up)\n");
 	{
-		bool refused_ok = true;
 		char rh[32];
 
 		rcp_unblock("10.0.31.5", T);
@@ -224,11 +249,20 @@ int main(void)
 			rcp_refusal_paused(0);
 		}
 		snprintf(rh, sizeof rh, "10.0.31.5");
-		refused_ok = !rcp_banned(rh, T + 140000, NULL);
-		require(refused_ok, "twenty orphan pauses count nothing: the key is not banned");
-		for (int k = 0; k < 12; k++)
-			rcp_orphan_verdict("utente-di-prova", "10.0.31.5:1", false, false, 900 + (uint64_t)k, T + 150000 + (uint64_t)k * 1000, NULL, NULL);
-		require(rcp_banned(rh, T + 170000, NULL), "…while plain orphan refusals do (the control)");
+		require(rcp_banned(rh, T + 140000, NULL), "an unknown key: twenty orphan pauses count and the key is banned, like plain orphan refusals");
+		rcp_unblock("10.0.31.8", T);
+		s = open_waiting("[10.0.31.8]:1", T, &o, &g);
+		if (s)
+			rcp_verdict(s, 77, true, T + 300);
+		rcp_time(s, T + 1001);
+		rcp_free(s);
+		for (int k = 0; k < 20; k++) {
+			rcp_refusal_paused(600 + (uint64_t)k);
+			rcp_orphan_verdict("utente-di-prova", "10.0.31.8:1", false, false, 600 + (uint64_t)k, T + 100000 + (uint64_t)k * 1000, NULL, NULL);
+			rcp_refusal_paused(0);
+		}
+		snprintf(rh, sizeof rh, "10.0.31.8");
+		require(!rcp_banned(rh, T + 140000, NULL), "a key that logged in lately: orphan pauses count nothing");
 	}
 
 	printf("  «not checked» is unchanged\n");

@@ -61,7 +61,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 142
+#define EXPECTED_CHECKS 143
 
 static void require(int cond, const char *desc)
 {
@@ -824,6 +824,15 @@ int main(void)
 				break;
 			}
 		endpwent();
+		{
+			struct rxr_verdict pv;
+
+			memset(&pv, 0, sizeof pv);
+			head_fill(&pv.h, RXR_VERDICT, 1);
+			pv.outcome = RXR_PAUSED;
+			require(rxr_canon_valid(pv.canon) && pv.h.version == RXR_VERSION && RXR_VERSION >= 3,
+			        "a PAUSED verdict has an empty canon field, which rxr_canon_valid accepts, in the same RXR_VERSION (3) as the canon itself");
+		}
 		require(rootside_verdict_outcome_ok(RXR_NO) && rootside_verdict_outcome_ok(RXR_PAUSED) && !rootside_verdict_outcome_ok(RXR_OUTCOME_MAX + 1)
 		        && !rootside_verdict_outcome_ok(255),
 		        "the list of outcomes: 0..RXR_PAUSED are verdicts, anything above is not");

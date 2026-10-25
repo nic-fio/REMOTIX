@@ -709,9 +709,10 @@ void rcp_refusal_locked(uint64_t ticket);
 void rcp_refusal_unchecked(uint64_t ticket);
 /* ⭐ 1.5 (reading of rcp.c, A1): the «no» about to be delivered for `ticket` is the ROOT SIDE's own pause (a user, an address, or its failures table:
  *    `RXR_PAUSED`).  Set just before ONE delivery, 0 just after.  For the page it is a REFUSAL like a wrong password — `0x07` at the same floor
- *    (`REJECT_FLOOR`), never `0x0E` — so that no byte and no time tells that the name exists; but it is NOT a failure of the tables: the booking is
- *    given back and nothing is counted, whether the key logged in lately or not (a pause only exists for a real account, so «not counted» here
- *    is the root side's secret and not the network side's). */
+ *    (`REJECT_FLOOR`), never `0x0E` — so that no byte and no time tells that the name exists.  And it is counted by the rule of §11.47 B, like the faillock
+ *    refusal: NOT counted (the booking given back) only when its key had an admitted login in the last 30 days (`good_recent()`); for any other key it COUNTS as a
+ *    failed attempt, so a name that does not exist and a name that is paused are banned alike.  «Never counted» for everybody would be the name oracle again:
+ *    only a real account can be paused. */
 void rcp_refusal_paused(uint64_t ticket);
 
 /* ⭐ THE TWO PAM SLOTS KEPT FOR A KNOWN KEY — 15 Oct 2026, `DECISIONS.md`

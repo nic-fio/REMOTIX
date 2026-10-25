@@ -1174,7 +1174,7 @@ static void handle_auth(struct rxr_auth *a)
 	} else if ((snprintf(ukey, sizeof ukey, "%lu", (unsigned long)uid),
 	            lg = rootside_login_admit(&R.bounds, ukey, a->rhost, now, &left, &taken)) != RXR_LOGIN_OK) {
 		/* ⭐ 1.5 (R2): paused (or about to be) by the root side's own count of what PAM
-		 *    refused: not asked, «not checked», not counted by the network side.  ⚠ One
+		 *    refused: not asked, answered PAUSED (see below).  ⚠ One
 		 *    line a second, with the count. */
 		static uint64_t paused_logged_ms;
 		static uint32_t paused_hidden;
@@ -1183,13 +1183,13 @@ static void handle_auth(struct rxr_auth *a)
 		/* ⛔⭐ A1 of the reading of rcp.c: NOT `RXR_NOT_CHECKED`.  «Not checked» is 0x0E after one second on the page; a name that does not exist
 		 *    is refused 0x07 after 2.5 s; a pause that answered differently would tell whoever can start it (four addresses are enough to
 		 *    refuse five for one name) that the name exists.  PAUSED is a plain refusal for the page, at the same floor, that the network side
-		 *    does not count. */
+		 *    counts by the rule of 11.47 B (not for a key that logged in lately, as any refusal otherwise). */
 		out = RXR_PAUSED;
 		paused_hidden++;
 		if (now >= paused_logged_ms + 1000) {
 			registro_dice(LOG_ROOT, "⛔ AUTH of «%.64s» from «%.64s» not asked of PAM: %s (%llu s "
 			              "to go; %u in the last second) — answered PAUSED: a refusal like any other for the page (0x07 at the "
-			              "same floor), NOT counted by the network side", a->user, a->rhost,
+			              "same floor), counted by the network side by the rule of 11.47 B", a->user, a->rhost,
 			              lg == RXR_LOGIN_PAIR_PAUSED  ? "this user from this address is paused"
 			              : lg == RXR_LOGIN_USER_PAUSED ? "the user is paused (too many refused from anywhere)"
 			              : lg == RXR_LOGIN_HOST_PAUSED ? "the address is paused"
