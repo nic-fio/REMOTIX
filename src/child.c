@@ -339,7 +339,15 @@ struct body_whoami {
 	uint32_t socket_bus_c_e;/* the session bus socket exists */
 	char user[64];
 	char runtime[160];
+	/* ⭐ The NAME check, moved out of the parent's loop (candidate `nss-fuori`): in the answer to the parent's «who are
+	 * you» question (every RECHECK_MS) the CHILD looks its own name up and says what NSS answered.  At the end of the
+	 * struct on purpose: a body of the old size (the first introduction, the fuzz seeds) still reads, with 0 = not asked. */
+	uint32_t name_check; /* NAME_NOT_ASKED / NAME_HOLDS / NAME_GONE / NAME_OTHER_UID */
+	uint32_t name_uid;   /* NAME_OTHER_UID: the uid NSS gave the name */
 };
+/* the size of the body before `name_check` existed: the least a parent accepts */
+#define WHOAMI_MIN offsetof(struct body_whoami, name_check)
+enum { NAME_NOT_ASKED = 0, NAME_HOLDS = 1, NAME_GONE = 2, NAME_OTHER_UID = 3 };
 
 struct body_stage {
 	uint32_t bus_open;      /* the CONNECTION to the bus succeeded */
@@ -557,9 +565,9 @@ struct child {
 	uint64_t serial;
 	uint64_t born_ms;
 	uint64_t last_recheck_ms;
-	/* ⭐ When the NAME was last resolved to `uid` (`name_still_ours()`), on the
-	 *    `RECHECK_MS` timer: not on every message (a 4K keyframe is ~64, and
-	 *    with sssd/LDAP every lookup is a network call inside the loop). */
+	/* ⭐ When the parent last resolved the NAME to `uid` itself (`name_still_ours()`): at the spawn and at a login, never on
+	 *    a timer — the periodic check is the child's (`body_whoami.name_check`), because with sssd/LDAP a lookup is a
+	 *    network call and this is the loop that delivers every user's video. */
 	uint64_t name_checked_ms;
 	/* ⭐ 1.5 (§11.50), network mode only (inert in the single-process server):
 	 *    the name as typed at the login when it differs from the canonical one
@@ -769,8 +777,9 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
  * ⚠ The fifth fact — the user's name **still today** resolves to that uid —
  *   is the only one that can change while the child is alive (NSS,
  *   `/etc/passwd` rewritten, a domain answering differently), and it is no
- *   longer asked HERE, on every message: see `name_still_ours()`, on the
- *   `RECHECK_MS` timer of `children_recheck()`.
+ *   longer asked HERE, on every message: the parent asks at a login
+ *   (`name_still_ours()`), and the CHILD answers the periodic one in its reply to
+ *   the «who are you» question of `children_recheck()` (`body_whoami.name_check`).
  *
  * ⛔ There is no path that delivers a byte to someone who does not pass here. */
 static bool credentials_match(const struct child *g, const struct head *t,
@@ -811,38 +820,70 @@ static bool credentials_match(const struct child *g, const struct head *t,
 }
 
 /* ⛔⭐ THE NAME STILL RESOLVES TO THE CHILD'S UID — the fifth fact of the wall
- *     above, asked once every `RECHECK_MS` instead of on every message
- *     (fairness review, 15 Oct 2026).
+ *     above.  WHAT IT PROTECTS: the link between the NAME an RCP session logged in
+ *     with and the child (a uid) that serves it.  If the name is later given to
+ *     ANOTHER uid (usermod -u, an account deleted and recreated, a domain that
+ *     answers differently) or vanishes, the next person to log in under that name
+ *     would be attached to the previous owner's desktop (I2: a login finds the
+ *     child BY NAME).  The kernel's credentials (pid, uid, gid) and the header
+ *     (serial, declared uid) are checked on EVERY message: they cost nothing and
+ *     are the isolation between users.
  *
- *     It was asked on every message: a 4K keyframe is ~64 pieces, so ~64
- *     `getpwnam_r()` per frame, and with sssd/LDAP every one of them is a call
- *     that can wait on the network — inside the server's single loop.
- * ⇒ The name is resolved at the spawn (`children_ensure_from()`), and checked
- *   again on the minute timer: a name that moved to another uid, or vanished,
- *   still costs the child its life — within `RECHECK_MS` instead of at the
- *   next message.  ⚠ The kernel's credentials (pid, uid, gid) and the header
- *   (serial, declared uid) are still checked on EVERY message: those cost
- *   nothing and are the isolation between users. */
-static bool name_still_ours(const struct child *g, char *why_no, size_t cap_why)
+ *     WHO ASKS NSS, AND WHEN:
+ *       · the parent, at the spawn and at every LOGIN (`children_ensure_from()`):
+ *         once, where it is the security-critical moment;
+ *       · the CHILD, once per `RECHECK_MS`, in its answer to the parent's «who are
+ *         you» (`body_whoami.name_check`): it was asked by the parent on a timer
+ *         until the candidate `nss-fuori`, and with sssd/LDAP every lookup is a
+ *         call that can wait on the network — inside the server's single loop, the
+ *         one that delivers every user's video.  Now a slow NSS stalls only the
+ *         stage of the child that asks.  A child that lied would only keep its own
+ *         (stale) session until someone logs in under the name, and the parent's
+ *         login check then kills it. */
+/* ⭐ The lookup itself, shared by the two sides: what NSS says about `user` against `uid`.  It BLOCKS on sssd/LDAP, so it
+ *    must never run in the parent's loop except at a login (below): the periodic check is made by the CHILD, which asks
+ *    NSS for its own name when the parent's question arrives (`name_check` of `body_whoami`), at the cost of its own
+ *    stage only. */
+static int name_resolution(const char *user, uid_t uid, uid_t *other)
 {
 	struct passwd pw, *result = NULL;
 	char spare[1024];
 
-	if (getpwnam_r(g->user, &pw, spare, sizeof spare, &result) != 0 || !result) {
-		snprintf(why_no, cap_why,
-		         "the name «%s» no longer resolves to any user: the "
-		         "link can no longer be proven",
-		         g->user);
-		return false;
+	if (getpwnam_r(user, &pw, spare, sizeof spare, &result) != 0 || !result)
+		return NAME_GONE;
+	if (result->pw_uid != uid) {
+		if (other)
+			*other = result->pw_uid;
+		return NAME_OTHER_UID;
 	}
-	if (result->pw_uid != g->uid) {
+	return NAME_HOLDS;
+}
+
+static void name_why(const char *user, uid_t uid, int check, uid_t other, char *why_no, size_t cap_why)
+{
+	if (check == NAME_OTHER_UID)
 		snprintf(why_no, cap_why,
 		         "«%s» is now uid %ld, and the child is uid %ld: the name and "
 		         "the uid have come apart",
-		         g->user, (long)result->pw_uid, (long)g->uid);
-		return false;
-	}
-	return true;
+		         user, (long)other, (long)uid);
+	else
+		snprintf(why_no, cap_why,
+		         "the name «%s» no longer resolves to any user: the "
+		         "link can no longer be proven",
+		         user);
+}
+
+/* The parent's own check, ONLY at a login (`children_ensure_from()`): the moment a name NSS now gives to another uid would
+ * be bound to a stage.  One lookup per login, as the spawn has. */
+static bool name_still_ours(const struct child *g, char *why_no, size_t cap_why)
+{
+	uid_t other = 0;
+	int check = name_resolution(g->user, g->uid, &other);
+
+	if (check == NAME_HOLDS)
+		return true;
+	name_why(g->user, g->uid, check, other, why_no, cap_why);
+	return false;
 }
 
 /* ⛔⭐ THE FAREWELL IS NOT THE RELEASE, AND KEEPING THEM TOGETHER IS A DEFECT —
@@ -2959,9 +3000,10 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 	switch (t->kind) {
 	case MSG_INTRO: {
 		struct body_whoami s;
-		if (byte < sizeof s)
+		if (byte < WHOAMI_MIN)
 			return refused_quietly(g);
-		memcpy(&s, body, sizeof s);
+		memset(&s, 0, sizeof s);
+		memcpy(&s, body, byte < sizeof s ? byte : sizeof s);
 		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0: the same lines are
 		 *   in 04f6aa18): the socket is UNTRUSTED, and `user` and `runtime` are fixed arrays
 		 *   that the log prints with %s.  Nothing guaranteed the final zero: a child that
@@ -2982,6 +3024,24 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 			if (g->pid > 0)
 				child_signal(f, g, SIGKILL);
 			child_dismiss(f, g, "declares a uid different from the stamped one");
+			return false;
+		}
+		/* ⭐⛔ THE NAME, answered by the child (see `body_whoami`): the periodic check that used to run in the parent's
+		 *    loop.  A name that moved to another uid or vanished costs the child as before — the parent still asks NSS
+		 *    itself at every login, so a child that lied here is found out the moment someone logs in under that name. */
+		if (g->showed_up && (s.name_check == NAME_GONE || s.name_check == NAME_OTHER_UID)) {
+			char why[256];
+
+			name_why(g->user, g->uid, (int)s.name_check, (uid_t)s.name_uid, why, sizeof why);
+			registro_dice(LOG_CHILD,
+			              "⛔⛔ the child of «%s» can no longer be "
+			              "proven to be that user: %s.  ⚠ A child "
+			              "running as the wrong user is I3 violated "
+			              "invisibly.  The child is killed.",
+			              g->user, why);
+			if (g->pid > 0)
+				child_signal(f, g, SIGKILL);
+			child_dismiss(f, g, "its name no longer resolves to its uid");
 			return false;
 		}
 		if (g->showed_up) {
@@ -3452,31 +3512,12 @@ void children_recheck(children *f, uint64_t now_ms)
 	for (int i = 0; i < f->cap; i++) {
 		struct child *g = &f->v[i];
 		struct head t;
-		char why[256];
 
 		if (!g->used || g->fd < 0 || g->exiting)
 			continue;
-		/* ⛔⭐ THE NAME, every `RECHECK_MS`, for every child — introduced or
-		 *     not: the fifth fact of the wall (`name_still_ours()`), moved
-		 *     here from every message.  A name that moved to another uid or
-		 *     vanished is the link between the RCP session and the child that
-		 *     can no longer be proven, and it costs the child as before. */
-		if (now_ms >= g->name_checked_ms + RECHECK_MS) {
-			g->name_checked_ms = now_ms;
-			why[0] = 0;
-			if (!name_still_ours(g, why, sizeof why)) {
-				registro_dice(LOG_CHILD,
-				              "⛔⛔ the child of «%s» can no longer be "
-				              "proven to be that user: %s.  ⚠ A child "
-				              "running as the wrong user is I3 violated "
-				              "invisibly.  The child is killed.",
-				              g->user, why);
-				if (g->pid > 0)
-					child_signal(f, g, SIGKILL);
-				child_dismiss(f, g, "its name no longer resolves to its uid");
-				continue;
-			}
-		}
+		/* ⛔⭐ THE NAME is NOT looked up here any more (candidate `nss-fuori`): `getpwnam_r()` blocks on sssd/LDAP, and
+		 *     this is the loop that delivers every user's video.  The «who are you» question below carries the check:
+		 *     the child looks its own name up and answers it in `body_whoami.name_check` (see `handle()`, MSG_INTRO). */
 		if (!g->showed_up)
 			continue;
 		if (now_ms < g->last_recheck_ms + RECHECK_MS)
@@ -10272,6 +10313,13 @@ void child_alive(int argc, char **argv)
 				s.sgid = sg;
 				s.ppid = (uint32_t)getppid();
 				s.descriptors = how_many_descriptors();
+				/* ⭐ the periodic NAME check, made HERE (it may wait for NSS; it stalls this stage only) */
+				{
+					uid_t other = 0;
+
+					s.name_check = (uint32_t)name_resolution(user, e, &other);
+					s.name_uid = s.name_check == NAME_OTHER_UID ? (uint32_t)other : 0;
+				}
 				send_msg(MSG_INTRO, &s, sizeof s, NULL, 0);
 				continue;
 			}
