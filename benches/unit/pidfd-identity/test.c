@@ -23,14 +23,17 @@
  *      pidfd) and the client claims the second for the born child; the network side asks for SO_PASSPIDFD on the socket it received, and
  *      closes the pidfd with the socket (reaped, dismissed, turned off).
  *
- * BUILD AND RUN (a few seconds; run from the root of the tree; see benches/unit/child-credentials/test.c for the stubs method):
- *   PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon" &&
- *   F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter -Isrc -Ibenches/fuzz/child-msg $(pkg-config --cflags $PK)" &&
- *   L="$(pkg-config --libs gio-2.0) -lpam -lpthread -ldl -lm" && gcc $F -c benches/unit/pidfd-identity/test.c -o t.o && gcc $F -c benches/fuzz/child-msg/stubs_log.c -o l.o &&
- *   { gcc -fsanitize=address,undefined t.o l.o $L -o t0 2> link1.log || true; } &&
- *   { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
- *     while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
- *   gcc $F -c s.c -o s.o && gcc -fsanitize=address,undefined t.o l.o s.o $L -o test && ./test src/rootside.c src/child.c
+ * BUILD AND RUN (a few seconds; nothing under /media/REMOTIX-15 is written; run from the root of the tree; see benches/unit/child-credentials/test.c for the stubs method):
+ *   nice -n 19 ionice -c3 podman run --rm --cpus=1 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
+ *     cd /tmp && PK="gio-2.0 libpipewire-0.3 libdrm libva libva-drm vulkan opus libei-1.0 xkbcommon" &&
+ *     F="-g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wno-unused-parameter \
+ *        -I/albero/src -I/albero/benches/fuzz/child-msg $(pkg-config --cflags $PK)" &&
+ *     L="$(pkg-config --libs gio-2.0) -lpam -lpthread -ldl -lm" &&
+ *     clang $F -c /albero/benches/unit/pidfd-identity/test.c -o t.o && clang $F -c /albero/benches/fuzz/child-msg/stubs_log.c -o l.o &&
+ *     { clang -fsanitize=address,undefined t.o l.o $L -o t0 2> link1.log || true; } &&
+ *     { echo "#include <stdio.h>"; grep -o "undefined reference to .[A-Za-z_0-9]*" link1.log | sed "s/.*to .//" | sort -u |
+ *       while read -r n; do echo "void $n(void); void $n(void) { fputs(\"STUB reached: $n\", stderr); fputc(10, stderr); __builtin_trap(); }"; done; } > s.c &&
+ *     clang $F -c s.c -o s.o && clang -fsanitize=address,undefined t.o l.o s.o $L -o test && ./test /albero/src/rootside.c /albero/src/child.c'
  * Exit code 0 = every check passed.
  */
 #include "child.c"
