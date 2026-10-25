@@ -766,6 +766,8 @@ struct rcp_session {
 	 *   start from 1.  It is not an implicit sentinel (§6.0), it is the one
 	 *   declared by the protocol. */
 	uint32_t app_my_id;  /* the last one *I* announced */
+	uint32_t ask_id;     /* the transfer the client asked for last, and how many times in a row (CLIPBOARD_ASK_FREE) */
+	unsigned ask_n;
 	/* ⛔ How many bytes the last text the SESSION gave us had: it serves to
 	 *    know whether the session has something to lose.  See the rule
 	 *    of the empty announcement, further below. */
@@ -3271,6 +3273,10 @@ static bool msg_line(rcp_session *s, enum msg_class c) { return msg_gate_line(&s
 /* The periodic call: a window that has ended gets its summary even if no message of that kind arrives any more. */
 #define CLIPBOARD_PER_SECOND 10u
 #define CLIPBOARD_BURST 20u
+/* ⭐ Reading of rcp.c, B2: the page asks AT ONCE for every announcement of the server, once, and RCP.md 7.4 has no refusal to answer an ASK with — an empty TEXT
+ *   would not match the announced length and the page would close the session.  So an ASK is never lost to the rate: the first CLIPBOARD_ASK_FREE requests for the same
+ *   transfer (the legitimate one, and a retry) are served whatever the bucket says; only the requests past them are subject to it, and they are said in the log. */
+#define CLIPBOARD_ASK_FREE 2u
 
 static void clip_report(rcp_session *s, const struct msg_gate_closed *cl)
 {
@@ -7756,8 +7762,6 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 		xform = le_u32(&l);
 		if (l.too_short)
 			return true;
-		if (clipboard_over_rate(s, now))
-			return true;
 
 		/* ⛔ §7.4: «an `CLIPBOARD_ASK` with an identifier that does not
 		 *    match any live announcement is `PROTOCOL_ERROR`».  ⚠ And
@@ -7769,6 +7773,21 @@ static bool handle_clipboard(rcp_session *s, uint16_t kind, const uint8_t *body,
 			                 "(§7.4)",
 			              xform, s->app_my_id);
 			return false;
+		}
+		/* ⭐ The rate applies to the REPEATS (reading of rcp.c, B2): the first CLIPBOARD_ASK_FREE requests for a transfer are always served — the page asks
+		 *    once per announcement, and a token spent by ANNOUNCEs must never cost a paste.  Past them the bucket decides, and what it refuses is SAID
+		 *    (the protocol has no refusal to send back: see CLIPBOARD_ASK_FREE). */
+		if (xform == s->ask_id) {
+			s->ask_n++;
+		} else {
+			s->ask_id = xform;
+			s->ask_n = 1;
+		}
+		if (s->ask_n > CLIPBOARD_ASK_FREE && clipboard_over_rate(s, now)) {
+			if (msg_gate_line(&s->clip_gate))
+				reg(s, "⚠ CLIPBOARD: the client asks for transfer %u the %uth time and the rate is over: this request is IGNORED (the first %u are always served)",
+				    xform, s->ask_n, CLIPBOARD_ASK_FREE);
+			return true;
 		}
 		if (!s->app_text) {
 			/* ⚠ It can happen: one announced, and then the stage was taken down
