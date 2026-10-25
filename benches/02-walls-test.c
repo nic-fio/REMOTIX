@@ -430,6 +430,69 @@ static void case_network(void)
 	(void)waitpid(p, &st, 0);
 }
 
+/* ⭐ 1.6 (audit split R7): the socket families allow list, in a fork (any user): the filter of walls.c, installed for real. */
+static void families_child(int out)
+{
+	static const struct { int af; const char *name; } no[] = {
+		{ AF_NETLINK, "AF_NETLINK" }, { AF_PACKET, "AF_PACKET" }, { AF_VSOCK, "AF_VSOCK" },
+		{ AF_ALG, "AF_ALG" }, { AF_BLUETOOTH, "AF_BLUETOOTH" }, { AF_KEY, "AF_KEY" },
+	};
+	struct addrinfo hints, *res = NULL;
+	char why[256] = "";
+	int s, sv[2], e;
+
+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 || no_user_namespaces(why, sizeof why) != 0) {
+		rep(out, false, "the seccomp filter could not be installed (%s)", why);
+		_exit(0);
+	}
+	s = socket(AF_UNIX, SOCK_STREAM, 0);
+	rep(out, s >= 0, "seccomp: socket(AF_UNIX) allowed"), close(s);
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	rep(out, s >= 0, "seccomp: socket(AF_INET) allowed"), close(s);
+	s = socket(AF_INET6, SOCK_DGRAM, 0);
+	e = errno;
+	rep(out, s >= 0 || e == EAFNOSUPPORT || e == EPROTONOSUPPORT, "seccomp: socket(AF_INET6) allowed by the filter (errno %d)", s >= 0 ? 0 : e);
+	close(s);
+	rep(out, socketpair(AF_UNIX, SOCK_SEQPACKET, 0, sv) == 0, "seccomp: socketpair(AF_UNIX) allowed");
+	errno = 0;
+	rep(out, socketpair(AF_NETLINK, SOCK_DGRAM, 0, sv) != 0 && errno == EAFNOSUPPORT, "seccomp: socketpair(AF_NETLINK) refused with EAFNOSUPPORT (errno %d)", errno);
+	for (size_t i = 0; i < sizeof no / sizeof no[0]; i++) {
+		errno = 0;
+		s = socket(no[i].af, SOCK_DGRAM, 0);
+		e = errno;
+		rep(out, s < 0 && e == EAFNOSUPPORT, "seccomp: socket(%s) refused with EAFNOSUPPORT (errno %d)", no[i].name, e);
+		if (s >= 0)
+			close(s);
+	}
+	memset(&hints, 0, sizeof hints);
+	hints.ai_flags = AI_ADDRCONFIG;
+	hints.ai_socktype = SOCK_DGRAM;
+	rep(out, getaddrinfo("localhost", "7447", &hints, &res) == 0, "seccomp: getaddrinfo(localhost) with AI_ADDRCONFIG answers (netlink refused, glibc falls back)");
+	if (res)
+		freeaddrinfo(res);
+	res = NULL;
+	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICHOST;
+	rep(out, getaddrinfo("127.0.0.1", "7447", &hints, &res) == 0, "seccomp: getaddrinfo(AI_ADDRCONFIG, 127.0.0.1) still answers (netlink refused, glibc falls back)");
+	_exit(0);
+}
+
+static void case_families(void)
+{
+	int res[2], st;
+	pid_t p;
+
+	if (pipe(res) != 0)
+		return;
+	p = fork();
+	if (p == 0) {
+		close(res[0]);
+		families_child(res[1]);
+	}
+	close(res[1]);
+	drain_report(res[0]);
+	(void)waitpid(p, &st, 0);
+}
+
 static void case_landlock(void)
 {
 	int res[2], st;
@@ -706,6 +769,7 @@ int main(void)
 	case_context();
 	case_unprivileged(nb);
 	case_landlock();
+	case_families();
 	case_network();
 	if (geteuid() == 0) {
 		if (!nb) {

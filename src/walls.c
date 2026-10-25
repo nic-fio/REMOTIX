@@ -545,6 +545,17 @@ static int no_user_namespaces(char *why, size_t n)
 		BPF_JUMP(BPF_JMP | BPF_JGE | BPF_K, 0x40000000u, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EPERM),
 #endif
+		/* ⭐ 1.6 (audit split R7): socket families on an ALLOW list — AF_UNIX, AF_INET, AF_INET6 and nothing else (netlink, packet,
+		 *    vsock, alg, bluetooth, … ⇒ EAFNOSUPPORT, what a kernel without the family says: glibc's AI_ADDRCONFIG falls back on it).
+		 *    `socket` and `socketpair` both take the family as their first argument. */
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_socket, 1, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_socketpair, 0, 6),
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, args[0])),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_UNIX, 3, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_INET, 2, 0),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AF_INET6, 1, 0),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | EAFNOSUPPORT),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
 		WALLS_DENY(__NR_io_uring_setup, ENOSYS),
 		WALLS_DENY(__NR_io_uring_enter, ENOSYS),
 		WALLS_DENY(__NR_io_uring_register, ENOSYS),
@@ -746,7 +757,7 @@ int walls_apply(const struct rootside_options *o, char *why, size_t why_len)
 		return -1;
 	note("own network namespace (loopback only; the inherited sockets work); tree read-only, nosuid, nodev but %s and %s; private /tmp and /dev; uid/gid %ld/%ld, "
 	     "no groups, no capabilities, no_new_privs; RLIMIT_NPROC %d; seccomp: no user "
-	     "namespaces, no io_uring/userfaultfd/perf/bpf/keys/ptrace/TIOCSTI", o->net_state_dir,
+	     "namespaces, sockets only AF_UNIX/AF_INET/AF_INET6, no io_uring/userfaultfd/perf/bpf/keys/ptrace/TIOCSTI", o->net_state_dir,
 	     o->net_run_dir, (long)uid, (long)gid, WALLS_NPROC_MAX);
 	return 0;
 }
