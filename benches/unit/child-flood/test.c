@@ -78,7 +78,7 @@ static int rxt_clock_gettime(clockid_t c, struct timespec *ts);
 #undef log_says_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 47
+#define EXPECTED_CHECKS 49
 
 static void require(int cond, const char *desc)
 {
@@ -599,6 +599,22 @@ int main(void)
 			children_recheck(&f, asked + 2 * WHOAMI_DEADLINE_MS);
 			require(sigkills == 1, "42c. if then it says nothing at all for another 180 s: SIGKILL");
 		}
+		/* 44-45 (review of c4cf6db2): NSS is slow. The child sends its LIGHT confirmation at once (name_check NOT_ASKED), the name verdict comes
+		 *       much later — the child is NOT killed in between, and the late verdict still counts */
+		if (!live_child(&f, &g))
+			return 1;
+		sigkills = 0;
+		children_recheck(&f, T0 + RECHECK_MS);
+		if (!send_intro(&g, NAME_NOT_ASKED, 0, sizeof(struct body_whoami)))
+			return 1;
+		one_round(&f, T0 + RECHECK_MS + 100);
+		children_recheck(&f, T0 + RECHECK_MS + WHOAMI_DEADLINE_MS + 5000);
+		require(sigkills == 0 && g.used && !g.exiting && g.whoami_asked_ms != 0 && strstr(last, "stuck") == NULL,
+		        "44. the light confirmation clears the wait: with the name check stuck in NSS for 10 minutes the child is NOT killed");
+		if (!send_intro(&g, NAME_OTHER_UID, (uint32_t)g.uid + 1, sizeof(struct body_whoami)))
+			return 1;
+		one_round(&f, T0 + RECHECK_MS + WHOAMI_DEADLINE_MS + 6000);
+		require(sigkills >= 1 && g.exiting, "45. and when NSS finally answers that the name is another uid's, that late verdict still kills it");
 		/* 43: the question cannot go out (the descriptor refuses the send) → the wait is armed all the same */
 		if (!live_child(&f, &g))
 			return 1;

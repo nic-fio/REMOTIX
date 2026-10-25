@@ -132,7 +132,12 @@
  *   it is killed — unless it has sent ANY message since the question: a child that is still delivering (frames, canvas, ...) but does not answer is not
  *   killed, one line says so and the wait starts again.  This does not touch I4: the child is not silent because nobody asks it anything, it is being
  *   asked, every minute. */
-#define WHOAMI_DEADLINE_MS 180000
+#define WHOAMI_DEADLINE_MS 600000
+/* ⭐ Why 600 s and not 180 (review of c4cf6db2): the full answer waits for `getpwnam_r()` (the NAME check, in the child), which with sssd or LDAP down can
+ *   take 300 s or have no limit at all; with the answer alone as the sign of life every idle child would have been killed TOGETHER when the directory
+ *   stalled.  So the child now sends a LIGHT confirmation first (a MSG_INTRO with `name_check` NAME_NOT_ASKED, before any lookup): it proves the loop is
+ *   alive and clears the wait; the name verdict follows, whenever NSS lets it.  600 s is the margin on top of that, for a child whose loop is really stuck
+ *   — which no lookup can explain, since the confirmation comes before it. */
 
 /* ⛔ §6.2 of `RCP.md`: a legal frame reaches 16 MiB.  The cap is here because
  * the bytes pass through here, and a lower cap of OURS would bite in place of
@@ -10408,6 +10413,11 @@ void child_alive(int argc, char **argv)
 				s.sgid = sg;
 				s.ppid = (uint32_t)getppid();
 				s.descriptors = how_many_descriptors();
+				/* ⭐ FIRST a light confirmation (review of c4cf6db2): the parent's wait for the answer ends here; the NAME check below may wait a
+				 *    long time for NSS, and a child that is only waiting for sssd must not look like a child whose loop is stuck */
+				s.name_check = NAME_NOT_ASKED;
+				s.name_uid = 0;
+				send_msg(MSG_INTRO, &s, sizeof s, NULL, 0);
 				/* ⭐ the periodic NAME check, made HERE (it may wait for NSS; it stalls this stage only) */
 				{
 					uid_t other = 0;

@@ -131,7 +131,7 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   that does not return kept the whole service from stopping until systemd's own timeout killed everything. Now SIGTERM, 1.5 s, SIGKILL, 1 s more (`src/reapwait.h`); a child still not reaped is said in the log and left to init.
   Test `benches/unit/reap-wait`.
 - **A child that no longer answers is found** (audit of the session, 25 Oct 2026, branch `chiusure-figli`): a child that had introduced itself had no deadline at all (invariant I4: the stage outlives the detach, and an idle child is doing its job), so one
-  stuck in a call that does not return stayed for ever, with its slot and its session. The parent already asks every child «who are you» once a minute; if that question stays unanswered for 180 s and the child has sent
+  stuck in a call that does not return stayed for ever, with its slot and its session. The parent already asks every child «who are you» once a minute; if that question stays unanswered for 600 s and the child has sent
   NOTHING else since, it is killed (SIGKILL; the desktop survives and is found again). A child that does not answer but still delivers messages is not killed: one line says so and the wait starts again. Test `benches/unit/child-flood` (12).
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
