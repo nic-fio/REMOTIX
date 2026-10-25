@@ -97,6 +97,10 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **Clipboard on KDE**: a zero byte cut the text and the fallback read past the copy (§11.6; `8031958d`).
 - **Small fixes of the manual's table** (§11.6): retired RX codes no longer raised, BENCH_MARK out of the installed binary,
   journal lines no longer doubled, FAREWELL reason 0x10 accepted (`84fdf573`).
+- **A stranger could fill the journal before any login** (audit R8 and R12, 25 Oct 2026, branch `log-tetti`): the line `packet … NOT sent` of `send_from()` had no limit (one source flooding Initials against a full
+  socket buffer wrote one line per failed reply, at the packet rate), and the pre-login budgets of `webtransport.c` are per address (20 lines every 10 s for each of 128 addresses): whoever has many addresses, or
+  rotates an IPv6 /48, gets a fresh budget for each. Both now also go through a GLOBAL budget per 10 s window (`src/linebudget.h`, the idea of `BIRTH_LINES`): 5 `NOT sent` lines and 100 pre-login lines for the whole
+  server, the rest counted in one line at the end of the window (with the last error for the first). The «BANNED» and «failed attempt» lines are exempt as before. Tests `benches/unit/line-budget` and `wt-prelogin` (7).
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)

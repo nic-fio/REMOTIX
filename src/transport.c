@@ -5,6 +5,7 @@
 
 #include "log.h"
 #include "pktinfo.h"
+#include "linebudget.h"
 #include "rcp.h" /* rcp_orphan_verdict(): a verdict whose connection is gone is still counted (§4.4-bis B) */
 #include "webtransport.h"
 
@@ -55,6 +56,10 @@
  * one; the rest are counted in one line at the end of the window (a churn must not
  * flood the log). */
 #define BIRTH_LINES 5
+/* ⛔ R12 (audit of 25 Oct 2026): the «packet … NOT sent» line, from ANY source, is limited like the births: the first SEND_FAIL_LINES
+ *    of every REFUSAL_LOG_S window, the rest counted in one line at its end (`send_fail_report()`).  Before, a flood against a full
+ *    socket buffer wrote one line per failed reply. */
+#define SEND_FAIL_LINES BIRTH_LINES
 #define RESET_PER_SECOND 100
 #define SECRET_LEN 32
 #define SECRET_FILE "quic-secret"
@@ -253,6 +258,8 @@ struct transport {
 	/* the «new connection» lines (BIRTH_LINES) */
 	ngtcp2_tstamp birth_window_ns;
 	unsigned births_in_window, births_quiet;
+	/* the «packet … NOT sent» lines (SEND_FAIL_LINES per window, linebudget.h) */
+	struct line_budget send_fail;
 	/* the «connection … closed» lines of connections that NEVER logged in (BIRTH_LINES too) */
 	ngtcp2_tstamp close_window_ns;
 	unsigned closes_in_window, closes_quiet;
@@ -644,6 +651,22 @@ static void pktinfo_refused_line(void *ctx, int err)
 		              strerror(err), refusals);
 }
 
+/* The count of the «NOT sent» lines not written, at the end of their window (the same REFUSAL_LOG_S as the births). */
+static void send_fail_say(const struct line_budget_closed *c)
+{
+	if (c->hidden)
+		registro_dice(REG_QUIC, "%u more packets NOT sent in the last %d s, not written one by one (%u written; "
+		              "last error: %s)", c->hidden, REFUSAL_LOG_S, c->written, strerror(c->err));
+}
+
+static void send_fail_report(transport *t, ngtcp2_tstamp now)
+{
+	struct line_budget_closed c;
+
+	line_budget_flush(&t->send_fail, now, REFUSAL_LOG_S * NGTCP2_SECONDS, &c);
+	send_fail_say(&c);
+}
+
 /* ⭐ Every datagram leaves with its SOURCE address fixed to `local` (pktinfo.h: the kernel's
  *   own choice is not the address the client wrote to on a host with several addresses).
  *   `local` NULL / empty, or a socket bound to one address: a plain `sendto()` as before. */
@@ -674,8 +697,15 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 		 *   condition its recovery exists to handle.  ⛔ It is not silent:
 		 *   the line below is what tells «the network loses» from «the
 		 *   server throws away». */
-		registro_dice(REG_QUIC, "packet of %zu bytes NOT sent: %s", len,
-		              strerror(err));
+		struct line_budget_closed c;
+
+		if (line_budget_take(&t->send_fail, now_ns(), REFUSAL_LOG_S * NGTCP2_SECONDS, SEND_FAIL_LINES, &c))
+			registro_dice(REG_QUIC, "packet of %zu bytes NOT sent: %s", len, strerror(err));
+		else {
+			t->send_fail.err = err;
+			log_detail(REG_QUIC, "packet of %zu bytes NOT sent: %s", len, strerror(err));
+		}
+		send_fail_say(&c);
 	}
 }
 
@@ -2191,6 +2221,7 @@ void transport_expired(transport *t)
 		births_report(t, now);
 	if (t->closes_quiet)
 		closes_report(t, now);
+	send_fail_report(t, now);
 	transport_write(t);
 }
 

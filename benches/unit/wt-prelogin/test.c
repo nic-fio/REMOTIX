@@ -20,7 +20,9 @@
  *      counted (here as the 9th request: closed);
  *   6. wt_max_size_of() and wt_tenants_served() count only sessions that
  *      LOGGED IN: a stranger still waiting for PAM under the owner's name, with
- *      a bigger max_size, changes neither.
+ *      a bigger max_size, changes neither;
+ *   7. (R8, 25 Oct 2026) the budget for ALL addresses: 300 addresses with one line each in one window write
+ *      about WT_PRELOGIN_GLOBAL_BURST lines, not 300; the next window counts the 200 in ONE line.
  *
  * BUILD AND RUN (a full build of the product first, about as long as `make`: the test links every object but main.o and webtransport.o; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=2 --memory=2g -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
@@ -56,7 +58,7 @@ static uint64_t rxt_now(void);
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 18
+#define EXPECTED_CHECKS 20
 
 static void require(int cond, const char *desc)
 {
@@ -264,6 +266,28 @@ int main(void)
 		require(wt_tenants_served() == 1, "wt_tenants_served(): one tenant, not two");
 		stranger->rcp = NULL;
 		owner->rcp = NULL;
+	}
+	printf("  7. one budget for all the addresses (R8)\n");
+	{
+		ngtcp2_ccerr eg;
+		char prov[48];
+
+		memset(&eg, 0, sizeof eg);
+		fake_now += 2 * WT_PRELOGIN_WINDOW_MS;
+		says = 0;
+		summary[0] = 0;
+		for (int k = 0; k < 300; k++) {
+			snprintf(prov, sizeof prov, "[10.%d.%d.7]:1", k / 250, k % 250);
+			wt *wk = wt_new(NULL, &eg, prov, NULL);
+			hook_log(wk, "a line from one of many addresses");
+		}
+		require(says >= WT_PRELOGIN_GLOBAL_BURST && says <= WT_PRELOGIN_GLOBAL_BURST + 2,
+		        "300 addresses, one line each: about 100 written (the global budget), not 300");
+		fake_now += WT_PRELOGIN_WINDOW_MS;
+		wt *wz = wt_new(NULL, &eg, "[10.9.9.9]:1", NULL);
+		hook_log(wz, "after the window");
+		require(strstr(summary, "200 more lines before the login from ALL addresses") != NULL,
+		        "the next window says in ONE line that 200 were not written");
 	}
 	require(true, "the end was reached");
 	(void)w2;
