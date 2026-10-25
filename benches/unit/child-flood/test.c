@@ -555,7 +555,7 @@ int main(void)
 		struct children f;
 		struct child g;
 
-		/* 40: never answered → killed at 180 s after the question, not before; no question yet → no deadline */
+		/* 40: never answered → killed at the deadline after the question, not before; no question yet → no deadline */
 		if (!live_child(&f, &g))
 			return 1;
 		sigkills = 0;
@@ -565,9 +565,9 @@ int main(void)
 		{
 			uint64_t asked = g.whoami_asked_ms;
 			children_recheck(&f, asked + WHOAMI_DEADLINE_MS - 1);
-			require(sigkills == 0, "40b. 1 ms before the 180 s: not killed");
+			require(sigkills == 0, "40b. 1 ms before the deadline (600 s): not killed");
 			children_recheck(&f, asked + WHOAMI_DEADLINE_MS);
-			require(sigkills == 1 && g.exiting, "40c. 180 s after the question and not a word from the child: SIGKILL, the slot is leaving");
+			require(sigkills == 1 && g.exiting, "40c. the deadline after the question and not a word from the child: SIGKILL, the slot is leaving");
 		}
 		/* 41: it answers every minute → never touched */
 		if (!live_child(&f, &g))
@@ -597,7 +597,7 @@ int main(void)
 			        "42. it does not answer but sent a message after the question: NOT killed, one line says so");
 			require(g.whoami_asked_ms == asked + WHOAMI_DEADLINE_MS, "42b. and the wait starts again from there");
 			children_recheck(&f, asked + 2 * WHOAMI_DEADLINE_MS);
-			require(sigkills == 1, "42c. if then it says nothing at all for another 180 s: SIGKILL");
+			require(sigkills == 1, "42c. if then it says nothing at all for another deadline: SIGKILL");
 		}
 		/* 44-45 (review of c4cf6db2): NSS is slow. The child sends its LIGHT confirmation at once (name_check NOT_ASKED), the name verdict comes
 		 *       much later — the child is NOT killed in between, and the late verdict still counts */
@@ -627,7 +627,7 @@ int main(void)
 			sigkills = 0;
 			children_recheck(&f, T0 + RECHECK_MS);
 			children_recheck(&f, T0 + RECHECK_MS + WHOAMI_DEADLINE_MS);
-			require(g.whoami_asked_ms == T0 + RECHECK_MS && sigkills == 1, "43. a question that cannot go out arms the wait: SIGKILL after 180 s");
+			require(g.whoami_asked_ms == T0 + RECHECK_MS && sigkills == 1, "43. a question that cannot go out arms the wait: SIGKILL after the deadline");
 			close(pp[0]);
 			close(pp[1]);
 			g.fd = -1;
