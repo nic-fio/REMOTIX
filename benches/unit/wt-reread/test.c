@@ -55,7 +55,7 @@ static int rxt_ext_conn(ngtcp2_conn *c, uint64_t n) { (void)c; (void)n; return 0
 #undef log_says_of_in
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 10
+#define EXPECTED_CHECKS 11
 
 static void require(int cond, const char *desc)
 {
@@ -246,6 +246,21 @@ int main(void)
 			close_session(a, 9);
 		}
 		require(a->closing_deadline == first_deadline && says == 0, "20 s of offending streams every 400 ms: the deadline is still the first one (the closure can mature)");
+	}
+
+	printf("  W4. network_cycle() without a control channel\n");
+	{
+		ngtcp2_ccerr e;
+		wt *a;
+
+		memset(&e, 0, sizeof e);
+		a = wt_new(NULL, &e, "[192.0.2.34]:4001", NULL);
+		a->conn = (ngtcp2_conn *)(uintptr_t)0x10;   /* never dereferenced: network_cycle() must leave before it asks ngtcp2 anything */
+		says = 0;
+		network_cycle(a, 5000);
+		network_cycle(a, 7000);
+		require(says == 0 && a->network_logged_ms == 0, "no control channel: no quic-net line and nothing armed");
+		a->conn = NULL;
 	}
 
 	printf("\n  %d/%d checks passed\n", passed, EXPECTED_CHECKS);

@@ -5889,7 +5889,9 @@ static void network_cycle(wt *w, uint64_t now_ms)
 	const char *said;
 	int g;
 
-	if (!w->conn || w->closing >= 0)
+	/* ⭐ rilettura-wt W4: like rate_cycle() and the other periodic ones, nothing for a connection without a control channel — the ~700-byte `quic-net` line was written every second by each of the
+	 *    128 waiting connections that moved a packet, outside every pre-login budget. */
+	if (!w->conn || !w->rcp || w->closing >= 0)
 		return;
 	/* ⚠ At most one a second.  ⛔ And the FIRST always comes out, without waiting:
 	 *   `network_logged_ms == 0` means «never spoken», which is not «nothing has
