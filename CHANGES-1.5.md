@@ -37,9 +37,10 @@
   what upgrades added (§11.6, under verification; `84fdf573`, `b4f0776e`). The site says «Download 1.0.0» (`b2f8161e`).
 - **`/diary` is gone** from the installed product and from test builds (§11.10, under verification; `8a46c9c9`, `9af7b82e`).
 - **ACTIVE by default, even with the split OFF (§11.50 D3/D4b, from `rootside-completo`)**: the PAM dispatcher is **re-executed** (`/proc/self/exe --pam-helper`, a fresh memory image, `src/helper.c:170-187`)
-  and **restarted by the watchdog** `helper_expired()` with a pause that doubles from 1 s to 60 s (loud after 5 deaths in a row). Every PAM request ends in one outcome (`HelperOutcome`, `src/helper.h:187-193`):
-  1 admitted, 0 refused, 2 refused while `pam_faillock` held the account, **3 not checked** (the dispatcher's cap, a failed `fork`, the dispatcher dead or down: our defect, **not counted** towards the ban),
-  **4 expired** (no answer in 8 s: it **counts** as a failed attempt). **The synchronous PAM fallback is gone**: with the helper down, or no helper object, the login is refused with `0x0E`, not counted (`src/main.c:2985`).
+  and **restarted by the watchdog** `helper_expired()` with a pause that doubles from 1 s to 60 s (loud after 5 deaths in a row). **The synchronous PAM fallback is gone**: with the helper down, or no helper object,
+  the login is refused with `0x0E`, not counted (`src/main.c:2985`). The single-process product keeps `helper_turn_on()` and `HelperVerdict` (`src/helper.h:153-160`: `admitted` and `lost`): a PAM timeout of 8 s
+  **counts** as a failed attempt; the death of the dispatcher with the request in flight, or a limit of ours, arrives as `lost` and **does not count** towards the ban.
+  The five outcomes of `HelperOutcome` (1 admitted, 0 refused, 2 refused while `pam_faillock` held the account, 3 not checked and not counted, 4 expired in 8 s and counted: `src/helper.h:183-193`) are the form used ONLY with the split on (`helper_turn_on_root()`).
 
 ## 2. Behaviour changes
 ### Login ban — SPEC CHANGE from 1.0 (§11.53; built on `login-difese`, not yet run on the boxes)

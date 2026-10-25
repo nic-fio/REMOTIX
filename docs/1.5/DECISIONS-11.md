@@ -1646,11 +1646,11 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
 
 > ⚠ In the branch `finale`, NOT in `integrazione2` (25 Oct 2026): the whole section is merged from `rootside-completo` (`ae8cae45`; D1-D7 plus installer and packages), OFF by default (the server stays one process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`). Whether it is ON or OFF in 1.5 waits for the user's decision D1; see CHANGES-1.5.md.
 >
-> ⭐ **D3 / D4b, from `port-rootside-D3`; approved on `rootside-completo` and merged in `finale` (`verifica-rami` on `finale` is queued). Active even with the split OFF:**
+> ⭐ **D3 / D4b, from `port-rootside-D3`; approved on `rootside-completo` and merged in `finale` (`verifica-rami` on `finale` is queued). The re-execution, the restart and the removal of the synchronous PAM fallback are active even with the split OFF; the root form (`HelperOutcome`) only with the split:**
 > - The PAM dispatcher is **re-executed** (`/proc/self/exe --pam-helper`, fresh memory image, descriptors above 3 closed) and
 >   **restarted with a doubling pause** (1 s … 60 s; loud after 5 deaths in a row) by `helper_expired()`, the watchdog.
 >   While it is down the logins are refused as ours.
-> - **Root form** (`helper_turn_on_root`, `helper_ask_bare`, `HelperOutcome`): every request ends in ONE callback: 1 admitted, 0
+> - **Root form, only with the split** (`helper_turn_on_root`, `helper_ask_bare`, `HelperOutcome`; the single-process product keeps `helper_turn_on()` and `HelperVerdict`, `admitted`/`lost`): every request ends in ONE callback: 1 admitted, 0
 >   refused, 2 refused while `pam_faillock` held the account, **3 not checked** (the dispatcher's cap of 2×16, a failed `fork`
 >   there, the dispatcher dead or down — our defect, never counted), **4 expired** (no answer in 8 s: it COUNTS as a failed
 >   attempt, the 24 Oct 2026 decision).
