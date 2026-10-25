@@ -802,7 +802,13 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
  *
  *   · the kernel attached the credentials (not "there were none");
  *   · the sender's pid is **that very child**, not another process holding
- *     the same descriptor;
+ *     the same descriptor — ⭐ 1.6 (R8 B): where this wall stands INSIDE the
+ *     network side's PID namespace (the split server: `f->remote`), the child is
+ *     outside it and the kernel stamps pid 0 on every message from outside, so
+ *     the pid cannot be compared there; the identity is then the SOCKET (the
+ *     root side made the socketpair and gave one end to that child only), the
+ *     kernel's uid and gid, the serial and the declared uid — and pid 0, which
+ *     says the sender is NOT a process inside this namespace;
  *   · the uid and gid stamped by the kernel are those the parent resolved
  *     from the NAME of the RCP session's user;
  *   · the serial number is its own — the equivalent of the helper's case
@@ -818,7 +824,7 @@ static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
  *
  * ⛔ There is no path that delivers a byte to someone who does not pass here. */
 static bool credentials_match(const struct child *g, const struct head *t,
-                                   bool c_e, const struct ucred *chi,
+                                   bool c_e, const struct ucred *chi, bool remote,
                                    char *why_no, size_t cap_why)
 {
 	if (!c_e) {
@@ -826,7 +832,19 @@ static bool credentials_match(const struct child *g, const struct head *t,
 		         "the kernel did not attach the credentials to the message");
 		return false;
 	}
-	if (chi->pid != g->pid) {
+	if (remote) {
+		/* ⭐ 1.6 (R8 B) — `[M]` boxes on v15c: «written by pid 0, and the child is pid 94513», every login refused.  The child is born
+		 *    in the HOST's PID namespace by the root side; this process is PID 1 of its own, where the kernel shows every sender
+		 *    from outside as pid 0.  A sender INSIDE the namespace has a pid ≥ 1: only this process lives there, and it holds
+		 *    no end of the child's socket other than the one it reads — so a non-zero pid is refused. */
+		if (chi->pid != 0) {
+			snprintf(why_no, cap_why,
+			         "written by pid %ld, which is inside this PID namespace: the child of «%s» is outside it, "
+			         "and the kernel stamps such a sender with pid 0",
+			         (long)chi->pid, g->user);
+			return false;
+		}
+	} else if (chi->pid != g->pid) {
 		snprintf(why_no, cap_why,
 		         "written by pid %ld, and the child of «%s» is pid %ld",
 		         (long)chi->pid, g->user, (long)g->pid);
@@ -852,6 +870,29 @@ static bool credentials_match(const struct child *g, const struct head *t,
 		return false;
 	}
 	return true;
+}
+
+/* ⭐ 1.6 (R8 B): the wall's credential rules on their own, for the live test (`benches/02-rootside-live-test.c`): a REAL child in the host's
+ *    PID namespace writes to the network side in its own, which reads the kernel's stamp and asks this.  `remote` is `f->remote`. */
+bool child_credentials_ok(uid_t uid, gid_t gid, pid_t pid, uint64_t serial, bool remote, bool have_cred,
+                          pid_t cred_pid, uid_t cred_uid, gid_t cred_gid, char *why, size_t why_len)
+{
+	struct ucred chi = { cred_pid, cred_uid, cred_gid };
+	struct child g;
+	struct head t;
+
+	memset(&g, 0, sizeof g);
+	memset(&t, 0, sizeof t);
+	g.uid = uid;
+	g.gid = gid;
+	g.pid = pid;
+	g.serial = serial;
+	snprintf(g.user, sizeof g.user, "live");
+	t.serial = serial;
+	t.declared_uid = (uint32_t)uid;
+	if (why && why_len)
+		why[0] = '\0';
+	return credentials_match(&g, &t, have_cred, &chi, remote, why, why_len);
 }
 
 /* ⛔⭐ THE NAME STILL RESOLVES TO THE CHILD'S UID — the fifth fact of the wall
@@ -3490,7 +3531,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 			}
 			/* ⛔⭐ AND HERE, BEFORE LOOKING AT A SINGLE BYTE OF THE BODY. */
 			why[0] = 0;
-			if (!credentials_match(g, &t, c_e, &chi, why,
+			if (!credentials_match(g, &t, c_e, &chi, f->remote, why,
 			                            sizeof why)) {
 				registro_dice(LOG_CHILD,
 				              "⛔⛔ MESSAGE REFUSED from «%s»: %s.  ⚠ It is not "

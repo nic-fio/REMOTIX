@@ -668,6 +668,9 @@ const char *child_render_node_requested(void);
  *    server).  `offered` is the list for HERE_I_AM's `video.codec` ("hevc,h264"
  *    · "hevc" · "h264" · "" = nothing), `explanation` the line for the log
  *    with the reason for each "no".  Returns false if nothing is offered. */
+/* ⭐ 1.6 (R8 B), a seam for the live test: the credential rules of the wall (see child.c). */
+bool child_credentials_ok(uid_t uid, gid_t gid, pid_t pid, uint64_t serial, bool remote, bool have_cred,
+                          pid_t cred_pid, uid_t cred_uid, gid_t cred_gid, char *why, size_t why_len);
 bool child_video_capabilities(char *offered, size_t offered_bytes, char *explanation,
                            size_t explanation_byte);
 

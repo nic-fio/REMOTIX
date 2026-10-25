@@ -26,6 +26,7 @@
  */
 #define _GNU_SOURCE
 #include "rootside.h"
+#include "child.h"
 #include "helper.h"
 #include "log.h"
 
@@ -614,6 +615,44 @@ static int net_side(void)
 		        (unsigned long long)ms_second);
 		fflush(out);
 	}
+	/* ⭐ 1.6 (R8 B) — `[M]` boxes on v15c: after a login «MESSAGE REFUSED … written by pid 0, and the child is pid 94513», the child killed:
+	 *    the child is born in the HOST's PID namespace, and this process is PID 1 of its own, where the kernel stamps every sender from
+	 *    outside with pid 0.  A REAL child (born by the root side, exec'd as `--internal-child`, a different PID namespace) writes to its
+	 *    socket; this side reads the kernel's stamp and asks the product's rules (`child_credentials_ok`, the wall of child.c). */
+	{
+		struct rootside_born cb;
+		int r3;
+
+		close(open(DIR_ "/child-send", O_CREAT | O_WRONLY, 0666));
+		check(ask(108, "anna", "anna-pw", "192.0.2.1") == RXR_YES, "AUTH anna once more: YES (for the child that writes to this side)");
+		r3 = rootside_spawn("anna", "192.0.2.1", 1280, 720, 10000, &cb);
+		check(r3 == 0 && cb.pid > 1 && getpid() == 1, "SPAWN anna: a real child outside this PID namespace (its pid there is not 1 or ours)");
+		if (r3 == 0) {
+			char buf[64], ctl[CMSG_SPACE(sizeof(struct ucred))], why[256] = "";
+			struct iovec io = { buf, sizeof buf };
+			struct msghdr h = { .msg_iov = &io, .msg_iovlen = 1, .msg_control = ctl, .msg_controllen = sizeof ctl };
+			struct pollfd pf = { cb.fd, POLLIN, 0 };
+			struct ucred cr = { -1, 0, 0 };
+			bool have = false;
+			ssize_t n = poll(&pf, 1, 8000) == 1 ? recvmsg(cb.fd, &h, 0) : -1;
+
+			for (struct cmsghdr *c = n > 0 ? CMSG_FIRSTHDR(&h) : NULL; c; c = CMSG_NXTHDR(&h, c))
+				if (c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_CREDENTIALS) {
+					memcpy(&cr, CMSG_DATA(c), sizeof cr);
+					have = true;
+				}
+			check(n > 0 && have && cr.pid == 0 && cr.uid == cb.uid,
+			      "the real child's message arrives stamped pid 0 (outside the namespace) and anna's uid — the stamp the old rule could not compare");
+			check(child_credentials_ok(cb.uid, cb.gid, cb.pid, cb.serial, true, have, cr.pid, cr.uid, cr.gid, why, sizeof why),
+			      "… and the product's wall accepts it inside the namespace (remote rules)");
+			check(!child_credentials_ok(cb.uid, cb.gid, cb.pid, cb.serial, false, have, cr.pid, cr.uid, cr.gid, why, sizeof why),
+			      "… while the single-process rule (pid == the child's) refuses it: the defect of the boxes, now not applied here");
+			close(cb.fd);
+			exited_serial = 0;
+			pump(10000, child_exited);
+		}
+		unlink(DIR_ "/child-send");
+	}
 	check(rootside_close_orphan("anna", 5000, &b) == RXR_REF_NO_ORPHAN,
 	      "CLOSE_ORPHAN anna with no remotix session in logind: refused");
 	check(rootside_close_orphan("elena", 5000, &b) == RXR_REF_NO_ORPHAN,
@@ -706,6 +745,9 @@ static int child_part(int argc, char **argv)
 		}
 		fclose(f);
 	}
+	/* ⭐ 1.6 (R8 B): a child that writes to its parent (fd 3, the agreed place) when the network side asks for it with a file */
+	if (argc > 2 && strcmp(argv[2], "anna") == 0 && exists_(DIR_ "/child-send"))
+		(void)!send(3, "live-child-hello", 16, MSG_NOSIGNAL);
 	if (argc > 2 && strcmp(argv[2], "dario") == 0) { /* the hung child of finding 2 */
 		signal(SIGTERM, SIG_IGN);
 		for (;;)
