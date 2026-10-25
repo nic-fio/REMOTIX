@@ -230,6 +230,7 @@ struct transport {
 	 *    the stateless answers (Version Negotiation, Retry, CONNECTION_CLOSE, Stateless Reset),
 	 *    which are written while that datagram is being read and have no connection. */
 	bool bound_any;
+	unsigned pktinfo_fallbacks;
 	struct sockaddr_storage rx_local;
 	socklen_t rx_locallen;
 	SSL_CTX *ctx;
@@ -640,6 +641,7 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 {
 	ssize_t n;
 	union pktinfo_ctl ctl;
+	bool fell_back;
 	size_t ctllen = pktinfo_cmsg(t->family, t->bound_any, local, locallen, &ctl);
 	struct iovec iov = {(void *)data, len};
 	struct msghdr mh;
@@ -652,9 +654,14 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 		mh.msg_control = &ctl;
 		mh.msg_controllen = ctllen;
 	}
-	do {
-		n = sendmsg(t->fd, &mh, 0);
-	} while (n < 0 && errno == EINTR);
+	n = pktinfo_sendmsg(t->fd, &mh, ctllen, &fell_back);
+	if (fell_back) {
+		/* one line at the first fall-back and then every 1024th: not one per packet */
+		if (t->pktinfo_fallbacks++ % 1024 == 0)
+			registro_dice(REG_QUIC, "the kernel refused the reply's source address (%s): "
+			              "sent without fixing it (%u times so far) — an address just "
+			              "removed from the interface?", strerror(errno), t->pktinfo_fallbacks);
+	}
 	if (n < 0) {
 		/* ⚠ DECLARED FALLBACK (`CODER.md` §4.2): if the socket is full the
 		 *   packet is lost, and QUIC retransmits it on its own — loss is the
@@ -666,7 +673,11 @@ static void send_from(transport *t, const struct sockaddr *local, socklen_t loca
 	}
 }
 
-/* The stateless answers: from the address the datagram being read arrived on. */
+/* The stateless answers (Version Negotiation, Retry, INVALID_TOKEN, Stateless Reset, the refusal of a
+ * newcomer), written WHILE read_packet() handles a datagram: from the address that datagram arrived on.
+ * ⛔ Nothing with a connection uses this — it goes through send_on(), with the path's own local address —
+ *    and read_packet() clears `rx_local` on the way out, so a call outside it sends without fixing the
+ *    source instead of with the address of some other client's packet. */
 static void send_msg(transport *t, const struct sockaddr *sa, socklen_t salen,
                   const uint8_t *data, size_t len)
 {
@@ -1624,7 +1635,7 @@ static void send_stateless_reset(transport *t, const ngtcp2_version_cid *vc,
 	send_msg(t, remote, remotelen, buf, (size_t)n);
 }
 
-static void read_packet(transport *t, const struct sockaddr *local,
+static void read_packet_1(transport *t, const struct sockaddr *local,
                             socklen_t localelen, const struct sockaddr *remote,
                             socklen_t remotelen, const ngtcp2_pkt_info *pi,
                             const uint8_t *data, size_t len)
@@ -1633,14 +1644,6 @@ static void read_packet(transport *t, const struct sockaddr *local,
 	connection *c;
 	ngtcp2_path path;
 	int rv;
-
-	/* ⭐ the stateless answers below leave from this address (send_msg) */
-	if (localelen > 0 && localelen <= sizeof t->rx_local) {
-		memcpy(&t->rx_local, local, localelen);
-		t->rx_locallen = localelen;
-	} else {
-		t->rx_locallen = 0;
-	}
 
 	rv = ngtcp2_pkt_decode_version_cid(&vc, data, len, SCIDLEN);
 	if (rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
@@ -1834,6 +1837,23 @@ static void read_packet(transport *t, const struct sockaddr *local,
 		c->dead_run = true;
 		return;
 	}
+}
+
+/* ⭐ The stateless answers written while this datagram is handled leave from its arrival address
+ *   (`rx_local`, see send_msg()); it is cleared on the way out. */
+static void read_packet(transport *t, const struct sockaddr *local,
+                        socklen_t localelen, const struct sockaddr *remote,
+                        socklen_t remotelen, const ngtcp2_pkt_info *pi,
+                        const uint8_t *data, size_t len)
+{
+	if (localelen > 0 && localelen <= sizeof t->rx_local) {
+		memcpy(&t->rx_local, local, localelen);
+		t->rx_locallen = localelen;
+	} else {
+		t->rx_locallen = 0;
+	}
+	read_packet_1(t, local, localelen, remote, remotelen, pi, data, len);
+	t->rx_locallen = 0;
 }
 
 /* ------------------------------------------------------------------------ */

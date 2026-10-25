@@ -22,6 +22,7 @@
 #ifndef REMOTIX_PKTINFO_H
 #define REMOTIX_PKTINFO_H
 
+#include <errno.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -83,6 +84,30 @@ static inline size_t pktinfo_cmsg(int sock_family, bool bound_any, const struct 
 		return CMSG_SPACE(sizeof pk);
 	}
 	return 0;
+}
+
+
+/* sendmsg() with the control message of pktinfo_cmsg() (`ctllen` > 0), and ONE retry without it when the kernel
+ * refuses the source: EINVAL / EADDRNOTAVAIL / ENETUNREACH (the address was just taken off the interface — a temporary
+ * IPv6 address expiring —, or is not local any more).  Otherwise that connection would stay mute for ever, where before
+ * this file the kernel chose a source.  `*fell_back` says the retry happened (the caller writes ONE log line, rate limited).
+ * Returns the sendmsg() result (errno as sendmsg left it). */
+static inline ssize_t pktinfo_sendmsg(int fd, struct msghdr *mh, size_t ctllen, bool *fell_back)
+{
+	ssize_t n;
+	*fell_back = false;
+	do {
+		n = sendmsg(fd, mh, 0);
+	} while (n < 0 && errno == EINTR);
+	if (n < 0 && ctllen && (errno == EINVAL || errno == EADDRNOTAVAIL || errno == ENETUNREACH)) {
+		mh->msg_control = NULL;
+		mh->msg_controllen = 0;
+		*fell_back = true;
+		do {
+			n = sendmsg(fd, mh, 0);
+		} while (n < 0 && errno == EINTR);
+	}
+	return n;
 }
 
 #endif

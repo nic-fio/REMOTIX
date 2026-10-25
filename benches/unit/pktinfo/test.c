@@ -12,18 +12,25 @@
  *   5. no cmsg (length 0) for: no local address, the wildcard (both families), a socket bound to ONE address
  *      (bound_any false: behaviour unchanged), a family the socket cannot carry (IPv6 local on an IPv4 socket), a short sockaddr;
  *   6. the cmsg is well formed (CMSG_FIRSTHDR/CMSG_DATA, cmsg_len = CMSG_LEN, controllen = CMSG_SPACE);
+ *   8. the fall-back (pktinfo_sendmsg()): a source the kernel refuses (192.0.2.1 is not local: sendmsg gives EINVAL on a socket
+ *      on 0.0.0.0) is retried ONCE without the cmsg and the datagram arrives, from the kernel's own source; a plain error with
+ *      no cmsg (ctllen 0) is NOT retried; an error that is not one of EINVAL / EADDRNOTAVAIL / ENETUNREACH is not retried;
+ *   9. by reading src/transport.c (argv[1], optional): read_packet() clears `rx_local` after handling the datagram
+ *      (`rx_locallen = 0` after the call to read_packet_1), and send_on() — what every connection uses — never goes
+ *      through `rx_local`.
  *   7. the kernel, for real (loopback, IPv4): a socket on 0.0.0.0 that sends with the cmsg for 127.0.0.2 is seen by the
  *      receiver as coming FROM 127.0.0.2 (without the cmsg it comes from 127.0.0.1).
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /tmp && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra \
- *        -I/albero/src /albero/benches/unit/pktinfo/test.c -o test && ./test'
+ *        -I/albero/src /albero/benches/unit/pktinfo/test.c -o test && ./test /albero/src/transport.c'
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "pktinfo.h"
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -71,7 +78,7 @@ static struct cmsghdr *one(union pktinfo_ctl *ctl, size_t len, int level, int ty
 	return cm;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
 	union pktinfo_ctl ctl;
 	size_t n;
@@ -175,6 +182,81 @@ int main(void)
 			close(rx);
 		if (tx >= 0)
 			close(tx);
+	}
+	/* 8. the fall-back */
+	{
+		int rx = socket(AF_INET, SOCK_DGRAM, 0), tx = socket(AF_INET, SOCK_DGRAM, 0), c;
+		struct sockaddr_in rxa = v4("127.0.0.1"), txa = v4("0.0.0.0"), from, badsrc = v4("192.0.2.1");
+		socklen_t fl = sizeof from, ml = sizeof rxa;
+		char buf[16];
+		rxa.sin_port = 0;
+		txa.sin_port = 0;
+		CHECK(rx >= 0 && tx >= 0, "socket: %m");
+		CHECK(bind(rx, (struct sockaddr *)&rxa, sizeof rxa) == 0, "bind rx: %m");
+		CHECK(bind(tx, (struct sockaddr *)&txa, sizeof txa) == 0, "bind tx: %m");
+		getsockname(rx, (struct sockaddr *)&rxa, &ml);
+		for (c = 0; c < 3 && rx >= 0 && tx >= 0; c++) {
+			struct iovec iov = {(void *)"ping", 4};
+			struct msghdr mh;
+			bool fb = true;
+			ssize_t r;
+			memset(&mh, 0, sizeof mh);
+			mh.msg_name = &rxa;
+			mh.msg_namelen = sizeof rxa;
+			mh.msg_iov = &iov;
+			mh.msg_iovlen = 1;
+			n = pktinfo_cmsg(AF_INET, true, (struct sockaddr *)&badsrc, sizeof badsrc, &ctl);
+			CHECK(n > 0, "no cmsg for 192.0.2.1");
+			mh.msg_control = &ctl;
+			mh.msg_controllen = n;
+			if (c == 0) {          /* refused source: one retry, the datagram arrives */
+				r = pktinfo_sendmsg(tx, &mh, n, &fb);
+				CHECK(r == 4 && fb, "refused source: result %zd, fell_back %d (%m)", r, fb);
+				fl = sizeof from;
+				CHECK(recvfrom(rx, buf, sizeof buf, MSG_DONTWAIT, (struct sockaddr *)&from, &fl) == 4,
+				      "the retried datagram did not arrive: %m");
+				CHECK(from.sin_addr.s_addr == rxa.sin_addr.s_addr, "retried datagram came from %s", inet_ntoa(from.sin_addr));
+			} else if (c == 1) {   /* ctllen 0 means no cmsg was asked: the error stands (bad destination) */
+				struct sockaddr_in far = v4("192.0.2.1");
+				mh.msg_control = NULL;
+				mh.msg_controllen = 0;
+				mh.msg_name = &far;
+				close(tx);
+				tx = socket(AF_INET, SOCK_DGRAM, 0);
+				r = pktinfo_sendmsg(tx, &mh, 0, &fb);
+				CHECK(!fb, "retried with no cmsg asked");
+				(void)r;
+			} else {               /* an error that is not about the source: not retried (EMSGSIZE) */
+				static char big[70000];
+				struct iovec iovb = {big, sizeof big};
+				mh.msg_iov = &iovb;
+				r = pktinfo_sendmsg(tx, &mh, n, &fb);
+				CHECK(r < 0 && !fb && errno == EMSGSIZE, "EMSGSIZE: result %zd, fell_back %d, errno %d", r, fb, errno);
+			}
+		}
+		if (rx >= 0)
+			close(rx);
+		if (tx >= 0)
+			close(tx);
+	}
+	/* 9. reading the code */
+	if (argc > 1) {
+		FILE *f = fopen(argv[1], "r");
+		static char src[4 << 20];
+		size_t got = f ? fread(src, 1, sizeof src - 1, f) : 0;
+		const char *a, *b, *c2;
+		if (f)
+			fclose(f);
+		src[got] = 0;
+		CHECK(got > 0, "cannot read %s", argv[1]);
+		a = strstr(src, "\tread_packet_1(t, local, localelen, remote, remotelen, pi, data, len);");
+		b = a ? strstr(a, "t->rx_locallen = 0;") : NULL;
+		c2 = a ? strstr(a, "\n}\n") : NULL;
+		CHECK(a && b && c2 && b < c2, "read_packet() does not clear rx_local after read_packet_1()");
+		a = strstr(src, "static void send_on(");
+		b = a ? strstr(a, "\n}\n") : NULL;
+		c2 = a ? strstr(a, "rx_local") : NULL;
+		CHECK(a && b && (!c2 || c2 > b), "send_on() uses rx_local");
 	}
 	printf("pktinfo: %d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;
