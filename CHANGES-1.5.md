@@ -143,6 +143,8 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
   (source reading: input.c cannot be linked without a compositor). Keys are left as they are: their path has the receipts of the latency measure, and a repeated key press may be a legitimate auto-repeat.
 - **An audio chunk outside its buffer is dropped** (audit of the session, S-R8, 25 Oct 2026): `sound.c` read `offset` and `size` of the PipeWire chunk without comparing them with the buffer. Now the block is used only if `offset + size`
   fits in `maxsize` (64-bit sum) and the offset keeps the samples aligned (`src/audiochunk.h`, test `benches/unit/audio-chunk`).
+- **No use after free of the Wayland offer in the KDE/wlroots clipboard** (audit of the session, S-R9, 25 Oct 2026): `read_text()` copied the offer's `proxy` under the lock and used it after releasing it, for up to 5 s per type, while the
+  pump thread (`on_selection`) could destroy it. The offers now have a reference count: the reader holds one for the whole read and the last drop destroys the proxy. Test `benches/unit/offer-refs`.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)

@@ -43,6 +43,10 @@ static const char *const TEXT_TYPES[] = {
 typedef struct {
 	struct zwlr_data_control_offer_v1 *proxy;
 	GPtrArray *mime;
+	/* ⭐ S-R9 (audit of the session, 25 Oct 2026): a reference count.  The pump thread (`on_selection`) and the child's thread (`clipboard_kde_read_now`) both
+	 *    touch the offers; `read_text` used to copy `proxy` under the lock and USE it after releasing it, for up to 5 s per type, while `on_selection` could
+	 *    destroy it: use after free.  Now `read_text` holds a reference for the whole read and the proxy is destroyed by whoever drops the LAST one. */
+	gint refs;
 } Offer;
 
 struct ClipboardKde {
@@ -85,9 +89,18 @@ struct ClipboardKde {
 /* ------------------------------------------------------------------ *
  * The session's offers
  * ------------------------------------------------------------------ */
+static Offer *offer_ref(Offer *offer)
+{
+	g_atomic_int_inc(&offer->refs);
+	return offer;
+}
+
+/* Drops ONE reference (the name stays: `g_clear_pointer(.., offer_free)` is used all over); the last one destroys. */
 static void offer_free(Offer *offer)
 {
 	if (!offer)
+		return;
+	if (!g_atomic_int_dec_and_test(&offer->refs))
 		return;
 	if (offer->proxy)
 		zwlr_data_control_offer_v1_destroy(offer->proxy);
@@ -144,6 +157,7 @@ static void on_new_offer(void *data, struct zwlr_data_control_device_v1 *device,
 {
 	Offer *offer = g_new0(Offer, 1);
 
+	offer->refs = 1;
 	offer->proxy = proxy;
 	offer->mime = g_ptr_array_new_with_free_func(g_free);
 	/* The offer hooks onto ITSELF: the `offer`s arrive before knowing
@@ -399,18 +413,20 @@ static GBytes *read_type(ClipboardKde *clipboard, struct zwlr_data_control_offer
 static char *read_text(ClipboardKde *clipboard, size_t *byte)
 {
 	struct zwlr_data_control_offer_v1 *proxy = NULL;
-	Offer *offer;
+	Offer *offer, *held = NULL;
 	GPtrArray *types = NULL;
 
 	g_mutex_lock(&clipboard->state);
 	offer = clipboard->current;
 	if (offer) {
+		held = offer_ref(offer);   /* ⭐ S-R9: kept alive for the whole read, whatever `on_selection` does meanwhile */
 		proxy = offer->proxy;
 		types = g_ptr_array_ref(offer->mime);
 	}
 	g_mutex_unlock(&clipboard->state);
 
 	if (!proxy || !types || types->len == 0) {
+		offer_free(held);
 		if (types)
 			g_ptr_array_unref(types);
 		log_detail(LOG_CLIPBOARD, "the session has nothing in the clipboard");
@@ -478,6 +494,7 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 			explicit_bzero((void *)start, amount);
 			g_bytes_unref(data);
 			g_ptr_array_unref(types);
+			offer_free(held);
 			log_detail(LOG_CLIPBOARD, "read %zu bytes of «%s» from the session",
 			                   (size_t)amount, TEXT_TYPES[i]);
 			return text;
@@ -497,6 +514,7 @@ static char *read_text(ClipboardKde *clipboard, size_t *byte)
 		g_string_free(listing, TRUE);
 	}
 	g_ptr_array_unref(types);
+	offer_free(held);
 	return NULL;
 }
 
