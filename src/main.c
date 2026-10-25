@@ -2658,6 +2658,7 @@ int main(int argc, char **argv)
 		}
 		if (!network_side_born_right())
 			return 1;
+		rediscover_refuse_here(); /* ⭐ 1.6 (R8): the root side searches for it; this side never does */
 		memset(&ready, 0, sizeof ready);
 		if (!rootside_attach(FD_ROOT, READY_WAIT_MS, &ready)) {
 			registro_dice(LOG_STARTUP,

@@ -526,8 +526,19 @@ void rediscover_collect(void)
 	}
 }
 
+static bool refused_here;
+
+void rediscover_refuse_here(void)
+{
+	refused_here = true;
+}
+
 int rediscover_search(RediscoveredDesktop *v, int cap, char *why, size_t how_much)
 {
+	if (refused_here) {
+		snprintf(why, how_much, "the network side does not read /proc or ask logind: the root side tells it");
+		return -1;
+	}
 	uint64_t now;
 	int n;
 
@@ -597,18 +608,27 @@ static int candidates_from_files(const char *dir, struct candidate_entry *v, int
 		return -1;
 	}
 	while (n < cap && (e = readdir(d)) != NULL) {
-		char path[PATH_MAX + 300], scope[sizeof v[0].scope] = "";
-		bool uid_seen = false, service_seen = false, scope_seen = false, uid_ok = false, service_ok = false;
+		char path[PATH_MAX + 300], scope[sizeof v[0].scope] = "", uname[sizeof v[0].user] = "";
+		bool uid_seen = false, service_seen = false, scope_seen = false, user_seen = false, uid_ok = false,
+		     service_ok = false;
 		unsigned long uidv = 0;
 		ssize_t len;
+		struct stat fst;
 		FILE *f;
+		int fd;
 
 		if (e->d_name[0] == '.' || strchr(e->d_name, '.') || strlen(e->d_name) >= sizeof v[0].id)
 			continue; /* `.ref` pipes and temporary files */
 		snprintf(path, sizeof path, "%s/%s", dir, e->d_name);
-		f = fopen(path, "re");
-		if (!f)
+		/* ⭐ a regular file only: NOFOLLOW (a link planted there is not followed) and NONBLOCK (a FIFO does not hold the
+		 *    root side), then S_ISREG */
+		fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+		if (fd < 0)
 			continue;
+		if (fstat(fd, &fst) != 0 || !S_ISREG(fst.st_mode) || !(f = fdopen(fd, "r"))) {
+			close(fd);
+			continue;
+		}
 		while ((len = getline(&line, &linecap, f)) > 0) {
 			char *end = NULL;
 
@@ -623,6 +643,11 @@ static int candidates_from_files(const char *dir, struct candidate_entry *v, int
 			} else if (!service_seen && strncmp(line, "SERVICE=", 8) == 0) {
 				service_seen = true;
 				service_ok = strcmp(line + 8, FOUND_AGAIN_PAM_SERVICE) == 0;
+			} else if (!user_seen && strncmp(line, "USER=", 5) == 0) {
+				user_seen = true;
+				/* logind's own name for the user: used as it is, if it is a plausible one */
+				if (line[5] && strlen(line + 5) < sizeof uname && !strpbrk(line + 5, "/ \t\r"))
+					snprintf(uname, sizeof uname, "%s", line + 5);
 			} else if (!scope_seen && strncmp(line, "SCOPE=", 6) == 0) {
 				scope_seen = true;
 				if (strlen(line + 6) < sizeof scope)
@@ -631,16 +656,21 @@ static int candidates_from_files(const char *dir, struct candidate_entry *v, int
 		}
 		fclose(f);
 		if (uid_ok && service_ok && scope[0]) {
-			struct passwd pw, *res = NULL;
-			char buf[4096];
+			/* ⭐ the name from the session file's USER= (logind wrote it, whatever NSS says now); NSS only as a fallback */
+			if (!uname[0]) {
+				struct passwd pw, *res = NULL;
+				char buf[4096];
 
-			if (getpwuid_r((uid_t)uidv, &pw, buf, sizeof buf, &res) != 0 || !res || strlen(res->pw_name) >= sizeof v[0].user)
-				continue;
+				if (getpwuid_r((uid_t)uidv, &pw, buf, sizeof buf, &res) != 0 || !res ||
+				    strlen(res->pw_name) >= sizeof uname)
+					continue;
+				snprintf(uname, sizeof uname, "%s", res->pw_name);
+			}
 			memset(&v[n], 0, sizeof v[n]);
 			v[n].uid = (uid_t)uidv;
 			snprintf(v[n].id, sizeof v[n].id, "%.*s", (int)sizeof v[n].id - 1, e->d_name);
 			snprintf(v[n].scope, sizeof v[n].scope, "%s", scope);
-			snprintf(v[n].user, sizeof v[n].user, "%s", res->pw_name);
+			snprintf(v[n].user, sizeof v[n].user, "%s", uname);
 			n++;
 		}
 	}
@@ -678,7 +708,11 @@ int rediscover_alive(uid_t uid, RediscoveredDesktop *d)
 {
 	RediscoveredDesktop uno;
 	char why[256] = "";
-	int n = search(&uno, 1, uid, why, sizeof why);
+	int n;
+
+	if (refused_here)
+		return -1;
+	n = search(&uno, 1, uid, why, sizeof why);
 
 	if (n < 0)
 		return -1;

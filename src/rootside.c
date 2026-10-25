@@ -1403,6 +1403,9 @@ static void net_generation_reset(void)
  * logind's own files, `rediscover_search_files()`.  ⭐ The later sweep of 1.5 (the whole question every 10 s) is gone: each
  * stage is watched by a pidfd, and its start time (field 22 of /proc/<pid>/stat) says it is the same process the search saw —
  * a reused pid is another process.  Where `pidfd_open` is missing the start time is read again every FOUND_POLL_MS.
+ * ⚠ `birth()` does NOT take an entry out of this table: a desktop whose user now has a child stays listed until its stage dies (the
+ *   network side removes it from ITS table when the child is born, and acts on FOUND_GONE only for an entry still there); a
+ *   restarted network side is told the table as it is, which is what 1.5's own search at its start would have found.
  * ⚠ A desktop that dies BEFORE it was announced is simply not announced (and not counted in FOUND_END); one that dies after
  *   is announced with FOUND_GONE, which can only follow FOUND_END (`found_pump()`).
  */

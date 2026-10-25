@@ -80,6 +80,10 @@ int rediscover_search_files(RediscoveredDesktop *v, int cap, char *why, size_t h
 int rediscover_search_files_at(const char *sessions_dir, const char *proc_root, RediscoveredDesktop *v, int cap,
                                char *why, size_t how_much);
 
+/* ⭐ 1.6 (R8): called by a NETWORK SIDE once it is attached: from then on `rediscover_search()` and `rediscover_alive()` refuse
+ * (-1, with the reason) — the network side neither reads /proc nor asks logind; the root side does, and tells it. */
+void rediscover_refuse_here(void);
+
 /* The start time (field 22 of `<proc_root>/<pid>/stat`).  false if the file is missing or malformed. */
 bool rediscover_starttime(const char *proc_root, pid_t pid, unsigned long long *out);
 

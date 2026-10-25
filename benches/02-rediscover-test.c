@@ -97,7 +97,7 @@ static void add_session(const char *id, const char *body_fmt, ...)
 
 static void add_session_std(const char *id, uid_t uid, const char *service, const char *state, const char *scope)
 {
-	add_session(id, "UID=%u\nUSER=x\nSERVICE=%s\nSTATE=%s\nSCOPE=%s\n", (unsigned)uid, service, state, scope);
+	add_session(id, "UID=%u\nUSER=%s\nSERVICE=%s\nSTATE=%s\nSCOPE=%s\n", (unsigned)uid, who_name, service, state, scope);
 }
 
 /* a fake process: its stat and its cgroup */
@@ -258,6 +258,72 @@ static void case_shape(void)
 	world_gone();
 }
 
+static void case_user_and_files(void)
+{
+	struct candidate_entry c[4];
+	RediscoveredDesktop v[4];
+	char why[256] = "", path[PATH_MAX + 64];
+	int n;
+
+	/* ⭐ the name is logind's USER=, whatever NSS knows: a uid NSS has never heard of, with USER= present */
+	world_new();
+	add_session("c1", "UID=4242424\nUSER=ghost-name\nSERVICE=remotix\nSTATE=closing\nSCOPE=session-c1.scope\n");
+	memset(c, 0, sizeof c);
+	n = candidates_from_files(sess, c, 4, why, sizeof why);
+	CHECK(n == 1 && c[0].uid == 4242424 && strcmp(c[0].user, "ghost-name") == 0,
+	      "a uid unknown to NSS, with USER= in the session file: the name is USER= («%s»)", n == 1 ? c[0].user : "?");
+	world_gone();
+
+	/* USER= first-wins, and an implausible one falls back on NSS (here: the real owner) */
+	world_new();
+	add_session("c1", "UID=%u\nUSER=first\nUSER=second\nSERVICE=remotix\nSCOPE=session-c1.scope\n", (unsigned)who);
+	add_session("c2", "UID=%u\nUSER=bad/name\nSERVICE=remotix\nSCOPE=session-c2.scope\n", (unsigned)who);
+	memset(c, 0, sizeof c);
+	n = candidates_from_files(sess, c, 4, why, sizeof why);
+	{
+		int good = 0, fallback = 0;
+
+		for (int i = 0; i < n; i++) {
+			good += strcmp(c[i].id, "c1") == 0 && strcmp(c[i].user, "first") == 0;
+			fallback += strcmp(c[i].id, "c2") == 0 && strcmp(c[i].user, who_name) == 0;
+		}
+		CHECK(n == 2 && good == 1 && fallback == 1, "the first USER= wins; a name with «/» is not used: NSS says «%s» instead", who_name);
+	}
+	world_gone();
+
+	/* no USER=, uid unknown to NSS: skipped, not an error */
+	world_new();
+	add_session("c1", "UID=4242424\nSERVICE=remotix\nSCOPE=session-c1.scope\n");
+	CHECK(candidates_from_files(sess, c, 4, why, sizeof why) == 0, "no USER= and no name in NSS: the session is skipped");
+	world_gone();
+
+	/* a link or a FIFO in the sessions' folder is not read (and does not hold the search) */
+	world_new();
+	snprintf(path, sizeof path, "%s/real-c1", root);
+	put(path, "UID=%u\nUSER=%s\nSERVICE=remotix\nSCOPE=session-c1.scope\n", (unsigned)who, who_name);
+	{
+		char l[PATH_MAX + 64], f[PATH_MAX + 64];
+
+		snprintf(l, sizeof l, "%s/c7", sess);
+		snprintf(f, sizeof f, "%s/c8", sess);
+		CHECK(symlink(path, l) == 0 && mkfifo(f, 0600) == 0, "(a link to a good file, and a FIFO, in the sessions' folder)");
+	}
+	add_proc(1300, "x", 'S', 1, 1300, 1, "session-c1.scope");
+	CHECK(find_all(v, 4, why, sizeof why) == 0, "a symlink and a FIFO are skipped: nothing found, and no hang");
+	world_gone();
+}
+
+static void case_refused_here(void)
+{
+	RediscoveredDesktop v[2];
+	char why[256] = "";
+
+	rediscover_refuse_here();
+	CHECK(rediscover_search(v, 2, why, sizeof why) == -1 && strstr(why, "network side"),
+	      "a network side: rediscover_search() refuses («%s»)", why);
+	CHECK(rediscover_alive(1000, NULL) == -1, "...and rediscover_alive() says unknown");
+}
+
 static void case_starttime(void)
 {
 	unsigned long long a = 0, b = 0;
@@ -303,6 +369,8 @@ int main(void)
 	case_exclusions();
 	case_shape();
 	case_starttime();
+	case_user_and_files();
+	case_refused_here();
 	printf("%d passed, %d failed\n", passed, failed);
 	return failed ? 1 : 0;
 }

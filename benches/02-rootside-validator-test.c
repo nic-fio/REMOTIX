@@ -60,7 +60,7 @@ static int fake_getpwnam_r(const char *n, struct passwd *pw, char *b, size_t c,
 #include <string.h>
 
 static int failures = 0, passed = 0;
-#define EXPECTED_CHECKS 88
+#define EXPECTED_CHECKS 92
 
 static void require(int cond, const char *desc)
 {
@@ -370,6 +370,68 @@ static void found_tests(void)
 		        "the unannounced ones that died are out of the count: FOUND_END says what was sent");
 		require(got_gone == first_batch && !gone_before_end,
 		        "the announced ones that died get FOUND_GONE, all of them, after FOUND_END");
+	}
+	/* ⭐ BACKPRESSURE, one stage each (the reviewer's cases): 40 real stages, a socket that takes only part of the list.  The one
+	 *    ANNOUNCED and killed gives FOUND_GONE after FOUND_END; the one NOT YET announced and killed lowers FOUND_END's count by
+	 *    one and is never announced; the other 38 arrive once each, in order. */
+	{
+		enum { N = 40 };
+		static RediscoveredDesktop dd[N];
+		pid_t kk[N];
+		int small = 4608, first_batch = 0, again = 0, gone = 0, end_count = -1, turns, dup = 0;
+		bool order_ok = true, end_seen = false, gone_before_end = false, wrong_gone = false, seen[N] = { false };
+		char name[32];
+
+		for (int i = 0; i < N; i++) {
+			snprintf(name, sizeof name, "w%d", i);
+			kk[i] = sleeper();
+			desktop_of(&dd[i], kk[i], name, (uid_t)(4000 + i));
+		}
+		setsockopt(sv[0], SOL_SOCKET, SO_SNDBUF, &small, sizeof small);
+		found_install(dd, N, true, "/proc");
+		found_pump();
+		while (take(sv[1], &in, sizeof in) > 0) {
+			order_ok = order_ok && in.fa.h.kind == RXR_FOUND_AGAIN && in.fa.uid == (uint32_t)(4000 + first_batch);
+			seen[first_batch] = true;
+			first_batch++;
+		}
+		again = first_batch;
+		require(first_batch > 1 && first_batch < N - 1 && order_ok,
+		        "(a) the socket takes only part of the list; what left is the beginning, in order");
+		stop_sleeper(kk[0]);     /* announced */
+		stop_sleeper(kk[N - 1]); /* not yet */
+		found_check(log_now_ms());
+		for (turns = 0; turns < 200; turns++) {
+			found_pump();
+			while (take(sv[1], &in, sizeof in) > 0) {
+				if (in.fa.h.kind == RXR_FOUND_AGAIN) {
+					int idx = (int)in.fa.uid - 4000;
+
+					order_ok = order_ok && !end_seen && idx == again + (idx - again) && idx >= again;
+					if (idx >= 0 && idx < N) {
+						dup += seen[idx];
+						seen[idx] = true;
+					}
+					again++;
+				} else if (in.fa.h.kind == RXR_FOUND_END) {
+					end_seen = true;
+					end_count = (int)in.fe.count;
+				} else if (in.fa.h.kind == RXR_FOUND_GONE) {
+					gone_before_end = gone_before_end || !end_seen;
+					wrong_gone = wrong_gone || in.fg.uid != 4000;
+					gone++;
+				}
+			}
+			if (end_seen && R.ngone == 0)
+				break;
+		}
+		require(dup == 0 && order_ok && again == N - 1 && !seen[N - 1] && end_seen,
+		        "(b) the rest arrive once each and in order, the killed unannounced one never");
+		require(end_count == N - 1 && end_count == again, "(c) FOUND_END counts what was announced: N-1");
+		require(gone == 1 && !wrong_gone && !gone_before_end,
+		        "(d) the announced one that was killed gets FOUND_GONE (only it), after FOUND_END");
+		for (int i = 1; i < N - 1; i++)
+			stop_sleeper(kk[i]);
 	}
 	if (k2 > 0)
 		stop_sleeper(k2);
