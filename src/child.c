@@ -644,6 +644,8 @@ struct children {
 	 *    only the loop LIMITS change, going from a `#define` to `f->cap`. */
 	struct child *v;
 	int cap;
+	/* ⭐ sigchld.h: true = the loop says nobody died since the last scan, skip `waitpid()` this round (false = always reap) */
+	bool reap_hold;
 	uint64_t next_serial;
 	uint32_t canvas_w, canvas_h;
 	char dir_survey[256];
@@ -1107,6 +1109,18 @@ static void child_signal(struct children *f, struct child *g, int sig)
 	kill(g->pid, sig);
 }
 
+/* ⛔ THE CAUSE of a death, not "it ended": whoever reads the log six hours later must be able to tell a child that exited by itself from
+ * one that somebody killed, and by which signal.  ⚠ The child's exit codes are in `child_alive()`: 42 = "I am not who I should be". */
+static void say_how_it_ended(int state, char *said, size_t cap)
+{
+	if (WIFEXITED(state))
+		snprintf(said, cap, "exited with %d — %s", WEXITSTATUS(state), why_exited(WEXITSTATUS(state)));
+	else if (WIFSIGNALED(state))
+		snprintf(said, cap, "killed by signal %d", WTERMSIG(state));
+	else
+		snprintf(said, cap, "ended (status %d)", state);
+}
+
 /* ⛔ The reaping, `WNOHANG`: our own `waitpid()`, or in network mode the
  *    CHILD_EXITED the root side sent (it reaped, and removed the render
  *    grant, before telling). */
@@ -1118,7 +1132,17 @@ static pid_t child_reap(struct children *f, struct child *g, int *state)
 		*state = g->reaped_status;
 		return g->pid;
 	}
+	/* ⭐ sigchld.h: no SIGCHLD since the last scan (and no safety scan due) = nobody to reap this round; the slot is looked at again
+	 *    at the next scan (a signal, or one second at most). */
+	if (f->reap_hold)
+		return 0;
 	return waitpid(g->pid, state, WNOHANG);
+}
+
+void children_reap_hold(children *f, bool hold)
+{
+	if (f)
+		f->reap_hold = hold;
 }
 
 static void child_exited_event(void *ctx, uint64_t serial, int wait_status)
@@ -1429,6 +1453,10 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 	int na = 0, ne = 0;
 	uid_t r, e, s;
 	gid_t rg, eg, sg;
+
+	/* ⭐ sigchld.h: the parent's SIGCHLD handler is still ours between the fork and the execve (only a flag is set, harmless); the default
+	 *    from the first line, so that nothing of the parent's loop is left in a process that is about to become something else. */
+	signal(SIGCHLD, SIG_DFL);
 
 	/* 1. the socket in the agreed place (fd 3), and without CLOEXEC: it is the
 	 *    only thing that must cross the `exec`. */
@@ -3373,20 +3401,7 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 			pid_t closed = child_reap(f, g, &state);
 			if (closed == g->pid) {
 				char said[160];
-				/* ⛔ THE CAUSE, not "it ended": whoever reads the log six
-				 *    hours later must be able to tell a child that exited by
-				 *    itself from one that somebody killed, and by which
-				 *    signal.  ⚠ The child's exit codes are in
-				 *    `child_alive()`: 42 = "I am not who I should be". */
-				if (WIFEXITED(state))
-					snprintf(said, sizeof said, "exited with %d — %s",
-					         WEXITSTATUS(state),
-					         why_exited(WEXITSTATUS(state)));
-				else if (WIFSIGNALED(state))
-					snprintf(said, sizeof said, "killed by signal %d",
-					         WTERMSIG(state));
-				else
-					snprintf(said, sizeof said, "ended (status %d)", state);
+				say_how_it_ended(state, said, sizeof said);
 				g->pid = 0;
 				child_free(f, g, said);
 				continue;
@@ -3412,6 +3427,18 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 					g->pid = 0;
 					child_free(f, g, "no CHILD_EXITED from the root side: treated as exited");
 					continue;
+				}
+				/* ⭐ sigchld.h: with the reaping driven by SIGCHLD this child may already be dead and simply not looked at yet: one
+				 *    waitpid() (not held) before the line and the kill — a corpse is collected, not «insisted upon». */
+				if (!f->remote) {
+					int late = 0;
+					if (waitpid(g->pid, &late, WNOHANG) == g->pid) {
+						char said[160];
+						say_how_it_ended(late, said, sizeof said);
+						g->pid = 0;
+						child_free(f, g, said);
+						continue;
+					}
 				}
 				registro_dice(LOG_CHILD,
 				              "⛔ the child of «%s» (pid %ld) did not die within 3 s "
