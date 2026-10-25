@@ -561,7 +561,9 @@ def case_a(o, E):
 def case_b(o, E):
     fresh_server(o)
     reg = G7.Log(o.box)
-    lm = G7.DeadLine(o.port)
+    # H1_RESET_MODE=drop: the old dead line (DeadLine, 3 s of silence); default «quiet»: QuietPort, restart at once
+    mode = os.environ.get("H1_RESET_MODE", "quiet")
+    lm = G7.DeadLine(o.port) if mode == "drop" else G7.QuietPort(o.port)
     lm.remove()
     ev = []
     try:
@@ -584,7 +586,7 @@ def case_b(o, E):
             k = 0
             t_down = time.time()
             said_early = False
-            while time.time() - t_down < 3:
+            while time.time() - t_down < (3 if mode == "drop" else 0):
                 nudge(s, k)
                 k += 1
                 if G7.page_says(G7.page(s.g)):

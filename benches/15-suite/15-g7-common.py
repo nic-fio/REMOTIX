@@ -183,6 +183,30 @@ class DeadLine:
         return False
 
 
+class QuietPort(DeadLine):
+    """⭐ The Stateless Reset WITHOUT a dead line (H-RESET, 25 Oct 2026).  With `DeadLine` the browser
+    sends into the void, and on `lo` its probe timers are a few ms: Chrome and Firefox gave up on
+    their own («WebTransportError: Connection lost») within 3 s, BEFORE the server was back, so the
+    reset was never exercised (8 runs out of 8).  Here the UDP keeps flowing: the server is killed and
+    started again AT ONCE, and only the ICMP «port unreachable» that the kernel would answer while
+    the port is closed is swallowed (it would close the connection by itself, which is not the
+    reset either).  The first packet of the browser that reaches the NEW server gets the Stateless
+    Reset.  The inner UDP destination port sits at byte 30 of an ICMP message (8 + 20 of the inner
+    IPv4 header + 2) and at byte 50 of an ICMPv6 one (8 + 40 + 2)."""
+
+    def __init__(self, port):
+        DeadLine.__init__(self, port)
+        self.table = "remotix_g7q_%d" % self.port
+
+    def rules(self):
+        return ("table inet %(t)s {\n"
+                " chain fuori { type filter hook output priority -10; policy accept;\n"
+                "  icmp type destination-unreachable icmp code port-unreachable @th,240,16 %(p)d counter drop\n"
+                "  icmpv6 type destination-unreachable icmpv6 code port-unreachable @th,400,16 %(p)d counter drop\n"
+                " }\n"
+                "}\n" % {"t": self.table, "p": self.port})
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE PAGE
 # ═══════════════════════════════════════════════════════════════════════════

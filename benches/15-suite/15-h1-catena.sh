@@ -36,6 +36,13 @@ pulizia() {
 		printf '%s\n' "$pw" | sudo -S -p '' /usr/sbin/nft delete table inet remotix_g7_$p >/dev/null 2>&1
 	done
 	for d in gnome kde xfce lxqt; do bash "$HERE/15-g7-server.sh" stop "$d" >/dev/null 2>&1; done
+	# ⛔ The test users of the sessions (c<N>u<N>, c<N>bu<N>): H-RESET kills the server under a live session and
+	#    its user can stay behind; 30-perf's precheck then finds the box «not empty» (25 Oct 2026, xfce c15114u620).
+	for d in gnome kde xfce lxqt; do
+		printf '%s\n' "$pw" | sudo -S -p '' podman exec "rete11-$d" sh -c \
+			'for u in $(getent passwd | cut -d: -f1 | grep -E "^c[0-9]+b?u[0-9]+$"); do
+				loginctl terminate-user "$u" 2>/dev/null; sleep 1; userdel -r "$u" 2>/dev/null; echo "   tolto $u"; done' 2>/dev/null
+	done
 }
 trap pulizia EXIT
 trap 'exit 143' TERM INT HUP
