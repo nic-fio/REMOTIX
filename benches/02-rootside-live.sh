@@ -8,6 +8,9 @@
 # ⚠ It CHANGES the container's users and PAM (rxnet, anna, bruno, /etc/pam.d/remotix):
 #   only in a throw-away container, never on a machine.
 # Exit status: 0 green, 1 red, 3 could not look.
+# ⭐ A line «??» is a check that could not be made (no card group, no cgroup scope for the desktop, no stand-in logind): it NEVER makes
+#   the run green — the mode exits 3, or red.  LIVE_SKIP="l2,stage,logind" (a comma list) skips those checks ON PURPOSE and the run
+#   says so.  l2: the card's groups; stage: fiona's desktop (a writable cgroup); logind: the stand-in on the system bus.
 set -u
 # ⛔ 24 Oct 2026: it rewrites /etc/passwd and PAM — refused outside a container.
 [ -e /run/.containerenv ] || [ -e /.dockerenv ] || { echo "not in a container: refused (it rewrites /etc/passwd and PAM)"; exit 3; }
@@ -28,6 +31,14 @@ if [ -z "${LIVE_MODE:-}" ]; then
 	exit 3
 fi
 [ "$LIVE_MODE" = journal ] && export RX_LIVE_JOURNAL=1 || export RX_LIVE_JOURNAL=0
+# «??»: a check that could not be made is not a pass (see the header)
+unk=0
+unk_line() {
+	case ",${LIVE_SKIP:-}," in
+		*",$1,"*) echo "-- skipped on purpose (LIVE_SKIP has $1): $2" ;;
+		*) echo "?? $2"; unk=1 ;;
+	esac
+}
 # the network side's environment is an allow-list: only REMOTIX_* crosses
 export RX_LIVE_MODE=$LIVE_MODE REMOTIX_LIVE_MODE=$LIVE_MODE REMOTIX_LIVE_JOURNAL=$RX_LIVE_JOURNAL
 echo "── mode: $LIVE_MODE"
@@ -40,6 +51,11 @@ gcc -std=gnu11 -Wall -Wextra -I. $(pkg-config --cflags $PK) -o /tmp/rx-live-bin 
 	-lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
 	$(pkg-config --libs $PK) -ldl || exit 3
 chmod 755 /tmp/rx-live-bin
+# ⭐ 1.6 (R8 B): network_side_born_right() of main.c, case by case (main.c included, its main() renamed)
+gcc -std=gnu11 -Wall -Wextra -Wno-unused-function -D_GNU_SOURCE -I. $(pkg-config --cflags $PK) -o /tmp/rx-bornright \
+	../benches/02-bornright-test.c $(ls *.o | grep -v -e '^main.o$' -e '^walls.o$') \
+	-lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam -lm -lz \
+	$(pkg-config --libs $PK) -ldl || rm -f /tmp/rx-bornright
 
 for u in rxnet anna bruno carla dario elena fiona; do id "$u" >/dev/null 2>&1 || useradd -M -s /bin/sh "$u" || exit 3; done
 # carla: a live REMOTIX session as logind writes it (CLOSE_ORPHAN's condition, finding 1)
@@ -198,14 +214,14 @@ if grep -q '^STAGE ok' /tmp/rx-live/stage.txt 2>/dev/null; then
 	grep -q '^FOUND3 n=0' /tmp/rx-live/restarted2.txt || { echo "NO the third network side was told of a desktop that is gone"; red=1; }
 	grep -q '^FOUND4 n=0' /tmp/rx-live/restarted3.txt || { echo "NO the fourth network side was told of a desktop that is gone"; red=1; }
 else
-	echo "?? no scope for fiona's desktop in this container ($(cat /tmp/rx-live/stage.txt 2>/dev/null)): FOUND_AGAIN across the restart could not look"
+	unk_line stage "no scope for fiona's desktop in this container ($(cat /tmp/rx-live/stage.txt 2>/dev/null)): FOUND_AGAIN across the restart could not look"
 fi
 grep -q 'RESTARTED3 uid=[1-9][0-9]* attached=1' /tmp/rx-live/restarted3.txt 2>/dev/null || { echo "NO after the kill -9 of the network side alone, no fourth one attached"; red=1; }
 grep -q 'will be started again' /tmp/rx-live/root.log || { echo "NO the root side did not restart"; red=1; }
 if [ "$REMOTIX_LIVE_LOGIND" = 1 ]; then
 	grep -q 'sentinel_local(anna)' /tmp/rx-live/net.txt && ! grep -q '^NO sentinel' /tmp/rx-live/net.txt || { echo "NO the sentinel over the bus"; red=1; }
 else
-	echo "?? the stand-in logind did not start: the sentinel could not look"
+	unk_line logind "the stand-in logind did not start: the sentinel could not look"
 fi
 if [ "$LIVE_MODE" = journal ]; then
 	NP1=$(grep -o 'network side started: pid [0-9]*' /tmp/rx-live/root.log | head -1 | grep -o '[0-9]*$')
@@ -229,7 +245,7 @@ if grep -q 'FIRST CONNECTION: «anna»' /tmp/rx-live/root.log; then
 	grep -q 'FIRST CONNECTION: «carla»' /tmp/rx-live/root.log && { echo "NO carla's close-only birth enrolled her in the card's groups"; red=1; }
 	echo "OK anna (SPAWN) enrolled, carla (CLOSE_ORPHAN) not"
 else
-	echo "?? no card group in this container: the L2 check could not look"
+	unk_line l2 "no card group in this container: the L2 check could not look"
 fi
 # finding 3: only SIGPIPE ignored (bit 13 = 0x1000, as 1.0 passed it on), nothing blocked, nothing caught
 grep -qx 'SigIgn:[[:space:]]*0000000000001000' /tmp/rx-live/child.txt || { echo "NO the child inherited ignored signals other than SIGPIPE (SIGHUP?)"; red=1; }
@@ -239,5 +255,24 @@ n=$(grep -c "broke the closed list" /tmp/rx-live/root.log); [ "$n" -le 1 ] || { 
 [ "$RC" = 0 ] || { echo "NO the root side exited $RC after SIGTERM"; red=1; }
 [ $((T1 - T0)) -le 6 ] || { echo "NO the root side took $((T1 - T0)) s to stop"; red=1; }
 echo "root side stopped in $((T1 - T0)) s, exit $RC"
-[ $red = 0 ] && echo "GREEN" || echo "RED"
-exit $red
+# ⭐ the net.txt «??» lines of the network side (no desktop of fiona): not a pass either
+grep -q '^?? ' /tmp/rx-live/net.txt && unk_line stage "the network side could not look at FOUND_AGAIN (net.txt)"
+# ⭐ the final stop: the network sides install their SIGTERM handler as main() does, so the root side's stop must NOT need the SIGKILL
+grep -q 'the network side did not stop within' /tmp/rx-live/root.log && { echo "NO the final stop needed the SIGKILL («did not stop within»): a network side left SIGTERM unhandled"; red=1; }
+n2=$(grep -c 'closed its channel and did not exit within' /tmp/rx-live/root.log)
+[ "$n2" = 1 ] || { echo "NO the SIGKILL of «closed its channel and did not exit within» happened $n2 times (once: the second network side, on purpose)"; red=1; }
+# ⭐ the leftover: killed with the namespace, the root side's sweep must NOT have had to
+grep -q "were still alive in this root side's cgroup" /tmp/rx-live/root.log && { echo "NO the root side's sweep found a leftover: the PID namespace did not kill it"; red=1; }
+# ⭐ network_side_born_right(), the function itself, case by case (02-bornright-test.c)
+if [ "$LIVE_MODE" = plain ]; then
+	echo "── network_side_born_right()"
+	if [ -x /tmp/rx-bornright ]; then
+		/tmp/rx-bornright; rcb=$?
+		[ "$rcb" = 0 ] || { echo "NO network_side_born_right: exit $rcb"; if [ "$rcb" = 3 ]; then unk=1; else red=1; fi; }
+	else
+		echo "NO the born-right test was not built"; red=1
+	fi
+fi
+if [ $red = 0 ] && [ $unk = 0 ]; then echo "GREEN"; exit 0; fi
+if [ $red = 0 ]; then echo "NOT RUN: a check could not look (see «??» above); LIVE_SKIP names the ones skipped on purpose"; exit 3; fi
+echo "RED"; exit 1

@@ -434,12 +434,21 @@ static void found_line(FILE *f, const char *tag)
 	fflush(f);
 }
 
+/* ⭐ main() installs a SIGTERM handler before anything else (as PID 1 the default action would be IGNORED): so do the network sides of
+ *    this test — except the second, which ignores it on purpose (finding 10) */
+static void live_term(int sig)
+{
+	(void)sig;
+	_exit(0);
+}
+
 static int net_side(void)
 {
 	struct rxr_ready r;
 	struct rootside_born b;
 	struct stat st;
 
+	signal(SIGTERM, live_term);
 	/* ⚠ REMOTIX_LIVE_*: only REMOTIX_* crosses the allow-list of the network side's environment */
 	if (getenv("REMOTIX_LIVE_MODE") && strcmp(getenv("REMOTIX_LIVE_MODE"), "nologind") == 0)
 		return net_nologind();
