@@ -779,9 +779,21 @@ static bool has_capabilities(struct bridge *p, const char *user, char *why,
 static void presence_mark(const char *user, uint64_t now_ms);
 
 static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
-                              const char *user, const char *rhost, bool lost)
+                              const char *user_typed, const char *rhost, bool lost)
 {
 	struct bridge *p = (struct bridge *)ctx;
+	/* ⛔⭐ THE NAME OF THE SYSTEM, NOT THE ONE TYPED (audit P-R6/Q-R8): the children, the stages, the budget and the abandonment clock
+	 *    are keyed by the name, and where the system does not tell «Anna» from «anna» (sssd with `case_sensitive = false`) one user
+	 *    could have one desktop per spelling.  Only for a verdict somebody waits for and PAM admitted; the orphan verdict at the end keeps
+	 *    counting by what was typed, like the ban. */
+	char user_buf[257];
+	const char *user = user_typed;
+	if (admitted && !lost && user_typed && user_typed[0] && transport_awaits_verdict(p->t, ticket) &&
+	    rcp_canonical_user(user_typed, user_buf, sizeof user_buf) && strcmp(user_buf, user_typed) != 0) {
+		registro_dice(LOG_CHILD, "⚠ the name typed «%s» is the user «%s» of this machine: the desktop goes by «%s»", user_typed,
+		              user_buf, user_buf);
+		user = user_buf;
+	}
 	/* ⛔ The farewell is sent AFTER `transport_verdict()`: the long reason is
 	 *    at the end of the function, in the box «AND THE FAREWELL GOES OUT
 	 *    HERE, AFTER THE VERDICT». */
@@ -1801,6 +1813,44 @@ static bool pace_to_child(void *ctx, const char *user, uint16_t max_fps)
 	return children_pace(p->f, user, max_fps);
 }
 
+/* ⛔⭐ THE BUDGET AND A CANVAS THAT GROWS (audit P-R4/Q-R4).  `has_capabilities()` judges a newcomer at the upper bound of
+ *     `CANVAS_W` x `CANVAS_H` (or the client's ceiling, if smaller) — and then `FIT_CANVAS` could take that session to the canvas
+ *     maximum of `rcp.h` (4096x2304, 4.4 times the pixels) without anyone asking the budget again: the admitted sum no longer
+ *     meant anything.  A request that stays within what the admission counted costs nothing more and passes; a larger one is judged
+ *     NOW, as a newcomer of that size beside everybody else (the user's own stage left out of the sum), and if it does not hold it
+ *     does not leave for the stage (the client is answered NOT_NOW and keeps the canvas it has).  ⛔ Asked ONLY for a NEW FIT_CANVAS of the
+ *     client, through the `canvas_fits` hook: `recanvas_to_child()` also serves the ATTACH and the recall of the scene, which put the
+ *     session on the canvas it already had and must always go through.  Budget OFF (the default) or
+ *     «I could not measure»: it passes, like every other verdict of the budget. */
+static bool recanvas_fits_budget(struct bridge *p, const char *user, uint32_t width, uint32_t height)
+{
+	struct budget_count tally;
+	enum budget_outcome e;
+	char why[512];
+	int amount;
+
+	if (!budget_on() || (uint64_t)width * height <= (uint64_t)CANVAS_W * CANVAS_H)
+		return true;
+	budget_count_open(&tally);
+	amount = children_count(p->f);
+	for (int i = 0; i < amount; i++) {
+		const char *chi = children_nth_user(p->f, i);
+
+		if (chi && chi[0] && strcmp(chi, user) != 0)
+			budget_count_inside(&tally, chi);
+	}
+	for (int i = 0; i < found_again_n; i++)
+		if (strcmp(found_again[i].user, user) != 0)
+			budget_count_inside(&tally, found_again[i].user);
+	why[0] = '\0';
+	e = budget_count_verdict(&tally, user, width, height, why, sizeof why);
+	if (e != BUDGET_DOES_NOT_HOLD)
+		return true;
+	registro_dice(REG_BUDGET, "⛔ «%s»: FIT_CANVAS %ux%u does NOT fit the budget (above the %ux%u of the admission): %s", user,
+	              width, height, CANVAS_W, CANVAS_H, why);
+	return false;
+}
+
 static bool recanvas_to_child(void *ctx, const char *user, uint32_t width,
                              uint32_t height)
 {
@@ -1808,6 +1858,16 @@ static bool recanvas_to_child(void *ctx, const char *user, uint32_t width,
 	if (!p || !p->f)
 		return false;
 	return children_recanvas(p->f, user, width, height);
+}
+
+/* The budget's question, ONLY for a new FIT_CANVAS of the client (`canvas_fits` hook of rcp.h, via `wt_canvas_fits_hook()`): the calls of
+ * `recanvas_to_child()` at the ATTACH and at the recall of the scene never ask it. */
+static bool canvas_fits_to_budget(void *ctx, const char *user, uint32_t width, uint32_t height)
+{
+	struct bridge *p = (struct bridge *)ctx;
+	if (!p || !p->f)
+		return true;
+	return recanvas_fits_budget(p, user, width, height);
 }
 
 /* ⛔ The child has gone.  ⚠ There is no longer any depot to empty — it was
@@ -3098,6 +3158,7 @@ int main(int argc, char **argv)
 	 *     matters — and the client would show «fit the desktop» as off on a
 	 *     server that can do it. */
 	wt_recanvas_hook(recanvas_to_child, &bridge);
+	wt_canvas_fits_hook(canvas_fits_to_budget, &bridge);
 	wt_layout_hook(layout_to_child, &bridge);
 	/* ⏳ §13: connected always; `rcp.c` declares `video.pace` only with
 	 *    `--decoder-pace`. */

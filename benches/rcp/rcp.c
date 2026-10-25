@@ -5,6 +5,7 @@
  * must change `RCP.md` first, or the two drift apart in silence.
  */
 #include "rcp.h"
+#include "msgrate.h" /* the token buckets of what a logged-in client can send as often as it likes */
 
 #include <arpa/inet.h> /* the ban key: IPv4 whole, IPv6 the /64 (`rcp_key_address`) */
 #include <errno.h> /* §4.4-bis: «there is no file yet» and «I could not
@@ -540,6 +541,8 @@ struct rcp_session {
 	 *    whether it has really changed.  ⚠ 64 bytes plus the NUL: it is the
 	 *    ceiling of §4.5. */
 	char layout[65];
+	/* The last LAYOUT asked while open that this machine does not have: asked again, it is not compiled again (`layout_known()` costs a keymap). */
+	char layout_unknown[65];
 	uint64_t since;   /* when the current state began */
 	/* ⛔⛔⭐ TWO CLOCKS, NOT ONE — and until 16 Aug 2026 there was only one
 	 *      doing the job of both.
@@ -695,6 +698,9 @@ struct rcp_session {
 	 * not a nuance: counting from requests, two insistent clients push the
 	 * clock forward forever and the keyframe never leaves. */
 	uint64_t last_key_ms;
+	uint64_t key_asked_ms; /* when a REQUEST_KEY last STARTED a keyframe (0 = never): the gap of V_KEY_ASK_GAP_MS */
+	bool key_deferred;     /* a REQUEST_KEY came inside the gap with no keyframe owed: `rcp_time()` serves it at the end of the gap */
+	uint64_t key_deferred_ms; /* when it came */
 	bool never_sent_key;
 	/* ⛔ 22 Sep 2026 — the `nr` of the last keyframe sent: the 200 ms grace
 	 *    applies only to whoever has NOT yet seen that keyframe
@@ -890,6 +896,10 @@ struct rcp_session {
 	 * harm but writes two lines that say different things about the same
 	 * fact. */
 	bool inp_released;
+	/* ⛔ THE PRESSES THE RATE LIMIT LET THROUGH (see `input_admit()`): one bit per key code and per button code below 0x300 (the
+	 *    compositor takes nothing above).  The RELEASE of a press that is marked here is never dropped, so that the ceiling can
+	 *    never leave a key or a button pressed.  Emptied with everything else when the input is released on detach. */
+	uint8_t inp_down_key[96], inp_down_btn[96];
 
 	/* ⛔⭐⭐ THE `FIT_CANVAS` PASSED TO THE STAGE AND NOT YET ANSWERED — §7.1,
 	 *     and the chain `children_recanvas()` → `capture_resize()`
@@ -932,6 +942,8 @@ struct rcp_session {
 	/* How long to wait before asking the stage again to go back: it doubles at
 	 * every attempt that came to nothing, up to `RCP_CANVAS_RETRY_MAX_MS`. */
 	uint64_t canvas_mismatch_wait;
+	/* ⛔ One token bucket per kind of message that can be dropped (msgrate.h): see `msg_admit()`. */
+	struct msg_gate gate[MC_COUNT];
 };
 
 /* Declared here because the attempt limiter, below, MUST be able to
@@ -3206,6 +3218,111 @@ static void reg(rcp_session *s, const char *fmt, ...)
 		s->g.record(s->g.ctx, line);
 }
 
+/* ⛔ THE FREQUENCY CEILING OF A LOGGED-IN CLIENT (msgrate.h, audit of 25 Oct 2026).  `true` = go on; `false` = the message is over the
+ *    (wide) rate of its kind: the caller CONSUMES it without effect.  The drops are counted, and one line per 10 s window says
+ *    how many, instead of a line per message. */
+static const char *const MC_NAMES[MC_COUNT] = {"POINTER",     "BUTTON",  "WHEEL",  "LETTER",     "KEY_POSITION",
+                                               "REQUEST_KEY", "PACE",    "VIEW",   "LAYOUT",     "FIT_CANVAS"};
+
+static void msg_report(rcp_session *s, enum msg_class c, const struct msg_gate_closed *cl)
+{
+	unsigned per_s, burst;
+
+	if (!cl->dropped && !cl->hidden)
+		return;
+	msg_class_rate(c, &per_s, &burst);
+	reg(s, "⚠ %s: in the last %u s %u messages over %u a second (burst %u) were DROPPED and %u log lines were not written",
+	    MC_NAMES[c], MSG_WINDOW_MS / 1000u, cl->dropped, per_s, burst, cl->hidden);
+}
+
+static bool msg_admit(rcp_session *s, enum msg_class c, uint64_t now)
+{
+	struct msg_gate_closed cl;
+	unsigned per_s, burst;
+	bool ok;
+
+	msg_class_rate(c, &per_s, &burst);
+	ok = msg_gate_admit(&s->gate[c], now, per_s, burst, &cl);
+	msg_report(s, c, &cl);
+	return ok;
+}
+
+/* May this kind write a log line now?  (at most MSG_LINES_PER_WINDOW per window and kind; the rest is in the summary) */
+static bool msg_line(rcp_session *s, enum msg_class c) { return msg_gate_line(&s->gate[c]); }
+
+/* The periodic call: a window that has ended gets its summary even if no message of that kind arrives any more. */
+static void msg_flush_all(rcp_session *s, uint64_t now)
+{
+	for (int c = 0; c < MC_COUNT; c++) {
+		struct msg_gate_closed cl;
+
+		if (!s->gate[c].started)
+			continue;
+		msg_gate_flush(&s->gate[c], now, &cl);
+		msg_report(s, (enum msg_class)c, &cl);
+	}
+}
+
+static enum msg_class input_class(uint16_t kind)
+{
+	switch (kind) {
+	case T_POINTER:      return MC_POINTER;
+	case T_BUTTON:       return MC_BUTTON;
+	case T_WHEEL:        return MC_WHEEL;
+	case T_LETTER:       return MC_LETTER;
+	default:             return MC_KEY_POSITION;
+	}
+}
+
+#define INP_TRACK_CODES 0x300u /* the codes the compositor takes; 96 bytes of bits */
+
+/* ⛔⭐ MAY THIS INPUT MESSAGE GO ON?  (msgrate.h, audit P-R2/Q-R4, and the rule «the ceiling never leaves a key pressed»).
+ *     A message over the rate of its kind is dropped — EXCEPT the RELEASE of a key or a button whose press we let through: dropping that
+ *     one would leave the key down in the compositor until the detach (RCP.md §11: «a Ctrl left down makes the desktop unusable»).
+ *     So: a press that is admitted is marked; its release is admitted whatever the rate and clears the mark; a press that is dropped is
+ *     not marked, and its release (which finds no mark) is just an ordinary message for the bucket — a release of a key that is not down
+ *     is harmless (the injector clears a bit that is already clear), so dropping it leaves nothing pressed.  The marks are bounded
+ *     (768 bits per kind), so the exception cannot be used to flood: an attacker can only release what he pressed within the rate.
+ *     The body of these two kinds is fixed (RCP.md §7.3), big-endian: id u32, instant u64, code u16, pressed u8. */
+static bool input_admit(rcp_session *s, uint16_t kind, const uint8_t *body, uint32_t lung, uint64_t now)
+{
+	enum msg_class c = input_class(kind);
+
+	if ((kind == T_BUTTON || kind == T_KEY_POSITION) && lung >= 15) {
+		uint16_t code = (uint16_t)((body[12] << 8) | body[13]); /* big-endian, as every field of RCP */
+		uint8_t pressed = body[14];
+		uint8_t *marks = kind == T_BUTTON ? s->inp_down_btn : s->inp_down_key;
+
+		if (code < INP_TRACK_CODES) {
+			if (pressed == 0 && (marks[code >> 3] & (1u << (code & 7)))) {
+				marks[code >> 3] &= (uint8_t)~(1u << (code & 7));
+				return true; /* the release of a press we let through: never dropped */
+			}
+			if (!msg_admit(s, c, now))
+				return false;
+			if (pressed == 1)
+				marks[code >> 3] |= (uint8_t)(1u << (code & 7));
+			return true;
+		}
+	}
+	return msg_admit(s, c, now);
+}
+
+/* The control requests of an ACTIVE session that can be dropped without harm: a REQUEST_KEY or a PACE that does not arrive is the
+ * same as one the client never sent; a LAYOUT or VIEW over the rate is a client that is not a person.  ⛔ NOT FIT_CANVAS: §7.1 wants
+ * one `CANVAS` answer for each, the client counts the unanswered ones, and a request consumed in silence would hold its frames back
+ * for ever — that one is gated in its own handler, and answered. */
+static enum msg_class control_class(uint16_t kind)
+{
+	switch (kind) {
+	case T_REQUEST_KEY:  return MC_REQUEST_KEY;
+	case T_PACE:         return MC_PACE;
+	case T_VIEW:         return MC_VIEW;
+	case T_LAYOUT:       return MC_LAYOUT;
+	default:             return MC_COUNT;
+	}
+}
+
 static void send_message(rcp_session *s, uint16_t kind, const uint8_t *body,
                             size_t n)
 {
@@ -4972,6 +5089,15 @@ static void key_paid(rcp_session *s)
 #define V_CAP (16u * 1024u * 1024u)
 /* ⛔ §5.2, exception 5 of §3: 200 ms from the last keyframe SENT. */
 #define V_GRACE_KEY 200
+/* ⛔ AT MOST ONE REQUEST_KEY PER THIS MANY ms STARTS A KEYFRAME (audit P-R5/Q-R6/E-R4).  The grace above is for duplicates only: a request whose
+ * `last_number` is as new as the last keyframe sent skips it (the gap came afterwards, ignoring it freezes the picture), and so a client could force a
+ * keyframe — the most expensive frame to encode and to send — at every request.  Inside this gap since the last request ACCEPTED:
+ *   - if a keyframe is STILL OWED (`needs_key`), the request is redundant: that keyframe will answer it, and it is ignored (declared);
+ *   - otherwise it is NOT LOST: it is marked as DEFERRED and `rcp_time()` turns it into a keyframe when the gap ends — unless a keyframe has gone
+ *     out in the meantime, which answers it too.
+ * So the client's wait for its picture grows by at most the gap, and never to «never».  The gap is the transport's own brake (`WT_KEY_REQUEST_MS` 150)
+ * minus a margin, so that no request the transport would have let through is held back here. */
+#define V_KEY_ASK_GAP_MS 100
 
 /* ⛔ §6.2 — THE COUNTER, AND THE TWO LINES THAT GOVERN IT.
  *
@@ -6209,6 +6335,8 @@ static void release_on_detach(rcp_session *s, const char *why)
 	if (!s || s->inp_released)
 		return;
 	s->inp_released = true;
+	memset(s->inp_down_key, 0, sizeof s->inp_down_key);
+	memset(s->inp_down_btn, 0, sizeof s->inp_down_btn);
 	if (!s->g.input_release_all) {
 		/* ⛔ It is written ONLY if this channel has seen something pass: on a
 		 * session without input — the in-process benches, the ngtcp2 harness —
@@ -6464,6 +6592,9 @@ static bool allowed_coordinates(rcp_session *s, uint32_t id, uint32_t x,
 static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
                          uint32_t lung, uint64_t now)
 {
+	/* ⛔ Over the rate of its kind: consumed, not executed, counted.  An input id only has to GROW (§7.3), so a gap is legitimate. */
+	if (!input_admit(s, kind, body, lung, now))
+		return true;
 	reader l = {body, lung, 0, false};
 	uint32_t id = le_u32(&l);
 	uint64_t instant = 0;
@@ -6652,6 +6783,7 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 		 * distinction as `RCP_VIDEO_NO_CHANNEL`, and the fallback is DECLARED
 		 * (`CODER.md` §4.2): this is the line. */
 		s->inp_not_injected++;
+		if (msg_line(s, input_class(kind)))
 		reg(s, "⚠ %s id=%u %s: VALID and NOT injected — this server does not have the "
 		       "five hooks of the input channel (§7.3).  The session HOLDS",
 		    input_name(kind), id, what);
@@ -6664,6 +6796,7 @@ static bool handle_input(rcp_session *s, uint16_t kind, const uint8_t *body,
 	 *   grain is deliberately coarsened — `milliseconds × 1000` (finding
 	 *   R1.27).  ⛔ Whoever derived a delay from it would measure the grain of a
 	 *   browser's `performance.now()`, not our loop. */
+	if (msg_line(s, input_class(kind)))
 	reg(s, "input id=%u (was %u) %s %s · client instant %llu us ⚠ coarsened "
 	       "grain, §7.3: no measurement is built on it",
 	    id, previous, input_name(kind), what,
@@ -8069,16 +8202,38 @@ static bool handle_key_request(rcp_session *s, reader *l, uint64_t now)
 	    now - s->last_key_ms < V_GRACE_KEY) {
 		/* ⛔ §3: «every tolerance must be written to the log.  A silent
 		 * tolerance is indistinguishable from a defect».  It is exception 5. */
-		reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): "
-		       "REQUEST_KEY(last_number=%u) ignored — %llu ms have "
-		       "passed since the last KEYFRAME sent, fewer than the %d allowed",
-		    last, (unsigned long long)(now - s->last_key_ms),
-		    V_GRACE_KEY);
+		if (msg_line(s, MC_REQUEST_KEY))
+			reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): "
+			       "REQUEST_KEY(last_number=%u) ignored — %llu ms have "
+			       "passed since the last KEYFRAME sent, fewer than the %d allowed",
+			    last, (unsigned long long)(now - s->last_key_ms),
+			    V_GRACE_KEY);
 		return true;
 	}
-	reg(s, "REQUEST_KEY(last_number=%u) accepted (§5.2): the next "
-	       "frame will be a KEYFRAME — last one sent by us: %u",
-	    last, s->video_number);
+	if (s->key_asked_ms && now - s->key_asked_ms < V_KEY_ASK_GAP_MS) {
+		/* ⛔ §3: a tolerance is written — but ONE line per window says how many (msgrate.h), not one per request. */
+		if (s->needs_key) {
+			if (msg_line(s, MC_REQUEST_KEY))
+				reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): REQUEST_KEY(last_number=%u) ignored — a keyframe is still "
+				       "owed and will answer it (%llu ms since the last one accepted, fewer than the %d between two)",
+				    last, (unsigned long long)(now - s->key_asked_ms), V_KEY_ASK_GAP_MS);
+			return true;
+		}
+		if (!s->key_deferred) {
+			s->key_deferred = true;
+			s->key_deferred_ms = now;
+		}
+		if (msg_line(s, MC_REQUEST_KEY))
+			reg(s, "⚠ DECLARED TOLERANCE (§3 exception 5, §5.2): REQUEST_KEY(last_number=%u) DEFERRED — %llu ms since the "
+			       "last one accepted, fewer than the %d between two: the keyframe is started when the gap ends",
+			    last, (unsigned long long)(now - s->key_asked_ms), V_KEY_ASK_GAP_MS);
+		return true;
+	}
+	s->key_asked_ms = now;
+	if (msg_line(s, MC_REQUEST_KEY))
+		reg(s, "REQUEST_KEY(last_number=%u) accepted (§5.2): the next "
+		       "frame will be a KEYFRAME — last one sent by us: %u",
+		    last, s->video_number);
 	key_needed(s, "the client asked for one (§5.2)");
 	return true;
 }
@@ -8627,12 +8782,36 @@ static void judge_after_end(rcp_session *s, const uint8_t *data,
 
 /* Extracts from the buffer all the whole messages that are there.  `false` = the
  * session is over, and the caller must not buffer anything else. */
+/* ⛔⭐ THE MESSAGES ARE CONSUMED BY AN OFFSET, NOT BY SLIDING THE REST DOWN (audit P-R2/Q-R2).  Until now every message ended with a
+ *     `memmove` of everything still in the buffer: a piece of 256 KiB made of 2-byte-body messages cost about L²/12 bytes moved, in the one
+ *     thread of every user — the same shape already cured for the capsules (`43fdc3f1`).  Now `drain_at()` walks the buffer with
+ *     `*off` and zeroes each message as soon as it has been consumed (a CREDENTIALS is the password in clear, finding R9.8), and
+ *     `drain()` slides the remainder down ONCE per call, whatever the way out — so that the buffer is, on return, what it always was:
+ *     the unconsumed bytes at the start, and nothing but zeros after them. */
+static bool drain_at(rcp_session *s, uint64_t now, size_t *off);
+
 static bool drain(rcp_session *s, uint64_t now)
 {
+	size_t off = 0;
+	bool ok = drain_at(s, now, &off);
+
+	if (off) {
+		size_t before = s->acc_len;
+
+		memmove(s->acc, s->acc + off, s->acc_len - off);
+		s->acc_len -= off;
+		/* ⛔ AND THE TAIL IS ZEROED, as it always was — finding R9.8: the `memmove` leaves a copy of the unconsumed bytes there. */
+		explicit_bzero(s->acc + s->acc_len, before - s->acc_len);
+	}
+	return ok;
+}
+
+static bool drain_at(rcp_session *s, uint64_t now, size_t *off)
+{
 	for (;;) {
-		if (s->acc_len < 6)
+		if (s->acc_len - *off < 6)
 			return true;
-		reader hdr = {s->acc, s->acc_len, 0, false};
+		reader hdr = {s->acc + *off, s->acc_len - *off, 0, false};
 		uint16_t kind = le_u16(&hdr);
 		uint32_t lung = le_u32(&hdr);
 		/* ⛔ The length is checked BEFORE allocating: whoever allocates and then
@@ -8644,7 +8823,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			dismiss(s, RCP_PROTOCOL_ERROR, "message over 1 MiB");
 			return false;
 		}
-		if (s->acc_len < 6u + lung)
+		if (s->acc_len - *off < 6u + lung)
 			return true; /* the body has not all arrived */
 
 		/* §2.5: on the control channel the high byte of the type is 0x00. */
@@ -8655,7 +8834,7 @@ static bool drain(rcp_session *s, uint64_t now)
 		/* ⛔ AND HERE, BEFORE ANY EFFECT: the declared length must be the one of
 		 * the type's fields (§6.1).  See `measure_fields()`. */
 		size_t wait = 0;
-		if (measure_fields(kind, s->acc + 6, lung, &wait) && wait != lung) {
+		if (measure_fields(kind, s->acc + *off + 6, lung, &wait) && wait != lung) {
 			char d[128];
 			snprintf(d, sizeof d,
 			         "type %#06x: the length declares %u bytes and the "
@@ -8664,8 +8843,17 @@ static bool drain(rcp_session *s, uint64_t now)
 			dismiss(s, RCP_PROTOCOL_ERROR, d);
 			return false;
 		}
-		reader l = {s->acc + 6, lung, 0, false};
+		reader l = {s->acc + *off + 6, lung, 0, false};
 		bool keep_going = true;
+		/* ⛔ The frequency ceiling (msgrate.h): over the rate, the message is consumed WITHOUT effect, as if it had not been sent. */
+		{
+			enum msg_class mc = control_class(kind);
+
+			if (mc != MC_COUNT && s->state == S_ACTIVE && !msg_admit(s, mc, now)) {
+				l.i = lung;
+				goto message_done;
+			}
+		}
 		switch (kind) {
 		case T_HELLO:
 			if (s->state != S_WAIT_HELLO) {
@@ -8996,16 +9184,10 @@ static bool drain(rcp_session *s, uint64_t now)
 				        "LAYOUT malformed");
 				return false;
 			}
-			if (!layout_known(s, new_one)) {
-				reg(s, "⚠ LAYOUT «%s»: this machine does not have it.  ⛔ The "
-				       "session is NOT closed (§8.3, «never detach») and keeps "
-				       "«%s»: the previous keyboard still works, and taking away "
-				       "the work for a missing keyboard would cost more than the "
-				       "fault.  ⚠ At `ATTACH` §4.5 wants the farewell, and there it is "
-				       "right: there is no session to save",
-				    new_one, s->layout[0] ? s->layout : "the session's own");
-				break;
-			}
+			/* ⛔⭐ THE CHEAP CHECK FIRST (audit P-R1/Q-R1/S-R2): `layout_known()` compiles a whole XKB keymap in the main loop, the
+			 *    one thread of every user, and until now it ran BEFORE the «already the one in force» test and for every message.
+			 *    The comparison costs nothing, so it comes first; and the last layout this machine turned out not to have is
+			 *    remembered, so that repeating it does not compile it again either. */
 			if (strcmp(new_one, s->layout) == 0) {
 				/* ⚠ It is written all the same: a client that sends the same
 				 *   layout again is not a fault, but a keymap replacement
@@ -9018,9 +9200,21 @@ static bool drain(rcp_session *s, uint64_t now)
 				    new_one);
 				break;
 			}
+			if (strcmp(new_one, s->layout_unknown) == 0 || !layout_known(s, new_one)) {
+				snprintf(s->layout_unknown, sizeof s->layout_unknown, "%s", new_one);
+				reg(s, "⚠ LAYOUT «%s»: this machine does not have it.  ⛔ The "
+				       "session is NOT closed (§8.3, «never detach») and keeps "
+				       "«%s»: the previous keyboard still works, and taking away "
+				       "the work for a missing keyboard would cost more than the "
+				       "fault.  ⚠ At `ATTACH` §4.5 wants the farewell, and there it is "
+				       "right: there is no session to save",
+				    new_one, s->layout[0] ? s->layout : "the session's own");
+				break;
+			}
 			reg(s, "LAYOUT: from «%s» to «%s», with the session OPEN (§7.1 0x0009)",
 			    s->layout[0] ? s->layout : "(none)", new_one);
 			snprintf(s->layout, sizeof s->layout, "%s", new_one);
+			s->layout_unknown[0] = 0;
 			apply_layout(s, "LAYOUT (0x0009)");
 			/* ⛔ And NOTHING is answered on the wire: §7.1 foresees no
 			 *    answer to `LAYOUT`, exactly as for `VIEW`.  A
@@ -9167,6 +9361,15 @@ static bool drain(rcp_session *s, uint64_t now)
 				break;
 			}
 
+			/* ⛔ THE FREQUENCY CEILING (msgrate.h, audit P-R3/Q-R3/E-R5): every request that CHANGES the size makes the stage of the child
+			 *    be rebuilt (up to 3 s) and reopens the encoders; the one for the size already in force (the most frequent) does
+			 *    not, and comes before this point.  Over the rate it is NOT consumed in silence: §7.1 wants one
+			 *    `CANVAS` for each `FIT_CANVAS` and the client keeps count, so it is answered NOT_NOW, with the canvas in force.
+			 *    The rate is far above what a hand dragging an edge does (twenty a second, the comment above). */
+			if (!msg_admit(s, MC_FIT_CANVAS, now)) {
+				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
+				break;
+			}
 			/* ⛔ NO HOOK = COMPOSITOR_UNABLE, and it is the TRUE answer for
 			 *    whoever hosts us without a stage: the in-process benches of phase 1
 			 *    and the harness of `benches/01-b3-graft-rcp.py`.  §7.1: «if the
@@ -9181,6 +9384,17 @@ static bool drain(rcp_session *s, uint64_t now)
 				    requested_w, requested_h, good_w, good_h, s->canvas_w, s->canvas_h);
 				send_canvas(s, 2 /* REFUSED */, 1 /* COMPOSITOR_UNABLE */,
 				           s->canvas_w, s->canvas_h);
+				break;
+			}
+
+			/* ⛔⭐ THE BUDGET (audit P-R4/Q-R4): ONLY HERE, for a NEW request of the client.  The calls of `recanvas` at the `ATTACH` and at the
+			 *    recall of the scene put the session on the canvas it already had, and must always go through (a budget that said no there leaves
+			 *    the screen black): that is why this is a hook of its own and not a check inside `recanvas`.  Before the in-flight handling
+			 *    below, so that a refused request does not disturb the one that is on its way. */
+			if (s->g.canvas_fits && !s->g.canvas_fits(s->g.ctx, good_w, good_h)) {
+				reg(s, "⛔ FIT_CANVAS %ux%u → %ux%u does NOT fit the budget of this machine: NOT_NOW, and the canvas stays %ux%u",
+				    requested_w, requested_h, good_w, good_h, s->canvas_w, s->canvas_h);
+				send_canvas(s, 2 /* REFUSED */, 3 /* NOT_NOW */, s->canvas_w, s->canvas_h);
 				break;
 			}
 
@@ -9309,6 +9523,7 @@ static bool drain(rcp_session *s, uint64_t now)
 			return false;
 		}
 		}
+	message_done:
 		if (!keep_going)
 			return false;
 		/* ⛔ §6.0: one advances by the DECLARED length, not by how much was
@@ -9321,15 +9536,11 @@ static bool drain(rcp_session *s, uint64_t now)
 			        "the body has more bytes than the expected fields");
 			return false;
 		}
-		size_t before = s->acc_len;
-		memmove(s->acc, s->acc + 6 + lung, s->acc_len - 6 - lung);
-		s->acc_len -= 6 + lung;
-		/* ⛔ AND THE TAIL IS ZEROED — finding R9.8.  The `memmove` slid the
-		 * remainder down and left the bytes of the message just consumed where
-		 * they were: those of a `CREDENTIALS` are the password in clear, and
-		 * they stayed in the session until the end of the connection.
-		 * §4.4: «it must be zeroed as soon as PAM has answered». */
-		explicit_bzero(s->acc + s->acc_len, before - s->acc_len);
+		/* ⛔ AND THE MESSAGE JUST CONSUMED IS ZEROED NOW — finding R9.8: those of a `CREDENTIALS` are the password in clear, and
+		 *    they must not stay in the session until the end of the connection.  §4.4: «it must be zeroed as soon as PAM has
+		 *    answered».  Only its own 6 + `lung` bytes: the rest is not touched (that was the quadratic cost). */
+		explicit_bzero(s->acc + *off, 6 + (size_t)lung);
+		*off += 6 + (size_t)lung;
 		s->since = now;
 	}
 }
@@ -9589,6 +9800,21 @@ void rcp_channel_closed(rcp_session *s)
  *
  * ⚠ And it sends nothing on the wire: `rcp_time()` takes care of that, when
  *   the fixed second of §4.4-bis has passed too. */
+bool rcp_canonical_user(const char *typed, char *out, size_t cap)
+{
+	struct passwd pw, *res = NULL;
+	char spare[2048];
+
+	if (!typed || !*typed || !out || cap == 0)
+		return false;
+	if (getpwnam_r(typed, &pw, spare, sizeof spare, &res) != 0 || !res || !res->pw_name || !res->pw_name[0])
+		return false;
+	if (strlen(res->pw_name) >= cap)
+		return false;
+	snprintf(out, cap, "%s", res->pw_name);
+	return true;
+}
+
 bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
                   uint64_t now)
 {
@@ -9636,6 +9862,19 @@ bool rcp_verdict(rcp_session *s, uint64_t ticket, bool admitted,
 			login_report(&k, s->address, s->user, admitted, &r, now);
 		}
 	}
+	/* ⛔⭐ ADMITTED: FROM HERE THE SESSION GOES BY THE NAME OF THE SYSTEM (audit P-R6/Q-R8) — the slot, the ATTACH, the messages to the
+	 *    stage.  The ban and the attempt booking above are keyed by what was TYPED, as they must be (the attacker chooses the spelling).
+	 *    `main.c` brings the child and the stage to the same name (`delivery_verdict()`). */
+	if (admitted) {
+		char canon[sizeof s->user];
+
+		if (rcp_canonical_user(s->user, canon, sizeof canon) && strcmp(canon, s->user) != 0) {
+			reg(s, "⚠ the name typed «%s» is the user «%s» of this machine (the system does not tell the two spellings "
+			       "apart): the slot, the session and the desktop go by «%s»",
+			    s->user, canon, canon);
+			snprintf(s->user, sizeof s->user, "%s", canon);
+		}
+	}
 	return true;
 }
 
@@ -9668,6 +9907,20 @@ bool rcp_time(rcp_session *s, uint64_t now)
 		return false;
 	/* ⏳ §13.5: a `PACE` held back by the 250 ms window goes out here. */
 	pace_flush(s, now);
+	msg_flush_all(s, now);
+	/* ⛔ A REQUEST_KEY DEFERRED BY THE GAP IS SERVED HERE, not lost (see `V_KEY_ASK_GAP_MS`): unless a keyframe has gone out since it came,
+	 *    which answers it too. */
+	if (s->key_deferred) {
+		if (!s->never_sent_key && s->last_key_ms >= s->key_deferred_ms) {
+			s->key_deferred = false;
+		} else if (now - s->key_asked_ms >= V_KEY_ASK_GAP_MS) {
+			s->key_deferred = false;
+			s->key_asked_ms = now;
+			if (msg_line(s, MC_REQUEST_KEY))
+				reg(s, "REQUEST_KEY deferred by the gap SERVED (§5.2): the next frame will be a KEYFRAME");
+			key_needed(s, "a REQUEST_KEY deferred by the gap (§5.2)");
+		}
+	}
 
 	/* ⛔⛔ THE BACKSTOP OF PASTE REQUESTS, and without it the clipboard
 	 *      channel works only once.

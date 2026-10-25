@@ -288,6 +288,11 @@ typedef bool (*wt_recanvas_request)(void *ctx, const char *user,
                                     uint32_t width, uint32_t height);
 void wt_recanvas_hook(wt_recanvas_request f, void *ctx);
 
+/* ⛔⭐ «May this user's session grow to this canvas?» — asked ONLY for a new FIT_CANVAS request of the client (the budget of the host).
+ * `false` = no: the client gets NOT_NOW.  Not connected = always yes.  Not the `recanvas` hook, which also serves the ATTACH. */
+typedef bool (*wt_canvas_fits_request)(void *ctx, const char *user, uint32_t width, uint32_t height);
+void wt_canvas_fits_hook(wt_canvas_fits_request f, void *ctx);
+
 /* ⭐ §5-bis.7 — the layout to the stage of WHOEVER ASKED. */
 typedef bool (*wt_layout_request)(void *ctx, const char *user,
                                           const char *name);
