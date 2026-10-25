@@ -1007,7 +1007,7 @@ static void deliver_outcome(helper *a, uint64_t ticket, uint8_t outcome, const c
 /* ⭐ 1.5: network mode — a VERDICT from the root side (`rootside_move()`).  RXR_NO_LOCKED is the faillock refusal
  *    (marked for `rcp.c` by `deliver_outcome()`), RXR_NOT_CHECKED the root side's «not checked» (its bounds, helper
  *    down, timeout): refused as OURS and never counted (`not_checked()`); RXR_PAUSED is the root side's own pause: a plain refusal
- *    for the page, not counted (`rcp_refusal_paused()`); RXR_NO counts. */
+ *    for the page, counted like any refusal EXCEPT for a key that logged in lately (§11.47 B, `rcp_refusal_paused()`); RXR_NO counts. */
 static void on_root_verdict(void *ctx, uint64_t request, int outcome)
 {
 	helper *a = (helper *)ctx;
@@ -1027,7 +1027,7 @@ static void on_root_verdict(void *ctx, uint64_t request, int outcome)
 	}
 	if (outcome == RXR_PAUSED) {
 		/* ⭐ A1 (reading of rcp.c): the root side's own pause.  A refusal like any other for the page — 0x07 at the same floor, so that it cannot be
-		 *    told from a wrong password or a name that does not exist — but NOT a failure in the tables: `rcp.c` is told for THIS delivery only. */
+		 *    told from a wrong password or a name that does not exist — and counted by the rule of §11.47 B (not for a key that logged in lately, as any refusal otherwise): `rcp.c` is told for THIS delivery only. */
 		rcp_refusal_paused(request);
 		if (a->delivery)
 			a->delivery(a->delivery_ctx, request, false, user, rhost, false);
