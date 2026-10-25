@@ -1629,8 +1629,115 @@ static bool log_secret_random(void)
 	return true;
 }
 
-/* Reads `<dir>/log-secret` or makes it (0600), exactly like `secret_load()`
- * of `transport.c` does for the QUIC token secret, in the same directory.
+/* ⭐ SECRET AND STATE FILES — the scheme of `secret_load()` in `transport.c`, shared by the log secret and the ban file
+ *    (before, `open()` without O_NOFOLLOW, no owner check, and the temporary one written with O_TRUNC by a fixed name).
+ *    · the DIRECTORY is opened once and every open, create and rename happens through that descriptor, so the three
+ *      steps cannot land in different directories; a directory that anyone can write to without the sticky bit is
+ *      refused (anybody could swap the file);
+ *    · READING: `O_NOFOLLOW` (a link is refused, never followed), a regular file, owned by root or by the uid we run as
+ *      (what a planted file of somebody else is not); for a secret also mode 0600;
+ *    · WRITING: a temporary `<name>.tmp.<pid>` with `O_CREAT|O_EXCL|O_NOFOLLOW`, 0600 from the first byte (a leftover of
+ *      a crashed run with the same pid is removed once), `fsync`, `rename` over the final name (it replaces a planted link
+ *      itself, it does not write through it), `fsync` of the directory.
+ *    The directory's own OWNER is not checked on purpose: what is read is validated by the file's owner and what is written
+ *    is created by us and renamed over; a container may mount the state directory from the host. */
+static uid_t sf_owner(void)
+{
+	return geteuid();
+}
+
+/* The directory of `path` opened; `base` receives the last component.  -1 with errno. */
+static int sf_dir(const char *path, char *base, size_t cap)
+{
+	const char *slash = strrchr(path, '/');
+	char dir[600];
+	struct stat st;
+	int dfd;
+
+	if (!slash) {
+		snprintf(dir, sizeof dir, ".");
+		snprintf(base, cap, "%s", path);
+	} else {
+		size_t n = slash == path ? 1 : (size_t)(slash - path);
+
+		if (n >= sizeof dir) {
+			errno = ENAMETOOLONG;
+			return -1;
+		}
+		memcpy(dir, path, n);
+		dir[n] = 0;
+		snprintf(base, cap, "%s", slash + 1);
+	}
+	if (!*base || strlen(slash ? slash + 1 : path) >= cap) {
+		errno = EINVAL;
+		return -1;
+	}
+	dfd = open(dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+	if (dfd < 0)
+		return -1;
+	if (fstat(dfd, &st) != 0 || ((st.st_mode & S_IWOTH) && !(st.st_mode & S_ISVTX))) {
+		close(dfd);
+		errno = EPERM;
+		return -1;
+	}
+	return dfd;
+}
+
+/* `base` opened for reading in `dfd`: no link, a regular file, owner root or us, and (secret) no group or other bits.
+ * -1 with errno (EPERM for a file that is not acceptable, ELOOP for a link). */
+static int sf_open(int dfd, const char *base, bool secret)
+{
+	struct stat st;
+	int fd = openat(dfd, base, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+
+	if (fd < 0)
+		return -1;
+	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || (st.st_uid != 0 && st.st_uid != sf_owner()) ||
+	    (secret && (st.st_mode & 077) != 0)) {
+		close(fd);
+		errno = EPERM;
+		return -1;
+	}
+	return fd;
+}
+
+/* The temporary of `base` created in `dfd`: its name in `tmp`.  The descriptor, or -1. */
+static int sf_tmp(int dfd, const char *base, char *tmp, size_t cap)
+{
+	int fd;
+
+	snprintf(tmp, cap, "%s.tmp.%ld", base, (long)getpid());
+	fd = openat(dfd, tmp, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+	if (fd < 0 && errno == EEXIST) {
+		unlinkat(dfd, tmp, 0); /* a leftover of a crashed run with the same pid (a link is removed, not followed) */
+		fd = openat(dfd, tmp, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+	}
+	if (fd >= 0 && fchmod(fd, 0600) != 0) {
+		close(fd);
+		unlinkat(dfd, tmp, 0);
+		return -1;
+	}
+	return fd;
+}
+
+/* fsync, close, rename over `base`, fsync of the directory.  On any failure the temporary is removed. */
+static bool sf_commit(int dfd, int fd, const char *tmp, const char *base)
+{
+	bool ok = fsync(fd) == 0;
+
+	ok = close(fd) == 0 && ok;
+	ok = ok && renameat(dfd, tmp, dfd, base) == 0;
+	if (!ok)
+		unlinkat(dfd, tmp, 0);
+	else
+		(void)fsync(dfd);
+	return ok;
+}
+
+/* Reads `<dir>/log-secret` or makes it (0600), the same way as `secret_load()`
+ * of `transport.c` does for the QUIC token secret, in the same directory (see
+ * the box above).  A file that is a link, not ours, not 0600 or not 32 bytes is
+ * REPLACED, as `secret_load()` does.
  * Returns 1 = read, 0 = made and written, -1 = the secret of this run only
  * (memory): the tags change at every restart, and the caller says so;
  * -2 = no secret at all (the tags are «??????»). */
@@ -1641,7 +1748,7 @@ int rcp_log_secret_load(const char *dir)
 		log_secret_ready = log_secret_random();
 		return log_secret_ready ? -1 : -2;
 	}
-	char path[600], tmp[620];
+	char path[600], base[64], tmp[96];
 	/* The directory may not exist yet: this runs before `certificates_prepare()`
 	 * (the ban file needs the secret first), which makes it with the same mode. */
 	if (mkdir(dir, 0700) != 0 && errno != EEXIST) {
@@ -1649,39 +1756,40 @@ int rcp_log_secret_load(const char *dir)
 		return log_secret_ready ? -1 : -2;
 	}
 	snprintf(path, sizeof path, "%s/%s", dir, LOG_SECRET_FILE);
-	int fd = open(path, O_RDONLY | O_CLOEXEC);
+	int dfd = sf_dir(path, base, sizeof base);
+	if (dfd < 0) {
+		log_secret_ready = log_secret_random();
+		return log_secret_ready ? -1 : -2;
+	}
+	int fd = sf_open(dfd, base, true);
 	if (fd >= 0) {
 		uint8_t buf[sizeof log_secret + 1];
 		ssize_t n = read(fd, buf, sizeof buf);
-		struct stat st;
-		bool ok = n == (ssize_t)sizeof log_secret && fstat(fd, &st) == 0 &&
-		          (st.st_mode & 077) == 0;
 		close(fd);
-		if (ok) {
+		if (n == (ssize_t)sizeof log_secret) {
 			memcpy(log_secret, buf, sizeof log_secret);
 			explicit_bzero(buf, sizeof buf);
 			log_secret_ready = true;
+			close(dfd);
 			return 1;
 		}
 		explicit_bzero(buf, sizeof buf);
-		/* a file of the wrong size or readable by others: replaced */
+		/* a file of the wrong size: replaced */
 	}
-	if (!log_secret_random())
+	if (!log_secret_random()) {
+		close(dfd);
 		return -2;
+	}
 	log_secret_ready = true;
-	snprintf(tmp, sizeof tmp, "%s.new", path);
-	fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
-	if (fd < 0)
-		return -1;
-	bool wrote = write(fd, log_secret, sizeof log_secret) == (ssize_t)sizeof log_secret &&
-	             fsync(fd) == 0;
-	close(fd);
-	if (!wrote || rename(tmp, path) != 0) {
-		/* the temporary one must not stay (a failed rename leaves it for ever) */
-		unlink(tmp);
+	fd = sf_tmp(dfd, base, tmp, sizeof tmp);
+	if (fd < 0) {
+		close(dfd);
 		return -1;
 	}
-	return 0;
+	bool wrote = write(fd, log_secret, sizeof log_secret) == (ssize_t)sizeof log_secret;
+	wrote = sf_commit(dfd, fd, tmp, base) && wrote; /* the temporary one is removed on failure */
+	close(dfd);
+	return wrote ? 0 : -1;
 }
 
 /* The name as it goes to the log: itself if it is a user of this machine,
@@ -2153,22 +2261,23 @@ static void save_ban(const struct sink *k, uint64_t now)
 {
 	if (ban_path[0] == 0)
 		return;
-	char tmp[sizeof ban_path + 8];
-	snprintf(tmp, sizeof tmp, "%s.new", ban_path);
-	/* ⛔ 0600 from the first byte (`open`, not `fopen`: the file is born with the
-	 *    right mode, no moment in which it is readable by others). */
-	int fd = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+	char base[256], tmp[300];
+	/* ⛔ The scheme of the box above `rcp_log_secret_load()`: the directory opened once, a temporary created with O_EXCL and
+	 *    O_NOFOLLOW (0600 from the first byte), written, synced and renamed over the final name (a planted link there is
+	 *    replaced, not written through). */
+	int dfd = sf_dir(ban_path, base, sizeof base);
+	int fd = dfd >= 0 ? sf_tmp(dfd, base, tmp, sizeof tmp) : -1;
 	FILE *f = fd >= 0 ? fdopen(fd, "w") : NULL;
-	if (fd >= 0 && !f)
+	if (fd >= 0 && !f) {
 		close(fd);
-	if (f && fchmod(fd, 0600) != 0) {
-		fclose(f);
-		f = NULL;
+		unlinkat(dfd, tmp, 0);
 	}
 	if (!f) {
 		say(k, "⛔ could not write the ban file «%s»: the ban "
 		       "lives only in memory and a restart removes it (§4.4-bis)",
-		    tmp);
+		    ban_path);
+		if (dfd >= 0)
+			close(dfd);
 		return;
 	}
 	static const char KIND_CHAR[LEVELS] = {'U', 'K', 'N'};
@@ -2193,7 +2302,16 @@ static void save_ban(const struct sink *k, uint64_t now)
 	bool bad = ferror(f) != 0 || fflush(f) != 0 || fsync(fd) != 0;
 	if (fclose(f) != 0)
 		bad = true;
-	if (bad || rename(tmp, ban_path) != 0)
+	if (bad) {
+		unlinkat(dfd, tmp, 0);
+	} else if (renameat(dfd, tmp, dfd, base) != 0) {
+		unlinkat(dfd, tmp, 0);
+		bad = true;
+	} else {
+		(void)fsync(dfd);
+	}
+	close(dfd);
+	if (bad)
 		say(k, "⛔ could not write/rename the ban file «%s»", ban_path);
 	else
 		say(k, "the ban file is up to date: %d bans in force in «%s»", amount,
@@ -2302,7 +2420,19 @@ int rcp_ban_load(const char *fpath, uint64_t now)
 	if (!fpath || !*fpath)
 		return 0;
 	snprintf(ban_path, sizeof ban_path, "%s", fpath);
-	FILE *f = fopen(ban_path, "r");
+	/* ⛔ Opened as a state file (see the box above `rcp_log_secret_load()`): a link is not followed (ELOOP) and a file
+	 *    that is not a regular one of root or of our uid is refused (EPERM): both are the «-1» below, the protection is NOT
+	 *    silently off.  The mode is not required to be 0600 here: the 1.0 wrote it with the umask. */
+	char base[256];
+	int dfd = sf_dir(ban_path, base, sizeof base);
+	int fd = dfd >= 0 ? sf_open(dfd, base, false) : -1;
+	FILE *f = fd >= 0 ? fdopen(fd, "r") : NULL;
+	int why_not = errno; /* kept across the closes below */
+	if (fd >= 0 && !f)
+		close(fd);
+	if (dfd >= 0)
+		close(dfd);
+	errno = why_not;
 	if (!f) {
 		/* ⛔ HERE LAY THE SEVENTH GUISE OF THE DEFECT, INSIDE THE FUNCTION THE
 		 *    HEADER DECLARES IMMUNE.  `rcp.h` promises «-1 if the file was

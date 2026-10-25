@@ -22,6 +22,9 @@
  *   unblock     removes every level of the address (user, key, /48) and the recidivism
  *   file        the old format is converted, the new one round-trips (ban, user with spaces, recidivism), -1 on a bad path
  *   log         `unknown user [hmac6]` (never the name); a real user is named; RFC 4231 vectors; the secret file is 0600
+ *   secure files  the log secret and the ban file follow transport.c's secret_load(): a link at the file or at its temporary is refused
+ *               and never written through, a foreign owner is refused, the 1.0's 0644 ban file is still read, the writing leaves no
+ *               temporary, a world-writable directory without the sticky bit is refused
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
@@ -31,8 +34,18 @@
  *     clang -fsanitize=address,undefined t.o l.o -o test && ./test'
  * Exit code 0 = every check passed.
  */
+/* geteuid() is interposed ONLY to let the test make a file look foreign when it runs as an ordinary user (as root it
+ * chown()s the file instead): the files rcp.c trusts are those of root or of this uid. */
+#include <sys/types.h>
+#include <unistd.h>
+static unsigned rxt_uid_shift;
+static uid_t rxt_geteuid(void);
+#define geteuid rxt_geteuid
 #include "rcp.c"
+#undef geteuid
+static uid_t rxt_geteuid(void) { return geteuid() + rxt_uid_shift; }
 
+#include <dirent.h>
 #include <stdio.h>
 #include "common.h"
 
@@ -975,6 +988,137 @@ static void test_extreme_expiries(void)
 	fresh();
 }
 
+/* ⭐ The secret and state files: the scheme of transport.c secret_load() (O_NOFOLLOW, owner root or us, O_EXCL temporary,
+ * atomic rename).  A link is refused, a foreign owner is refused, and the writing is atomic and writes through nothing. */
+static void test_secure_files(void)
+{
+	char sd[] = "/tmp/lg-sf-XXXXXX";
+	char victim[160], lp[160], planted[200], bp[160], line[64];
+	struct stat st, lst;
+	const char *K = "[1.2.3.4]";
+	FILE *vf;
+	int n, others;
+	DIR *dh;
+	struct dirent *de;
+	char buf[40];
+
+	CHECK(mkdtemp(sd) != NULL, "mkdtemp");
+	snprintf(victim, sizeof victim, "%s/victim", sd);
+	snprintf(lp, sizeof lp, "%s/%s", sd, LOG_SECRET_FILE);
+	vf = fopen(victim, "w");
+	CHECK(vf != NULL, "victim file");
+	for (int i = 0; i < 32; i++)
+		fputc('V', vf);
+	fclose(vf);
+	chmod(victim, 0600);
+
+	/* 1. a link in place of log-secret: not read (the 32 'V' are NOT the secret), not written through, replaced */
+	CHECK(symlink(victim, lp) == 0, "plant a link at log-secret");
+	CHECK(rcp_log_secret_load(sd) == 0, "a link in place of log-secret is refused: a new secret is made");
+	CHECK(memcmp(log_secret, "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV", 32) != 0, "...it is not the victim's bytes");
+	vf = fopen(victim, "r");
+	n = vf ? (int)fread(buf, 1, sizeof buf, vf) : -1;
+	if (vf)
+		fclose(vf);
+	CHECK(n == 32 && memcmp(buf, "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV", 32) == 0, "...and the victim is not written through");
+	CHECK(lstat(lp, &lst) == 0 && S_ISREG(lst.st_mode) && (lst.st_mode & 0777) == 0600 && lst.st_size == 32,
+	      "the link was replaced by a regular 0600 file of 32 bytes");
+
+	/* 2. a link planted at the temporary name: O_EXCL|O_NOFOLLOW, it is removed and recreated, the victim is untouched */
+	unlink(lp);
+	snprintf(planted, sizeof planted, "%s/%s.tmp.%ld", sd, LOG_SECRET_FILE, (long)getpid());
+	CHECK(symlink(victim, planted) == 0, "plant a link at the temporary name");
+	CHECK(rcp_log_secret_load(sd) == 0, "a planted temporary does not stop the writing");
+	vf = fopen(victim, "r");
+	n = vf ? (int)fread(buf, 1, sizeof buf, vf) : -1;
+	if (vf)
+		fclose(vf);
+	CHECK(n == 32 && memcmp(buf, "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV", 32) == 0, "the victim is untouched");
+	CHECK(lstat(planted, &lst) != 0, "and no temporary stays");
+
+	/* 3. a file of ANOTHER OWNER is not trusted (as root: chown'ed; as a user: this uid is made to look foreign) */
+	CHECK(rcp_log_secret_load(sd) == 1, "our own good file is read");
+	memcpy(line, log_secret, 32);
+	bool foreign = true;
+	if (geteuid() == 0)
+		foreign = chown(lp, 12345, (gid_t)-1) == 0; /* a root in a user namespace may not be able to: then the check is skipped */
+	else
+		rxt_uid_shift = 1;
+	if (foreign)
+		CHECK(rcp_log_secret_load(sd) == 0 && memcmp(line, log_secret, 32) != 0, "a secret of another owner is not trusted: replaced");
+	else
+		CHECK(true, "(skipped: this root cannot chown to another uid)");
+	rxt_uid_shift = 0;
+	CHECK(stat(lp, &st) == 0 && st.st_uid == geteuid() && (st.st_mode & 0777) == 0600, "and the new file is ours, 0600");
+
+	/* 4. the writing leaves nothing but the file itself */
+	others = 0;
+	dh = opendir(sd);
+	while (dh && (de = readdir(dh)) != NULL)
+		if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..") && strcmp(de->d_name, LOG_SECRET_FILE) &&
+		    strcmp(de->d_name, "victim"))
+			others++;
+	if (dh)
+		closedir(dh);
+	CHECK(others == 0, "no temporary or .new left in the directory (%d)", others);
+	CHECK(rcp_log_secret_load("/tmp") != -2, "a directory with the sticky bit (/tmp) is accepted");
+
+	/* 5. the ban file: a link is refused (-1, not «no bans»), a foreign owner is refused, 0644 (the 1.0's) is read, and the
+	 *    saving replaces a planted link without writing through it */
+	snprintf(bp, sizeof bp, "%s/ban", sd);
+	fresh();
+	CHECK(symlink(victim, bp) == 0, "plant a link at the ban file");
+	CHECK(rcp_ban_load(bp, at(0)) == -1, "a link at the ban file is a fault (-1), not zero bans");
+	ban_user(K, "linkvictim", at(0));
+	save_ban(NULL, at(1));
+	CHECK(lstat(bp, &lst) == 0 && S_ISREG(lst.st_mode) && (lst.st_mode & 0777) == 0600,
+	      "the saving replaced the link by a regular 0600 file");
+	vf = fopen(victim, "r");
+	n = vf ? (int)fread(buf, 1, sizeof buf, vf) : -1;
+	if (vf)
+		fclose(vf);
+	CHECK(n == 32 && memcmp(buf, "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV", 32) == 0, "...and the victim of the link was not written");
+	fresh();
+	CHECK(rcp_ban_load(bp, at(0)) >= 0, "our own file is read");
+	chmod(bp, 0644);
+	fresh();
+	CHECK(rcp_ban_load(bp, at(0)) >= 0, "a 0644 ban file (what the 1.0 wrote) is still read");
+	foreign = true;
+	if (geteuid() == 0)
+		foreign = chown(bp, 12345, (gid_t)-1) == 0;
+	else
+		rxt_uid_shift = 1;
+	fresh();
+	if (foreign)
+		CHECK(rcp_ban_load(bp, at(0)) == -1, "a ban file of another owner is a fault (-1)");
+	else
+		CHECK(true, "(skipped: this root cannot chown to another uid)");
+	rxt_uid_shift = 0;
+	fresh();
+	CHECK(rcp_ban_load("/tmp/lg-sf-nonexistent-dir/ban", at(0)) == 0, "no directory, no file yet: zero bans, not an error");
+
+	/* 6. a directory anybody can write to (no sticky bit) is refused: anybody could swap the file */
+	{
+		char wd[] = "/tmp/lg-sw-XXXXXX";
+
+		CHECK(mkdtemp(wd) != NULL, "mkdtemp (world-writable)");
+		chmod(wd, 0777);
+		CHECK(rcp_log_secret_load(wd) == -1, "a world-writable directory: no file is made, the secret of the run only");
+		char wb[200];
+
+		snprintf(wb, sizeof wb, "%s/ban", wd);
+		fresh();
+		CHECK(rcp_ban_load(wb, at(0)) == -1, "...and the ban file there is a fault (-1)");
+		rmdir(wd);
+	}
+
+	unlink(bp);
+	unlink(lp);
+	unlink(victim);
+	rmdir(sd);
+	fresh();
+}
+
 int main(void)
 {
 	test_keys();
@@ -990,6 +1134,7 @@ int main(void)
 	test_unblock();
 	test_file();
 	test_log();
+	test_secure_files();
 	printf("\n%d checks, %d failed\n", checks, bad);
 	return bad ? 1 : 0;
 }
