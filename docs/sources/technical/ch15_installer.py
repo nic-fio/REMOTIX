@@ -666,10 +666,10 @@ S_ROUTES = p("REMOTIX encodes only on the graphics card (§10.27: “no CPU with
       + " field of " + c("remotix --encoding-test") + " (" + rif("Verification and the certificate") + "). The minimum "
       "Mesa with RADV encoding by default is not measured (Mesa 25.0.7 works, measured 1 Oct 2026 on the test server's "
       "Radeon RX 6800).") + \
-    warn(c("codeH264()") + " in " + c("preflight.go") + " still raises " + c("RX-H264-003") + " (Fedora) and " + c("RX-H264-004") + " (openSUSE), "
-         "which " + c("codes.go") + " marks as retired by §10.36: where a driver warning was meant, the "
-         "administrator reads an INFO line with a “(retired…)” text. The verdict above is what blocks; these lines are "
-         "cosmetic.", "Code defect.")
+    p("Settled in 1.5 (commit " + c("84fdf573") + "): " + c("codeH264") + " is gone. A VA-API driver that is missing or "
+      "does not encode H.264 always raises " + c("RX-H264-002") + "; " + c("RX-H264-003") + " and " + c("RX-H264-004") + " stay in "
+      + c("codes.go") + " only as retired (§10.36) and nothing raises them, and the firewall that cannot be changed returns "
+      + c("RX-FW-002") + ", not the retired " + c("RX-FW-004") + ".")
 
 S_COMPAT = p("Phase 2 (" + c("Evaluate()") + ") judges the machine against the catalogue, desktop by desktop, and "
              "collects in one list everything that is missing. An empty list means REMOTIX can be installed.", lead=True) + \
@@ -768,7 +768,7 @@ S_PLAN = p(c("InstallPlan()") + " is the whole installation policy in one functi
     p("Settled in 1.5 (DECISIONS-11 §11.38): the card groups are those of the render nodes only — the compositors and the encoder "
       "open " + c("renderD*") + ", never " + c("card0") + " — so " + c("CardGroups()") + " scans " + c("/dev/dri/renderD*") + " and the users present "
       "at installation get the render group, not " + c("video") + ". Not measured: AMD and NVIDIA cards (the NVIDIA proprietary driver "
-      "opens " + c("/dev/nvidia*") + ", for which " + c("RX-GPU-007") + " warns).")
+      "opens " + c("/dev/nvidia*") + ", for which " + c("RX-GPU-002") + " warns).")
 
 S_MANAGERS = p("Each family has an adapter (" + c("Manager") + " in " + c("package_manager.go") + ", chosen by "
                + c("ChooseHandler()") + "): versions, simulate, install, simulate-remove, remove only the named "

@@ -589,10 +589,15 @@ def controlla(kinds=tuple(MANUALS)):
     words_go = set(re.findall(r"\b\w+\b", go_content))
     js_text = (ROOT / "src" / "page.html").read_text(errors="replace")
     words_js = set(re.findall(r"\b\w+\b", js_text))
+    # The shell functions of the package scripts (packaging/*/remotix.install, remotix-net-move) are cited too, e.g. net_back().
+    sh_text = "".join(f.read_text(errors="replace") for pat in ("remotix.install", "remotix-net-move", "remotix.postinst",
+                                                                 "remotix.prerm", "remotix.postrm")
+                      for f in (ROOT / "packaging").glob("*/" + pat))
+    words_sh = set(re.findall(r"\b\w+\b", sh_text))
     for x in codici:
         for nome in re.findall(r"^([A-Za-z_][\w.]*)\(\)$", x.strip()):
             ultimo = nome.split(".")[-1]
-            if ultimo not in words_c and ultimo not in words_go and ultimo not in words_js \
+            if ultimo not in words_c and ultimo not in words_go and ultimo not in words_js and ultimo not in words_sh \
                     and nome not in NON_FUNCTION_NAMES:
                 errori.append(f"cited function that does not exist in the sources: {nome}()")
 
