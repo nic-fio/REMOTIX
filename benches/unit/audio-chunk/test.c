@@ -1,4 +1,7 @@
-/* test.c — audiochunk.h (audit of the session, S-R8).
+/* test.c — audiochunk.h (audit of the session, S-R8): audio_chunk_ok() refuses a chunk that does not fit in its buffer; audio_chunk_fit() reduces it to the buffer (offset modulo maxsize,
+ * size cut to what is left, offset even).  The last check reads src/sound.c to see that the capture callback uses audio_chunk_fit() and reads only the reduced chunk: that is why it
+ * runs from the root of the tree.
+ *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --cpus=2 --memory=2g --network=none -v "$PWD:/albero:ro" localhost/remotix-fuzz sh -c '
  *     cd /albero && clang -g -O1 -fsanitize=address,undefined -fno-sanitize-recover=undefined -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -Wno-unused-parameter \
