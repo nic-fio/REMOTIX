@@ -189,7 +189,7 @@ static size_t one_capsule(uint8_t *out, size_t cap)
 
 	if (pick == 0) {                          /* a close capsule, valid or invalid code */
 		kind = 0x2843;
-		lung = 4 + rnd() % 8;
+		lung = rnd() % 12;                  /* 0..11: also the ones shorter than the 4 bytes of a code (no close, just consumed) */
 	} else if (pick == 1) {                   /* above the cap */
 		kind = rnd() % 3000;
 		lung = WT_CAPSULE_MAX + 1 + rnd() % 3000;
