@@ -3029,7 +3029,7 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 			return false;
 		}
 		/* ⭐⛔ THE NAME, answered by the child (see `body_whoami`): the periodic check that used to run in the parent's
-		 *    loop.  A name that moved to another uid or vanished costs the child as before — the parent still asks NSS
+		 *    loop.  A name that moved to another uid costs the child as before — the parent still asks NSS
 		 *    itself at every login, so a child that lied here is found out the moment someone logs in under that name. */
 		/* ⚠ ONLY «another uid» costs the child.  «Gone» is NOT acted on here: the child asks NSS as an ordinary user, and a
 		 *   directory that wants root to bind (LDAP, sssd with a protected cache) would make EVERY child answer «gone» and
