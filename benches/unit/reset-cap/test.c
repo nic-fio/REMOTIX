@@ -121,8 +121,8 @@ int main(int argc, char **argv)
 		if (s) {
 			char *fn = strstr(s, "static void send_stateless_reset(");
 			char *take = fn ? strstr(fn, "reset_addr_take(&t->reset_addr") : NULL;
-			char *glob = fn ? strstr(fn, "if (t->reset_count >= RESET_PER_SECOND)") : NULL;
-			char *inc = fn ? strstr(fn, "t->reset_count++;") : NULL;
+			char *glob = fn ? strstr(fn, "if (*count >= cap)") : NULL;
+			char *inc = fn ? strstr(fn, "(*count)++;") : NULL;
 			CHECK(take && glob && inc && take < glob && glob < inc, "5b. the per-address check comes before the global cap and the global count");
 			CHECK(take && strstr(take, "t->reset_per_address ? t->reset_per_address : RESET_PER_ADDRESS"),
 			      "5c. the limit is t->reset_per_address (0 = the default), so the fuzz harness can raise it");
