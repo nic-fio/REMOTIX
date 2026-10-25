@@ -16,6 +16,9 @@
  *   3. without SO_PASSPIDFD on the socket nothing is attached: UNKNOWN (the old kernel's face);
  *   4. the wall (child_credentials_pidfd_ok), remote, the kernel's stamp pid 0: SAME passes; DIFFERENT is refused and the reason names the
  *      pidfd; UNKNOWN passes as today; SAME does not excuse a wrong uid, gid or serial; a non-zero pid in the namespace is still refused;
+ *   4b. a message that carries DESCRIPTORS (SCM_RIGHTS: the child never sends any) is a violation of the wall: -3, every descriptor the kernel
+ *      installed is closed (the open descriptors do not grow) — with and without SO_PASSPIDFD on the socket, one descriptor or four (the control data
+ *      does not fit: MSG_CTRUNC), and a plain message after it is read normally; the child-side wrapper just drops it (-2);
  *   5. by reading the sources (argv[1] = src/rootside.c, argv[2] = src/child.c): SPAWNED carries at most TWO descriptors (socket, then
  *      pidfd) and the client claims the second for the born child; the network side asks for SO_PASSPIDFD on the socket it received, and
  *      closes the pidfd with the socket (reaped, dismissed, turned off).
@@ -77,6 +80,43 @@ static void reap(pid_t p)
 {
 	kill(p, SIGKILL);
 	waitpid(p, NULL, 0);
+}
+
+/* A child that writes one message on `fd` WITH `n` descriptors attached (pipe ends) and exits. */
+static pid_t writer_with_fds(int fd, int n)
+{
+	pid_t p = fork();
+
+	if (p == 0) {
+		int fds[8], k = 0;
+		char m[16] = "hello";
+		struct iovec io = { m, sizeof m };
+		union { struct cmsghdr c; char b[CMSG_SPACE(8 * sizeof(int))]; } ctl;
+		struct msghdr mh;
+
+		for (int i = 0; i < n; i += 2) {
+			int pp[2];
+
+			if (pipe(pp) != 0)
+				_exit(1);
+			fds[k++] = pp[0];
+			if (k < n)
+				fds[k++] = pp[1];
+		}
+		memset(&ctl, 0, sizeof ctl);
+		memset(&mh, 0, sizeof mh);
+		mh.msg_iov = &io;
+		mh.msg_iovlen = 1;
+		mh.msg_control = ctl.b;
+		mh.msg_controllen = CMSG_SPACE(n * sizeof(int));
+		ctl.c.cmsg_level = SOL_SOCKET;
+		ctl.c.cmsg_type = SCM_RIGHTS;
+		ctl.c.cmsg_len = CMSG_LEN(n * sizeof(int));
+		memcpy(CMSG_DATA(&ctl.c), fds, n * sizeof(int));
+		(void)sendmsg(fd, &mh, 0);
+		_exit(0);
+	}
+	return p;
 }
 
 /* A child that writes one message on `fd` and exits. */
@@ -212,6 +252,49 @@ int main(int argc, char **argv)
 		close(sv[1]);
 	}
 
+	/* 4b */
+	{
+		int sv[2], one = 1;
+		int cases[4][2] = { {0, 1}, {1, 1}, {0, 4}, {1, 4} }; /* {SO_PASSPIDFD on?, descriptors attached} */
+
+		for (int k = 0; k < 4; k++) {
+			struct ucred chi;
+			bool c_e;
+			char buf[64];
+			enum pidfd_same same;
+			pid_t w;
+			ssize_t r;
+			int before;
+
+			socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, sv);
+			setsockopt(sv[0], SOL_SOCKET, SO_PASSCRED, &one, sizeof one);
+			if (cases[k][0])
+				setsockopt(sv[0], SOL_SOCKET, SO_PASSPIDFD, &one, sizeof one);
+			w = writer_with_fds(sv[1], cases[k][1]);
+			usleep(30000);
+			before = open_fds();
+			r = receive_with_credentials_pidfd(sv[0], buf, sizeof buf, &chi, &c_e, pfs_other, &same);
+			CHECK(r == -3, "4b: a message with descriptors is a violation of the wall (-3)");
+			CHECK(open_fds() == before, "4b: and every descriptor the kernel installed is closed (the open descriptors do not grow)");
+			waitpid(w, NULL, 0);
+			/* a plain message afterwards is read normally */
+			w = writer(sv[1]);
+			usleep(30000);
+			r = receive_with_credentials_pidfd(sv[0], buf, sizeof buf, &chi, &c_e, -1, &same);
+			CHECK(r > 0 && c_e, "4b: and the next plain message is read normally");
+			waitpid(w, NULL, 0);
+			/* the child-side wrapper drops it */
+			w = writer_with_fds(sv[1], cases[k][1]);
+			usleep(30000);
+			before = open_fds();
+			r = receive_with_credentials(sv[0], buf, sizeof buf, &chi, &c_e);
+			CHECK(r == -2 && open_fds() == before, "4b: the child-side wrapper drops it (-2) and closes the descriptors too");
+			waitpid(w, NULL, 0);
+			close(sv[0]);
+			close(sv[1]);
+		}
+	}
+
 	/* 4 */
 	{
 		char why[256];
@@ -252,6 +335,16 @@ int main(int argc, char **argv)
 			      "5: the root side hands over a pidfd of the child with the socket");
 			CHECK(strstr(r, "out->pidfd = C.has_pidfd ? C.pidfd : -1;") != NULL, "5: and rootside_spawn() claims it");
 			CHECK(strstr(c, "SO_PASSPIDFD") != NULL, "5: the network side asks the kernel for the sender's pidfd");
+			{
+				const char *mv = strstr(c, "if (readings == -3) {");
+				const char *kill_ = mv ? strstr(mv, "child_signal(f, g, SIGKILL);") : NULL;
+				const char *dis = mv ? strstr(mv, "child_dismiss(f, g, \"it sent descriptors on its socket\");") : NULL;
+
+				CHECK(mv && kill_ && dis && kill_ < dis && dis - mv < 1200, "5: children_move refuses a -3 message: the child is killed and dismissed");
+			}
+			CHECK(strstr(c, "exact via pidfd (pidfs)") != NULL && strstr(c, "the socket's rule") != NULL,
+			      "5: one log line per child says whether its identity is exact via pidfd or the socket's rule");
+			CHECK(strstr(c, "(m.msg_flags & MSG_CTRUNC)") != NULL, "5: MSG_CTRUNC is treated as the same violation");
 			CHECK(strstr(c, "g->pidfd = b.pidfd;") != NULL, "5: and keeps the pidfd in the child");
 			{
 				int closes = 0;

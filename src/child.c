@@ -730,6 +730,7 @@ static ssize_t receive_with_credentials_pidfd(int fd, void *buf, size_t cap,
 	} check;
 	struct cmsghdr *c;
 	ssize_t readings;
+	bool carried_descriptors = false;
 
 	*credentials = false;
 	if (same)
@@ -762,6 +763,20 @@ static ssize_t receive_with_credentials_pidfd(int fd, void *buf, size_t cap,
 				sender_pidfd = pf;
 			else
 				close(pf);
+		} else if (c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_RIGHTS) {
+			/* ⛔ THE CHILD NEVER SENDS DESCRIPTORS.  The room in `check` for the kernel's pidfd (a kernel < 6.5, or SO_PASSPIDFD refused,
+			 *    or no pidfd: the room is there all the same) would let a SCM_RIGHTS through, and the kernel INSTALLS those descriptors in
+			 *    THIS process: left open, a child could use up the network side's descriptors for everybody.  Every one is closed here, counted
+			 *    from `cmsg_len`, and the message is a violation of the wall (-3). */
+			size_t k = (c->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+
+			for (size_t j = 0; j < k; j++) {
+				int d;
+
+				memcpy(&d, CMSG_DATA(c) + j * sizeof(int), sizeof d);
+				close(d);
+			}
+			carried_descriptors = true;
 		}
 	}
 	/* ⭐ The exact identity, where the kernel has pidfs: the sender's pidfd against the one the root side handed over.  Closed here,
@@ -770,6 +785,11 @@ static ssize_t receive_with_credentials_pidfd(int fd, void *buf, size_t cap,
 		*same = pidfd_compare(expected_pidfd, sender_pidfd);
 	if (sender_pidfd >= 0)
 		close(sender_pidfd);
+	/* ⛔ The control data was cut by the kernel (`MSG_CTRUNC`): something was attached that does not fit what this wall expects (credentials and
+	 *    at most the sender's pidfd) — descriptors the kernel then closes itself.  Same verdict as descriptors that arrived: the child does not do
+	 *    that (as `chan_read()` in rootside.c:1109 does for the root channel). */
+	if (carried_descriptors || (m.msg_flags & MSG_CTRUNC))
+		return -3;
 	/* ⚠ A message truncated by the kernel (`MSG_TRUNC`) is a message that is
 	 *   not what it says it is: it is dropped.  With SEQPACKET this happens
 	 *   only if the sender wrote more than our buffer, that is if it is not
@@ -782,7 +802,10 @@ static ssize_t receive_with_credentials_pidfd(int fd, void *buf, size_t cap,
 static ssize_t receive_with_credentials(int fd, void *buf, size_t cap,
                                       struct ucred *chi, bool *credentials)
 {
-	return receive_with_credentials_pidfd(fd, buf, cap, chi, credentials, -1, NULL);
+	ssize_t r = receive_with_credentials_pidfd(fd, buf, cap, chi, credentials, -1, NULL);
+
+	/* the child side reading its PARENT: descriptors are not a wall matter there, the message is just dropped */
+	return r == -3 ? -2 : r;
 }
 
 /* ⛔⭐ THE WALL, AND THERE IS ONLY ONE — invariant I3.
@@ -2618,6 +2641,13 @@ static child_outcome ensure_remote(struct children *f, struct child *g,
 		g->pidfd = b.pidfd;
 		g->has_pidfd = true;
 	}
+	/* ⭐ ONE LINE PER CHILD: how its messages are identified.  Exact when the kernel has pidfs and gave a pidfd; otherwise the rule of the
+	 *    socket (pid 0 from outside the namespace, uid, gid, serial). */
+	registro_dice(LOG_CHILD, "⭐ identity of the child of «%s»: %s", b.user,
+	              use_pidfd && pidfd_on_pidfs(b.pidfd)
+	                  ? "exact via pidfd (pidfs)"
+	                  : use_pidfd ? "the socket's rule (a pidfd, but not on pidfs: kernel before 6.9)"
+	                              : "the socket's rule (no pidfd or no SO_PASSPIDFD: kernel before 6.5)");
 	g->born_ms = log_now_ms();
 	g->last_recheck_ms = g->born_ms;
 	g->name_checked_ms = g->born_ms;
@@ -3409,6 +3439,19 @@ void children_move(children *f, struct pollfd *fds, size_t n, uint64_t now_ms)
 
 			if (readings == 0) {
 				child_dismiss(f, g, "closed the socket (or died)");
+				break;
+			}
+			if (readings == -3) {
+				/* ⛔ A message that carried descriptors, or whose control data did not fit: the child never sends any.  A VIOLATION of the
+				 *    wall, not a message to throw away: the descriptors have been closed, the child is killed (same as a credentials
+				 *    mismatch). */
+				registro_dice(LOG_CHILD,
+				              "⛔⛔ MESSAGE REFUSED from «%s»: it carried descriptors (SCM_RIGHTS) or control data that did not fit; "
+				              "the child never sends descriptors.  The descriptors were closed; the child is killed.",
+				              g->user);
+				if (g->pid > 0)
+					child_signal(f, g, SIGKILL);
+				child_dismiss(f, g, "it sent descriptors on its socket");
 				break;
 			}
 			if (readings == -2) {
