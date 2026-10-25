@@ -1402,7 +1402,7 @@ int rcp_cursor_shape(rcp_session *s, uint16_t width, uint16_t height,
  * Aug 2026: three consecutive failed authentications from the same address, and
  * that address is out for twelve hours.
  * ⛔ CHANGED on 24 Oct 2026 (`docs/1.5/DECISIONS-11.md`): three levels of counters
- * ((key, user) 5 in 5 min · key 12 in 5 min · IPv6 /48 30 in 10 min), progressive
+ * ((key, user) 5 in 5 min · key 20 in 5 min (it was 12; only the failures count there since 1.5) · IPv6 /48 30 in 10 min), progressive
  * ban 15 min / 1 h / 12 h, forgotten after 24 h; key = IPv4 whole, IPv6 /64.
  * The 12 hours are now the TOP of the ladder.  `rcp_banned()` answers for the
  * levels that do not depend on the user (key, /48); `rcp_unblock()` clears all. */

@@ -2337,7 +2337,9 @@ struct login_info {
  * PAM.  The counters are «failed in the window + in flight»; the attempt that
  * would bring any level to its limit is not let through, and it is NOT a
  * failure (no ban is born from a refusal).  At most
- * `MAX_PER_USER_IN_FLIGHT` for the same (key, user). */
+ * `MAX_PER_USER_IN_FLIGHT` for the same (key, user).
+ * ⭐ 1.5 (margins for eight people behind one NAT): the ADDRESS level (LK_KEY) counts only the FAILURES, not the attempts in flight — eight people
+ * logging in together are eight attempts in flight at once; the (key, user) level and the IPv6 /48 keep counting theirs. */
 static enum login_verdict login_reserve(const char *key, const char *user,
                                         uint64_t now, struct login_info *info)
 {

@@ -5,7 +5,7 @@
  * further keys drained: «503 busy» for everybody.  Now the BUSY buckets of one IPv6 /32 are at most PAGE_KEYS_PER_32 (32) in a table.
  *
  * What is checked, on the REAL header (nothing copied):
- *   1. a bucket: the burst (32), then 8 a second, for an IPv4 key (nothing changed);
+ *   1. a bucket: the burst (32), then 8 a second, for an IPv4 key (the values of src/page.c since the margins of 1.5; they were 8 and 4);
  *   2. 400 /64s of ONE /32 at one instant: at most 32 buckets of that /32 are in the table, the attacker's further keys share the overflow bucket,
  *      and a visitor from ANOTHER /32 still gets a bucket of its own with its full burst;
  *   3. the mutant (cap disabled = the old behaviour, bucket_of_cap with cap32 = PAGE_RATE_KEYS): the same visitor is pushed onto the overflow
