@@ -46,6 +46,7 @@
  *    writing**, and an unprivileged process cannot declare false ones.  It is
  *    the only way "verified on every message" is a fact and not a promise.
  */
+#include "runwait.h"
 #include "child.h"
 
 /* ⛔ ONLY for the session cap (`RCP_SESSION_CAP`, `rcp_cap()`).  ⚠ The
@@ -2031,6 +2032,8 @@ static bool card_groups(const char *user, gid_t primary,
  * Returns `true` if it changed something (and then the groups must be read
  * again).
  */
+#define RUN_AS_ROOT_MAX_MS 10000
+
 static bool run_as_root(const char *which, char *const argv[], const char *user)
 {
 	pid_t p = fork();
@@ -2039,11 +2042,26 @@ static bool run_as_root(const char *which, char *const argv[], const char *user)
 	if (p < 0)
 		return false;
 	if (p == 0) {
+		/* ⭐ E-R9 (audit of the session, 25 Oct 2026): `usermod` started with every descriptor of the service (UDP and TCP sockets, the command socket and the accepted ones) and kept them
+		 *    open for as long as it lived.  As `become_and_exec` does: everything above stdin/stdout/stderr is closed before the exec. */
+		if (close_range(3, ~0U, 0) != 0)
+			for (int fd = 3; fd < 4096; fd++)
+				close(fd);
 		execv(which, argv);
 		_exit(127);
 	}
-	if (waitpid(p, &state, 0) != p)
-		return false;
+	/* ⭐ E-R9: the wait is LIMITED.  `usermod` waits for its own timeout (tens of seconds) if /etc/passwd or /etc/group are locked, and this process serves everybody. */
+	{
+		int waited = run_wait(p, RUN_AS_ROOT_MAX_MS, &state);
+
+		if (waited == 0 || waited == 2) {
+			log_says_of(LOG_CHILD, user, "⛔ «%s» did not finish in %d ms (/etc/passwd or /etc/group locked?): killed",
+			            which, RUN_AS_ROOT_MAX_MS);
+			return false;
+		}
+		if (waited < 0)
+			return false;
+	}
 	if (!WIFEXITED(state) || WEXITSTATUS(state) != 0) {
 		log_says_of(LOG_CHILD, user, "⛔ «%s» did not work (status %d)", which,
 		                 WIFEXITED(state) ? WEXITSTATUS(state) : -1);

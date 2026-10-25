@@ -153,6 +153,9 @@ Found on 24 Oct 2026 by the fuzz harnesses and by reading the ngtcp2 1.25 / nght
 - **The stop signals are handled without a race, and SIGHUP / SIGQUIT too** (audit of the session, E-R8, 25 Oct 2026): a SIGTERM arriving between the `stop_requested` test and the main `ppoll` did not interrupt the wait (up to a second of
   delay), and SIGHUP / SIGQUIT killed the process without the orderly close (command socket, FAREWELL to the clients, SIGTERM to the children). Now the four stop signals are blocked only around the `ppoll`, the flag is read again with them
   blocked and the `ppoll` takes the original mask; SIGHUP and SIGQUIT are stop requests like SIGINT and SIGTERM. The mask is restored right after, so children and the PAM dispatcher start with the signals open. Test `benches/unit/stop-signals`.
+- **`usermod` at the first connection no longer blocks the spawner or inherits the service's sockets** (audit of the session, E-R9, 25 Oct 2026): `run_as_root()` did a blocking `waitpid` (if `/etc/passwd` or `/etc/group` were locked, tens of seconds
+  with every spawn and confirmation stopped) and `usermod` started with every descriptor of the service open. Now the wait is limited to 10 s, then SIGKILL (`src/runwait.h`), and the child closes everything above stderr before the exec.
+  The sockets themselves were not changed to `SOCK_CLOEXEC`: the `close_range` covers this spawn, and the other spawns already do it. Test `benches/unit/run-wait`.
 - **Fuzz harnesses now in the repository**: `quic-conn`, `rcp-msg` (`a63cd356`, `fd02e3a4`), `child-msg`; the rcp-msg runs are still to do (§11.52 D).
 
 ## 4. Requirements that changed (§11.51, recorded 21 Oct 2026)
