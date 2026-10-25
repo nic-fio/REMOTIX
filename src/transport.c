@@ -4,6 +4,7 @@
 #include "transport.h"
 
 #include "log.h"
+#include "pktinfo.h"
 #include "rcp.h" /* rcp_orphan_verdict(): a verdict whose connection is gone is still counted (§4.4-bis B) */
 #include "webtransport.h"
 
@@ -223,6 +224,14 @@ typedef struct {
 struct transport {
 	int fd;
 	int family;
+	/* ⭐ 25 Oct 2026: replies leave FROM the address the client wrote to (pktinfo.h).
+	 *    `bound_any`: the socket is on the wildcard (else the source is already fixed);
+	 *    `rx_local`: the local address of the datagram being handled by read_packet(), for
+	 *    the stateless answers (Version Negotiation, Retry, CONNECTION_CLOSE, Stateless Reset),
+	 *    which are written while that datagram is being read and have no connection. */
+	bool bound_any;
+	struct sockaddr_storage rx_local;
+	socklen_t rx_locallen;
 	SSL_CTX *ctx;
 	connection *prime;
 	size_t how_many;
@@ -622,12 +631,29 @@ static int cb_recv_datagram(ngtcp2_conn *conn, uint32_t flags,
 /* ------------------------------------------------------------------------ */
 /* Sending.                                                                  */
 
-static void send_msg(transport *t, const struct sockaddr *sa, socklen_t salen,
-                  const uint8_t *data, size_t len)
+/* ⭐ Every datagram leaves with its SOURCE address fixed to `local` (pktinfo.h: the kernel's
+ *   own choice is not the address the client wrote to on a host with several addresses).
+ *   `local` NULL / empty, or a socket bound to one address: a plain `sendto()` as before. */
+static void send_from(transport *t, const struct sockaddr *local, socklen_t locallen,
+                      const struct sockaddr *sa, socklen_t salen,
+                      const uint8_t *data, size_t len)
 {
 	ssize_t n;
+	union pktinfo_ctl ctl;
+	size_t ctllen = pktinfo_cmsg(t->family, t->bound_any, local, locallen, &ctl);
+	struct iovec iov = {(void *)data, len};
+	struct msghdr mh;
+	memset(&mh, 0, sizeof mh);
+	mh.msg_name = (void *)sa;
+	mh.msg_namelen = salen;
+	mh.msg_iov = &iov;
+	mh.msg_iovlen = 1;
+	if (ctllen) {
+		mh.msg_control = &ctl;
+		mh.msg_controllen = ctllen;
+	}
 	do {
-		n = sendto(t->fd, data, len, 0, sa, salen);
+		n = sendmsg(t->fd, &mh, 0);
 	} while (n < 0 && errno == EINTR);
 	if (n < 0) {
 		/* ⚠ DECLARED FALLBACK (`CODER.md` §4.2): if the socket is full the
@@ -640,6 +666,13 @@ static void send_msg(transport *t, const struct sockaddr *sa, socklen_t salen,
 	}
 }
 
+/* The stateless answers: from the address the datagram being read arrived on. */
+static void send_msg(transport *t, const struct sockaddr *sa, socklen_t salen,
+                  const uint8_t *data, size_t len)
+{
+	send_from(t, (const struct sockaddr *)&t->rx_local, t->rx_locallen, sa, salen, data, len);
+}
+
 /* ⛔ §2.3 (migration): a connection's packets go where NGTCP2 says — the path it wrote
  *    them for (the new address after a migration, the probe of a path being validated) —
  *    and not to the address the connection was born on.  An empty path (never expected)
@@ -648,10 +681,13 @@ static void send_on(connection *c, const ngtcp2_path *path, const uint8_t *data,
                     size_t len)
 {
 	if (path && path->remote.addrlen > 0)
-		send_msg(c->t, (const struct sockaddr *)path->remote.addr,
-		         (socklen_t)path->remote.addrlen, data, len);
+		send_from(c->t, (const struct sockaddr *)path->local.addr,
+		          (socklen_t)path->local.addrlen,
+		          (const struct sockaddr *)path->remote.addr,
+		          (socklen_t)path->remote.addrlen, data, len);
 	else
-		send_msg(c->t, (const struct sockaddr *)&c->remote, c->remotelen, data, len);
+		send_from(c->t, (const struct sockaddr *)&c->local, c->localelen,
+		          (const struct sockaddr *)&c->remote, c->remotelen, data, len);
 }
 
 /* ⛔ The callback ngtcp2 invokes for every packet, and the `user_data` it
@@ -1598,6 +1634,14 @@ static void read_packet(transport *t, const struct sockaddr *local,
 	ngtcp2_path path;
 	int rv;
 
+	/* ⭐ the stateless answers below leave from this address (send_msg) */
+	if (localelen > 0 && localelen <= sizeof t->rx_local) {
+		memcpy(&t->rx_local, local, localelen);
+		t->rx_locallen = localelen;
+	} else {
+		t->rx_locallen = 0;
+	}
+
 	rv = ngtcp2_pkt_decode_version_cid(&vc, data, len, SCIDLEN);
 	if (rv == NGTCP2_ERR_VERSION_NEGOTIATION) {
 		nego_version(t, &vc, remote, remotelen);
@@ -2343,6 +2387,17 @@ transport *transport_open(const char *address, const char *port, SSL_CTX *ctx,
 	}
 	t->fd = fd;
 	t->family = r->ai_family;
+	{
+		struct sockaddr_storage me;
+		socklen_t ml = sizeof me;
+		t->bound_any = true;
+		if (getsockname(fd, (struct sockaddr *)&me, &ml) == 0) {
+			if (me.ss_family == AF_INET6)
+				t->bound_any = IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)&me)->sin6_addr);
+			else if (me.ss_family == AF_INET)
+				t->bound_any = ((struct sockaddr_in *)&me)->sin_addr.s_addr == htonl(INADDR_ANY);
+		}
+	}
 	t->ctx = ctx;
 	t->help = help;
 	freeaddrinfo(result);
