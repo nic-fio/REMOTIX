@@ -180,6 +180,7 @@ int main(void)
 	CHECK(has("src/main.c", "sigprocmask(SIG_BLOCK, &stops, &original);") && has("src/main.c", "sigprocmask(SIG_SETMASK, &original, NULL);"), "4c. blocked and restored around it");
 	CHECK(has("src/main.c", "sigaddset(&stops, SIGCHLD);") && has("src/main.c", "if (sigchld_gate_pending(&sigchld_gate)) {\n				wait_ts.tv_sec = 0;"), "4d. main.c: SIGCHLD is in the blocked set and a pending gate means a zero wait (B4)");
 	CHECK(has("src/rootside.c", "sigaction(SIGQUIT, &sa, NULL);") && has("src/rootside.c", "sigs[k] == SIGTERM || sigs[k] == SIGINT || sigs[k] == SIGQUIT"), "4e. rootside.c: SIGQUIT goes through the self-pipe and stops like SIGTERM (B1)");
+	CHECK(has("src/main.c", "rilettura-fix B2 (declared") && has("src/main.c", "rilettura-fix B3 (declared") && has("src/child.c", "rilettura-fix M4 (declared"), "4f. B2, B3 and M4 are declared in comments where the code is");
 	printf("%s\n", bad ? "FAILED" : "OK: all checks passed");
 	return bad ? 1 : 0;
 }

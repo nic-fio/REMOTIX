@@ -2657,12 +2657,16 @@ int main(int argc, char **argv)
 		return 2;
 	}
 
+	/* ⚠ rilettura-fix B3 (declared, not cured): the network side is PID 1 of its own PID namespace, where a signal with the DEFAULT action is ignored, so a SIGTERM that reaches it between
+	 *    its `exec` and these lines is lost.  The root side's SIGKILL after NET_TERM_GRACE_MS (3 s) is the net: such a stop costs 3 s. */
 	signal(SIGINT, on_signal);
 	signal(SIGTERM, on_signal);
 	/* ⭐ E-R8 (audit of the session, 25 Oct 2026): SIGHUP and SIGQUIT had the default action (terminate / core) without going through the orderly close (command socket,
 	 *    FAREWELL to the clients, SIGTERM to the children).  They are a stop request like the other two.  Under systemd they do not arrive; from a shell or a script they do. */
 	/* ⚠ Review of e3de2871: a SIGHUP that was IGNORED when we started stays ignored — `nohup`, or a launcher that sets it, is how a service survives the shell that started it
 	 *    (the default action, which this replaces, respected that too).  Only when it is not ignored does it become a stop request. */
+	/* ⚠ rilettura-fix B2 (declared): in the SPLIT server the network side NEVER inherits an ignored SIGHUP — `rootside_fork_signals_fresh()` puts every disposition back to default before the exec — so
+	 *    here SIGHUP stops it (the root side starts it again like after a crash).  The nohup rule below holds for the single-process server only. */
 	{
 		struct sigaction old_hup;
 

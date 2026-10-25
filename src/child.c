@@ -898,6 +898,9 @@ static bool credentials_match(const struct child *g, const struct head *t,
 		 *    in the HOST's PID namespace by the root side; this process is PID 1 of its own, where the kernel shows every sender
 		 *    from outside as pid 0.  A sender INSIDE the namespace has a pid ≥ 1: only this process lives there, and it holds
 		 *    no end of the child's socket other than the one it reads — so a non-zero pid is refused. */
+		/* ⚠ rilettura-fix M4 (declared, not cured): this is ONE GRADE WEAKER than the single-process server, which also compares the sender's pid with the child's.  Here the identity is the socket
+		 *    (only the child and this side hold an end), uid/gid, serial and pid 0 — and, where the kernel has pidfs (6.9; `SO_PASSPIDFD` from 6.5), the exact pidfd below.  On an older kernel a process of
+		 *    the SAME user that the child lets inherit fd 3 writes with the same credentials; `become_and_exec()` closes everything above fd 3, so only the desktop's own descendants could. */
 		if (chi->pid != 0) {
 			snprintf(why_no, cap_why,
 			         "written by pid %ld, which is inside this PID namespace: the child of «%s» is outside it, "
