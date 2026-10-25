@@ -1055,7 +1055,7 @@ bool kwin_host_exists(void)
  * ⛔⭐ THE WANTED SIZE — one small file next to labwc's socket
  *      (`<host folder>/wanted`, «W H»).
  *
- * `[M]` 14-15 Oct 2026, rete11-kde: three births out of ~20 came out at
+ * `[M]` 14-15 Oct 2026, a KDE test box: three births out of ~20 came out at
  * 1280x720 — labwc's hard-wired size — although `--kwin-nested` had put
  * labwc at the client's size and READ IT BACK before starting KWin
  * (journal: «labwc … at 3824x2064 … now KWin», then «asked 3824x2064,

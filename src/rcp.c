@@ -3652,7 +3652,7 @@ static bool layout_well_formed(const char *d, size_t n)
  *   symptom would be «the client is broken» instead of «the machine lacks a
  *   layout».
  *
- * `[?]` ⚠ **And the list below is from phase 1, and it must be declared.**
+ * ⚠ **And the list below is from phase 1, and it must be declared** (the code below is still a fixed list).
  *   «What the system knows» is known by the system, not by RCP: a real server
  *   asks XKB.  In phase 1 there is no compositor (`SESSION` declares
  *   `desktop=unknown`), so there is nobody to ask, and the choice is a

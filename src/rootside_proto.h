@@ -48,8 +48,8 @@
  * AUTH is refused without asking PAM (a dictionary attack through a hijacked
  * network side costs PAM nothing).  The grant lives 30 s: a right password is
  * followed by its SPAWN within the same login, `[M]` 1–14 ms (the «SPAWNED
- * after N ms» line); 30 s is the slack for a slow PAM session stack.  `[?]`
- * the rate is a decision, not a measurement. */
+ * after N ms» line); 30 s is the slack for a slow PAM session stack.  The
+ * rate is a decision, not a measurement. */
 #define RXR_AUTH_IN_FLIGHT_MAX 16
 #define RXR_AUTH_PER_S         10
 #define RXR_AUTH_BURST         20

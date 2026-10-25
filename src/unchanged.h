@@ -307,7 +307,7 @@ static inline void uc_gate_frame(UcStaleGate *g, uint64_t generation, gboolean c
  *    `UC_COST_FIRST` looks), then every `UC_COST_EVERY`.
  *
  * ⛔ 15 Oct 2026 — THE CEILING ALONE SWITCHED THE FILTER OFF WHERE IT WAS
- *    NEEDED.  `[M]` rete11-kde, run functional/20261015-090731, F-003
+ *    NEEDED.  `[M]` a KDE test box, run functional/20261015-090731, F-003
  *    kde/firefox (09:08): 19 switch-offs for cost in 50 minutes of the box's
  *    log (08:43–09:34), means 4.3–9.3 ms against the 3 ms ceiling, most at the
  *    FIRST window — while windows held back 25 of 30 frames (c16002u99,
