@@ -5,6 +5,7 @@
 
 #include "log.h"
 #include "pktinfo.h"
+#include "hsrate.h"
 #include "rcp.h" /* rcp_orphan_verdict(): a verdict whose connection is gone is still counted (§4.4-bis B) */
 #include "webtransport.h"
 
@@ -238,6 +239,12 @@ struct transport {
 	/* ⭐ 1.5: the caps (0 = the default) and how many connections are `unlogged` */
 	size_t max_conns, max_pending, per_address, per_48;
 	size_t unlogged;
+	/* ⭐ R4: the RATE of new handshakes (hsrate.h): the buckets, and the refusals counted since the last line about them */
+	struct hs_rate hs;
+	unsigned hs_over_address, hs_over_net, hs_over_all;
+	char hs_last[64];
+	bool hs_ever;
+	ngtcp2_tstamp hs_line_ns;
 	/* the refusals and evictions counted since the last line about them */
 	unsigned refused_full, refused_address, refused_48, evicted, aged;
 	char refused_last[64];
@@ -1198,6 +1205,61 @@ static void refusals_report(transport *t, ngtcp2_tstamp now)
 	t->refused_line_ns = now;
 }
 
+/* ⭐ R4 (audit, conto-handshake.md): one line, at most every REFUSAL_LOG_S seconds, with the new handshakes refused for their RATE since the
+ * last one (the same pattern as `refusals_report()`; the first is written at once). */
+static void hs_report(transport *t, ngtcp2_tstamp now)
+{
+	if (!t->hs_over_address && !t->hs_over_net && !t->hs_over_all)
+		return;
+	if (t->hs_ever && now - t->hs_line_ns < REFUSAL_LOG_S * NGTCP2_SECONDS)
+		return;
+	registro_dice(REG_QUIC,
+	              "⚠ HANDSHAKE RATE%s: %u new handshakes refused for coming too fast (%u over %d a second from one address, "
+	              "%u over %d from one IPv6 /48, %u over %d for all together); the last refused from %s",
+	              t->hs_ever ? " in the last seconds" : "", t->hs_over_address + t->hs_over_net + t->hs_over_all,
+	              HS_ADDR_RATE, t->hs_over_address, HS_NET_RATE, t->hs_over_net, HS_ALL_RATE, t->hs_over_all,
+	              t->hs_last[0] ? t->hs_last : "-");
+	t->hs_over_address = t->hs_over_net = t->hs_over_all = 0;
+	t->hs_last[0] = 0;
+	t->hs_ever = true;
+	t->hs_line_ns = now;
+}
+
+/* `true` = this new handshake is within the rate limits (a token taken from each bucket); `false` = refused, and the client was told
+ * with a stateless CONNECTION_CLOSE(CONNECTION_REFUSED), like `room_for()`.  ⚠ Why an answer and not silence: the address has just
+ * proved itself with the Retry token (no spoofing, no amplification: the close is ~50 bytes against an Initial of at least 1200), and a
+ * real browser that is told fails at once and the page reconnects, instead of waiting out its handshake timeout.  The token is NOT used up
+ * (token_keep() is called only for an accepted connection). */
+static bool rate_ok(transport *t, const ngtcp2_pkt_hd *hd, const struct sockaddr *remote, socklen_t remotelen)
+{
+	static const struct hs_limits LIM = HS_LIMITS_DEFAULT;
+	uint8_t key[16], key48[16];
+	uint8_t buf[NGTCP2_MAX_UDP_PAYLOAD_SIZE];
+	ngtcp2_ssize n;
+	int why;
+
+	address_key(remote, key, key48);
+	why = hs_take(&t->hs, &LIM, key, key48, now_ns());
+	if (why == HS_OK)
+		return true;
+	if (why == HS_OVER_ADDRESS) {
+		t->hs_over_address++;
+		key_text(key, 64, t->hs_last, sizeof t->hs_last);
+	} else if (why == HS_OVER_NET) {
+		t->hs_over_net++;
+		key_text(key48, 48, t->hs_last, sizeof t->hs_last);
+	} else {
+		t->hs_over_all++;
+		key_text(key, 64, t->hs_last, sizeof t->hs_last);
+	}
+	n = ngtcp2_crypto_write_connection_close(buf, sizeof buf, hd->version, &hd->scid, &hd->dcid,
+	                                         NGTCP2_CONNECTION_REFUSED, NULL, 0);
+	if (n > 0)
+		send_msg(t, remote, remotelen, buf, (size_t)n);
+	hs_report(t, now_ns());
+	return false;
+}
+
 /* `true` = room for one more connection from `remote` — and `*victim`, when not
  * NULL, is the connection to EVICT once the newcomer's exists (the caller does it:
  * `accept_conn()` may still fail); `false` = refused, and the client was told
@@ -1719,6 +1781,9 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 			refusals_report(t, now_ns());
 			return;
 		}
+		/* ⭐ R4: the rate, after the token is verified and before anything is created */
+		if (!rate_ok(t, &hd, remote, remotelen))
+			return;
 		if (!room_for(t, &hd, remote, remotelen, &victim))
 			return;
 		c = accept_conn(t, &hd, &odcid, local, localelen, remote, remotelen);
@@ -1991,6 +2056,9 @@ int64_t transport_wait_ns(const transport *t)
 	     t->aged || t->token_replayed || t->token_forgotten) &&
 	    t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->refused_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
+	if ((t->hs_over_address || t->hs_over_net || t->hs_over_all) &&
+	    t->hs_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
+		before = t->hs_line_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
 	if (t->births_quiet && t->birth_window_ns + REFUSAL_LOG_S * NGTCP2_SECONDS < before)
 		before = t->birth_window_ns + REFUSAL_LOG_S * NGTCP2_SECONDS;
 	if (before == UINT64_MAX)
@@ -2187,6 +2255,7 @@ void transport_expired(transport *t)
 		}
 	}
 	refusals_report(t, now);
+	hs_report(t, now);
 	if (t->births_quiet)
 		births_report(t, now);
 	if (t->closes_quiet)

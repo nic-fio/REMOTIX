@@ -76,6 +76,10 @@
 - One write burst is at most the send quantum, and the loop timeout is rounded up (§11.52 A; `643e9a40`, `3a6d128c`). `pacing-ab`
   then measured +1 ms of RTT at rest from that round-up (24 Oct), so the main loop now waits on the exact deadline with `ppoll`
   (`1b447d3c`, `de5ebdfa`); to be measured again (see Still open).
+- **The RATE of new handshakes is limited** (audit R4, 25 Oct 2026, branch `handshake-ritmo`): the connection caps bound how many are open, not how fast they come, so one address could make
+  hundreds of handshakes a second (0.3-1.2 ms of the single thread each). After the Retry token is verified and before `accept_conn()`, three token buckets (`src/hsrate.h`): 4 a second per address
+  (IPv4 or IPv6 /64, burst 8), 16 a second per IPv6 /48 (burst 32), 100 a second for all (burst 32). Over the limit the newcomer gets the stateless `CONNECTION_REFUSED` (the address is proved by
+  the token, so no amplification) and the token is not used up; one line per 10 s counts them (`⚠ HANDSHAKE RATE`). The tables are fixed (256 + 128 entries, least recently seen evicted). Test `benches/unit/hs-rate`.
 - «Connection closed» log lines of connections that never logged in are limited per window, the rest in a summary (`6368c6a8`).
 
 ## 3. Defects of 1.0 fixed (all «present since 1.0»)
