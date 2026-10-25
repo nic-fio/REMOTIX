@@ -308,12 +308,16 @@ S5 = p("Three levels of counters, a progressive ban and a key that is the /64 fo
         [c("LADDER_MS"), "15 min · 1 h · 12 h", "The n-th ban of a level lasts the n-th step; the 1.0 duration is now the top of the ladder."],
         [c("FORGET_MS"), "24 h", "Without a ban for 24 hours the memory of the previous bans (the recidivism) is forgotten"],
         [c("MAX_PER_USER_IN_FLIGHT"), "2", "Verifications at once for the same (key, user)"],
-        [c("MAX_ATTEMPTS"), "256", "Entries in the table. At most " + c("BAN_QUOTA") + " (160) of them can be bans, and an entry with an attempt in flight is <b>never</b> evicted. "
-         "A plain attempt never takes the place of a ban, so flooding the table with new keys cannot lift a ban. "
-         "Priority: first the entries with nothing to remember are taken back, then the oldest without recidivism (declared in the log); "
-         "when a new ban would pass the quota, the least valuable ban is dropped instead (lowest level, then nearest expiry, then oldest), "
-         "so a 1 h ban outlives 15 min bans; it is counted and logged (" + c("bans at their quota") + "). "
-         "A key that logged in successfully in the last 30 days may also take the least valuable ban, so a known user is never locked out by a full table."],
+        [c("MAX_ATTEMPTS"), "256", "Entries in the table. The table is sized for " + c("BAN_QUOTA") + " (160) bans; an entry with an attempt in flight is <b>never</b> evicted. "
+         "<b>A new ban never drops another one</b>: a first version did, and a botnet of about 54 addresses taking turns made its own bans fall after "
+         "about 90 s, with their recidivism, so the ladder never climbed. Priority: first the entries with nothing to remember are taken back, then the "
+         "oldest without recidivism (declared in the log). A key that logged in during the last 30 days always finds a place, and its own ban is given "
+         "even over the quota. While 160 bans are in force the <b>unknown</b> keys share " + c("UNKNOWN_LIMIT") + " (5 failures in "
+         + c("UNKNOWN_WINDOW_MS") + ", 5 min) for all of them together; beyond it they are refused with " + c("TOO_MANY_ATTEMPTS")
+         + " (0x08) before PAM, nothing is booked or evicted, until the counter goes down. The cost: in that moment a new user from an address that "
+         "never logged in is refused too. Only as a last resort, when the table has no other place, the least valuable ban is dropped (lowest level, then "
+         "nearest expiry, then oldest, then the name) and every ban dropped in one outcome is named in the log. A ban file with more than 160 bans keeps the "
+         "most valuable ones whatever the order of its lines; the one displaced keeps its recidivism."],
     ], "«TAB» — The ban parameters") + \
     p("The windows <b>slide</b>: the times of the last N failures are kept (N = the limit of the level). Anchored to the "
       "first failure, failures at 0:00, 4:59 and 5:01 would restart the count from one, and whoever guesses slightly "
