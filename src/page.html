@@ -13135,7 +13135,12 @@ addEventListener("pointerdown", function (ev) {
  *    ⇒ (1) a MOVE of a mouse or a pen is already proof (a finger cannot hover), not only a press;
  *      (2) the hardware change no longer erases what was SEEN: it only re-reads the context.  The way
  *          back is the next finger: a `pointerdown` of type touch switches to touch at once. */
+/* ⛔ 26 Oct 2026, F-015C red on Chrome 156 with this listener acting in the CLASSIC layout too (a move that changes
+ *    nothing, yet the remote copy no longer reached the computer's clipboard; without the listener, green — OBSERVED,
+ *    not explained: no side effect found in the code): the move
+ *    is proof only where it can change something, in the TOUCH layout — exactly the desktop mode's wrong guess. */
 addEventListener("pointermove", function (ev) {
+  if (mode_in_effect !== "touch") return;
   if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
   if (touch_seen && touch_seen.type === ev.pointerType) return;
   touch_seen = { type: ev.pointerType, t: performance.now() };
