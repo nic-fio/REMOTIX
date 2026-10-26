@@ -29,6 +29,10 @@ profile remotix_network flags=(complain,attach_disconnected) {
   # The program itself (mapped; the exec of it is the root side's business).
   /usr/libexec/remotix/remotix mr,
   /usr/share/remotix/** r,
+  # The keyboard: the network side compiles the XKB keymap of the session (libxkbcommon reads rules, keycodes and types
+  # here).  Seen by aa-deb-box.sh on 26 Oct 2026: 10 ALLOWED lines in complain, all of them under this folder.
+  /usr/share/X11/xkb/ r,
+  /usr/share/X11/xkb/** r,
   # (nothing under /etc/remotix: the configuration is read by the root side and by systemd; remotix.te.split
   #  gives remotix_net_t only the general reads of /etc, which the nameservice abstraction covers)
   /etc/machine-id r,
