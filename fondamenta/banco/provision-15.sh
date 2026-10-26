@@ -139,6 +139,9 @@ PKGS=(
     # Firefox (il client dei banchi) decodifica H.264/HEVC con libavcodec: senza, ogni login dice «nothing in common»
     # (26 ott 2026, dopo un riavvio: prima c era perché installato a mano nel sistema live)
     libavcodec61
+    # ...e la decodifica IN HARDWARE dei client (Radeon: radeonsi via VA-API): senza, i 6 Firefox del 30-perf
+    # decodificano in CPU (13 core a 6 utenti) e la misura diventa del client, non del prodotto (26 ott 2026)
+    mesa-va-drivers vainfo
     # per scaricare e per la chiave del repository di Chrome
     curl ca-certificates gnupg
 )
