@@ -600,13 +600,14 @@ class Endpoint:
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE SERVER (read only, except the tests themselves)
 # ═══════════════════════════════════════════════════════════════════════════
-def ssh(line, t=60, keep_going=None):
+def ssh(line, t=60, keep_going=None, stdin=None):
     cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8"]
     if keep_going:
         cmd += ["-o", "ExitOnForwardFailure=yes"] + keep_going
     try:
         r = subprocess.run(cmd + [HOST, line], capture_output=True, text=True,
-                           errors="replace", timeout=t)
+                           errors="replace", timeout=t, input=stdin,
+                           stdin=None if stdin is not None else subprocess.DEVNULL)
         out = "\n".join(x for x in (r.stdout + r.stderr).splitlines() if not x.startswith("tput"))
         return r.returncode, out
     except subprocess.TimeoutExpired:
@@ -615,13 +616,22 @@ def ssh(line, t=60, keep_going=None):
 
 # ⚠ /sys inside the box is the host's (renderD128 = the Intel even when the Radeon
 #   is mapped inside): the GPU is read from the route the server declared in the log.
-CARD_SH = ("P=$(awk '/^pass:/{print $2; exit}' $HOME/SERVER.ssh 2>/dev/null); "
+# ⚠ The sudo password travels on ssh's STDIN from the laptop's ~/SERVER.ssh (26 Oct 2026: on the server
+#   there is no SERVER.ssh, and the server's home lives in RAM).
+CARD_SH = ("read -r P; "
              "printf '%s\\n' \"$P\" | sudo -S -p '' podman exec rete11-gnome "
              "sh -c \"grep -ohE 'route (vulkan|vaapi)' /var/lib/rete11/registro.log | tail -1\"")
 
 
 def card_of_boxes():
-    _c, t = ssh(CARD_SH, 30)
+    pw = os.environ.get("REMOTIX_SUDO_PASSWORD", "")
+    if not pw:
+        try:
+            pw = next((x.split(":", 1)[1].strip() for x in open(os.path.join(CASA, "SERVER.ssh"))
+                       if x.startswith("pass:")), "")
+        except OSError:
+            pw = ""
+    _c, t = ssh(CARD_SH, 30, stdin=pw + "\n")
     if "route vaapi" in t:
         return "intel", "Intel UHD 770 (VA-API)"
     if "route vulkan" in t:
@@ -670,7 +680,7 @@ def check(tel, o):
     else:
         note("Chrome closed: the test opens it and closes it again at the end (DevTools is checked then)")
     title("The boxes seen from the phone")
-    _c, ping = tel.sh("ping -c 1 -W 2 %s >/dev/null 2>&1 && echo si || echo no" % IP_SERVER,
+    _c, ping = tel.sh("ping -c 1 -W 2 %s >/dev/null 2>&1 && echo yes || echo no" % IP_SERVER,
                       t=10)
     (ok if "yes" in ping else no)("the server %s %s from the phone (ping)"
                                  % (IP_SERVER, "answers" if "yes" in ping else "does NOT answer"))
@@ -883,7 +893,7 @@ case "$r" in
   *"settings get system accelerometer_rotation"*) echo 1;;
   *"settings get system user_rotation"*) echo 0;;
   *"settings get"*) echo 60000;;
-  *ping*) echo si;;
+  *ping*) echo yes;;
   *) echo "(fake) $r";;
 esac
 """
