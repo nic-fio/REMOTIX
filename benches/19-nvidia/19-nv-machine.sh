@@ -535,11 +535,36 @@ remotix() {
 	done
 	if [ $ready = 1 ]; then
 		ok "the server listens on $PORT"
+		# ⭐ 1.5 (26 Oct 2026): the port is opened by the ROOT side; the network side is a child running as the user
+		#   «remotix».  [M] in the container of 19-nv-test-in-container.sh: «fork of the network side: Operation not
+		#   permitted» and still «remotix VERDE».  A 1.5 that is not split (the user remotix is absent) is said, not red.
+		if id remotix >/dev/null 2>&1; then
+			# the criterion of split-box.sh: «--network-side» in the command line (it is born by execve of /proc/self/exe,
+			#   so its comm is «exe», not «remotix»), user remotix, parent = the unit's main process (the root side)
+			local net="" main
+			main=$(systemctl show -p MainPID --value remotix.service 2>/dev/null)
+			for i in $(seq 1 30); do
+				for net in $(pgrep -u remotix -f -- '--network-side'); do
+					[ "$(ps -o ppid= -p "$net" | tr -d ' ')" = "$main" ] && break 2
+				done
+				net=""; sleep 1
+			done
+			if [ -n "$net" ]; then
+				ok "the network side runs (pid $net, user remotix, child of the root side $main)"
+			else
+				ko "the network side is NOT running (no «--network-side» process of the user remotix, child of $main, after 30 s)"
+				grep -a -E 'network side' "$WORKDIR/registro.log" 2>/dev/null | tail -n 5 | sed 's/^/      /'
+				outcome remotix ROSSO "network side not running"; return 1
+			fi
+		else
+			warning "no user remotix: a single-process server (not split)"
+		fi
 	else
 		ko "the server is not listening on $PORT after 60 s"; tail -n 20 "$WORKDIR/registro.log" 2>/dev/null | sed 's/^/      /'
 		outcome remotix ROSSO "not listening"; return 1
 	fi
-	grep -a -E 'route|THIS SERVER CANNOT|HERE_I_AM|offered|⛔' "$WORKDIR/registro.log" | head -20 > "$EVID/server-avvio.txt"
+	grep -a -E 'route|THIS SERVER CANNOT|HERE_I_AM|offered|⛔|network side' "$WORKDIR/registro.log" | head -20 > "$EVID/server-avvio.txt"
+	nv_devices
 	"$ri" status > "$EVID/installatore-certifica.txt" 2>&1; local c=$?
 	ok "certify: exit $c"
 	outcome remotix VERDE "$(cat "$WORKDIR/come-installato") · check: $(cat "$WORKDIR/codici-verifica") · certify $c"
@@ -708,8 +733,25 @@ suite() {
 # ═══════════════════════════════════════════════════════════════════════════
 #  (f) COLLECT
 # ═══════════════════════════════════════════════════════════════════════════
+# ⭐ 26 Oct 2026: the NVIDIA device files and the driver's own modes, BEFORE the suite — 1.5 gives the users the render
+#   node only (no more `video`, DECISIONS-11 §11.38): with NVreg_DeviceFileMode 0660 + a group, /dev/nvidia* would be
+#   closed to them, the desktop would draw in software and the encoder would find no route, while the log says OK.
+nv_devices() {
+	ls -l /dev/nvidia* /dev/dri/ > "$EVID/dev-nvidia.txt" 2>&1
+	grep -E 'DeviceFile(UID|GID|Mode)|ModifyDeviceFiles' /proc/driver/nvidia/params > "$EVID/nvidia-params.txt" 2>/dev/null
+	local mode gid
+	mode=$(awk '/DeviceFileMode/{print $2}' "$EVID/nvidia-params.txt" 2>/dev/null)
+	gid=$(awk '/DeviceFileGID/{print $2}' "$EVID/nvidia-params.txt" 2>/dev/null)
+	if [ -z "$mode" ]; then warning "/proc/driver/nvidia/params unreadable: the device modes are only in dev-nvidia.txt"
+	elif [ "$mode" = 438 ]; then ok "NVreg_DeviceFileMode 0666: /dev/nvidia* open to every user"
+	else warning "NVreg_DeviceFileMode $(printf '%o' "$mode") gid $gid: /dev/nvidia* NOT open to every user — watch for a black or software desktop (dev-nvidia.txt)"
+	fi
+}
+
 collect() {
 	log "(f) collecting logs and evidence"
+	nv_devices
+	journalctl -k -b --no-pager 2>/dev/null | grep -a -i 'apparmor=' > "$EVID/apparmor.txt"
 	journalctl -b --no-pager > "$EVID/journal.txt" 2>&1
 	journalctl -k -b --no-pager > "$EVID/nucleo.txt" 2>&1
 	grep -i -E 'NVRM|Xid|nvidia' "$EVID/nucleo.txt" > "$EVID/nucleo-nvidia.txt" 2>/dev/null

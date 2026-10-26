@@ -46,6 +46,16 @@ tests (login, first image, screen update, canvas at attach, video, detach and
 reattach, reattach at a different size) with real Firefox and Chrome · packs the evidence and brings it
 to the laptop, in `measurements/19-nvidia/`.
 
+⭐ 1.5 (26 Oct 2026), right after `all`, the two things 1.5 has never run on an NVIDIA card: KDE (born inside a
+headless labwc since 10 Oct, and the «unchanged» filter of the capture) and the device modes:
+
+    REDO="deps suite collect" DESKTOP_NV=kde bash benches/19-nvidia/19-nvidia.sh start ADDRESS all
+
+(`deps` installs Plasma for KDE; `suite` alone would start without it.)
+
+and read `evidenze/dev-nvidia.txt`, `nvidia-params.txt` (a mode other than 0666 is the black-desktop risk of
+DECISIONS-11 §11.38) and `apparmor.txt`.  Rent an Ada card (RTX 40, L4, L40S) if you can: zero copy was measured on Ada only.
+
 You do not need to stay in front of it: if the connection drops the bench goes on, and you find it again with
 `bash benches/19-nvidia/19-nvidia.sh follow ADDRESS`.
 

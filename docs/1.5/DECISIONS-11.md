@@ -917,7 +917,9 @@ item below unless its line says otherwise. Release notes: `docs/RELEASE-NOTES-1.
   §11.38 nobody is put in `video`. Expected symptom: the compositor and the encoder cannot open the card; the
   desktop draws in software, or the encoder has no route. Neither `card_groups()` nor `CardGroups()` looks at
   `/dev/nvidia*`, so the log's «can see» line would say OK. Said in `docs/RELEASE-NOTES-1.5.md` (Known issues:
-  add the users to `video` by hand). Built (15 Oct 2026), the warning only: when `gpu.nvidia_proprietary` is yes the
+  add the users to `video` by hand). ⛔ CORRECTED 26 Oct 2026: NOT built — no RX-GPU-007 and no `nvidia_group` exist in any
+  branch's code (the text below described a plan); the NVIDIA bench now records the modes (`nv_devices`, dev-nvidia.txt,
+  nvidia-params.txt) and warns, and the decision waits for the rental's measurement. The plan was: when `gpu.nvidia_proprietary` is yes the
   installer's check reads `/proc/driver/nvidia/params` (else the group and mode of `/dev/nvidiactl`,
   `/dev/nvidia[0-9]*`) into `gpu.nvidia_group` and raises the WARNING `RX-GPU-007` naming the group when it is not
   root, not the render group, and the mode does not give everyone read and write; `CardGroups()` is NOT widened
