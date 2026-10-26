@@ -101,12 +101,16 @@ def read_tests(pattern=""):
         # ⭐ PHONE_ONLY = True: the test makes sense only with the real phone (F-031, touch)
         solo_tel = bool(re.search(r"^PHONE_ONLY\s*=\s*True", text, re.M))
         s = re.search(r"^SERVER\s*=\s*[\"']([^\"']+)[\"']", text, re.M)
+        # ⭐ BROWSERS = ("chrome",): the test is launched ONLY with these browsers (absent = all) — F-031C: the phone's
+        #   desktop mode is Chrome's (DeX, Pixel), and only Chrome emulates the pointer media features for real
+        bm = re.search(r"^BROWSERS\s*=\s*\(([^)]*)\)", text, re.M)
+        only_browsers = re.findall(r"[\"']([a-z0-9]+)[\"']", bm.group(1)) if bm else []
         # ⭐ DESKTOPS = ("kde",): the test is launched ONLY on these desktops (absent = on all)
         dm = re.search(r"^DESKTOPS\s*=\s*\(([^)]*)\)", text, re.M)
         desktops = re.findall(r"[\"']([a-z0-9]+)[\"']", dm.group(1)) if dm else []
         prove.append({"file": f, "name": name, "corto": too_short, "functions": functions,
                       "per_browser": per_browser, "long": long, "solo_telefono": solo_tel,
-                      "server": s.group(1) if s else "", "desktops": desktops})
+                      "server": s.group(1) if s else "", "desktops": desktops, "browsers": only_browsers})
     return prove
 
 
@@ -308,6 +312,8 @@ def streak(o, d, prove, meta, outcomes):
     threads = []
     for i, p in enumerate(long_tests):
         b = o.browser[0]
+        if p["browsers"] and b not in p["browsers"]:
+            continue
         t = threading.Thread(target=lambda p=p, b=b, i=i: outcomes.extend(
             one_test(o, p, d, b, 3500 + 10 * DESKTOP.index(d) + 2 * i, meta)))
         t.start()
@@ -317,6 +323,8 @@ def streak(o, d, prove, meta, outcomes):
             if not p["per_browser"] and b != o.browser[0]:
                 continue
             if p["solo_telefono"] and b != "phone":
+                continue
+            if p["browsers"] and b not in p["browsers"]:
                 continue
             outcomes.extend(one_test(o, p, d, b, base, meta))
     for t in threads:
