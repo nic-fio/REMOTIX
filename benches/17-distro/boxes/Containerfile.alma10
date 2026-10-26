@@ -8,8 +8,9 @@ ARG SSH_PORT=8600
 RUN case "$DESKTOP" in gnome|kde) ;; *) echo "DESKTOP=\"$DESKTOP\": on Alma 10 only gnome|kde" >&2; exit 2 ;; esac
 RUN dnf -y install systemd dbus sudo procps-ng iproute ca-certificates curl openssh-server shadow-utils dnf-plugins-core \
     && dnf clean all
-RUN if [ "$DESKTOP" = gnome ]; then dnf -y group install "Server with GUI"; \
-    else dnf -y install epel-release && dnf config-manager --set-enabled crb && dnf -y group install "KDE Plasma Workspaces"; fi \
+# --allowerasing (26 Oct 2026): the alma:10 image carries coreutils-single, which the desktop groups replace with coreutils
+RUN if [ "$DESKTOP" = gnome ]; then dnf -y --allowerasing group install "Server with GUI"; \
+    else dnf -y install epel-release && dnf config-manager --set-enabled crb && dnf -y --allowerasing group install "KDE Plasma Workspaces"; fi \
     && dnf clean all
 COPY common.sh /usr/local/sbin/t17-comune
 RUN sh /usr/local/sbin/t17-comune "$SSH_PORT" sshd.service
