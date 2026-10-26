@@ -14,8 +14,13 @@ touch at every change: TWO cursors and a mouse that jumped, with 1.0 and 1.5 ali
 and a hardware change no longer erases what was seen.
 
 CHROME ONLY (BROWSERS below): the desktop mode of the phones is Chrome's, and only Chrome
-emulates the pointer media features FOR REAL (`Emulation.setEmulatedMedia`): the real
-MediaQueryList objects of the page change and fire their real `change` listeners.
+changes the pointer media features FOR REAL: `Emulation.setTouchEmulationEnabled` makes
+`(pointer: coarse)` true and `(any-pointer: fine)` false, exactly DeX's answers, and the real
+MediaQueryList objects of the page fire their real `change` listeners ([M] 26 Oct 2026, Chrome 156;
+`Emulation.setEmulatedMedia` does NOT emulate pointer/hover: it is ignored without an error).
+The mouse events stay `pointerType = "mouse"` (that is `setEmitTouchEventsForMouse`, not used).
+Every switch is CHECKED in the page (the matches, and a counter of the real `change` events):
+an emulation that did not take is BLOCKED, never green.
 
   phone     the media features of the S23+ in DeX (pointer coarse, any-pointer coarse, no hover):
             the page must be in touch.  If it is in classic because the login was done with the
@@ -42,11 +47,17 @@ FUNCTIONS = ("F-031C",)
 BROWSERS = ("chrome",)
 STORM = 6
 
-PHONE = [{"name": "pointer", "value": "coarse"}, {"name": "any-pointer", "value": "coarse"},
-         {"name": "hover", "value": "none"}, {"name": "any-hover", "value": "none"}]
-FINE = [{"name": "pointer", "value": "fine"}, {"name": "any-pointer", "value": "fine"},
-        {"name": "hover", "value": "hover"}, {"name": "any-hover", "value": "hover"}]
+PHONE, FINE = True, False
 LAYOUT = "return REMOTIX.touch.layout();"
+# the page's own reading of the context, and a counter of the REAL change events (installed once)
+READ_MEDIA = r"""
+if (window.__rx_changes === undefined) {
+  window.__rx_changes = 0;
+  window.__rx_mql = matchMedia("(pointer: coarse)");
+  window.__rx_mql.addEventListener("change", function () { window.__rx_changes++; });
+}
+return [matchMedia("(pointer: coarse)").matches, matchMedia("(any-pointer: fine)").matches, window.__rx_changes];
+"""
 
 
 def judge(after_phone, after_move, storm):
@@ -81,9 +92,16 @@ def certify():
     return 1 if troubles else 0
 
 
-def media(g, features):
-    g.cdp.call("Emulation.setEmulatedMedia", features=features)
+def media(g, phone):
+    """The phone's context (touch emulation on) or the computer's (off), CHECKED in the page."""
+    g.cdp.call("Emulation.setTouchEmulationEnabled", enabled=phone, **({"maxTouchPoints": 5} if phone else {}))
     time.sleep(0.3)
+    coarse, fine, n = g.js(READ_MEDIA)
+    if phone and not (coarse and not fine):
+        raise S.Blocked("the phone context did not take: (pointer: coarse) %s, (any-pointer: fine) %s" % (coarse, fine))
+    if not phone and coarse:
+        raise S.Blocked("the computer context did not come back: (pointer: coarse) still true")
+    return n
 
 
 def phone_on(g, geo, note):
@@ -91,7 +109,7 @@ def phone_on(g, geo, note):
     media(g, PHONE)
     lay = g.js(LAYOUT)
     if lay == "classic":
-        x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.97, geo["ta"] * 0.97)   # a corner: the tap moves the remote pointer only
+        x, y = S.C21.desktop_to_glass(geo, geo["tl"] * 0.5, geo["ta"] * 0.45)    # the empty desktop (no window is opened here)
         g.touches(x, y)
         time.sleep(0.4)
         lay = g.js(LAYOUT)
@@ -111,10 +129,15 @@ def play(g, geo, move):
     after_move = g.js(LAYOUT)
     storm = []
     if move:
+        n0 = g.js(READ_MEDIA)[2]
         for _ in range(STORM):
             media(g, FINE)
             media(g, PHONE)
             storm.append(g.js(LAYOUT))
+        changes = g.js(READ_MEDIA)[2] - n0
+        if changes < 2 * STORM:
+            raise S.Blocked("only %d real media changes in the storm (%d expected): the storm did not happen" % (changes, 2 * STORM))
+        note.append("%d real media changes" % changes)
     else:
         storm = [after_move]
     why = g.js("return REMOTIX.touch.why ? REMOTIX.touch.why() : null")
@@ -126,7 +149,7 @@ def play(g, geo, move):
 
 def body(o, E):
     if o.browser != "chrome":
-        raise S.Blocked("F-031C is Chrome's (Emulation.setEmulatedMedia): --browser chrome")
+        raise S.Blocked("F-031C is Chrome's (Emulation.setTouchEmulationEnabled): --browser chrome")
     with S.Session(o, "933", E) as s:
         ok, m = s.enter()
         if not ok:
@@ -149,7 +172,7 @@ def body(o, E):
             E.put("F-031C", e, m, expected=expected, observed=obs)
         finally:
             try:
-                g.cdp.call("Emulation.setEmulatedMedia", features=[])       # the browser's own answers again
+                g.cdp.call("Emulation.setTouchEmulationEnabled", enabled=False)   # the browser's own answers again
             except Exception:                                                 # noqa: BLE001
                 pass
 
