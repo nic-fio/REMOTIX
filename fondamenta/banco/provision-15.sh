@@ -136,6 +136,9 @@ PKGS=(
     shellcheck pyflakes3
     # il banco 30-perf: carico per motore della GPU Intel (intel_gpu_top)
     intel-gpu-tools
+    # Firefox (il client dei banchi) decodifica H.264/HEVC con libavcodec: senza, ogni login dice «nothing in common»
+    # (26 ott 2026, dopo un riavvio: prima c era perché installato a mano nel sistema live)
+    libavcodec61
     # per scaricare e per la chiave del repository di Chrome
     curl ca-certificates gnupg
 )
