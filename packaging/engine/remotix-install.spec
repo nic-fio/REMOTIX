@@ -49,5 +49,7 @@ install -D -m 0644 %{SOURCE3} %{buildroot}%{_defaultlicensedir}/remotix-install/
 %{_bindir}/remotix-install
 %dir %{_datadir}/remotix-install
 %{_datadir}/remotix-install/README
+# the folder is ours too: without %dir rpm removes the two files and leaves it, empty (T10 R6, tumbleweed, 26 Oct 2026)
+%dir %{_defaultlicensedir}/remotix-install
 %license %{_defaultlicensedir}/remotix-install/LICENSE.md
 %license %{_defaultlicensedir}/remotix-install/THIRD-PARTY-LICENSES
