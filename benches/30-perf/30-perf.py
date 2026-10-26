@@ -59,6 +59,14 @@ MAIN_DONE = threading.Event()    # the main thread has recorded the stop and is 
 STATE, OUT_LOCK = {}, threading.Lock()     # o / stem / lines / n / flags shared with guard() for the emergency write
 RC_MEM = 4                       # exit code: stopped for lack of memory (the chain reads it); 1 = step failed, 2 = csv exists, 3 = server not empty
 CLEAN_S = 90                     # max seconds for ONE clean-up action
+# ⭐ 26 Oct 2026, the endurance and disturbed-network runs of 1.5 (PIANO-durata-rete):
+#   REMOTIX_PERF_NETEM="loss 3%"  a netem on lo for the UDP of the box's port ONLY (both directions: a delay counts twice in
+#                                 the RTT), so the local LLMs and the rest of the server are not disturbed; on before the
+#                                 sessions open, off at every clean-up and at exit;
+#   REMOTIX_PERF_SERIES=1         per step, <stem>-<n>u.series.json: per sample and per user the server's memory and open
+#                                 files, and the painted counter every 5 s (the .csv keeps only the summaries).
+NETEM = os.environ.get("REMOTIX_PERF_NETEM", "").strip()
+SERIES = os.environ.get("REMOTIX_PERF_SERIES") == "1"
 
 
 class MemoryStop(Exception):
@@ -122,6 +130,48 @@ def kill_ours():       # TERM then KILL to the descendants of THIS process (brow
         time.sleep(2)
     mon_sweep()        # GPU monitors last (found by tag even if their sudo is already dead): browsers and labwc first
     [shutil.rmtree(d, ignore_errors=True) for d in PROFILES]
+
+
+def tc(*argv, check=True):
+    r = subprocess.run(["sudo", "-S", "-p", "", "tc", *argv], input=S._sudo_password(), capture_output=True, text=True)
+    if check and r.returncode != 0:
+        raise RuntimeError("tc %s: %s" % (" ".join(argv), r.stderr.strip()[-200:]))
+    return r
+
+
+def netem_off():
+    tc("qdisc", "del", "dev", "lo", "root", check=False)      # nothing there: harmless error
+
+
+def netem_on(port):
+    """prio with 4 bands, everything in band 4 (untouched); the box's UDP port, both directions, in band 1 with the netem."""
+    netem_off()
+    tc("qdisc", "add", "dev", "lo", "root", "handle", "1:", "prio", "bands", "4", "priomap", *["3"] * 16)
+    tc("qdisc", "add", "dev", "lo", "parent", "1:1", "handle", "10:", "netem", *NETEM.split(), "limit", "100000")
+    for d in ("dport", "sport"):
+        tc("filter", "add", "dev", "lo", "parent", "1:", "protocol", "ip", "prio", "1", "u32",
+           "match", "ip", "protocol", "17", "0xff", "match", "ip", d, str(port), "0xffff", "flowid", "1:1")
+    print("   netem on lo, UDP port %d: %s" % (port, NETEM), flush=True)
+
+
+def dump_series(stem, n, users, samples, recs):
+    """The raw story of one step, compact: what the .csv averages away (a leak is a slope, not a mean)."""
+    rows = []
+    for b in samples:
+        per = {}
+        for pid, (u, comm, _t1, r1) in b["p"].items():
+            if u in users:
+                e = per.setdefault(u, [0.0, 0.0, 0])
+                e[1] += r1 / 1048576.0
+                if comm == "remotix":
+                    e[0] += r1 / 1048576.0
+                    e[2] += b.get("fd", {}).get(pid, 0)
+        rows.append({"t": round(b["t"], 1),
+                     "u": {u: [round(x, 1) if isinstance(x, float) else x for x in per.get(u, [0.0, 0.0, 0])] for u in users}})
+    painted = [[[round(t, 1), c] for t, c in r["series"][::5]] for r in recs]
+    with open("%s-%du.series.json" % (stem, n), "w") as f:
+        json.dump({"users": users, "columns": ["srv_rss_mb", "ses_rss_mb", "srv_fd"], "samples": rows,
+                   "painted": painted, "netem": NETEM}, f)
 
 
 def meminfo_kb():
@@ -387,7 +437,13 @@ try:
             ms[k] = int(v)
 except Exception:
     ms = {}      # unreadable or in an unexpected shape: no memory.stat for this sample, box_mem is still recorded
-print(json.dumps({"t": time.time(), "p": out, "cpu_us": cpu, "mem": int(open("/sys/fs/cgroup/memory.current").read()), "ms": ms}))
+fd = {}          # open files of the server processes (comm remotix): a leak shows here before it shows in memory
+for p, v in out.items():
+    if v[1] == "remotix":
+        try:
+            fd[p] = len(os.listdir("/proc/%s/fd" % p))
+        except Exception: pass
+print(json.dumps({"t": time.time(), "p": out, "fd": fd, "cpu_us": cpu, "mem": int(open("/sys/fs/cgroup/memory.current").read()), "ms": ms}))
 """
 
 
@@ -608,6 +664,9 @@ def run_step(o, n):
         if "ok" not in (box.inside("echo %s | base64 -d > /tmp/perf-sample.py; echo ok"
                                    % base64.b64encode(SAMPLER.encode()).decode(), 30)[1] or ""):
             raise RuntimeError("the sampler does not install in the box")
+        if NETEM:
+            CLEAN.append(netem_off)
+            netem_on(S.PORTS[o.box])
         comps = [start_compositor(os.environ["XDG_RUNTIME_DIR"]) for _ in range(n)]
         CLEAN.append(kill_ours)
         CLEAN.append(stack.close)
@@ -845,7 +904,8 @@ def main():
             code = RC_MEM
             break
         try:
-            row = step_row(o, *run_step(o, n))
+            res = run_step(o, n)
+            row = step_row(o, *res)
         except MemoryStop:
             record_stop(o, stem, lines, n)
             code = RC_MEM
@@ -861,9 +921,17 @@ def main():
         new = not os.path.exists(stem + ".csv")
         with open(stem + ".csv", "a", newline="") as f:
             (w := csv.writer(f)).writerows(([[k for k, _x in row]] if new else []) + [[x for _k, x in row]])
+        if SERIES:                                   # after the .csv: a failing dump must not cost the step's row
+            try:
+                dump_series(stem, n, res[2], res[3], res[4])
+            except Exception as e:                   # noqa: BLE001
+                print("   ⚠ series not written: %r" % e, flush=True)
         d = dict(row)
         lines.append("%d user(s): " % n + " · ".join("%s=%s" % (k, x) for k, x in row[7:] if k.endswith(("_mean", "_p90", "photos", "unreadable", "first_img_s_max", "scene_retries", "client_limited", "age_future", "age_over_half", "age_unreliable")))
                      + ("  ⚠ LIMITED BY THE CLIENTS (LIMITATO DAI CLIENT)" if dict(row)["client_limited"] else ""))
+    if NETEM:
+        netem_off()
+        lines.append("netem (lo, UDP port %d, both directions): %s" % (S.PORTS[o.box], NETEM))
     write_txt(o, stem, lines, code)
     MAIN_DONE.set()
     print("\n".join(lines) + "\n⭐ %s.csv / .txt · code %d" % (stem, code))
