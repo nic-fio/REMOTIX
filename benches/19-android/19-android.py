@@ -69,8 +69,10 @@ CHIAVE = os.environ.get("ADB_VENDOR_KEYS") or os.path.join(CASA, ".config/Phones
 PHONES = os.path.join(CASA, ".config/Phonestra/telefoni.toml")
 HOST = os.environ.get("REMOTIX_HOST", "nicfio@192.168.0.2")
 IP_SERVER = os.environ.get("REMOTIX_PHONE_HOST", "192.168.0.2")
-CHECK = os.environ.get("REMOTIX_CHECK_DIR_ANDROID", "/media/REMOTIX/src/controllo-android")
-MEASUREMENTS = os.environ.get("REMOTIX_MEASUREMENTS_ANDROID", "/media/REMOTIX/misure/fase19-android")
+# 1.5 (26 Oct 2026): the server of 1.5 lives in /media/REMOTIX-15 (the 1.0 tree /media/REMOTIX/src/controllo-android
+#   still exists and would run the 1.0 benches against whatever product is in the boxes)
+CHECK = os.environ.get("REMOTIX_CHECK_DIR_ANDROID", "/media/REMOTIX-15/lavori/v15c")
+MEASUREMENTS = os.environ.get("REMOTIX_MEASUREMENTS_ANDROID", "/media/REMOTIX-15/misure/fase19-android")
 CDP_HERE, ENDPOINT_HERE = 9333, 9334          # on the laptop
 CDP_LA, ENDPOINT_THERE = 19333, 19334          # on the server, at the end of the tunnel
 CHROME = "com.android.chrome"
@@ -623,7 +625,8 @@ CARD_SH = ("read -r P; "
              "sh -c \"grep -ohE 'route (vulkan|vaapi)' /var/lib/rete11/registro.log | tail -1\"")
 
 
-def card_of_boxes():
+def sudo_password():
+    """The server's sudo password, from the environment or the laptop's ~/SERVER.ssh (never printed)."""
     pw = os.environ.get("REMOTIX_SUDO_PASSWORD", "")
     if not pw:
         try:
@@ -631,7 +634,11 @@ def card_of_boxes():
                        if x.startswith("pass:")), "")
         except OSError:
             pw = ""
-    _c, t = ssh(CARD_SH, 30, stdin=pw + "\n")
+    return pw
+
+
+def card_of_boxes():
+    _c, t = ssh(CARD_SH, 30, stdin=sudo_password() + "\n")
     if "route vaapi" in t:
         return "intel", "Intel UHD 770 (VA-API)"
     if "route vulkan" in t:
@@ -774,7 +781,9 @@ def one_line(o, tel, sp, d, n, round_id, system_wide):
     env = {"REMOTIX_MEASUREMENTS_15": MEASUREMENTS, "REMOTIX_SYSTEM_15": system_wide,
            "REMOTIX_PHONE_CDP": str(CDP_LA), "REMOTIX_PHONE_ENDPOINT": str(ENDPOINT_THERE),
            "REMOTIX_PHONE_HOST": IP_SERVER}
-    line = ("cd %s/benches/15-suite && env %s python3 15-round.py --round %s --desktop %s "
+    # ⚠ 15-round.py needs sudo on the server: the password travels on ssh's STDIN (never on the command line)
+    line = ("read -r REMOTIX_SUDO_PASSWORD; export REMOTIX_SUDO_PASSWORD; "
+            "cd %s/benches/15-suite && env %s python3 15-round.py --round %s --desktop %s "
             "--browser phone --tests %s%s" % (
                 CHECK, " ".join("%s=%s" % (k, shlex.quote(v)) for k, v in env.items()),
                 shlex.quote(round_id), d, ",".join(prove), " --no-fault" if o.no_fault else ""))
@@ -782,7 +791,7 @@ def one_line(o, tel, sp, d, n, round_id, system_wide):
               "-R", "%d:127.0.0.1:%d" % (ENDPOINT_THERE, ENDPOINT_HERE)]
     t0 = time.time()
     try:
-        c, out = ssh(line, t=60 * 12 * len(prove), keep_going=keep_going)
+        c, out = ssh(line, t=60 * 12 * len(prove), keep_going=keep_going, stdin=sudo_password() + "\n")
     finally:
         if n == 7:
             sp.rotate("start_base")
