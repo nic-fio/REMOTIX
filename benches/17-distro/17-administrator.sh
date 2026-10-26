@@ -62,6 +62,9 @@ tumbleweed | leap16)
 	;;
 arch)
 	ha AMD && comp="$comp vulkan-radeon"
+	# the Intel VA-API driver (iHD): without it the one-frame test after installation (7a) fails and the engine rolls back
+	#   (T10 arch-xfce on the Intel, 26 Oct 2026: RX-AZIONE-003, «VA-API did not open on renderD128»)
+	ha Intel && comp="$comp intel-media-driver"
 	[ -n "$comp" ] && run_traced pacman -S --needed --noconfirm $comp
 	;;
 *) echo "⛔ unknown machine: $m"; exit 2 ;;
