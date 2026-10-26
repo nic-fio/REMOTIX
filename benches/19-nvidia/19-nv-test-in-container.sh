@@ -46,7 +46,7 @@ x() { podman exec -i "$NAME" bash -c "$1"; }
 
 bash "$D" send || exit 1
 x "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' | awk '\$1==\"ii\"{print \$2}' | sort > /root/pacchetti-inizio.txt; tar -C / -cf /root/apt-inizio.tar etc/apt"
-for p in controlli dipendenze remotix codifica; do
+for p in checks deps remotix encode; do   # the verbs of 19-nv-machine.sh (English since the translation)
 	echo; echo "######## $p"
 	x "bash $M $p"; echo ">> $p: exit $?"
 done

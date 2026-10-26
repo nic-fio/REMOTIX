@@ -216,7 +216,7 @@ ACTION=${1:-}
 case "$ACTION" in
 prepare) prepare ;;
 send|follow|collect|clean|all) needs_ip "${2:-}"; "$ACTION" ;;
-start) needs_ip "${2:-}"; start "${3:-tutto}" ;;
+start) needs_ip "${2:-}"; start "${3:-all}" ;;
 status) needs_ip "${2:-}"; far "bash $FAR/albero/benches/19-nvidia/19-nv-machine.sh status" ;;
 enter) needs_ip "${2:-}"; ssh ${SSH_KEY:+-i "$SSH_KEY"} -p "${SSH_PORT:-22}" "$ACCOUNT@$IP" ;;
 *) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
