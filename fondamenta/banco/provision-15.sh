@@ -144,6 +144,8 @@ PKGS=(
     mesa-va-drivers vainfo
     # il qemu estratto in strumenti/qemu (VM Alma per SELinux) vuole libnl-3 dall'host (26 ott 2026, dopo un riavvio)
     libnl-3-200
+    # i modelli locali (llama-server -dev Vulkan0 sulla Radeon): senza RADV vedono solo la CPU
+    mesa-vulkan-drivers
     # per scaricare e per la chiave del repository di Chrome
     curl ca-certificates gnupg
 )
@@ -218,6 +220,15 @@ runuser -u "$UTENTE" -- env XDG_RUNTIME_DIR=/run/user/$UID_UTENTE systemctl --us
 #    in hardware; senza i gruppi decodificano in CPU e il 30-perf misura il client (26 ott 2026, dopo un riavvio).
 log "Gruppi video e render per $UTENTE"
 usermod -aG video,render "$UTENTE" && ok "$UTENTE in video e render (vale dalla prossima sessione ssh)"
+
+# 5-ter. I modelli locali: lo script llm.sh sta sul disco (/media/DOWNLOAD/llama-swap), ~/llm e' un collegamento.
+#    (26 ott 2026: l'originale stava in ~/llm, cioe' in RAM, ed e' sparito al riavvio.)
+log "Collegamento ~/llm"
+if [ -x /media/DOWNLOAD/llama-swap/llm.sh ]; then
+    ln -sfn /media/DOWNLOAD/llama-swap "/home/$UTENTE/llm" && chown -h "$UTENTE:$UTENTE" "/home/$UTENTE/llm" && ok "~/llm -> /media/DOWNLOAD/llama-swap"
+else
+    inf "/media/DOWNLOAD/llama-swap/llm.sh assente: i modelli locali non si accendono"
+fi
 
 # 6. Riepilogo: i fatti che contano per non finire la memoria
 # ---------------------------------------------------------------------------
