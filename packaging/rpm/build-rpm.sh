@@ -80,7 +80,7 @@ build_one()
 			# Tumbleweed rolls: stale metadata in the image, and mirrors that answer 404 now and then
 			for i in 1 2 3; do
 				zypper -n -q refresh -f >/dev/null 2>&1
-				zypper -n -q install --no-recommends --force-resolution rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 >/dev/null 2>&1
+				zypper -n -q install --no-recommends --force-resolution rpm-build rpmlint systemd-rpm-macros cpio selinux-policy-devel bzip2 sysuser-tools >/dev/null 2>&1
 				rpm -q rpm-build rpmlint >/dev/null && break
 			done
 		fi
