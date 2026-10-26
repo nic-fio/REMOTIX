@@ -12695,11 +12695,12 @@ function on_touchcancel(ev) { touch_release_all("the system cancelled the touch"
  *   3. `(pointer: coarse)` — the PRIMARY pointer is coarse, that is a finger;
  *   4. ⚠ FALLBACK: the window width, if `matchMedia` does not answer.
  *
- * ⛔ And the stronger sign WINS over the weaker only until the next hardware
- *    change: when a media query changes, the observation is thrown away and
- *    one starts again from the context.  ⇒ pick up the mouse and switch to
- *    classic, touch the screen and go back to touch, unplug the mouse and the
- *    context takes command again.
+ * ⛔ And the stronger sign WINS over the weaker until the next pointer of
+ *    another type: a media-query change re-reads the context but does NOT
+ *    throw the observation away (Android desktop mode fires them while the
+ *    mouse is used, 26 Oct 2026).  ⇒ move the mouse and switch to classic,
+ *    touch the screen and go back to touch, unplug the mouse and the next
+ *    finger brings back touch.
  * ══════════════════════════════════════════════════════════════════════════ */
 const TOUCH_CLASSIC_WIDTH = 800;   /* CSS px, only for the fallback */
 
