@@ -13126,12 +13126,25 @@ addEventListener("pointerdown", function (ev) {
   reevaluate_layout();
 }, true);
 
-/* ⛔ And the hardware change throws the observation away: if the mouse is
-   unplugged, "last time I used the mouse" is an old and wrong fact. */
+/* ⛔⭐ 26 Oct 2026, Android desktop mode (DeX, and the Pixel desktop mode the same way) with a
+ *    real mouse, Chrome 155: `(pointer: coarse)` true and `(any-pointer: fine)` FALSE although a mouse
+ *    is there, and the media queries fire `change` again and again while the mouse is used.  The
+ *    handler below threw the observation away at every `change`: one click went to classic, the next
+ *    `change` went back to touch ⇒ two cursors and a mouse that jumped (the user, with 1.0 and 1.5).
+ *    ⇒ (1) a MOVE of a mouse or a pen is already proof (a finger cannot hover), not only a press;
+ *      (2) the hardware change no longer erases what was SEEN: it only re-reads the context.  The way
+ *          back is the next finger: a `pointerdown` of type touch switches to touch at once. */
+addEventListener("pointermove", function (ev) {
+  if (ev.pointerType !== "mouse" && ev.pointerType !== "pen") return;
+  if (touch_seen && touch_seen.type === ev.pointerType) return;
+  touch_seen = { type: ev.pointerType, t: performance.now() };
+  reevaluate_layout();
+}, true);
+
 for (const q of ["(any-pointer: fine)", "(pointer: coarse)", "(any-hover: hover)"]) {
   try {
     const m = matchMedia(q);
-    const f = function () { touch_seen = null; reevaluate_layout(); };
+    const f = function () { reevaluate_layout(); };
     if (m.addEventListener) m.addEventListener("change", f);
     else if (m.addListener) m.addListener(f);
   } catch (e) { /* the fallback on width is already in `layout_from_context` */ }
