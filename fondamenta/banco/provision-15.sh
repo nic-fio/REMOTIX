@@ -141,7 +141,7 @@ PKGS=(
     libavcodec61
     # ...e la decodifica IN HARDWARE dei client (Radeon: radeonsi via VA-API): senza, i 6 Firefox del 30-perf
     # decodificano in CPU (13 core a 6 utenti) e la misura diventa del client, non del prodotto (26 ott 2026)
-    mesa-va-drivers vainfo
+    mesa-va-drivers vainfo zstd
     # il qemu estratto in strumenti/qemu (VM Alma per SELinux) vuole libnl-3 dall'host (26 ott 2026, dopo un riavvio)
     libnl-3-200
     # i modelli locali (llama-server -dev Vulkan0 sulla Radeon): senza RADV vedono solo la CPU
