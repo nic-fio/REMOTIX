@@ -229,7 +229,7 @@ say "   session logs in the homes before: $(tr '\n' ' ' <"$E/registri-prima.txt"
 T0=$(date +%s)
 vm "printf 'y\\n' | sudo /usr/bin/remotix-install uninstall --purge" >"$E/disinstalla.txt" 2>&1
 u=$?
-OPD=$(grep -E '^operation '"$E/disinstalla.txt" | tail -1)
+OPD=$(grep -E '^operation ' "$E/disinstalla.txt" | tail -1)
 say "   uninstall: exit $u in $(( $(date +%s) - T0 )) s — $OPD"
 grep -E 'FAILED|BLOCKED|RX-|session.log' "$E/disinstalla.txt" | head -8 | cut -c1-240 | sed 's/^/   /' | tee -a "$E/giro.log"
 sleep 3
