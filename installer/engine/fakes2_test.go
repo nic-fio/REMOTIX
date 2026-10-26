@@ -138,6 +138,7 @@ func (g *fakeManager) Install(file, names []string) error {
 				uid, gid := strconv.Itoa(ownUid), strconv.Itoa(ownGid)
 				os.MkdirAll(filepath.Join(g.root, NetDir[1:]), 0o700)
 				os.Chmod(filepath.Join(g.root, NetDir[1:]), 0o700)
+				os.Lchown(filepath.Join(g.root, NetDir[1:]), ownUid, ownGid) // the network user's, as tmpfiles.d makes it (as root: 990)
 				// ⚠ login.defs is OVERWRITTEN here (only when this package is the one that makes the network user): the fake
 				// «prova» at uid 1000 no longer counts as a person in THIS test only — nothing here may rely on it being one.
 				// (And a test run as root has uid 0, which is root's, not ours: use 990.)

@@ -215,10 +215,25 @@ func TestRollbackKeepsAnOldNetGroup(t *testing.T) {
 
 // netMachine: a fake machine with the 1.5 package's sysusers file and remotix as the test's own uid
 // (the files the test makes are the test's: without root they cannot be given to anyone else).
+// ⛔ Run as root (the Go container of installer/build.sh), the test's own uid is 0, which is root's and never the network
+//
+//	user's (PersonAccount, 2249b570): then remotix is uid/gid 990 and the state dir is chowned to it, as the package does.
 func netMachine(t *testing.T) (string, *Environment) {
 	root := t.TempDir()
 	prepareMachine(t, root)
 	uid, gid := os.Getuid(), os.Getgid()
+	if uid == 0 || gid == 0 {
+		uid, gid = 990, 990
+		defer filepath.Walk(filepath.Join(root, NetDir[1:]), func(f string, _ os.FileInfo, err error) error {
+			if err == nil {
+				err = os.Lchown(f, uid, gid)
+			}
+			if err != nil {
+				t.Fatalf("chown %s to %d:%d: %v", f, uid, gid, err)
+			}
+			return nil
+		})
+	}
 	appendTo(t, filepath.Join(root, "etc/passwd"), "remotix:x:"+strconv.Itoa(uid)+":"+strconv.Itoa(gid)+":REMOTIX network side:/:/usr/sbin/nologin\n")
 	os.WriteFile(filepath.Join(root, "etc/login.defs"), []byte("UID_MIN "+strconv.Itoa(uid+1)+"\n"), 0o644)
 	os.MkdirAll(filepath.Join(root, "usr/lib/sysusers.d"), 0o755)
