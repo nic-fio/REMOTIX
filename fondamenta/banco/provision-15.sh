@@ -212,6 +212,11 @@ runuser -u "$UTENTE" -- env XDG_RUNTIME_DIR=/run/user/$UID_UTENTE systemctl --us
     && ok "pipewire attivo per $UTENTE" || inf "pipewire non avviato: lancialo a mano"
 
 # ---------------------------------------------------------------------------
+# 5-bis. Le schede per l'utente: i client dei banchi (Firefox, Chrome) aprono /dev/dri/renderD* per decodificare
+#    in hardware; senza i gruppi decodificano in CPU e il 30-perf misura il client (26 ott 2026, dopo un riavvio).
+log "Gruppi video e render per $UTENTE"
+usermod -aG video,render "$UTENTE" && ok "$UTENTE in video e render (vale dalla prossima sessione ssh)"
+
 # 6. Riepilogo: i fatti che contano per non finire la memoria
 # ---------------------------------------------------------------------------
 log "Riepilogo"
