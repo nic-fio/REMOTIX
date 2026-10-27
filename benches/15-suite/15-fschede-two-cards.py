@@ -17,7 +17,7 @@ F-SCHEDE  expected: ONE real session (tenant, real browser, login) in the two-ca
              GNOME chooses by itself: consistency is judged, and which card Mutter chose is REPORTED (expected = primary);
           4. if the box got `--render-node X` (secondary, the encoder's fallback): when X is not the compositor's card
              the «is NOT the compositor's card» warning is there, and when it is, it is not.
-          The log texts judged are the product's own: «the card I give wlroots is» (session.c, XFCE/LXQt), «the encoding card»
+          The log texts judged are the product's own: «the card I give wlroots is» (before 1.5 card_pick) or «the card I give the compositor is» (session.c, XFCE/LXQt), «the encoding card»
           (child.c, from the compositor's linux-dmabuf main_device), «encoder N OPENED» with «in HARDWARE · /dev/dri/renderDN»,
           and the two declared fallbacks (pixman; «falls back to the startup card» = cross-card import).
 
@@ -36,7 +36,7 @@ OWN = ("xfce", "lxqt", "kde")          # the desktops whose card REMOTIX chooses
 DEFAULT_ROOT = "/media/REMOTIX-15/lavori/due-schede"
 
 RE_ENC = re.compile(r"the encoding card: (/dev/dri/renderD\d+) \((\S+), driver (\S+), [^)]*\) — from (.*)$")
-RE_WLR = re.compile(r"the card I give wlroots is (/dev/dri/renderD\d+)")
+RE_WLR = re.compile(r"the card I give (?:wlroots|the compositor) is (/dev/dri/renderD\d+)")
 RE_OPEN = re.compile(r"encoder \d+ OPENED.*?(/dev/dri/renderD\d+)")
 RE_OPENED_NODE = re.compile(r"(OPENED.*?)(/dev/dri/renderD\d+)")
 WARN = "is NOT the compositor's card"
@@ -210,6 +210,8 @@ def certify():
     prova("all on the primary card, XFCE ⇒ PASS", judge("xfce", st, fake_lines(st, "intel", "intel"), True)[0], S.PASS)
     prova("same, names exchanged ⇒ PASS", judge("xfce", sw, fake_lines(sw, "intel", "intel"), True)[0], S.PASS)
     prova("primary is the Radeon (boot_vga on it), all on it ⇒ PASS", judge("lxqt", ra, fake_lines(ra, "amd", "amd"), True)[0], S.PASS)
+    nl = [r.replace("wlroots is", "the compositor is") + " (0000:00:02.0, driver i915) — BIOS primary" for r in fake_lines(st, "intel", "intel")]
+    prova("the new text «the card I give the compositor is» ⇒ PASS", judge("xfce", st, nl, True)[0], S.PASS)
     prova("XFCE on the non-primary card ⇒ FAIL", judge("xfce", st, fake_lines(st, "amd", "amd"), True)[0], S.FAIL)
     prova("names exchanged and the product follows the NAME (lowest) ⇒ FAIL", judge(
         "xfce", sw, fake_lines(sw, "amd", "amd"), True)[0], S.FAIL)
