@@ -667,7 +667,10 @@ def server_stats(samples, users, ovh):
         ms = b.get("ms") or {}
         if "anon" in ms:
             kern = ms.get("kernel", ms.get("kernel_stack", 0) + ms.get("pagetables", 0) + ms.get("slab", 0))
-            work = ms["anon"] + ms.get("shmem", 0) + kern - ms.get("slab_reclaimable", 0)
+            jr = b.get("jr")
+            # the journal is taken off the SHMEM only, never off the total: statvfs can count tmpfs pages swapped out or
+            # charged to another cgroup, so jr may exceed the box's shmem and would eat REMOTIX's anon memory
+            work = ms["anon"] + max(0, ms.get("shmem", 0) - (jr or 0)) + kern - ms.get("slab_reclaimable", 0)
             # ⭐ 27 Oct 2026: WITHOUT the journal tmpfs.  The box's systemd journal grows by itself (1.6 GB in rete11-gnome
             #   after a day) and was counted here as shmem: a 1.0 reference measured when the journal was small and a 1.5
             #   measured when it was big differed by +1.4 GB «box working memory» that was the journal, not REMOTIX
@@ -675,9 +678,7 @@ def server_stats(samples, users, ovh):
             #   ⛔ References measured BEFORE this change include the journal in box_work: they are NOT comparable with
             #   the new ones and must be measured again.  `jr` None (journal not a tmpfs of its own, or an old sampler):
             #   box_work is as it always was and box_journal stays empty.
-            jr = b.get("jr")
             if jr is not None:
-                work = max(0, work - jr)
                 v["box_journal"].append(jr / 1048576.0)
             v["box_work"].append(work / 1048576.0)
             v["box_cache"].append(max(0, ms.get("file", 0) - ms.get("shmem", 0) + ms.get("slab_reclaimable", 0)) / 1048576.0)
