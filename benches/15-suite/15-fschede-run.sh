@@ -25,7 +25,8 @@ done
 [ -n "$RAMO" ] && [ -n "$LABEL" ] || { sed -n '2,/^set -uo/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 2; }
 RAMO=$(cd "$RAMO" && pwd) || exit 2
 case $LABEL in ""|*[!a-z0-9-]*) echo "--label: lowercase letters, digits, dashes"; exit 2 ;; esac
-TWO=$RAMO/benches/11-boxes/11-two-cards.sh
+TWO=$HERE/../11-boxes/11-two-cards.sh          # the bench's OWN script (the worktree under test may not have it); --ramo is only build/assemble's argument
+STAGE=${REMOTIX_DUE_ROOT:-/media/REMOTIX-15/lavori/due-schede}/stage-$LABEL      # one stage per label
 OUT=/media/REMOTIX-15/log/fschede-$LABEL
 mkdir -p "$OUT" || exit 1
 VERD=$OUT/fschede.txt; : > "$VERD"
@@ -35,7 +36,13 @@ trap finish EXIT
 trap 'exit 130' INT TERM HUP
 if [ "$BUILD" = 1 ]; then
 	bash "$TWO" build --ramo "$RAMO" > "$OUT/build.log" 2>&1 || { echo "build failed: $OUT/build.log"; exit 1; }
-	bash "$TWO" assemble --ramo "$RAMO" > "$OUT/assemble.log" 2>&1 || { echo "assemble failed: $OUT/assemble.log"; exit 1; }
+	bash "$TWO" assemble --ramo "$RAMO" --stage "$STAGE" > "$OUT/assemble.log" 2>&1 || { echo "assemble failed: $OUT/assemble.log"; exit 1; }
+fi
+# the product under test must BE the worktree's binary: refuse a stage left over from another build
+M_STAGE=$(md5sum "$STAGE/prodotto/remotix" 2>/dev/null | cut -c1-32); M_RAMO=$(md5sum "$RAMO/src/remotix" 2>/dev/null | cut -c1-32)
+{ echo "# stage $STAGE · prodotto/remotix md5 ${M_STAGE:-MISSING} · $RAMO/src/remotix md5 ${M_RAMO:-MISSING}"; } >> "$VERD"
+if [ -z "$M_STAGE" ] || [ "$M_STAGE" != "$M_RAMO" ]; then
+	echo "the stage ($STAGE) does not hold the binary of $RAMO/src/remotix (${M_STAGE:-missing} vs ${M_RAMO:-missing}): use --build"; exit 1
 fi
 BAD=0
 for d in $DESKTOPS; do
@@ -46,7 +53,7 @@ for d in $DESKTOPS; do
 		case $sc in plain|swap|req-intel|req-amd|swap-req-intel|swap-req-amd) ;; *) echo "scenario «$sc»?"; BAD=1; continue ;; esac
 		echo "=== $(date +%T) $d $sc"
 		STOP_LIST="$d"
-		if ! bash "$TWO" start "$d" "${opts[@]}" > "$OUT/$d-$sc-start.log" 2>&1; then
+		if ! bash "$TWO" start "$d" --stage "$STAGE" "${opts[@]}" > "$OUT/$d-$sc-start.log" 2>&1; then
 			echo "    box start FAILED ($OUT/$d-$sc-start.log)"; echo "$d $sc BOX-KO" >> "$VERD"; BAD=1
 			bash "$TWO" stop "$d" > /dev/null 2>&1; STOP_LIST=""; continue
 		fi

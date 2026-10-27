@@ -248,6 +248,19 @@ for i in 0 1; do
 	fi
 done
 
+# --swap and the dev_t: code that goes through the node's major:minor (render_node.c node_of_device, wlroots.c) reads
+# /sys/dev/char/226:M/device/drm, which is the HOST's; the nodes inside keep the host minors.  Is that view true by name?
+SWAP_DEVT=1
+for n in "${INC[@]}" "${INR[@]}"; do
+	nb=$(basename "$n")
+	m=$(podman exec "$NAME" stat -c %T "/dev/dri/$nb" 2>/dev/null)
+	if ! podman exec "$NAME" sh -c "ls /sys/dev/char/226:\$((0x$m))/device/drm 2>/dev/null | grep -qx $nb"; then
+		SWAP_DEVT=0; echo "  --  dev_t: /dev/dri/$nb has minor $((0x$m)) and /sys/dev/char/226:$((0x$m))/device/drm does not list it"
+	fi
+done
+if [ "$SWAP_DEVT" = 1 ]; then ok "dev_t: every node's major:minor leads, through /sys/dev/char, to a device that lists that very name"
+else echo "  --  SWAP_DEVT=0: the simulation is NOT faithful for code that goes through the dev_t; the test will judge only the card given to the compositor"; fi
+
 log "Putting the product inside $NAME"
 read -r -d '' INSTALL <<'XEOF'
 set -e
@@ -312,7 +325,7 @@ ok "the server listens on $PORT${REQ:+ (--render-node $REQ)}"
 # the state, for the test
 {
 	echo "NAME=$NAME"; echo "DESKTOP=$DESK"; echo "PORT=$PORT"; echo "SWAP=$SWAP"; echo "RENDER_NODE=$REQ"
-	echo "PRIMARY_PCI=$PRIMARY"
+	echo "PRIMARY_PCI=$PRIMARY"; echo "SWAP_DEVT=$SWAP_DEVT"
 	for i in 0 1; do echo "CARD_$i=${CLAB[$i]}|${CPCI[$i]}|${CDRV[$i]}|$(basename "${INR[$i]}")|$(basename "${INC[$i]}")|${CBOOT[$i]}"; done
 } > "$STATE/$DESK.env"
 chmod a+r "$STATE/$DESK.env"

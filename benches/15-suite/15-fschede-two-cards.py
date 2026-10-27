@@ -61,7 +61,7 @@ def read_state(path):
         cards.append({"label": label, "pci": pci, "driver": drv, "render": "/dev/dri/" + rend,
                       "card": "/dev/dri/" + card, "boot": boot == "1"})
     return {"name": kv["NAME"], "desktop": kv["DESKTOP"], "port": int(kv["PORT"]), "swap": kv["SWAP"] == "1",
-            "req": kv.get("RENDER_NODE", ""), "cards": cards}
+            "req": kv.get("RENDER_NODE", ""), "devt": kv.get("SWAP_DEVT", "1") == "1", "cards": cards}
 
 
 def primary_pci(st):
@@ -114,6 +114,19 @@ def judge(desktop, st, lines, image_ok):
         return S.FAIL, "the compositor fell back to pixman (the chosen card cannot create the buffer): not a card choice", facts
     if f["xcard"]:
         return S.FAIL, "cross-card: the encoder fell back to the startup card, not the compositor's (\"%s\")" % XCARD, facts
+    if not st.get("devt", True):
+        # --swap NOT faithful on the dev_t (11-two-cards.sh): the encoder/compositor comparison cannot be trusted, so it is never
+        # judged here; only the card the product GIVES the compositor is, against the BIOS primary
+        if f["wlr"] is None:
+            return S.BLOCKED, "I could not look: no «the card I give … is» line (simulazione --swap non fedele sul dev_t)", facts
+        given = pci_of(st, f["wlr"])
+        facts["compositor_card"] = label_of(st, given)
+        if given is not None and given != primary_pci(st) and desktop in OWN:
+            return S.FAIL, "%s was given %s (%s), not the BIOS primary card %s (%s) [names exchanged]" % (
+                desktop, f["wlr"], facts["compositor_card"], label_of(st, primary_pci(st)), primary_pci(st)), facts
+        return S.BLOCKED, ("simulazione --swap non fedele sul dev_t: the card given (%s, %s) is %s the BIOS primary; the "
+                           "encoder/compositor comparison is not judged" % (f["wlr"], facts["compositor_card"],
+                                                                           "the" if given == primary_pci(st) else "NOT the")), facts
     enc = f["enc"]
     if not enc or not f["opened"]:
         return S.BLOCKED, "I could not look: the log has no «the encoding card» line (%s) or no «encoder OPENED» node (%s)" % (
@@ -175,13 +188,13 @@ def swap_encoder_node(lines, st):
 
 
 # ── the synthetic cases for the certification
-def fake_state(swap=False, req="", boot_intel=True):
+def fake_state(swap=False, req="", boot_intel=True, devt=True):
     a = {"label": "intel", "pci": "0000:00:02.0", "driver": "i915", "render": "/dev/dri/renderD128", "card": "/dev/dri/card0", "boot": boot_intel}
     b = {"label": "amd", "pci": "0000:03:00.0", "driver": "amdgpu", "render": "/dev/dri/renderD129", "card": "/dev/dri/card1", "boot": not boot_intel}
     if swap:
         a["render"], b["render"] = b["render"], a["render"]
         a["card"], b["card"] = b["card"], a["card"]
-    return {"name": "rete11-due-xfce", "desktop": "xfce", "port": 8533, "swap": swap, "req": req, "cards": [a, b]}
+    return {"name": "rete11-due-xfce", "desktop": "xfce", "port": 8533, "swap": swap, "req": req, "devt": devt, "cards": [a, b]}
 
 
 def fake_lines(st, comp, enc, source="the compositor's card (linux-dmabuf main_device)", wlr=True, extra=()):
@@ -212,6 +225,12 @@ def certify():
     prova("primary is the Radeon (boot_vga on it), all on it ⇒ PASS", judge("lxqt", ra, fake_lines(ra, "amd", "amd"), True)[0], S.PASS)
     nl = [r.replace("wlroots is", "the compositor is") + " (0000:00:02.0, driver i915) — BIOS primary" for r in fake_lines(st, "intel", "intel")]
     prova("the new text «the card I give the compositor is» ⇒ PASS", judge("xfce", st, nl, True)[0], S.PASS)
+    nd = fake_state(swap=True, devt=False)
+    prova("dev_t not faithful, card given = primary ⇒ BLOCKED, never PASS/FAIL", judge("xfce", nd, fake_lines(nd, "intel", "intel"), True)[0], S.BLOCKED)
+    prova("dev_t not faithful, the encoder on the other card ⇒ still BLOCKED (not judged)", judge("xfce", nd, fake_lines(nd, "intel", "amd"), True)[0], S.BLOCKED)
+    prova("dev_t not faithful, card given NOT the primary ⇒ FAIL", judge("xfce", nd, fake_lines(nd, "amd", "amd"), True)[0], S.FAIL)
+    prova("dev_t not faithful, no image ⇒ FAIL", judge("xfce", nd, fake_lines(nd, "intel", "intel"), False)[0], S.FAIL)
+    prova("dev_t not faithful, GNOME (no given-card line) ⇒ BLOCKED", judge("gnome", nd, fake_lines(nd, "intel", "intel", wlr=False), True)[0], S.BLOCKED)
     prova("XFCE on the non-primary card ⇒ FAIL", judge("xfce", st, fake_lines(st, "amd", "amd"), True)[0], S.FAIL)
     prova("names exchanged and the product follows the NAME (lowest) ⇒ FAIL", judge(
         "xfce", sw, fake_lines(sw, "amd", "amd"), True)[0], S.FAIL)
