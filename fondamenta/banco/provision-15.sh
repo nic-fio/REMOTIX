@@ -127,6 +127,9 @@ PKGS=(
     git podman make gcc pkg-config rsync
     # la rete dei container senza privilegi
     uidmap slirp4netns passt netavark aardvark-dns
+    # podman --init (il contenitore di compilazione di verifica-rami e i test root): senza, «catatonit: executable file
+    # not found» e la verifica della rete va 1 PASS / 68 FAIL in 16 s (27 ott 2026, dopo un riavvio)
+    catatonit
     # la suite: i banchi in Python (immagini, matematica) e l'ambiente isolato
     python3-venv python3-pil python3-numpy python3-xlib wlr-randr libpulse0 pipewire pipewire-pulse wireplumber
     # la suite (F-014C/D, F-015C): wl-copy/wl-paste fuori dal browser, tasti (wtype), focus (wlrctl),
