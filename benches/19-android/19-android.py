@@ -762,7 +762,9 @@ def log_lines(round_id, desktop, prove):
             r = json.loads(x)
         except ValueError:
             continue
-        if any(f in r.get("test", "") for f in prove):
+        # ⭐ 27 Oct 2026: the lines name the test by FUNCTION («T-001-gnome-phone»), the row by FILE («f001»): match the file
+        #   (field «prova», «15-f001-login-and-first-image»); the test name stays for the old lines that carried the file
+        if any(f in r.get("prova", "") or f in r.get("test", "") for f in prove):
             lines.append(r)
     # the last run of each test
     last = {}
