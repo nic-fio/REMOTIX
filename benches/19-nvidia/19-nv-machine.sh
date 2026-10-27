@@ -15,23 +15,35 @@
 #                    as it was (packages, /etc/apt, users, units): "clean" needs it
 #   driver       the NVIDIA driver with its Vulkan ICD and nvidia-drm modeset=1, ONLY
 #                    if missing; if it touches the kernel it exits with 10 = reboot
-#   deps   (b) XFCE under labwc, the test tools, Firefox ESR, Chrome,
-#                    the bench user `rxbanco`
+#   deps   (b) XFCE under labwc, the test tools, Firefox ESR, Chrome (these two only with
+#                    CLIENTS=machine), the bench user `rxbanco`
 #   remotix      (b) REMOTIX from the `fase-19` .deb WITH THE INSTALLER (plan, apply):
 #                    the refusal, if any, is already a result
+#   porta (port)  (b2) CLIENTS=home only: REMOTIX listens on a non-loopback address, and its port
+#                    (TCP+UDP) is opened ONLY towards the client's address, if a firewall is active
+#                    (ufw or nftables); the rule is recorded and `clean` removes it
 #   encode     (c) `remotix --encoding-test` h264 and hevc: must say route "vulkan"
 #   comparison    (d) `benches/19-vulkan/19-compare.sh` on the NVIDIA (quality,
 #                    decoding of every frame, new canvas, canvas in a LOOP, keyframe, ceiling)
 #   suite        (e) the subset of the phase 15 suite (F-001 F-002 F-003 F-011
 #                    F-013 F-016 F-018) on XFCE under headless labwc, Firefox and Chrome
+#                    — CLIENTS=machine only; with CLIENTS=home the browsers are at HOME:
+#                    `19-nvidia.sh suite-casa IP`, run on the home server
 #   collect     (f) logs and evidence in ONE archive, to take to the laptop
 #   clean      (g) the machine as we found it (wants the archive already taken away)
 #   status        how far we got
-#   all        from the first to the last before "clean", skipping those already done
+#   record     (home) `record STEP OUTCOME TEXT`: a line in passi.txt written from outside
+#                    (suite-casa leaves there «browsers at home, RTT N ms»)
+#   all        from the first to the last before "clean", skipping those already done.
+#                    CLIENTS=home: it stops BEFORE `suite` and `collect` (the suite is at home):
+#                    then `suite-casa IP`, then `collect IP`
 #
 # Exit: 0 green · 1 red · 3 could not look · 10 a reboot is needed
 # (then `all` is run again, and it resumes from the next step).
-# Variables: PORT (7447), FORCE=1 (goes on even after a red check), TESTS=f003,f013 and
+# Variables: CLIENTS=home|machine (home by default: the clients' browsers are on the home server and
+# come in over the internet, like real users; machine = the browsers on this machine, as before),
+# CLIENT_ADDR (the address the clients come from: 19-nvidia.sh reads it from ssh and passes it),
+# PORT (7447), FORCE=1 (goes on even after a red check), TESTS=f003,f013 and
 # BROWSER_SUITE=firefox (only those tests / that browser, to repeat a test), DESKTOP_NV=gnome
 # (GNOME in addition to XFCE, and the suite on GNOME; =kde: Plasma, and GNOME removed; =lxqt: LXQt, and the others removed), CLIENT_CARD=1
 # (the browsers draw on the card: counter-test only),
@@ -49,9 +61,17 @@ BEFORE=$WORKDIR/prima
 DONE=$WORKDIR/fatto
 EVID=$WORKDIR/evidenze
 PORT=${PORT:-7447}
+# ⭐ 27 Oct 2026: WHERE THE BROWSERS ARE.  home (default): at home, on the home server, as real users over
+#    internet — this machine runs only REMOTIX and the desktop, so the card is measured without the browsers
+#    on its back and the network is the real one.  machine: as it has always been (the fallback, if the
+#    provider will not open the UDP port).
+CLIENTS=${CLIENTS:-home}
+CLIENT_ADDR=${CLIENT_ADDR:-}
+FWREC=$WORKDIR/firewall-regole          # what `porta` opened: «ufw PROTO ADDR PORT» / «nft FAMILY TABLE CHAIN PORT»
 BENCH_USER=rxbanco
 BIN=/usr/libexec/remotix/remotix
 APT=(apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+case "$CLIENTS" in home|machine) ;; *) echo "CLIENTS=$CLIENTS: home or machine"; exit 2 ;; esac
 mkdir -p "$WORKDIR" "$DONE" "$EVID"
 
 ok()     { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -358,6 +378,53 @@ spare() {
 	warning "memory $((kib / 1048576)) GiB and the swap does not turn on: a red from memory running out must be read in the kernel log (oom)"
 }
 
+# Firefox ESR and Chrome, with what the suite's tests need of them (CLIENTS=machine only)
+browsers() {
+	local fam
+	fam=$(family)
+	# Firefox ESR: Debian has it; on Ubuntu "firefox" is a snap ⇒ Mozilla's repository
+	if [ "$fam" = ubuntu ] && ! has_candidate firefox-esr; then
+		install -d -m 0755 /etc/apt/keyrings
+		curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg -o /etc/apt/keyrings/packages.mozilla.org.asc
+		echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" \
+			> /etc/apt/sources.list.d/mozilla.list
+		"${APT[@]}" update >> "$EVID/dipendenze.txt" 2>&1
+	fi
+	"${APT[@]}" install --no-install-recommends firefox-esr libpci3 >> "$EVID/dipendenze.txt" 2>&1 \
+		&& ok "Firefox ESR: $(firefox-esr --version 2>/dev/null)" \
+		|| { ko "firefox-esr does not install"; outcome deps ROSSO "firefox-esr"; return 1; }
+	# ⭐ 5 Oct 2026, `[M]` RTX 4090: Firefox ESR 153 (Mozilla's repository) on first start puts
+	#    the "Welcome to Firefox / Terms of Use" window ABOVE the test page, and F-003 does not
+	#    find it.  The boxes have 140, which does not show it.  ⇒ It is skipped with a Firefox
+	#    policy ("clean" removes it together with the package: it is in its folder).
+	mkdir -p /usr/lib/firefox-esr/distribution
+	printf '%s\n' '{"policies": {"SkipTermsOfUse": true, "DisableTelemetry": true, "DontCheckDefaultBrowser": true, "OverrideFirstRunPage": "", "OverridePostUpdatePage": ""}}' \
+		> /usr/lib/firefox-esr/distribution/policies.json
+	# ⭐ 5 Oct 2026, `[M]`: Mozilla's package runs Firefox as "firefox-bin", Debian's
+	#    as "firefox-esr" — and the suite's tests (F-016/F-017) look for and kill the scene
+	#    by NAME (`pgrep -x firefox-esr`).  ⇒ The tests stay IDENTICAL and the name is aligned: a
+	#    hard link with the right name, in Firefox's folder ("clean" removes it).
+	# ⛔ 6 Oct 2026: it was "only if the link is missing" — after a `clean` and a new run the
+	#    hard link was still there and /usr/bin/firefox-esr was not ⇒ F-016 BLOCKED. Always redone
+	if [ -x /usr/lib/firefox-esr/firefox-bin ]; then
+		ln -f /usr/lib/firefox-esr/firefox-bin /usr/lib/firefox-esr/firefox-esr
+		ln -sfn /usr/lib/firefox-esr/firefox-esr /usr/bin/firefox-esr
+		touch "$WORKDIR/firefox-esr-nome"
+	fi
+	# Chrome: Google's .deb (it brings its repository: "clean" removes it with /etc/apt)
+	if ! command -v google-chrome >/dev/null; then
+		curl -fsSL -o /var/tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+			&& "${APT[@]}" install /var/tmp/google-chrome.deb >> "$EVID/dipendenze.txt" 2>&1
+		rm -f /var/tmp/google-chrome.deb
+	fi
+	command -v google-chrome >/dev/null && ok "Chrome: $(google-chrome --version 2>/dev/null)" \
+		|| { ko "Chrome does not install"; outcome deps ROSSO chrome; return 1; }
+	# the "firefox" the benches launch (07-b46: `firefox --marionette`) is firefox-esr
+	mkdir -p "$SUITCASE/bin"
+	ln -sf "$(command -v firefox-esr)" "$SUITCASE/bin/firefox"
+	return 0
+}
+
 deps() {
 	log "(b) the dependencies: XFCE under labwc, tools, Firefox ESR, Chrome"
 	local fam
@@ -416,46 +483,13 @@ deps() {
 		ko "apt-get install failed (dipendenze.txt)"; outcome dipendenze ROSSO "apt failed"; return 1
 	fi
 	ok "desktop and tools"
-	# Firefox ESR: Debian has it; on Ubuntu "firefox" is a snap ⇒ Mozilla's repository
-	if [ "$fam" = ubuntu ] && ! has_candidate firefox-esr; then
-		install -d -m 0755 /etc/apt/keyrings
-		curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg -o /etc/apt/keyrings/packages.mozilla.org.asc
-		echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" \
-			> /etc/apt/sources.list.d/mozilla.list
-		"${APT[@]}" update >> "$EVID/dipendenze.txt" 2>&1
+	# ⭐ 27 Oct 2026: with CLIENTS=home the browsers are at home: nothing of Firefox or Chrome is installed here
+	#    (and `clean` has less to take away)
+	if [ "$CLIENTS" = machine ]; then
+		browsers || return 1
+	else
+		ok "CLIENTS=home: no Firefox or Chrome on this machine (the browsers are at home)"
 	fi
-	"${APT[@]}" install --no-install-recommends firefox-esr libpci3 >> "$EVID/dipendenze.txt" 2>&1 \
-		&& ok "Firefox ESR: $(firefox-esr --version 2>/dev/null)" \
-		|| { ko "firefox-esr does not install"; outcome deps ROSSO "firefox-esr"; return 1; }
-	# ⭐ 5 Oct 2026, `[M]` RTX 4090: Firefox ESR 153 (Mozilla's repository) on first start puts
-	#    the "Welcome to Firefox / Terms of Use" window ABOVE the test page, and F-003 does not
-	#    find it.  The boxes have 140, which does not show it.  ⇒ It is skipped with a Firefox
-	#    policy ("clean" removes it together with the package: it is in its folder).
-	mkdir -p /usr/lib/firefox-esr/distribution
-	printf '%s\n' '{"policies": {"SkipTermsOfUse": true, "DisableTelemetry": true, "DontCheckDefaultBrowser": true, "OverrideFirstRunPage": "", "OverridePostUpdatePage": ""}}' \
-		> /usr/lib/firefox-esr/distribution/policies.json
-	# ⭐ 5 Oct 2026, `[M]`: Mozilla's package runs Firefox as "firefox-bin", Debian's
-	#    as "firefox-esr" — and the suite's tests (F-016/F-017) look for and kill the scene
-	#    by NAME (`pgrep -x firefox-esr`).  ⇒ The tests stay IDENTICAL and the name is aligned: a
-	#    hard link with the right name, in Firefox's folder ("clean" removes it).
-	# ⛔ 6 Oct 2026: it was "only if the link is missing" — after a `clean` and a new run the
-	#    hard link was still there and /usr/bin/firefox-esr was not ⇒ F-016 BLOCKED. Always redone
-	if [ -x /usr/lib/firefox-esr/firefox-bin ]; then
-		ln -f /usr/lib/firefox-esr/firefox-bin /usr/lib/firefox-esr/firefox-esr
-		ln -sfn /usr/lib/firefox-esr/firefox-esr /usr/bin/firefox-esr
-		touch "$WORKDIR/firefox-esr-nome"
-	fi
-	# Chrome: Google's .deb (it brings its repository: "clean" removes it with /etc/apt)
-	if ! command -v google-chrome >/dev/null; then
-		curl -fsSL -o /var/tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-			&& "${APT[@]}" install /var/tmp/google-chrome.deb >> "$EVID/dipendenze.txt" 2>&1
-		rm -f /var/tmp/google-chrome.deb
-	fi
-	command -v google-chrome >/dev/null && ok "Chrome: $(google-chrome --version 2>/dev/null)" \
-		|| { ko "Chrome does not install"; outcome deps ROSSO chrome; return 1; }
-	# the "firefox" the benches launch (07-b46: `firefox --marionette`) is firefox-esr
-	mkdir -p "$SUITCASE/bin"
-	ln -sf "$(command -v firefox-esr)" "$SUITCASE/bin/firefox"
 	# the bench user: the browsers do NOT run as root; passwordless sudo to get "into the box"
 	# (which here is the machine itself); linger to have /run/user/<uid> and its labwc
 	if ! id "$BENCH_USER" >/dev/null 2>&1; then
@@ -572,6 +606,125 @@ remotix() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  (b2) THE PORT, for the clients at home (CLIENTS=home)
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ 27 Oct 2026: the scenes the tests open INSIDE the session (F-021: `turn_on_scene`) are looked for in
+#    /opt/remotix, where they live on the boxes. If the folder was not there, it is ours: `clean` removes it.
+#    Used by `suite` (CLIENTS=machine) and by `porta` (CLIENTS=home: the tests run at home, the scenes here)
+scenes() {
+	if [ ! -d /opt/remotix ]; then mkdir -p /opt/remotix && touch "$WORKDIR/opt-remotix-nostra"; fi
+	cp "$TREE"/benches/11-boxes/11-c*-scene.html /opt/remotix/ 2>/dev/null
+	chmod 755 /opt/remotix; chmod 644 /opt/remotix/*.html 2>/dev/null
+}
+
+# does REMOTIX listen on $PORT on an address other than loopback? public_listening tcp|udp
+public_listening() {
+	local flag=-ltn
+	[ "$1" = udp ] && flag=-lun
+	ss "$flag" -H 2>/dev/null | awk -v p=":$PORT" '
+		{ a = $4; n = length(a) - length(p)
+		  if (n > 0 && substr(a, n + 1) == p) { a = substr(a, 1, n); if (a !~ /^127\./ && a != "[::1]") f = 1 } }
+		END { exit f ? 0 : 1 }'
+}
+
+# the nftables input chains that can block (family table chain, one per line)
+nft_chains() {
+	command -v nft >/dev/null 2>&1 || return 0
+	local fam tab ch
+	nft list ruleset 2>/dev/null | awk '
+		$1 == "table" { fam = $2; tab = $3 }
+		$1 == "chain" { ch = $2 }
+		/type filter hook input/ { print fam, tab, ch }' | while read -r fam tab ch; do
+		nft list chain "$fam" "$tab" "$ch" 2>/dev/null | grep -q -E 'policy drop|(^|[ ;])(drop|reject)([ ;]|$)' \
+			&& echo "$fam $tab $ch"
+	done
+}
+
+# takes away what `porta` opened (idempotent; `clean` and a new `porta` call it)
+fw_close() {
+	[ -f "$FWREC" ] || return 0
+	local kind a b c d h
+	while read -r kind a b c d; do
+		case $kind in
+		ufw) ufw --force delete allow from "$b" to any port "$c" proto "$a" >/dev/null 2>&1 ;;   # PROTO ADDR PORT
+		nft) for h in $(nft -a list chain "$a" "$b" "$c" 2>/dev/null | awk '/comment "remotix-nv"/ {print $NF}'); do
+				nft delete rule "$a" "$b" "$c" handle "$h" 2>/dev/null
+			done ;;                                                                                 # FAMILY TABLE CHAIN
+		esac
+	done < "$FWREC"
+	rm -f "$FWREC"
+}
+
+porta() {
+	log "(b2) the port $PORT for the clients at home"
+	if [ "$CLIENTS" != home ]; then ok "CLIENTS=machine: the browsers are here, nothing to open"; return 0; fi
+	local nv note=""
+	nv=$(nvidia_node || true)
+	# not a stop (encode and comparison still have to run), but said: as `suite` does, the server encodes on renderD128
+	if [ "$nv" != renderD128 ]; then
+		warning "the server encodes on renderD128 and the NVIDIA is \"${nv:-none}\": the suite from home would say nothing about the NVIDIA"
+		note=" · ⚠ the NVIDIA is not renderD128"
+	fi
+	# 1. REMOTIX must listen where the clients can reach it, not only on 127.0.0.1
+	if public_listening tcp; then
+		ok "REMOTIX listens on TCP $PORT on a non-loopback address: $(ss -ltnH 2>/dev/null | awk -v p=":$PORT" '{n=length($4)-length(p); if (substr($4,n+1)==p) print $4}' | tr '\n' ' ')"
+	else
+		ko "REMOTIX does not listen on TCP $PORT beyond 127.0.0.1 ($(ss -ltnH 2>/dev/null | awk '{print $4}' | grep ":$PORT\$" | tr '\n' ' '))"
+		outcome porta ROSSO "not listening beyond loopback"; return 1
+	fi
+	public_listening udp && ok "REMOTIX listens on UDP $PORT on a non-loopback address" \
+		|| warning "no UDP $PORT socket seen beyond loopback: if the product speaks WebTransport the clients will not get in"
+	# 2. the scenes the tests will open inside the session
+	scenes
+	# 3. the firewall: ONLY towards the client's address, and only if one is active
+	fw_close
+	local fw=none ch fam tab m pr
+	if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
+		fw=ufw
+	elif [ -n "$(nft_chains)" ]; then
+		fw=nftables
+	fi
+	if [ "$fw" != none ] && ! printf '%s' "$CLIENT_ADDR" | grep -q -E '^[0-9A-Fa-f:.]+$'; then
+		ko "a firewall ($fw) is active and the client's address is unknown or odd (\"$CLIENT_ADDR\"): 19-nvidia.sh passes it, or CLIENT_ADDR=…"
+		outcome porta ROSSO "firewall $fw, no client address"; return 1
+	fi
+	: > "$FWREC"
+	case $fw in
+	ufw)
+		for pr in tcp udp; do
+			ufw allow from "$CLIENT_ADDR" to any port "$PORT" proto "$pr" >> "$EVID/porta.txt" 2>&1 \
+				&& echo "ufw $pr $CLIENT_ADDR $PORT" >> "$FWREC" \
+				|| { ko "ufw did not open $pr $PORT (porta.txt)"; outcome porta ROSSO "ufw $pr"; return 1; }
+		done
+		ok "ufw: $PORT tcp+udp open only from $CLIENT_ADDR" ;;
+	nftables)
+		case $CLIENT_ADDR in *:*) m=ip6 ;; *) m=ip ;; esac
+		while read -r fam tab ch; do
+			case "$fam:$m" in ip:ip6|ip6:ip) continue ;; esac     # an address of the other family cannot enter this table
+			nft insert rule "$fam" "$tab" "$ch" "$m" saddr "$CLIENT_ADDR" meta l4proto '{ tcp, udp }' th dport "$PORT" \
+				accept comment '"remotix-nv"' >> "$EVID/porta.txt" 2>&1 \
+				&& echo "nft $fam $tab $ch $PORT" >> "$FWREC" \
+				|| { ko "nft did not insert the rule in $fam $tab $ch (porta.txt)"; outcome porta ROSSO "nft $fam $tab $ch"; return 1; }
+		done < <(nft_chains)
+		[ -s "$FWREC" ] && ok "nftables: $PORT tcp+udp open only from $CLIENT_ADDR ($(awk '{print $4}' "$FWREC" | tr '\n' ' ')chains)" \
+			|| warning "nftables blocks, but no table accepts an address of this family: nothing opened" ;;
+	*)
+		rm -f "$FWREC"
+		ok "no active firewall on the machine (ufw/nftables): nothing to open. A firewall of the provider, outside, is not visible from here" ;;
+	esac
+	outcome porta VERDE "listens beyond loopback · firewall: $fw · open to ${CLIENT_ADDR:-any}$note"
+	return 0
+}
+
+# a line in passi.txt written from outside (suite-casa): record STEP OUTCOME TEXT
+record() {
+	local p=${1:-}
+	[ -n "$p" ] && [ -n "${2:-}" ] || { echo "usage: $0 record STEP OUTCOME TEXT"; return 2; }
+	outcome "$p" "$2" "${3:-}"
+	echo "exit 0 · $(date -Is) · from outside" > "$DONE/$p"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  (c) THE ENCODING TEST
 # ═══════════════════════════════════════════════════════════════════════════
 encode() {
@@ -649,6 +802,11 @@ EOF
 # ═══════════════════════════════════════════════════════════════════════════
 suite() {
 	log "(e) the phase 15 suite, subset, on XFCE"
+	if [ "$CLIENTS" = home ]; then
+		warning "CLIENTS=home: the browsers are at home — run \"19-nvidia.sh suite-casa IP\" on the home server (CLIENTS=machine for the suite here)"
+		outcome suite NON-GUARDATA "CLIENTS=home: the suite is run from home (suite-casa)"
+		return 3
+	fi
 	local nv u uid sock="" mode=finestra
 	nv=$(nvidia_node || true)
 	u="$WORKDIR/suite"
@@ -667,9 +825,7 @@ suite() {
 	# ⭐ 6 Oct 2026: the scenes the tests open INSIDE the session (F-021: `turn_on_scene`)
 	#    are looked for in /opt/remotix, where they live on the boxes. If the folder was not there, it is
 	#    ours: `clean` removes it
-	if [ ! -d /opt/remotix ]; then mkdir -p /opt/remotix && touch "$WORKDIR/opt-remotix-nostra"; fi
-	cp "$TREE"/benches/11-boxes/11-c*-scene.html /opt/remotix/ 2>/dev/null
-	chmod 755 /opt/remotix; chmod 644 /opt/remotix/*.html 2>/dev/null
+	scenes
 	pkill -u "$BENCH_USER" -x labwc 2>/dev/null
 	# ⛔ 5 Oct 2026: `pkill` does not wait. If the previous labwc is still alive, its
 	#    "wayland-0" ends up in the "before" list, the new one is reborn with the SAME name and
@@ -788,6 +944,8 @@ clean() {
 		pkill -KILL -u "$u" 2>/dev/null
 	done
 	[ -f "$WORKDIR/opt-remotix-nostra" ] && rm -rf /opt/remotix
+	# 1-bis. the firewall rules `porta` opened (CLIENTS=home)
+	if [ -f "$FWREC" ]; then fw_close; ok "the firewall rules of the bench removed"; fi
 	# 2. REMOTIX: with the installer if it installed it, then our two files
 	if [ -x /usr/bin/remotix-install ] || [ -x "$SUITCASE/bin/remotix-install" ]; then
 		local ri=/usr/bin/remotix-install
@@ -869,7 +1027,7 @@ clean() {
 status() {
 	log "where we are"
 	local p
-	for p in upgrade checks driver deps remotix encode comparison suite collect; do
+	for p in upgrade checks driver deps remotix porta encode comparison suite collect; do
 		if [ -f "$DONE/$p" ]; then printf '    %-11s done   %s\n' "$p" "$(cat "$DONE/$p")"; else printf '    %-11s —\n' "$p"; fi
 	done
 	[ -f "$EVID/passi.txt" ] && { echo; sed 's/^/    /' "$EVID/passi.txt"; }
@@ -891,9 +1049,14 @@ all() {
 		rm -f "$WORKDIR/riavvio-chiesto" "$DONE/checks" "$DONE/driver"
 		log "after the reboot: redoing checks and driver"
 	fi
-	for p in upgrade checks driver deps remotix encode comparison suite collect; do
+	# ⭐ CLIENTS=home: the suite is at home (`suite-casa`) and the evidence is collected AFTER it (`collect`):
+	#    here it stops after the comparison.  CLIENTS=machine: the steps are the same as ever
+	local steps="upgrade checks driver deps remotix encode comparison suite collect"
+	[ "$CLIENTS" = home ] && steps="upgrade checks driver deps remotix porta encode comparison"
+	for p in $steps; do
 		case " ${REDO:-} " in *" $p "*) rm -f "$DONE/$p" ;; esac
-		if [ -f "$DONE/$p" ] && [ "$p" != collect ]; then
+		# porta is redone every time: a firewall rule does not survive a reboot
+		if [ -f "$DONE/$p" ] && [ "$p" != collect ] && [ "$p" != porta ]; then
 			log "$p: already done ($(cat "$DONE/$p")), skipping"
 			continue
 		fi
@@ -908,7 +1071,7 @@ all() {
 				collect
 				return 1
 			fi
-			if [ "$p" = deps ] || [ "$p" = remotix ]; then
+			if [ "$p" = deps ] || [ "$p" = remotix ] || [ "$p" = porta ]; then
 				log "$p failed: without it, the later steps make no sense"
 				collect
 				return 1
@@ -918,16 +1081,18 @@ all() {
 	done
 	log "END"
 	sed 's/^/    /' "$EVID/passi.txt"
+	[ "$CLIENTS" = home ] && [ $worse = 0 ] && log "the machine is ready: now \"19-nvidia.sh suite-casa IP\" on the home server, then \"collect IP\""
 	return $worse
 }
 
 ACTION=${1:-status}
 case "$ACTION" in
-upgrade|checks|driver|deps|remotix|encode|comparison|suite)
+upgrade|checks|driver|deps|remotix|porta|encode|comparison|suite)
 	step "$ACTION"; c=$? ;;
 collect|clean|status) "$ACTION"; c=$? ;;
+record) shift; record "$@"; c=$? ;;
 all) all; c=$? ;;
-*) echo "usage: $0 upgrade|checks|driver|deps|remotix|encode|comparison|suite|collect|clean|status|all"; exit 2 ;;
+*) echo "usage: $0 upgrade|checks|driver|deps|remotix|porta|encode|comparison|suite|collect|clean|status|record|all"; exit 2 ;;
 esac
 echo "$c" > "$WORKDIR/uscita"
 exit "$c"

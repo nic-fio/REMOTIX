@@ -21,16 +21,25 @@ each, like `15-round.py`.  ⭐ The only difference is where things are:
   - the browsers in THE BROWSERS' headless labwc (pixman, 3840x2160) like
     `15-compositors.sh`; if that one is not born, HEADLESS — and the line says so.
 
+⭐ 27 Oct 2026, CLIENTS=home: the browsers are NOT on the machine but on the home server, and
+the machine is far away (`--host IP`).  Then "inside the box" is a command to the machine, over ssh
+(`--ssh user@IP`, with `--ssh-opts` and `--sudo`) or, for the local test, in a home container
+(`--container rete11-xfce`, `sudo podman exec` like `suite.py` does with REMOTIX_ON_SERVER).
+The server log the tests read is then the one on the machine, read the same way.
+Without `--ssh`/`--container` everything is as before (`sudo -n sh -c` on the machine itself).
+
 The log has the lines of `15-round.py` (run "19-nvidia"): `15-report.py` makes the
 report as for the other runs.  Exit: 0 all PASS · 1 at least one FAIL · 3 BLOCKED.
 """
 import argparse
+import base64
 import datetime
 import hashlib
 import json
 import os
 import re
 import runpy
+import shlex
 import subprocess
 import sys
 import threading
@@ -51,6 +60,43 @@ CHROME_OPTIONS = ("--ozone-platform=wayland --disable-backgrounding-occluded-win
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  THE ROAD TO "INSIDE": the machine itself, a remote machine over ssh, or a home container
+# ═══════════════════════════════════════════════════════════════════════════
+def is_remote():
+    return bool(os.environ.get("RXNV_SSH") or os.environ.get("RXNV_CONTAINER"))
+
+
+def remote(line, seconds=90):
+    """(code, output) of `line` as root ON THE MACHINE, whatever the road is.
+
+    - RXNV_SSH=user@IP (+ RXNV_SSH_OPTS, RXNV_SUDO="sudo -n" for a user other than root): the home
+      server drives a rented machine.  ⚠ The line travels in base64, like `Box.inside` of
+      12-c20-real.py: no quote to escape across the shells, whatever the login shell is;
+    - RXNV_CONTAINER=name: the local test, a home container as the "machine" (root podman, with the
+      sudo password of the server, as `suite.py` does with REMOTIX_ON_SERVER);
+    - none of the two: the machine itself (the bench as run by `19-nv-machine.sh suite`)."""
+    if os.environ.get("RXNV_SSH"):
+        b = base64.b64encode(line.encode()).decode()
+        argv = (["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=30"]
+                + shlex.split(os.environ.get("RXNV_SSH_OPTS", "")) + [os.environ["RXNV_SSH"],
+                "%s sh -c \"$(echo %s | base64 -d)\"" % (os.environ.get("RXNV_SUDO", ""), b)])
+        stdin = None
+    elif os.environ.get("RXNV_CONTAINER"):
+        sys.path.insert(0, SUITE)
+        import suite as S                                          # noqa: E402
+        argv = ["sudo", "-S", "-p", "", "podman", "exec", os.environ["RXNV_CONTAINER"], "sh", "-c", line]
+        stdin = S._sudo_password()
+    else:
+        argv, stdin = ["sudo", "-n", "sh", "-c", line], None
+    try:
+        r = subprocess.run(argv, input=stdin, capture_output=True, text=True, errors="replace",
+                           timeout=seconds)
+    except subprocess.TimeoutExpired:
+        return None, "(no answer within %d s)" % seconds
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  INSIDE A TEST (child process): the graft, then the real test
 # ═══════════════════════════════════════════════════════════════════════════
 def internal(file, rest):
@@ -59,12 +105,7 @@ def internal(file, rest):
 
     def inside(self, line, seconds=90):
         """(code, output) of `line` as root ON THE MACHINE (the "box" is the machine)."""
-        try:
-            r = subprocess.run(["sudo", "-n", "sh", "-c", line], capture_output=True,
-                               text=True, errors="replace", timeout=seconds)
-        except subprocess.TimeoutExpired:
-            return None, "(no answer within %d s)" % seconds
-        return r.returncode, (r.stdout + r.stderr).strip()
+        return remote(line, seconds)
 
     S.C20V.Box.inside = inside
     S.C20V.LOG = os.environ["RXNV_LOG"]
@@ -84,6 +125,9 @@ def load(file):
 
 
 def md5(fpath):
+    if is_remote():                 # the product is on the machine, not here
+        c, t = remote("md5sum %s 2>/dev/null | cut -c1-8" % shlex.quote(fpath), 30)
+        return t if c == 0 and len(t) == 8 else "?"
     try:
         return hashlib.md5(open(fpath, "rb").read()).hexdigest()[:8]
     except OSError:
@@ -98,8 +142,10 @@ def una(o, file, browser, base):
     os.makedirs(ev, exist_ok=True)
     env = dict(os.environ, MOZ_ENABLE_WAYLAND="1")
     cmd = [sys.executable, os.path.abspath(__file__), "--internal", file,
-           "--box", DESKTOP, "--browser", browser, "--host", "127.0.0.1",
+           "--box", DESKTOP, "--browser", browser, "--host", o.host,
            "--port", str(o.port), "--base-port", str(base), "--evidence", ev, "--fault"]
+    if o.cap_s:
+        cmd += ["--cap-s", str(o.cap_s)]
     if o.mode == "window":
         env.update(REMOTIX_NESTED_SCREEN="1", REMOTIX_CHROME_OPTIONS=CHROME_OPTIONS)
     else:
@@ -189,7 +235,24 @@ def main():
     a.add_argument("--tests", default="", help="only these (e.g. f001,f018)")
     a.add_argument("--browser", default=",".join(BROWSER))
     a.add_argument("--desktop", default="xfce", choices=("gnome", "kde", "xfce", "lxqt"))
+    a.add_argument("--host", default="127.0.0.1",
+                   help="the machine's address (default: this one; CLIENTS=home: the rented machine)")
+    a.add_argument("--ssh", default="", help="user@IP: \"inside\" goes to the machine over ssh")
+    a.add_argument("--ssh-opts", default="", help="more ssh options (-p PORT -i KEY …)")
+    a.add_argument("--sudo", default="", help="prefix for the commands inside (\"sudo -n\" if the user is not root)")
+    a.add_argument("--container", default="",
+                   help="the local test: \"inside\" goes to this home container (sudo podman exec)")
+    a.add_argument("--cap-s", type=int, default=0,
+                   help="the tests' own cap for login and first image (0 = the suite's 45 s); "
+                        "the caller raises it, DECLARED, when the round trip is long")
     o = a.parse_args()
+    if o.ssh and o.container:
+        a.error("--ssh and --container exclude each other")
+    # the children (one process per test) inherit the road to "inside"
+    if o.ssh:
+        os.environ.update(RXNV_SSH=o.ssh, RXNV_SSH_OPTS=o.ssh_opts, RXNV_SUDO=o.sudo)
+    if o.container:
+        os.environ["RXNV_CONTAINER"] = o.container
     if "RXNV_LOG" not in os.environ:
         a.error("RXNV_LOG is missing (the file the server writes to)")
     os.makedirs(o.evidence, exist_ok=True)
@@ -197,8 +260,11 @@ def main():
     globals()["DESKTOP"] = o.desktop
     # the desktop's debug ports as in 15-round.py
     base = 3100 + 10 * ("gnome", "kde", "xfce", "lxqt").index(o.desktop)
-    print("⭐ 19-nv-suite · %s · %s · browser %s · port %d" % (
-        o.desktop, o.mode, o.browser, o.port), flush=True)
+    print("⭐ 19-nv-suite · %s · %s · browser %s · host %s · port %d%s" % (
+        o.desktop, o.mode, o.browser, o.host, o.port,
+        (" · inside via %s" % (o.ssh or "container " + o.container)) if is_remote() else ""), flush=True)
+    if o.cap_s:
+        print("⭐ --cap-s %d (the suite's default is 45): raised by the caller, declared" % o.cap_s, flush=True)
     # ⭐ 6 Oct 2026: with --tests one chooses among ALL the phase 15 tests (e.g. f012 for
     #    sound without video), not only among the six of the run; "-f012-" does not pick f012b
     choices = PROVE

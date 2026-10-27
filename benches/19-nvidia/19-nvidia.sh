@@ -1,15 +1,24 @@
 #!/bin/bash
-# 19-nvidia.sh — the bench of the rented NVIDIA machine, driven FROM THE LAPTOP.
+# 19-nvidia.sh — the bench of the rented NVIDIA machine, driven FROM THE LAPTOP (or from the home server).
 #
 #   bash benches/19-nvidia/19-nvidia.sh prepare           # BEFORE the rental: the suitcase
-#   bash benches/19-nvidia/19-nvidia.sh all IP          # sends, starts, follows (reboot included), collects
+#   bash benches/19-nvidia/19-nvidia.sh all IP          # sends, starts, follows (reboot included); collects
+#                                                       #   (CLIENTS=machine) or stops, machine ready (CLIENTS=home)
+#   bash benches/19-nvidia/19-nvidia.sh suite-casa IP   # CLIENTS=home: the tests, browsers at HOME (run on the home server)
+#   bash benches/19-nvidia/19-nvidia.sh collect IP      # the evidence archive to this machine
 #   bash benches/19-nvidia/19-nvidia.sh clean IP        # AFTER collecting: the machine as found
 #
 #   and piece by piece:  send IP · start IP [STEP] · follow IP · status IP · collect IP · enter IP
 #
+# CLIENTS=home (default) | machine: where the browsers of the suite are.  home: at home (the home server,
+# 192.168.0.2, connects over internet like a real user; the machine runs only REMOTIX and the desktop; the
+# firewall opens the port only towards the address ssh comes from, CLIENT_ADDR to force it).  machine: the browsers
+# on the rented machine, as the bench has always done (the fallback if the provider will not open the UDP port).
+# Other variables: PORT (7447), DESKTOP_NV (xfce), TESTS, BROWSER_SUITE, PREFLIGHT (path, or skip), RTT_WIDEN_MS (30), FAR_LOG.
 # Variables: ACCOUNT (root; a user with passwordless "sudo" is fine: ubuntu, debian, admin),
 # SSH_PORT (22), SSH_KEY (an ssh key file), CONTAINER=name (the LOCAL test: podman exec
-# instead of ssh, for the steps that do not touch the GPU — see 19-nv-test-in-container.sh).
+# instead of ssh, for the steps that do not touch the GPU — see 19-nv-test-in-container.sh; with
+# `suite-casa`, a HOME container (rete11-xfce) acting as the machine — see the comment above suite_home).
 #
 # The suitcase (`prepare`) lives in costruzione-uscita/19-nvidia/ (ignored by git): the REMOTIX .debs
 # for Debian 13 and Ubuntu 26.04 built from THIS tree (run it from a checkout of
@@ -25,9 +34,12 @@ FAR=/opt/remotix-nv
 WORKDIR=/var/lib/remotix-nv
 UNIT=remotix-nv-banco
 ACCOUNT=${ACCOUNT:-root}
+CLIENTS=${CLIENTS:-home}
+case "$CLIENTS" in home|machine) ;; *) echo "CLIENTS=$CLIENTS: home or machine"; exit 2 ;; esac
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
+warning() { printf '    \033[1;33m!!\033[0m  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s · %s\033[0m\n' "$(date +%H:%M:%S)" "$*"; }
 
 # ── the road to the machine: ssh, or podman exec for the local test ──────────────────────────
@@ -41,6 +53,20 @@ far() {  # far 'command' — runs as root on the machine (the command travels on
 		printf '%s\n' "$1" | ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ConnectTimeout=15 \
 			${SSH_KEY:+-i "$SSH_KEY"} -p "${SSH_PORT:-22}" "$ACCOUNT@$IP" "$PRE bash -s"
 	fi
+}
+
+# ⭐ 27 Oct 2026: the address the machine sees us from, READ FROM SSH ITSELF ($SSH_CONNECTION of the session; no
+#    external service). Computed here, where we know how we connect: the bench on the machine runs in a systemd
+#    unit, with no ssh session of its own, and `sudo` strips the variable.  CLIENT_ADDR forces it (a jump host,
+#    a second address); in the local test (CONTAINER) there is nothing to open: empty.
+client_addr() {
+	local a
+	if [ -n "${CLIENT_ADDR:-}" ]; then echo "$CLIENT_ADDR"; return 0; fi
+	[ -n "${CONTAINER:-}" ] && return 0
+	a=$(printf '%s\n' 'echo "${SSH_CONNECTION%% *}"' | ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 \
+		${SSH_KEY:+-i "$SSH_KEY"} -p "${SSH_PORT:-22}" "$ACCOUNT@$IP" sh -s 2>/dev/null | tail -n 1)
+	printf '%s' "$a" | grep -q -E '^[0-9A-Fa-f:.]+$' || return 1
+	echo "$a"
 }
 
 needs_ip() {
@@ -124,14 +150,19 @@ send() {
 }
 
 start() {
-	local p=${1:-all}
-	log "starting \"$p\" on the machine (a systemd unit: ssh may drop)"
+	local p=${1:-all} ca=""
+	log "starting \"$p\" on the machine (a systemd unit: ssh may drop) · CLIENTS=$CLIENTS"
+	if [ "$CLIENTS" = home ]; then
+		ca=$(client_addr) || { ko "I cannot read from ssh the address the machine sees us from (CLIENT_ADDR=… to give it)"; return 1; }
+		[ -n "$ca" ] && ok "the clients come from $ca: the port will be opened towards it only"
+	fi
 	if far "systemctl is-active --quiet $UNIT"; then ko "the bench is already running ($UNIT)"; return 1; fi
 	far "mkdir -p $WORKDIR && rm -f $WORKDIR/uscita && echo '=== avvio $p $(date -Is)' >> $WORKDIR/banco.log && \
 		systemctl reset-failed $UNIT 2>/dev/null; \
 		systemd-run --unit=$UNIT --collect --property=StandardOutput=append:$WORKDIR/banco.log \
 		--property=StandardError=append:$WORKDIR/banco.log --setenv=FORCE=${FORCE:-0} --setenv=REDO='${REDO:-}' \
 		--setenv=TESTS='${TESTS:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' --setenv=CLIENT_CARD='${CLIENT_CARD:-0}' --setenv=DESKTOP_NV='${DESKTOP_NV:-xfce}' \
+		--setenv=CLIENTS=$CLIENTS --setenv=CLIENT_ADDR='$ca' --setenv=PORT='${PORT:-7447}' \
 		/bin/bash $FAR/albero/benches/19-nvidia/19-nv-machine.sh $p" \
 		&& ok "started"
 }
@@ -193,6 +224,158 @@ clean() {
 	far "cat /run/reboot-required 2>/dev/null; true"
 }
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  suite-casa: the browsers at HOME, the machine far away (CLIENTS=home)
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ 27 Oct 2026.  Run on the HOME server (192.168.0.2), not on the laptop/tablet (a long job freezes it), after
+#    `all IP` has left the machine ready (REMOTIX installed, port open towards this server).  The tests are the
+#    same ones of `19-nv-suite.py`; what changes is where things are:
+#      - the browsers: here, in the headless labwc of the desktop (15-compositors.sh), as in the phase 15 suite;
+#      - the connection: over internet, to IP:PORT, like a real user;
+#      - "inside the desktop" (commands, scenes, the server log the tests read): ssh to the machine
+#        (CONTAINER=name: the local test, `sudo podman exec` into a home container acting as the machine).
+#    Local test, no NVIDIA, no rental (after the net has finished):
+#        CONTAINER=rete11-xfce PORT=8513 bash benches/19-nvidia/19-nvidia.sh suite-casa 192.168.0.2
+suite_home() {
+	local desk=${DESKTOP_NV:-xfce} port=${PORT:-7447} R dir pf sock rtt how code i c off="" t0 t1 r cap=0
+	local flog system version text status sshopts ctl sdir
+	R=/run/user/$(id -u)
+	[ "$CLIENTS" = home ] || { ko "CLIENTS=machine: the suite runs on the machine (\"all\"); suite-casa is for CLIENTS=home"; return 2; }
+	dir=$SIZES/suite-casa-$(date +%Y%m%d-%H%M)
+	mkdir -p "$dir" || return 1
+	log "suite-casa: the browsers at home ($(hostname -s)), the machine at $IP:$port, desktop $desk"
+	# 1. the home server must be free: no test or chain alive, free ports, compositors on (the preflight of the
+	#    nightly chains, profile suite: it also starts the compositors, a safe repair)
+	pf=${PREFLIGHT:-/media/REMOTIX-15/lavori/notti/preflight.sh}
+	if [ "$pf" = skip ]; then
+		warning "PREFLIGHT=skip: the home server was NOT checked, and that is declared"
+		echo "preflight skipped by the operator" > "$dir/preflight.txt"
+	else
+		[ -r "$pf" ] || { ko "the preflight $pf is not readable (PREFLIGHT=path, or PREFLIGHT=skip)"; return 1; }
+		# shellcheck disable=SC2086
+		bash "$pf" ${PREFLIGHT_ARGS:-suite --desktop $desk --ripara} 2>&1 | tee "$dir/preflight.txt" | sed 's/^/      /'
+		[ "${PIPESTATUS[0]}" = 0 ] || { ko "the home server is not free (preflight.txt): nothing started"; return 1; }
+		ok "the home server is free"
+	fi
+	sock=$(cat "$R/15-compositors/$desk" 2>/dev/null)
+	if [ -z "$sock" ] || [ ! -S "$R/$sock" ]; then
+		ko "no browsers' compositor for $desk ($R/15-compositors/$desk): bash benches/15-suite/15-compositors.sh start"; return 1
+	fi
+	ok "browsers' compositor: $sock"
+	# 2. the delay towards the machine, measured and written down (ping; if ICMP is filtered, the TCP connection)
+	how=ping
+	rtt=$(ping -c 10 -i 0.2 -W 2 -q "$IP" 2>/dev/null | awk -F/ '/^(rtt|round-trip)/ {printf "%.0f", $5}')
+	if [ -z "$rtt" ]; then
+		how="TCP connect"
+		rtt=$(for i in 1 2 3 4 5; do curl -sk -o /dev/null -m 10 -w '%{time_connect}\n' "https://$IP:$port/"; done \
+			| awk '$1 > 0 {s += $1; n++} END {if (n) printf "%.0f", 1000 * s / n}')
+	fi
+	[ -n "$rtt" ] || { ko "no answer from $IP (neither ping nor TCP $port)"; return 1; }
+	ok "round trip to $IP: $rtt ms ($how)"
+	# 3. the port answers from outside: TCP and REMOTIX's own page over https (self-signed certificate: -k)
+	code=""
+	for i in 1 2 3; do
+		code=$(curl -sk -o "$dir/pagina.html" -m 15 -w '%{http_code}' "https://$IP:$port/" 2>/dev/null)
+		[ "$code" = 200 ] && break
+		sleep 5
+	done
+	if [ "$code" != 200 ]; then
+		ko "REMOTIX's page does not answer on https://$IP:$port/ (code ${code:-none}): the TCP port is closed or the server is down (\"$0 status $IP\")"
+		return 1
+	fi
+	ok "REMOTIX's page answers on https://$IP:$port/ ($(wc -c < "$dir/pagina.html") bytes)"
+	# UDP cannot be asked with a question: the first login of F-001 is the proof. If this curl speaks HTTP/3, one try, for information
+	if curl --version 2>/dev/null | grep -q -i http3; then
+		curl -sk --http3-only -o /dev/null -m 10 "https://$IP:$port/" 2>/dev/null \
+			&& ok "HTTP/3 over UDP $port: answers" || warning "HTTP/3 over UDP $port: no answer (information only: the tests will say)"
+	fi
+	# 4. the clocks: F-003 compares the clock of the scene inside the desktop (the machine's) with ours
+	if [ -z "${CONTAINER:-}" ]; then
+		t0=$(date +%s.%N); r=$(far "date +%s.%N" 2>/dev/null | tail -n 1); t1=$(date +%s.%N)
+		if printf '%s' "$r" | grep -q -E '^[0-9]+\.[0-9]+$'; then
+			off=$(awk -v a="$t0" -v b="$t1" -v r="$r" 'BEGIN {printf "%.0f", (r - (a + b) / 2) * 1000}')
+			ok "clock of the machine minus ours: $off ms"
+			[ "${off#-}" -gt 100 ] && warning "the clocks differ by more than 100 ms: F-003 (image age, cap 1000 ms) adds this to what it measures"
+		else
+			warning "the machine's clock could not be read"
+		fi
+	fi
+	# 5. the delay and the tests' time limits (the only knob the suite exposes: --cap-s, login and first image, 45 s).
+	#    Beyond RTT_WIDEN_MS it grows by RTT/5 seconds and it is SAID. The other limits (F-003 1000 ms…) stay as they are.
+	if [ "$rtt" -gt "${RTT_WIDEN_MS:-30}" ]; then
+		cap=$((45 + rtt / 5))
+		warning "round trip $rtt ms > ${RTT_WIDEN_MS:-30} ms: --cap-s 45 → $cap (declared); the other limits of the tests are NOT widened"
+	fi
+	# 6. the road to "inside" and the description of the run
+	flog=${FAR_LOG:-$WORKDIR/registro.log}
+	ctl=""
+	if [ -n "${CONTAINER:-}" ]; then
+		system="container $CONTAINER"
+		version="container $CONTAINER"
+		case "$CONTAINER" in rete11-*) flog=${FAR_LOG:-/var/lib/rete11/registro.log} ;; esac
+	else
+		system=$(far '. /etc/os-release; echo "$PRETTY_NAME · $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1)"' 2>/dev/null | tail -n 1)
+		version=$(far "head -1 $FAR/VERSIONE" 2>/dev/null | tail -n 1)
+		# one ssh connection for all the "insides" of the tests (each one would pay the handshake again): closed at the end
+		ctl=$R/rxnv-ssh-%C
+		sshopts="-o StrictHostKeyChecking=accept-new -o ControlMaster=auto -o ControlPath=$ctl -o ControlPersist=120 -p ${SSH_PORT:-22}${SSH_KEY:+ -i $SSH_KEY}"
+	fi
+	system="$system · $desk · browsers at home, RTT $rtt ms"
+	{
+		echo "machine: $IP:$port"
+		echo "rtt_ms: $rtt ($how)"
+		echo "clock_offset_ms: ${off:-unknown}"
+		echo "cap_s: $([ "$cap" -gt 0 ] && echo "$cap (default 45, raised)" || echo "45 (default)")"
+		echo "inside: $([ -n "${CONTAINER:-}" ] && echo "container $CONTAINER" || echo "ssh $ACCOUNT@$IP")"
+		echo "server_log: $flog"
+		echo "browsers: $HOSTNAME, compositor $sock"
+	} > "$dir/rete.txt"
+	# 7. the run: the same tests, the browsers here, the product there
+	local args=(--log "$dir/registro.jsonl" --evidence "$dir" --port "$port" --mode window --desktop "$desk" --host "$IP")
+	[ "$cap" -gt 0 ] && args+=(--cap-s "$cap")
+	[ -n "${TESTS:-}" ] && args+=(--tests "$TESTS")
+	[ -n "${BROWSER_SUITE:-}" ] && args+=(--browser "$BROWSER_SUITE")
+	if [ -n "${CONTAINER:-}" ]; then args+=(--container "$CONTAINER")
+	else args+=(--ssh "$ACCOUNT@$IP" --ssh-opts "$sshopts" ${PRE:+--sudo "$PRE"}); fi
+	log "the tests (${TESTS:-all}) with ${BROWSER_SUITE:-firefox,chrome} at home against $IP:$port"
+	env XDG_RUNTIME_DIR="$R" WAYLAND_DISPLAY="$sock" MOZ_ENABLE_WAYLAND=1 RXNV_LOG="$flog" \
+		RXNV_SYSTEM="$system" RXNV_VERSION="$version" \
+		python3 "$HERE/19-nv-suite.py" "${args[@]}" > "$dir/suite.txt" 2>&1
+	c=$?
+	[ -n "$ctl" ] && ssh -O exit -o ControlPath="$ctl" "$ACCOUNT@$IP" >/dev/null 2>&1
+	tail -n 3 "$dir/suite.txt" | sed 's/^/      /'
+	# 8. the report, like the machine does, and the routes the real sessions took (from the machine's log)
+	python3 "$TREE/benches/15-suite/15-report.py" --log "$dir/registro.jsonl" --round 19-nvidia --text \
+		> "$dir/suite-rapporto.txt" 2>&1
+	python3 "$TREE/benches/15-suite/15-report.py" --log "$dir/registro.jsonl" --round 19-nvidia \
+		--html "$dir/suite-rapporto.html" > /dev/null 2>&1
+	if [ -z "${CONTAINER:-}" ]; then
+		far "grep -a -E 'route (vulkan|vaapi)|pixman|CANNOT ENCODE|DEVICE_LOST|Xid' $flog | sort | uniq -c | sort -rn | head -30" \
+			> "$dir/suite-strade.txt" 2>/dev/null
+	fi
+	case $c in 0) status=VERDE ;; 3) status=NON-GUARDATA ;; *) status=ROSSO ;; esac
+	text="browsers at home, RTT $rtt ms ($how), clock offset ${off:-?} ms, cap-s $([ "$cap" -gt 0 ] && echo "$cap" || echo 45) · $(tail -n 1 "$dir/suite.txt")"
+	text=$(printf '%s' "$text" | tr -d "'\"\\\`\$" | cut -c1-300)
+	printf '%s\t%s\t%s\t%s\n' "$(date -Is)" suite "$status" "$text" >> "$dir/passi.txt"
+	# 9. the evidence also goes to the machine: the archive of `collect` has it all, with the passi.txt line
+	if [ -z "${CONTAINER:-}" ]; then
+		sdir=$WORKDIR/evidenze/suite-casa
+		if tar -C "$SIZES" -czf - "$(basename "$dir")" | ssh -o StrictHostKeyChecking=accept-new ${SSH_KEY:+-i "$SSH_KEY"} -p "${SSH_PORT:-22}" "$ACCOUNT@$IP" \
+			"$PRE mkdir -p $sdir && $PRE tar -xzf - -C $sdir"; then
+			far "bash $FAR/albero/benches/19-nvidia/19-nv-machine.sh record suite $status '$text'" >/dev/null 2>&1 \
+				&& ok "evidence and passi.txt line sent to the machine (the archive of \"collect\" will have them)"
+		else
+			warning "the evidence could not be sent to the machine: it stays in $dir"
+		fi
+	fi
+	case $c in
+	0) ok "suite GREEN (browsers at home, RTT $rtt ms) · $dir" ;;
+	3) warning "suite with tests not looked at · $dir" ;;
+	*) ko "suite RED · $dir" ;;
+	esac
+	return "$c"
+}
+
 all() {
 	send
 	start all || exit 1
@@ -207,6 +390,11 @@ all() {
 		start all || exit 1
 		follow; u=$?
 	done
+	if [ "$CLIENTS" = home ] && [ "$u" = 0 ]; then
+		# the machine is ready; the suite is run from home, and the evidence is collected AFTER it
+		log "END: the machine is ready · next, on the home server: \"$0 suite-casa $IP\", then \"$0 collect $IP\", then \"$0 clean $IP\""
+		return 0
+	fi
 	collect
 	log "END: exit $u · the evidence in $SIZES · the cleanup: \"$0 clean $IP\""
 	return "$u"
@@ -217,7 +405,9 @@ case "$ACTION" in
 prepare) prepare ;;
 send|follow|collect|clean|all) needs_ip "${2:-}"; "$ACTION" ;;
 start) needs_ip "${2:-}"; start "${3:-all}" ;;
+suite-casa) [ -n "${2:-}" ] || { echo "the machine's address is required (also with CONTAINER: the address the container answers on)"; exit 2; }
+	IP=$2; suite_home ;;
 status) needs_ip "${2:-}"; far "bash $FAR/albero/benches/19-nvidia/19-nv-machine.sh status" ;;
 enter) needs_ip "${2:-}"; ssh ${SSH_KEY:+-i "$SSH_KEY"} -p "${SSH_PORT:-22}" "$ACCOUNT@$IP" ;;
-*) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+*) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
