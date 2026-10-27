@@ -3,10 +3,72 @@
  */
 #include "card_pick.h"
 
+#include <errno.h>
 #include <fcntl.h>
+#include <gbm.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <glib/gstdio.h>
+
+/*
+ * ⭐ PHASE 17 — CAN THE CARD DRAW?  Opening the node is not enough.
+ *
+ * `[M]` 29 Sep 2026, openSUSE Leap 16 VM with `virtio_gpu` WITHOUT 3D: the node
+ *   `renderD128` OPENS (so `card_node()` returns it), but labwc
+ *   cannot create the output buffer on it — `gbm_bo_create failed`,
+ *   `Failed to allocate buffer` — and draws nothing: black canvas.  With
+ *   `WLR_RENDERER=pixman` the desktop arrives.
+ *
+ * ⇒ Before labwc, the SAME move labwc falls on is made: `gbm` on the node and
+ *   an XRGB8888 buffer with the usages wlroots asks for when it creates without
+ *   modifiers (`[R]` wlroots `render/allocator/gbm.c`, `create_buffer`:
+ *   `GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING`), then with RENDERING only.
+ *   ⛔ «No» is said only if BOTH fail: in doubt the card wins,
+ *      because on machines with a real card nothing must change.
+ * ⛔ No exception per distribution, desktop or driver: the machine is asked
+ *    whether it can do the thing, and the answer is written.
+ *
+ * Returns TRUE if the buffer is born; otherwise FALSE, with the reason in `*why`.
+ */
+gboolean card_can_draw(const char *node, char **why)
+{
+	static const uint32_t uses[] = { GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING,
+		                        GBM_BO_USE_RENDERING };
+	struct gbm_device *gbm;
+	int fd, error = 0;
+
+	fd = g_open(node, O_RDWR | O_CLOEXEC, 0);
+	if (fd < 0) {
+		*why = g_strdup_printf("%s does not open: %s", node, g_strerror(errno));
+		return FALSE;
+	}
+	gbm = gbm_create_device(fd);
+	if (!gbm) {
+		*why = g_strdup_printf("gbm_create_device on %s fails", node);
+		g_close(fd, NULL);
+		return FALSE;
+	}
+	for (guint i = 0; i < G_N_ELEMENTS(uses); i++) {
+		struct gbm_bo *bo;
+
+		errno = 0;
+		bo = gbm_bo_create(gbm, 256, 256, GBM_FORMAT_XRGB8888, uses[i]);
+		if (bo) {
+			gbm_bo_destroy(bo);
+			gbm_device_destroy(gbm);
+			g_close(fd, NULL);
+			return TRUE;
+		}
+		error = errno;
+	}
+	*why = g_strdup_printf("gbm_bo_create on %s (gbm «%s») does not create the buffer: %s", node,
+	                          gbm_device_get_backend_name(gbm),
+	                          error ? g_strerror(error) : "no errno");
+	gbm_device_destroy(gbm);
+	g_close(fd, NULL);
+	return FALSE;
+}
 
 typedef struct {
 	char *name;     /* renderD128 */
@@ -73,15 +135,19 @@ static gint cand_cmp(gconstpointer a, gconstpointer b)
 	return r ? r : strcmp(x->name, y->name);
 }
 
-/* the BIOS primary card when it has NO render node (ASPEED «ast» on a server): a card-N device with boot_vga = 1 whose
- * PCI address no candidate has.  Returns «pci (driver)» or NULL. */
+/* the BIOS primary card when no candidate (a render node that OPENS) is on it: a card-N device with boot_vga = 1 whose PCI
+ * address no candidate has.  Returns the tail of a sentence, g_free, or NULL:
+ *   «0000:05:00.0 (card0, driver ast) has no render node»                       (ASPEED: display only)
+ *   «0000:03:00.0 (card1, driver amdgpu): its render node renderD128 is not openable here (not in /dev/dri, or no
+ *    permission)»   (sysfs HAS a renderD* of that device and it does not open: a box that does not pass it, a permission)
+ * ⛔ The two are different facts, and saying «no render node» for the second would be a false line in every session. */
 static char *primary_without_node(const char *sys_dir, GPtrArray *cands)
 {
 	g_autoptr(GDir) d = g_dir_open(sys_dir, 0, NULL);
 	const char *e;
 
 	while (d && (e = g_dir_read_name(d))) {
-		g_autofree char *dev = NULL, *pci = NULL, *drv = NULL, *f = NULL;
+		g_autofree char *dev = NULL, *pci = NULL, *drv = NULL, *f = NULL, *rname = NULL;
 		gboolean has = FALSE;
 
 		if (!g_str_has_prefix(e, "card") || strchr(e, '-'))
@@ -100,10 +166,28 @@ static char *primary_without_node(const char *sys_dir, GPtrArray *cands)
 			continue;
 		{
 			g_autofree char *dl = g_build_filename(dev, "driver", NULL);
+			g_autoptr(GDir) d2 = g_dir_open(sys_dir, 0, NULL);
+			const char *e2;
 
 			drv = link_base(dl);
+			while (d2 && (e2 = g_dir_read_name(d2))) {
+				g_autofree char *rdev = NULL, *rpci = NULL;
+
+				if (!g_str_has_prefix(e2, "renderD"))
+					continue;
+				rdev = g_build_filename(sys_dir, e2, "device", NULL);
+				rpci = link_base(rdev);
+				if (rpci && strcmp(rpci, pci) == 0) {
+					rname = g_strdup(e2);
+					break;
+				}
+			}
 		}
-		return g_strdup_printf("%s (%s, driver %s)", pci, e, drv ? drv : "?");
+		if (rname)
+			return g_strdup_printf("%s (%s, driver %s): its render node %s is not openable here (not in /dev/dri, or "
+			                       "no permission)",
+			                       pci, e, drv ? drv : "?", rname);
+		return g_strdup_printf("%s (%s, driver %s) has no render node", pci, e, drv ? drv : "?");
 	}
 	return NULL;
 }
@@ -148,7 +232,7 @@ char *card_pick(const char *dev_dir, const char *sys_dir, card_draw_fn can_draw,
 	g_ptr_array_sort(cands, cand_cmp);
 	if (cands->len == 0) {
 		no_node_primary = primary_without_node(sys_dir, cands);
-		*story = no_node_primary ? g_strdup_printf("no openable render node (the BIOS primary card %s has none)",
+		*story = no_node_primary ? g_strdup_printf("no openable render node (the BIOS primary card %s)",
 		                                          no_node_primary)
 		                         : g_strdup("no openable /dev/dri/renderD* node");
 		return NULL;
@@ -176,7 +260,7 @@ char *card_pick(const char *dev_dir, const char *sys_dir, card_draw_fn can_draw,
 		g_string_append_printf(notes, "the BIOS primary card %s (%s, driver %s) cannot draw: %s", primary->pci,
 		                       primary->name, primary->driver, why ? why : "?");
 	} else if (no_node_primary) {
-		g_string_append_printf(notes, "the BIOS primary card %s has no render node", no_node_primary);
+		g_string_append_printf(notes, "the BIOS primary card %s", no_node_primary);
 	}
 
 	/* 2 · the capable card with the lowest PCI address */
@@ -217,4 +301,16 @@ char *card_pick_driver_of(const char *sys_dir, const char *node)
 	g_autofree char *p = base ? g_build_filename(sys_dir, base, "device", "driver", NULL) : NULL;
 
 	return p ? link_base(p) : NULL;
+}
+
+char *card_pick_desktop(card_pick_how *how, char **story)
+{
+	return card_pick("/dev/dri", "/sys/class/drm", card_can_draw, how, story);
+}
+
+char *card_pick_driver_of_chardev(const char *sys_root, unsigned major, unsigned minor)
+{
+	g_autofree char *p = g_strdup_printf("%s/dev/char/%u:%u/device/driver", sys_root, major, minor);
+
+	return link_base(p);
 }

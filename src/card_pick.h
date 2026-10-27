@@ -24,6 +24,10 @@
 
 typedef gboolean (*card_draw_fn)(const char *node, char **why);
 
+/* ⭐ PHASE 17 (moved here from session.c, 1.5): can the card CREATE the drawing buffer?  TRUE if a gbm buffer is born on
+ * `node`; otherwise FALSE and `*why` (g_free) says why. */
+gboolean card_can_draw(const char *node, char **why);
+
 typedef enum {
 	CARD_PICK_BIOS_PRIMARY,  /* the BIOS primary card, capable */
 	CARD_PICK_PCI_FIRST,     /* the capable card with the lowest PCI address (no primary, or it cannot) */
@@ -36,6 +40,15 @@ typedef enum {
  * (renderD129, driver ast) has no render node», … */
 char *card_pick(const char *dev_dir, const char *sys_dir, card_draw_fn can_draw, card_pick_how *how,
                 char **story);
+
+/* ⭐ THE rule of the product, for `session.c` AND `wlroots.c`: `card_pick()` on the real /dev/dri and /sys/class/drm with
+ * `card_can_draw()`. */
+char *card_pick_desktop(card_pick_how *how, char **story);
+
+/* the driver of a character device `major:minor` (the compositor's `main_device`) through `sys_root`/dev/char/M:m/
+ * device/driver — also for a display-only card with NO render node (ast, mgag200); g_free, NULL if sysfs does not say.
+ * In the product `sys_root` = "/sys". */
+char *card_pick_driver_of_chardev(const char *sys_root, unsigned major, unsigned minor);
 
 /* ⭐ 1.5 (27 Oct 2026): is `driver` a SERVICE / BMC card's — a card that cannot draw or encode on the GPU?  (ast =
  * ASPEED, mgag200 = Matrox G200 of the Dell/HP BMCs, hibmc = HiSilicon's).  Only the classification: «no render node»

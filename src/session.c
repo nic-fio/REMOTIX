@@ -408,23 +408,12 @@ static gboolean e_kde(void)
  *
  * Returns NULL if there is none: the caller says so in the log.
  */
-static gboolean card_can_draw(const char *node, char **why); /* PHASE 17, below */
-
 static char *card_node(card_pick_how *how, char **story)
 {
 	/* ⭐ 1.5 (27 Oct 2026, §11.37 addendum): the rule lives in `card_pick.c`, shared with `wlroots.c`: the BIOS primary
 	 *   card if it can draw, else the capable card with the lowest PCI address (not the lowest NAME).  ⛔ The
 	 *   administrator does not choose the card; `--render-node` stays the encoder's fallback only. */
-	return card_pick("/dev/dri", "/sys/class/drm", card_can_draw, how, story);
-}
-
-/* ⭐ the same rule for `wlroots.c`'s fallback node (the compositor did not say its `main_device`) */
-char *session_card_node(void)
-{
-	card_pick_how how;
-	g_autofree char *story = NULL;
-
-	return card_node(&how, &story);
+	return card_pick_desktop(how, story);
 }
 
 /* ⭐ the log line of a chosen card: node, PCI address, driver (`render_node_describe()`) and WHY */
@@ -434,65 +423,6 @@ static void card_say(const char *who, const char *node, const char *story)
 
 	render_node_describe(node, desc, sizeof desc);
 	registro_dice(LOG_SESSION, "⭐ %s: the card I give the compositor is %s (%s) — %s", who, node, desc, story);
-}
-
-/*
- * ⭐ PHASE 17 — CAN THE CARD DRAW?  Opening the node is not enough.
- *
- * `[M]` 29 Sep 2026, openSUSE Leap 16 VM with `virtio_gpu` WITHOUT 3D: the node
- *   `renderD128` OPENS (so `card_node()` returns it), but labwc
- *   cannot create the output buffer on it — `gbm_bo_create failed`,
- *   `Failed to allocate buffer` — and draws nothing: black canvas.  With
- *   `WLR_RENDERER=pixman` the desktop arrives.
- *
- * ⇒ Before labwc, the SAME move labwc falls on is made: `gbm` on the node and
- *   an XRGB8888 buffer with the usages wlroots asks for when it creates without
- *   modifiers (`[R]` wlroots `render/allocator/gbm.c`, `create_buffer`:
- *   `GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING`), then with RENDERING only.
- *   ⛔ «No» is said only if BOTH fail: in doubt the card wins,
- *      because on machines with a real card nothing must change.
- * ⛔ No exception per distribution, desktop or driver: the machine is asked
- *    whether it can do the thing, and the answer is written.
- *
- * Returns TRUE if the buffer is born; otherwise FALSE, with the reason in `*why`.
- */
-static gboolean card_can_draw(const char *node, char **why)
-{
-	static const uint32_t uses[] = { GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING,
-		                        GBM_BO_USE_RENDERING };
-	struct gbm_device *gbm;
-	int fd, error = 0;
-
-	fd = g_open(node, O_RDWR | O_CLOEXEC, 0);
-	if (fd < 0) {
-		*why = g_strdup_printf("%s does not open: %s", node, g_strerror(errno));
-		return FALSE;
-	}
-	gbm = gbm_create_device(fd);
-	if (!gbm) {
-		*why = g_strdup_printf("gbm_create_device on %s fails", node);
-		g_close(fd, NULL);
-		return FALSE;
-	}
-	for (guint i = 0; i < G_N_ELEMENTS(uses); i++) {
-		struct gbm_bo *bo;
-
-		errno = 0;
-		bo = gbm_bo_create(gbm, 256, 256, GBM_FORMAT_XRGB8888, uses[i]);
-		if (bo) {
-			gbm_bo_destroy(bo);
-			gbm_device_destroy(gbm);
-			g_close(fd, NULL);
-			return TRUE;
-		}
-		error = errno;
-	}
-	*why = g_strdup_printf("gbm_bo_create on %s (gbm «%s») does not create the buffer: %s", node,
-	                          gbm_device_get_backend_name(gbm),
-	                          error ? g_strerror(error) : "no errno");
-	gbm_device_destroy(gbm);
-	g_close(fd, NULL);
-	return FALSE;
 }
 
 static gboolean e_xfce(void)

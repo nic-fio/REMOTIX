@@ -31,7 +31,10 @@
  *   false, *reached == false  no compositor reachable yet (ask again later)
  *   false, *reached == true   it answered but did not name a usable card
  *                             (v < 4, no render node, not openable): `why` */
-bool render_node_of_compositor(char *out, size_t n, char *why, size_t wn, bool *reached);
+bool render_node_of_compositor(char *out, size_t n, char *why, size_t wn, bool *reached, char *driver, size_t dn);
+/* ⭐ 1.5 (27 Oct 2026): `driver` (may be NULL) = the kernel driver of the compositor's `main_device`, filled as soon as
+ * the compositor has stated it — also when that card has NO render node (ast / mgag200: display only), so that the
+ * caller can say «the desktop draws on a service card».  "" when unknown. */
 
 /* «0000:00:02.0, driver i915, 8086:4680» for the log; «?» parts when sysfs
  * does not say.  Never fails. */

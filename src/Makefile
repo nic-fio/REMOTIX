@@ -398,7 +398,7 @@ kwin.o clipboard_kde.o wlroots.o wlr_input.o render_node.o: $(PROTOCOLLI:%=%-cli
 # -----------------------------------------------------------------------------
 BANCO_W1 := ../benches/13-w1-one-frame
 
-$(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o log.o \
+$(BANCO_W1): ../benches/13-w1-one-frame.c wlroots.o card_pick.o log.o \
              wlr-screencopy-unstable-v1-protocol.o \
              wlr-output-management-unstable-v1-protocol.o \
              linux-dmabuf-unstable-v1-protocol.o
@@ -596,7 +596,7 @@ child.o:         child.h log.h session.h capture.h mutter.h encoder.h \
 #    example has neither a graphical session nor an encoder.
 session.o:       session.h log.h card_pick.h render_node.h
 card_pick.o:     card_pick.h
-wlroots.o:       card_pick.h session.h
+wlroots.o:       card_pick.h
 
 # ⭐ THE GUARDIAN OF PHASE 5 — the emitter that was missing for `0x04` and `0x05`.
 # ⚠ It is not among the `GEMELLATI` and cannot go there: `rcp.c` reaches it by
@@ -607,7 +607,7 @@ rediscover.o:        rediscover.h
 # ⭐ 1.5 (DECISIONS.md §11.4) — the card for a stale user manager.
 render_grant.o:   render_grant.h rediscover.h log.h
 # ⭐ 1.5 (SPECS audit, 15 Oct 2026) — which card encodes: the compositor's.
-render_node.o:    render_node.h kwin.h
+render_node.o:    render_node.h kwin.h card_pick.h
 capture.o:        capture.h log.h cursor.h unchanged.h
 mutter.o:         mutter.h log.h
 encoder.o:   encoder.h log.h vadirect.h vulkanvideo.h bit_writer.h colors709.h

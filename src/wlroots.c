@@ -162,7 +162,6 @@
  */
 #include "wlroots.h"
 #include "card_pick.h"
-#include "session.h"
 #include "vulkanvideo.h"
 
 #include "shape.h"
@@ -1088,7 +1087,7 @@ static char *node_from_device(dev_t d)
 /*
  * ⚠ THE FALLBACK, when the compositor does not say its node (v < 4): the SAME
  *   rule with which `session.c` chooses `WLR_RENDER_DRM_DEVICE` — one function,
- *   `session_card_node()` (`card_pick.h`): the BIOS primary card if it can draw,
+ *   `card_pick_desktop()` (`card_pick.h`): the BIOS primary card if it can draw,
  *   else the capable card with the lowest PCI address.  ⛔ A different rule here
  *   would mean allocating on the other card exactly on the day the nodes swap.
  *   If NO card can draw (labwc is on pixman) the node is still needed for the
@@ -1096,9 +1095,9 @@ static char *node_from_device(dev_t d)
  */
 static char *node_as_session(void)
 {
-	char *n = session_card_node();
 	card_pick_how how;
 	g_autofree char *story = NULL;
+	char *n = card_pick_desktop(&how, &story);
 
 	if (n)
 		return n;

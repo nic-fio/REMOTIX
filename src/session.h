@@ -432,10 +432,6 @@ const char *session_desktop_name(void);
  */
 bool session_on_wlroots(void);
 
-/* ⭐ 1.5: the card given to the desktop (labwc / KWin's host), `card_pick.h`'s rule; g_free; NULL if there is none.
- * For `wlroots.c`'s fallback node: the SAME rule as `session.c`. */
-char *session_card_node(void);
-
 /*
  * ⛔ THE MONITOR IS CHOSEN BY NAME, AND THIS IS THE NAME.
  *

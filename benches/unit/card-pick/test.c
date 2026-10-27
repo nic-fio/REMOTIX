@@ -18,11 +18,15 @@
  *   9 no sysfs at all (a container) falls back to the node name, as before
  *  10 service cards                card_pick_service_driver(): ast, mgag200, hibmc-drm yes; i915, amdgpu, nvidia, virtio_gpu, NULL no;
  *                                  card_pick_driver_of() reads the driver of a render node through sysfs
+ *  11 main_device without renderD   card_pick_driver_of_chardev(): the driver of a display-only card (ast) is found through
+ *                                  sys/dev/char/M:m/device/driver, which is how child.c warns when GNOME draws on a BMC card
+ *  12 primary renderD exists but does not open  the BIOS primary card HAS a renderD* in sysfs that is not in /dev/dri (a box,
+ *                                  a permission): the story says «not openable here», never «has no render node»
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
- *     cd /tmp && gcc -g -O1 -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -I/albero/src $(pkg-config --cflags glib-2.0) \
- *        /albero/benches/unit/card-pick/test.c -o test $(pkg-config --libs glib-2.0) && ./test'
+ *     cd /tmp && gcc -g -O1 -std=gnu11 -D_GNU_SOURCE -Wall -Wextra -I/albero/src $(pkg-config --cflags glib-2.0 gbm) \
+ *        /albero/benches/unit/card-pick/test.c -o test $(pkg-config --libs glib-2.0 gbm) && ./test'
  * Exit code 0 = every check passed, 1 = a check failed.
  */
 #include "../../../src/card_pick.c"
@@ -322,6 +326,41 @@ int main(void)
 		check(d == NULL, "an unknown node has no driver");
 		g_free(d);
 	}
+	wipe();
+
+	puts("11 · the driver of a main_device that has no render node");
+	fresh();
+	pci("0000:05:00.0", "ast", 1);
+	entry("card0", "0000:05:00.0", 0);
+	mkd("dev/char/226:0");
+	{
+		char l[512], tgt[512], *d;
+
+		snprintf(l, sizeof l, "%s/dev/char/226:0/device", root);
+		snprintf(tgt, sizeof tgt, "%s/pci/0000:05:00.0", root);
+		(void)!symlink(tgt, l);
+		d = card_pick_driver_of_chardev(root, 226, 0);
+		check(d && strcmp(d, "ast") == 0 && card_pick_service_driver(d), "226:0 is driver ast: a service card although it has no render node");
+		g_free(d);
+		d = card_pick_driver_of_chardev(root, 226, 7);
+		check(d == NULL, "an unknown dev_t has no driver");
+		g_free(d);
+	}
+	wipe();
+
+	puts("12 · the BIOS primary card has a renderD in sysfs that does not open here");
+	fresh();
+	pci("0000:03:00.0", "amdgpu", 1);
+	pci("0000:00:02.0", "i915", 0);
+	entry("renderD128", "0000:03:00.0", 0); /* NOT in dev/: a box that does not pass it */
+	entry("card1", "0000:03:00.0", 0);
+	entry("renderD129", "0000:00:02.0", 1);
+	node = pick(draw, &how, &story);
+	check(is(node, "/renderD129") && how == CARD_PICK_PCI_FIRST, "the card that opens is chosen");
+	check(story && strstr(story, "not openable here") && strstr(story, "renderD128") && !strstr(story, "has no render node"),
+	      "the story says the primary card's renderD128 is not openable here, not «no render node»");
+	g_free(node);
+	g_free(story);
 	wipe();
 
 	printf("%d passed, %d failed\n", passed, failures);
