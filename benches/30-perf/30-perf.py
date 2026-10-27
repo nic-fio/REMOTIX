@@ -49,6 +49,8 @@ BOXES = ("gnome", "kde", "xfce", "lxqt")
 MIN_AVAIL_KB = 6 * 1024 * 1024
 SAMPLE_S, PHOTO_S = 5, 1
 FIRST_IMG_S = 180        # max wait for the first readable image of a session (s)
+KEEPALIVE_S = 240        # a real mouse move this often: REMOTIX detaches a session after 30 min without input (rcp.h §5.3)
+                         #   and ends it 60 min later — the endurance run (27 Oct 2026) measured nothing after minute 30
 SEED, N_RECTS, BOX_CARD, DRIVER = 1527, 6, "intel", {"intel": "i915", "amd": "amdgpu"}   # light scene; boxes on BOX_CARD
 DELTA = {"chrome": [32, 129], "firefox": [0, 0]}       # outer - inner window size, calibrated live
 SCENE = "heavy"                                      # --scene: heavy (6 rectangles, whole screen) | text (scrolling window)
@@ -399,6 +401,8 @@ def photo_delay(s, rec=None):
 
 def client_loop(s, t_end, rec):
     nxt, bad = time.time(), 0
+    # only the long runs (the endurance): the 5-minute A/B stay identical to the bench their 1.0 references were measured with
+    nudge, side = (time.time() + KEEPALIVE_S) if t_end - time.time() > 25 * 60 else float("inf"), 0
     while time.time() < t_end and not STOP.is_set():
         t = time.time()
         if s.g is None:                              # browser already closed by the clean-up: nothing to measure
@@ -408,6 +412,13 @@ def client_loop(s, t_end, rec):
             if t >= nxt:
                 nxt = t + PHOTO_S
                 rec["delays"].append(photo_delay(s, rec))
+            if t >= nudge:                           # the user is there: a small real move in the middle of the canvas
+                nudge, side = t + KEEPALIVE_S, side ^ 1
+                geo = s.geometry() or {}
+                if not geo.get("tl"):
+                    raise RuntimeError("keep-alive: the canvas geometry is not readable")
+                s.g.move_to(*S.C21.desktop_to_glass(geo, geo["tl"] * (0.49 + 0.02 * side), geo["ta"] * 0.5))
+                rec["nudges"] += 1
             bad = 0
         except Exception as e:                       # noqa: BLE001
             rec["errors"] += 1
@@ -416,6 +427,8 @@ def client_loop(s, t_end, rec):
                 print("   ⚠ %s: %s%s" % (s.chi, str(e)[:100], " (%d in a row)" % bad if bad > 1 else ""), flush=True)
             STOP.wait(min(10.0, 0.5 * bad))          # repeated error: pause, growing, never spin
         STOP.wait(max(0.0, t + 1.0 - time.time()))
+    if rec["nudges"]:
+        print("   %s: %d keep-alive mouse moves (one every %d s)" % (s.chi, rec["nudges"], KEEPALIVE_S), flush=True)
 
 
 SAMPLER = r"""
@@ -719,7 +732,7 @@ def run_step(o, n):
         igt = gpu_start(o)
         t_end = time.time() + o.minutes * 60
         smp = threading.Thread(target=sampler, args=(box, samples, done), daemon=True)
-        recs = [{"series": [], "delays": [], "errors": 0, "bytes": 0, "cost": []} for _ in sessions]
+        recs = [{"series": [], "delays": [], "errors": 0, "bytes": 0, "cost": [], "nudges": 0} for _ in sessions]
         th = [threading.Thread(target=client_loop, args=(s, t_end, r), daemon=True) for s, r in zip(sessions, recs)]
         for t in [smp] + th:
             t.start()
