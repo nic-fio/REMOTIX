@@ -78,6 +78,19 @@ t() { date -u +%H:%M:%S; }
 say() { printf '%s %s\n' "$(t)" "$*" | tee -a "$E/giro.log"; }
 STEPS=""
 step_outcome() { STEPS="$STEPS $1=$2"; say "   ⇒ $1: $2"; }
+diag_browser() {   # a failed browser step: what it takes to understand it (27 Oct 2026, Alma GNOME: the last 40 lines of the
+	# remotix journal were all the retry loop «no session bus», nothing about WHY the desktop had none)
+	vm 'sudo bash -s' >"$E/journal-$1.txt" 2>&1 <<'DIAG'
+journalctl -u remotix --no-pager -b | grep -m3 'session bus: Could not connect'
+echo "==== the remotix journal without the retry loop"
+journalctl -u remotix --no-pager -b | grep -v -e 'NOT there YET' -e 'session bus: Could not connect' -e 'NO STAGE: the attempt' -e 'loop ALIVE' -e 'backlog READ' | tail -300
+u=$(id -u prova 2>/dev/null)
+echo "==== the journal of the user prova (uid $u)"; journalctl -b _UID=$u --no-pager | tail -150
+echo "==== logind"; loginctl list-sessions --no-pager; loginctl show-user $u --no-pager 2>&1 | head -20
+echo "==== user@$u"; systemctl status user@$u --no-pager 2>&1 | head -25
+echo "==== /run/user/$u"; ls -la /run/user/$u 2>&1
+DIAG
+}
 impronta() { vm 'sudo bash -s' <"$R/t4/$FINGERPRINT" >"$E/impronta-$1.txt" 2>"$E/impronta-$1.err"
              say "   fingerprint «$1»: $(wc -l <"$E/impronta-$1.txt") lines"; }
 FINALE=FAIL
@@ -171,7 +184,7 @@ fi
 say "==> 3. the real browser (Chrome) on 127.0.0.1:$PRX"
 T1C=$T1C T1C_EVIDENCE=$E/browser-1 bash "$R/t1c/17-t1c-look.sh" "$m" "$PRX" chrome >"$E/browser-1.log" 2>&1
 say "   exit $? — $(grep -E '^T1C ' "$E/browser-1.log" | cut -c1-300)"
-if grep -E '^T1C ' "$E/browser-1.log" | grep -q '"outcome": *"PASS"'; then step_outcome browser PASS; else step_outcome browser FAIL; vm "sudo journalctl -u remotix --no-pager -b | tail -40" >"$E/journal-browser-1.txt" 2>&1; exit 1; fi
+if grep -E '^T1C ' "$E/browser-1.log" | grep -q '"outcome": *"PASS"'; then step_outcome browser PASS; else step_outcome browser FAIL; diag_browser browser-1; exit 1; fi
 
 if [ -n "$BOX" ]; then say "==> 4. reboot OF THE CONTAINER (the real reboot of the machine is not tested in a box: §7.5), and back in"
 else say "==> 4. real reboot of the machine (R15), and back in"; fi
@@ -180,7 +193,7 @@ grep -E 'rebooted' "$E/riavvia.log" | tail -1 | cut -c1-200 | sed 's/^/   /' | t
 vm "echo \"service: \$(systemctl is-active remotix 2>&1) · listening on $PG: \$(sudo ss -Htulpn | grep -c ':$PG ')\"" | tee -a "$E/giro.log"
 T1C=$T1C T1C_EVIDENCE=$E/browser-2 bash "$R/t1c/17-t1c-look.sh" "$m" "$PRX" chrome >"$E/browser-2.log" 2>&1
 say "   exit $? — $(grep -E '^T1C ' "$E/browser-2.log" | cut -c1-300)"
-if grep -E '^T1C ' "$E/browser-2.log" | grep -q '"outcome": *"PASS"'; then step_outcome riavvio PASS; else step_outcome riavvio FAIL; vm "sudo journalctl -u remotix --no-pager -b | tail -40" >"$E/journal-browser-2.txt" 2>&1; exit 1; fi
+if grep -E '^T1C ' "$E/browser-2.log" | grep -q '"outcome": *"PASS"'; then step_outcome riavvio PASS; else step_outcome riavvio FAIL; diag_browser browser-2; exit 1; fi
 
 say "==> 5. update to N+1: the .run N+1 run again, a browser stays connected"
 RN1=$(port_run "$RUN_N1") || { say "⛔ the .run N+1 does not get into the machine"; step_outcome aggiorna FAIL; exit 1; }
