@@ -12,6 +12,11 @@ RUN dnf -y install systemd dbus sudo procps-ng iproute ca-certificates curl open
 RUN if [ "$DESKTOP" = gnome ]; then dnf -y --allowerasing group install "Server with GUI"; \
     else dnf -y install epel-release && dnf config-manager --set-enabled crb && dnf -y --allowerasing group install "KDE Plasma Workspaces"; fi \
     && dnf clean all
+# ⛔ 27 Oct 2026: the official AlmaLinux CONTAINER image masks systemd-logind (/etc/systemd/system/systemd-logind.service
+#   -> /dev/null, with getty and a few mounts): no logind ⇒ no user session, no user@UID, no session bus, no desktop — the
+#   browser step of 17-t10 failed with «I do NOT have the session bus» for 1.5 (and would have for 1.0). A real Alma machine
+#   has logind: unmasked here, so that the box is a customer's machine and not a container image's choice.
+RUN systemctl unmask systemd-logind.service
 COPY common.sh /usr/local/sbin/t17-comune
 RUN sh /usr/local/sbin/t17-comune "$SSH_PORT" sshd.service
 COPY chiave-banco.pub /root/.ssh/authorized_keys
