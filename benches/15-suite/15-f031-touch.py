@@ -121,6 +121,22 @@ def certify():
     return r or (1 if troubles else 0)
 
 
+def closing_tap(g, k, note, label):
+    """⭐ 27 Oct 2026: the tap that should CLOSE the keyboard, with what is needed to see where it lands.  On the real phone
+    the first tap on ⌨ opens the soft keyboard and the second does not close it (Android's mInputShown stays true), in 1.0
+    and in 1.5 alike.  Into `note` (the sub-check's text, no verdict changes): the element hit (real_touch_at returns it),
+    the button's rect read BEFORE the tap, and visualViewport offsetTop/height + innerHeight read in the page right before."""
+    try:
+        vv = g.js("const v=window.visualViewport;"
+                  "return v?[v.offsetTop, v.height, innerHeight]:[null, null, innerHeight];")
+    except Exception as e:                       # noqa: BLE001
+        vv = "unreadable: %s" % str(e)[:60]
+    t = g.real_touch_at(k[0], k[1])
+    note.append("%s: tap at (%.0f,%.0f) on «%s»; button rect x=%.0f y=%.0f %.0fx%.0f; visualViewport offsetTop/height, "
+                "innerHeight = %s" % (label, k[0], k[1], (t or {}).get("su", "none"), k[0] - k[2] / 2.0,
+                                      k[1] - k[3] / 2.0, k[2], k[3], vv))
+
+
 def keyboard(s, sc, mp, geo, fault, note):
     """The «tastiera» gesture: see the header.  Returns (outcome, sentence)."""
     g = s.g
@@ -154,14 +170,14 @@ def keyboard(s, sc, mp, geo, fault, note):
             st = sc.wait_until(lambda q: q.get("a") == PASSWORD, F4.WAIT_S)
             n_written = (st or {}).get("a")
             k = g.command_keyboard() or k
-            g.real_touch_at(k[0], k[1])
+            closing_tap(g, k, note, "second tap (to close)")
             is_closed = g.wait_keyboard(False)
     finally:
         # ⛔ the keyboard does not stay open over the later tests (the fault, the other lines)
         if g.keyboard_is_open():
             k = g.command_keyboard()
             if k:
-                g.real_touch_at(k[0], k[1])
+                closing_tap(g, k, note, "closing tap in the finally")
                 g.wait_keyboard(False)
     return judge_keyboard(before, is_open, n_written, is_closed)
 
