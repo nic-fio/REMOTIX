@@ -40,6 +40,15 @@ func PlatformChecks(a *Environment, port int) (k []CheckReport, cond []Condition
 	if n.Outcome == "FAIL" {
 		has_failed = true
 	}
+	// §11.37 addendum: with more than one card, which one the desktop gets and why (nothing on one card)
+	if t := DesktopCardsText(a); t != "" {
+		_, ch, _ := DesktopCards(a)
+		o := "PASS"
+		if ch < 0 {
+			o = "UNKNOWN"
+		}
+		k = append(k, CheckReport{ID: "desktop-card", What: T("ver.cards"), Outcome: o, Requested: false, Detail: t})
+	}
 	f, fc := checkPort(a, port)
 	k = append(k, f)
 	if fc != nil {
