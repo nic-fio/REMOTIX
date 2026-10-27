@@ -43,6 +43,8 @@
 #include "session.h"
 
 #include "shape.h"
+#include "card_pick.h"
+#include "render_node.h"
 #include "log.h"
 
 #include <errno.h>
@@ -395,7 +397,8 @@ static gboolean e_kde(void)
  *
  * ⚠ `renderD128` and `renderD129` swap between two boots (`provision.sh`
  *   §5), and on the real machine the second node is a card **excluded on purpose**.
- *   ⇒ The first `renderD*` that can be OPENED is taken: opening is the
+ *   ⇒ ⭐ 1.5: NOT by name any more — see `card_pick.h` (the BIOS primary card, else the lowest PCI address).
+ *   Opening is still
  *     right question, because it is exactly what wlroots will do.
  *
  * ⛔⛔ And this is not zeal: if opening fails, wlroots **says nothing**
@@ -405,33 +408,32 @@ static gboolean e_kde(void)
  *
  * Returns NULL if there is none: the caller says so in the log.
  */
-static char *card_node(void)
+static gboolean card_can_draw(const char *node, char **why); /* PHASE 17, below */
+
+static char *card_node(card_pick_how *how, char **story)
 {
-	g_autoptr(GDir) dri = g_dir_open("/dev/dri", 0, NULL);
-	const char *entry;
-	g_autofree char *first = NULL;
+	/* ⭐ 1.5 (27 Oct 2026, §11.37 addendum): the rule lives in `card_pick.c`, shared with `wlroots.c`: the BIOS primary
+	 *   card if it can draw, else the capable card with the lowest PCI address (not the lowest NAME).  ⛔ The
+	 *   administrator does not choose the card; `--render-node` stays the encoder's fallback only. */
+	return card_pick("/dev/dri", "/sys/class/drm", card_can_draw, how, story);
+}
 
-	if (!dri)
-		return NULL;
-	while ((entry = g_dir_read_name(dri))) {
-		g_autofree char *fpath = NULL;
-		int fd;
+/* ⭐ the same rule for `wlroots.c`'s fallback node (the compositor did not say its `main_device`) */
+char *session_card_node(void)
+{
+	card_pick_how how;
+	g_autofree char *story = NULL;
 
-		if (!g_str_has_prefix(entry, "renderD"))
-			continue;
-		fpath = g_build_filename("/dev/dri", entry, NULL);
-		fd = g_open(fpath, O_RDWR | O_CLOEXEC, 0);
-		if (fd < 0)
-			continue;
-		g_close(fd, NULL);
-		/* ⚠ The first in name order, to get a STABLE answer between two
-		 *   boots instead of the one the filesystem order hands out. */
-		if (!first || g_strcmp0(entry, first) < 0) {
-			g_free(first);
-			first = g_strdup(entry);
-		}
-	}
-	return first ? g_build_filename("/dev/dri", first, NULL) : NULL;
+	return card_node(&how, &story);
+}
+
+/* ⭐ the log line of a chosen card: node, PCI address, driver (`render_node_describe()`) and WHY */
+static void card_say(const char *who, const char *node, const char *story)
+{
+	char desc[160];
+
+	render_node_describe(node, desc, sizeof desc);
+	registro_dice(LOG_SESSION, "⭐ %s: the card I give the compositor is %s (%s) — %s", who, node, desc, story);
 }
 
 /*
@@ -1874,30 +1876,29 @@ static char **compose_environment(void)
 		 *   written: DECLARED FALLBACK, not silent.  ⚠ Without
 		 *   `WLR_RENDER_DRM_DEVICE`: pixman does not draw on the card. */
 		{
-			g_autofree char *node = card_node();
-			g_autofree char *why = NULL;
+			card_pick_how how;
+			g_autofree char *story = NULL;
+			g_autofree char *node = card_node(&how, &story);
 
-			if (node && !card_can_draw(node, &why)) {
+			if (!node && how == CARD_PICK_NONE_CAPABLE) {
 				g_ptr_array_add(environment, g_strdup("WLR_RENDERER=pixman"));
 				registro_dice(LOG_SESSION,
-				              "⛔ %s: the card %s opens but CANNOT create the "
+				              "⛔ %s: render nodes open but NO card can create the "
 				              "output buffer (%s).  DECLARED FALLBACK: "
 				              "WLR_RENDERER=pixman — labwc draws in MEMORY, "
 				              "with the processor; without it, the canvas would be black",
-				              desktop_name(), node, why);
+				              desktop_name(), story);
 			} else if (node) {
 				g_ptr_array_add(environment,
 				                g_strdup_printf("WLR_RENDER_DRM_DEVICE=%s", node));
-				registro_dice(LOG_SESSION,
-				              "⭐ %s: the card I give wlroots is %s (opened, and the "
-				              "test buffer is born)", desktop_name(), node);
+				card_say(desktop_name(), node, story);
 			} else {
 				registro_dice(LOG_SESSION,
-				              "⛔ %s: no openable /dev/dri/renderD* node — I do NOT "
+				              "⛔ %s: %s — I do NOT "
 				              "pass WLR_RENDER_DRM_DEVICE, and wlroots will choose by itself. "
 				              "⚠ If it falls back to pixman it does so SILENTLY: the numbers "
 				              "will collapse and this is the only line that explains it",
-				              desktop_name());
+				              desktop_name(), story);
 			}
 		}
 		/* ⛔ MANDATORY: without it, on headless labwc **does not propagate**
@@ -2272,21 +2273,22 @@ static gboolean write_dropin(uint32_t width, uint32_t height)
 		 *   host announces (`linux-dmabuf` `main_device`).
 		 */
 		{
-			g_autofree char *node = card_node();
-			g_autofree char *why = NULL;
+			card_pick_how how;
+			g_autofree char *story = NULL;
+			g_autofree char *node = card_node(&how, &story);
 			g_autofree char *self_exe = realpath("/proc/self/exe", NULL);
 			const char *node_arg = node ? node : "-";
 
-			if (node && !card_can_draw(node, &why)) {
+			if (!node && how == CARD_PICK_NONE_CAPABLE) {
 				node_arg = "pixman";
 				registro_dice(LOG_SESSION,
-				              "⛔ KDE: the card %s opens but CANNOT create a buffer "
-				              "(%s). DECLARED FALLBACK: KWin's host draws in memory",
-				              node, why);
+				              "⛔ KDE: render nodes open but NO card can create a buffer "
+				              "(%s). DECLARED FALLBACK: KWin's host draws in memory", story);
 			} else if (!node)
 				registro_dice(LOG_SESSION,
-				              "⛔ KDE: no openable /dev/dri/renderD* node — KWin's host "
-				              "will choose by itself");
+				              "⛔ KDE: %s — KWin's host will choose by itself", story);
+			else
+				card_say("KDE", node, story);
 			if (!self_exe) {
 				registro_dice(LOG_SESSION,
 				              "⛔ I do not know which binary I am (%s): the nested "

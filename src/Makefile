@@ -78,7 +78,7 @@ SORGENTI := main.c transport.c webtransport.c page.c command.c certificates.c \
             vulkanvideo.c bit_writer.c colors709.c audio.c sound.c \
             input.c keyboard.c cursor.c sentinel.c clipboard.c kwin.c \
             clipboard_kde.c wlroots.c wlr_input.c shape.c rediscover.c \
-            render_grant.c render_node.c walls.c rootside.c
+            render_grant.c render_node.c walls.c rootside.c card_pick.c
 OGGETTI  := $(SORGENTI:.c=.o)
 
 # -----------------------------------------------------------------------------
@@ -594,7 +594,9 @@ child.o:         child.h log.h session.h capture.h mutter.h encoder.h \
 # ⭐ THE FOUR OF PHASE 2.  ⚠ NONE is among the `GEMELLATI`: they belong to the PRODUCT
 #    only — in `benches/rcp/` they do not exist, because the graft into ngtcp2's
 #    example has neither a graphical session nor an encoder.
-session.o:       session.h log.h
+session.o:       session.h log.h card_pick.h render_node.h
+card_pick.o:     card_pick.h
+wlroots.o:       card_pick.h session.h
 
 # ⭐ THE GUARDIAN OF PHASE 5 — the emitter that was missing for `0x04` and `0x05`.
 # ⚠ It is not among the `GEMELLATI` and cannot go there: `rcp.c` reaches it by
