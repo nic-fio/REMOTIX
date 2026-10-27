@@ -62,6 +62,7 @@
 #include "rediscover.h"
 #include "render_grant.h"
 #include "render_node.h"
+#include "card_pick.h"
 
 #include <dirent.h>
 #include <dlfcn.h>
@@ -6482,7 +6483,7 @@ static void choose_render_node(bool final)
 {
 	char node[64], why[256] = "", desc[160];
 	const char *come;
-	bool reached = false;
+	bool reached = false, from_compositor = false;
 
 	if (render_node_latched)
 		return;
@@ -6494,6 +6495,7 @@ static void choose_render_node(bool final)
 			              render_node_option, node);
 		snprintf(render_node_buf, sizeof render_node_buf, "%s", node);
 		come = "the compositor's card (linux-dmabuf main_device)";
+		from_compositor = true;
 	} else {
 		if (!reached && !final)
 			return; /* asked again at the next mount */
@@ -6505,6 +6507,19 @@ static void choose_render_node(bool final)
 	render_node_describe(render_node_buf, desc, sizeof desc);
 	registro_dice(LOG_CHILD, "⭐ the encoding card: %s (%s) — from %s%s%s", render_node_buf,
 	              desc, come, why[0] ? "; the compositor did not say it: " : "", why);
+	/* ⭐ 1.5 (27 Oct 2026): the compositor's card is a SERVICE / BMC card (ast, mgag200 …): the desktop draws there,
+	 *   probably in software.  One warning per session (the choice is latched); no behaviour change. */
+	if (from_compositor) {
+		char *drv = card_pick_driver_of("/sys/class/drm", render_node_buf);
+
+		if (card_pick_service_driver(drv))
+			registro_dice(LOG_CHILD,
+			              "⚠ %s draws on %s (driver %s), a SERVICE card (BMC) with no 3D: probably IN SOFTWARE. "
+			              "The encoder goes to the compositor's card and, where that card cannot encode, to the "
+			              "startup card %s (cross-card). Make the capable card the BIOS primary card",
+			              session_desktop_name(), render_node_buf, drv, startup_node());
+		g_free(drv);
+	}
 }
 
 /* ⭐ PHASE 19 — THE CARD'S ROUTE (`DECISIONS.md` §10.27).  `card` = chosen BY

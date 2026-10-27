@@ -16,6 +16,8 @@
  *   7 none can draw / no node       NULL, NONE_CAPABLE / NO_NODE
  *   8 one card                      that card; can_draw NULL = «opens» is enough
  *   9 no sysfs at all (a container) falls back to the node name, as before
+ *  10 service cards                card_pick_service_driver(): ast, mgag200, hibmc-drm yes; i915, amdgpu, nvidia, virtio_gpu, NULL no;
+ *                                  card_pick_driver_of() reads the driver of a render node through sysfs
  *
  * BUILD AND RUN (a second; nothing under /media/REMOTIX-15 is written; run from the root of the tree):
  *   nice -n 19 ionice -c3 podman run --rm --network=none --cpus=1 --memory=512m -v "$PWD:/albero:ro" localhost/remotix-costruzione sh -c '
@@ -66,7 +68,7 @@ static void mkd(const char *rel)
 /* a PCI device: pci/<addr>/{boot_vga,driver -> ../../drivers/<drv>} */
 static void pci(const char *addr, const char *drv, int boot)
 {
-	char rel[256], tgt[512], l[512];
+	char rel[256], tgt[256], l[512];
 
 	snprintf(rel, sizeof rel, "pci/%s", addr);
 	mkd(rel);
@@ -298,6 +300,28 @@ int main(void)
 	check(is(node, "/renderD128") && how == CARD_PICK_PCI_FIRST, "renderD128 (lowest name)");
 	g_free(node);
 	g_free(story);
+	wipe();
+
+	puts("10 · service / BMC cards");
+	check(card_pick_service_driver("ast") && card_pick_service_driver("mgag200") && card_pick_service_driver("hibmc-drm"),
+	      "ast, mgag200, hibmc-drm are service cards");
+	check(!card_pick_service_driver("i915") && !card_pick_service_driver("amdgpu") && !card_pick_service_driver("nvidia") &&
+	          !card_pick_service_driver("virtio_gpu") && !card_pick_service_driver("") && !card_pick_service_driver(NULL),
+	      "i915, amdgpu, nvidia, virtio_gpu, empty and NULL are not");
+	fresh();
+	pci("0000:05:00.0", "mgag200", 1);
+	entry("renderD128", "0000:05:00.0", 1);
+	{
+		char sys[300], *d;
+
+		snprintf(sys, sizeof sys, "%s/sys", root);
+		d = card_pick_driver_of(sys, "/dev/dri/renderD128");
+		check(d && strcmp(d, "mgag200") == 0 && card_pick_service_driver(d), "driver of renderD128 is mgag200, a service card");
+		g_free(d);
+		d = card_pick_driver_of(sys, "/dev/dri/renderD999");
+		check(d == NULL, "an unknown node has no driver");
+		g_free(d);
+	}
 	wipe();
 
 	printf("%d passed, %d failed\n", passed, failures);

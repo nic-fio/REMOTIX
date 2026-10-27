@@ -200,3 +200,21 @@ char *card_pick(const char *dev_dir, const char *sys_dir, card_draw_fn can_draw,
 	*story = g_strdup_printf("no capable card: %s", notes->len ? notes->str : "?");
 	return NULL;
 }
+
+gboolean card_pick_service_driver(const char *driver)
+{
+	static const char *const service[] = { "ast", "mgag200", "hibmc-drm", "hibmc", NULL };
+
+	for (guint i = 0; driver && service[i]; i++)
+		if (strcmp(driver, service[i]) == 0)
+			return TRUE;
+	return FALSE;
+}
+
+char *card_pick_driver_of(const char *sys_dir, const char *node)
+{
+	g_autofree char *base = node ? g_path_get_basename(node) : NULL;
+	g_autofree char *p = base ? g_build_filename(sys_dir, base, "device", "driver", NULL) : NULL;
+
+	return p ? link_base(p) : NULL;
+}

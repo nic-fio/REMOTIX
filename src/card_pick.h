@@ -37,4 +37,13 @@ typedef enum {
 char *card_pick(const char *dev_dir, const char *sys_dir, card_draw_fn can_draw, card_pick_how *how,
                 char **story);
 
+/* ⭐ 1.5 (27 Oct 2026): is `driver` a SERVICE / BMC card's — a card that cannot draw or encode on the GPU?  (ast =
+ * ASPEED, mgag200 = Matrox G200 of the Dell/HP BMCs, hibmc = HiSilicon's).  Only the classification: «no render node»
+ * is another way to be a service card and is decided by whoever has the node.  NULL / unknown driver = FALSE. */
+gboolean card_pick_service_driver(const char *driver);
+
+/* the driver (kernel module name) of a render node `/dev/dri/renderDN` through `sys_dir`/renderDN/device/driver; g_free,
+ * NULL if sysfs does not say */
+char *card_pick_driver_of(const char *sys_dir, const char *node);
+
 #endif

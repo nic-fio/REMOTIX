@@ -547,6 +547,12 @@ static const char *desktop_name(void)
 	}
 }
 
+/* ⭐ 1.5: the desktop's name for `child.c`'s service-card warning */
+const char *session_desktop_name(void)
+{
+	return desktop_name();
+}
+
 /*
  * ⭐⭐ PHASE 17, D8 (`DECISIONS.md` §10.20) — WHICH GNOME SESSION: the distribution's
  *      DEFAULT one, not always `gnome`.
