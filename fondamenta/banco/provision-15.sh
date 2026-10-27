@@ -125,6 +125,8 @@ scrivi_storage "$CASA/.config/containers/storage.conf" "/run/user/$UID_UTENTE/co
 PKGS=(
     # per compilare nel contenitore e per muovere il repository
     git podman make gcc pkg-config rsync
+    # le intestazioni C: alcuni test unitari di verifica-rami si compilano sull'host (27 ott 2026, dopo un riavvio: «stdint.h»)
+    libc6-dev
     # la rete dei container senza privilegi
     uidmap slirp4netns passt netavark aardvark-dns
     # podman --init (il contenitore di compilazione di verifica-rami e i test root): senza, «catatonit: executable file
