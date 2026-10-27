@@ -342,7 +342,7 @@ suite_home() {
 		RXNV_SYSTEM="$system" RXNV_VERSION="$version" \
 		python3 "$HERE/19-nv-suite.py" "${args[@]}" > "$dir/suite.txt" 2>&1
 	c=$?
-	[ -n "$ctl" ] && ssh -O exit -o ControlPath="$ctl" "$ACCOUNT@$IP" >/dev/null 2>&1
+	[ -n "$ctl" ] && ssh -O exit -o ControlPath="$ctl" -p "${SSH_PORT:-22}" "$ACCOUNT@$IP" >/dev/null 2>&1
 	tail -n 3 "$dir/suite.txt" | sed 's/^/      /'
 	# 8. the report, like the machine does, and the routes the real sessions took (from the machine's log)
 	python3 "$TREE/benches/15-suite/15-report.py" --log "$dir/registro.jsonl" --round 19-nvidia --text \

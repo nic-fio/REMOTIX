@@ -721,7 +721,9 @@ record() {
 	local p=${1:-}
 	[ -n "$p" ] && [ -n "${2:-}" ] || { echo "usage: $0 record STEP OUTCOME TEXT"; return 2; }
 	outcome "$p" "$2" "${3:-}"
-	echo "exit 0 · $(date -Is) · from outside" > "$DONE/$p"
+	# the marker only for a GREEN step: a red or unlooked-at suite must not look done (`all` with CLIENTS=machine would skip it)
+	[ "$2" = VERDE ] && echo "$2 · $(date -Is) · from outside" > "$DONE/$p"
+	return 0
 }
 
 # ═══════════════════════════════════════════════════════════════════════════

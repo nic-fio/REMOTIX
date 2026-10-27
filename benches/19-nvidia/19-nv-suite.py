@@ -77,7 +77,8 @@ def remote(line, seconds=90):
     - none of the two: the machine itself (the bench as run by `19-nv-machine.sh suite`)."""
     if os.environ.get("RXNV_SSH"):
         b = base64.b64encode(line.encode()).decode()
-        argv = (["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=30"]
+        argv = (["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=30",
+                 "-o", "LogLevel=ERROR"]      # no «Permanently added … known hosts» in the output the tests parse
                 + shlex.split(os.environ.get("RXNV_SSH_OPTS", "")) + [os.environ["RXNV_SSH"],
                 "%s sh -c \"$(echo %s | base64 -d)\"" % (os.environ.get("RXNV_SUDO", ""), b)])
         stdin = None
