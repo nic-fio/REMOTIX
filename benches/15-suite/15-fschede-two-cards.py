@@ -112,8 +112,6 @@ def judge(desktop, st, lines, image_ok):
         return S.FAIL, "the first image did not arrive", facts
     if f["pixman"]:
         return S.FAIL, "the compositor fell back to pixman (the chosen card cannot create the buffer): not a card choice", facts
-    if f["xcard"]:
-        return S.FAIL, "cross-card: the encoder fell back to the startup card, not the compositor's (\"%s\")" % XCARD, facts
     if not st.get("devt", True):
         # --swap NOT faithful on the dev_t (11-two-cards.sh): the encoder/compositor comparison cannot be trusted, so it is never
         # judged here; only the card the product GIVES the compositor is, against the BIOS primary
@@ -127,6 +125,8 @@ def judge(desktop, st, lines, image_ok):
         return S.BLOCKED, ("simulazione --swap non fedele sul dev_t: the card given (%s, %s) is %s the BIOS primary; the "
                            "encoder/compositor comparison is not judged" % (f["wlr"], facts["compositor_card"],
                                                                            "the" if given == primary_pci(st) else "NOT the")), facts
+    if f["xcard"]:
+        return S.FAIL, "cross-card: the encoder fell back to the startup card, not the compositor's (\"%s\")" % XCARD, facts
     enc = f["enc"]
     if not enc or not f["opened"]:
         return S.BLOCKED, "I could not look: the log has no «the encoding card» line (%s) or no «encoder OPENED» node (%s)" % (
@@ -228,6 +228,8 @@ def certify():
     nd = fake_state(swap=True, devt=False)
     prova("dev_t not faithful, card given = primary ⇒ BLOCKED, never PASS/FAIL", judge("xfce", nd, fake_lines(nd, "intel", "intel"), True)[0], S.BLOCKED)
     prova("dev_t not faithful, the encoder on the other card ⇒ still BLOCKED (not judged)", judge("xfce", nd, fake_lines(nd, "intel", "amd"), True)[0], S.BLOCKED)
+    prova("dev_t not faithful + «falls back to the startup card», card given = primary ⇒ BLOCKED", judge("xfce", nd, fake_lines(nd, "intel", "intel", extra=[
+        "x ⛔ codec 1 at 8 bits does NOT encode on the compositor's card /dev/dri/renderD129: no.  ⇒ It falls back to the startup card"]), True)[0], S.BLOCKED)
     prova("dev_t not faithful, card given NOT the primary ⇒ FAIL", judge("xfce", nd, fake_lines(nd, "amd", "amd"), True)[0], S.FAIL)
     prova("dev_t not faithful, no image ⇒ FAIL", judge("xfce", nd, fake_lines(nd, "intel", "intel"), False)[0], S.FAIL)
     prova("dev_t not faithful, GNOME (no given-card line) ⇒ BLOCKED", judge("gnome", nd, fake_lines(nd, "intel", "intel", wlr=False), True)[0], S.BLOCKED)
