@@ -96,7 +96,7 @@ for prova, v in per_test.items():
         if s_["code"] != 0 or int(s_.get("errori_decodifica", 0)) > 0:
             note.append(f"the INTEGRATED PRODUCT has code {s_['code']} and {s_.get('errori_decodifica')} decoding errors")
         if note:
-            worse.append(f"{prova} [integrated product «scheda»]: " + " · ".join(note))
+            worse.append(f"{prova} [integrated product «card»]: " + " · ".join(note))
 print()
 if worse:
     print("⛔ WHERE VULKAN IS NOT EQUAL TO OR IS WORSE THAN VA-API:")
