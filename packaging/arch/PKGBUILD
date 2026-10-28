@@ -87,7 +87,7 @@ depends=(
 	wayland libwayland-client.so libwayland-server.so
 	# ⭐ what OUR labwc links (wlroots is inside it, static): `ldd` of the binary built here
 	libinput libinput.so seatd libseat.so libdisplay-info libdisplay-info.so
-	libdrm libdrm.so pixman libpixman-1.so libxml2 libxml2.so libpng libpng16.so
+	libdrm pixman libpixman-1.so libxml2 libxml2.so libpng libpng16.so  # libdrm provides no soname: by name
 	cairo libcairo.so pango libpango-1.0.so libpangocairo-1.0.so
 	mesa                                      # libgbm.so.1 (mesa does not declare it)
 	# ⭐ Not linked, but without them the desktop does not come up (§4.6, §11.1):
