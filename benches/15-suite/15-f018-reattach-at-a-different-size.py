@@ -46,6 +46,9 @@ FUNCTIONS = ("F-018", "P-C")
 NEW_SIZE = (2560, 1440)
 TOL_CANVAS = 16            # the page truncates the canvas to multiples of 16 (fc0fbff)
 TOL_EDGE = 40           # mean colour of the edge rows
+EDGE_BAND = (16, 96)      # px from the screen edge where the panel's inner edge must sit
+EDGE_MIN = 25              # median luminance step (0-255) across the free slices
+EDGE_SHIFT = 12            # px: the panel's height is fixed, its edge may move this much
 MIN_FILL = 0.90            # on KDE the rescaled canvas fills at least one side
 
 
@@ -74,6 +77,62 @@ def compare_panel(bp, bd, side):
     # changes ALL the slices
     d = sorted(G.distance(fp[k], fd[k]) for k in ks)
     return d[len(d) // 2], len(ks)
+
+
+def panel_edge(png, side, covered, span=120, nsl=50):
+    """⭐ STRUCTURE of the panel, not its colour (the KDE 6.6 panel is translucent: its colour
+    follows the wallpaper behind it — F-018/P-C false red, 28 Oct 2026).  On the FULL-size
+    photo: for each slice not covered by the window, the luminance by row in the `span`
+    px next to the edge; the panel is the one sharp horizontal step (its inner edge) that
+    all the slices share.  Returns (distance in px from the edge, median step) of the
+    strongest row inside EDGE_BAND, or None."""
+    import io
+    from PIL import Image
+    im = Image.open(io.BytesIO(png)).convert("L")
+    w, h = im.size
+    px = im.load()
+    free = [k for k in range(nsl) if k not in set(covered or [])]
+    if not free:
+        return None
+    ys = list(range(h - span, h)) if side != "top" else list(range(0, span))
+    per = []
+    for k in free:
+        xs = range(int(w * k / nsl), max(int(w * (k + 1) / nsl), int(w * k / nsl) + 1), 2)
+        col = [sum(px[x, y] for x in xs) / len(xs) for y in ys]
+        per.append([abs(col[i + 1] - col[i]) for i in range(len(col) - 1)])
+    best = None
+    for i in range(span - 1):
+        dist = (span - 1 - i) if side != "top" else (i + 1)
+        if not EDGE_BAND[0] <= dist <= EDGE_BAND[1]:
+            continue
+        m = sorted(p[i] for p in per)[len(per) // 2]
+        if best is None or m > best[1]:
+            best = (dist, round(m))
+    return best
+
+
+# ⭐ only KDE: its panel is the only translucent one (the colour follows the wallpaper behind it).
+#   GNOME, XFCE and LXQt keep the colour judgement exactly as before.
+STRUCTURE_PANEL = {"kde": "basso"}
+
+
+def edge_of(png, borders, side):
+    """The panel structure for `observe`: None if the box is not judged by structure (side None)."""
+    if not side or not png or not borders:
+        return None
+    return panel_edge(png, side, borders.get("covered"))
+
+
+def compare_structure(ep, ed):
+    """Panel structure before/after: (True, text) if both photos have a sharp panel edge at
+    about the same distance from the screen edge."""
+    if not ep or not ed:
+        return False, "no panel edge measured (before %s, after %s)" % (ep, ed)
+    if ep[1] < EDGE_MIN or ed[1] < EDGE_MIN:
+        return False, "no sharp panel edge (before %s, after %s)" % (ep, ed)
+    if abs(ep[0] - ed[0]) > EDGE_SHIFT:
+        return False, "the panel edge moved (before %s px, after %s px)" % (ep[0], ed[0])
+    return True, "panel edge at %d/%d px, step %d/%d" % (ep[0], ed[0], ep[1], ed[1])
 
 
 def judge_measure(fam, before, after, view_wait, text, panel="top"):
@@ -140,11 +199,15 @@ def judge_measure(fam, before, after, view_wait, text, panel="top"):
         d, n = compare_panel(bp, bd, panel)
         if d is None:
             probs.append("the panel edge (%s) is entirely covered by the window" % panel)
-        elif d > TOL_EDGE:
+        elif d > TOL_EDGE and not compare_structure(before.get("edge"), after.get("edge"))[0]:
             probs.append("the panel edge (%s) changed (median deviation %d over %d free "
                          "slices): the panel is not at the new edge" % (panel, d, n))
         else:
-            all_ok.append("panel at the %s edge (%d slices, deviation %d)" % (panel, n, d))
+            if d > TOL_EDGE:      # colour changed (translucent panel) but the structure is the same
+                all_ok.append("panel at the %s edge (%s; colour deviation %d ignored)"
+                              % (panel, compare_structure(before.get("edge"), after.get("edge"))[1], d))
+            else:
+                all_ok.append("panel at the %s edge (%d slices, deviation %d)" % (panel, n, d))
         for side in ("nero_destra", "nero_basso"):
             if bd[side] > bp[side] + 0.5:
                 probs.append("a new BLACK band (%s %.0f %%, before %.0f %%): the background is not "
@@ -199,13 +262,52 @@ def certify():
     prova("photo failed, good fields ⇒ BLOCKED", e == S.BLOCKED)
     e, _ = judge_measure("segue", A, dict(C, blind=True), B["view"], "abc")
     prova("photo failed, wrong fields ⇒ FAIL", e == S.FAIL)
+    # ⭐ translucent panel (KDE 6.6): colour changes with the wallpaper, structure the same
+    bt = {"top": [0, 0, 0], "basso": [197, 212, 224], "nero_destra": 0.0, "nero_basso": 0.0}
+    bt2 = dict(bt, basso=[241, 244, 250])
+    Ap = dict(A, borders=bt, edge=(48, 62))
+    Bp = dict(B, borders=bt2, edge=(40, 70))
+    e, m = judge_measure("segue", Ap, Bp, B["view"], "abc", "basso")
+    prova("translucent panel: colour differs, same edge ⇒ PASS (%s)" % m[:60], e == S.PASS)
+    e, _ = judge_measure("segue", Ap, dict(Bp, edge=(70, 30)), B["view"], "abc", "basso")
+    prova("fault: colour differs and panel edge moved ⇒ FAIL", e == S.FAIL)
+    e, _ = judge_measure("segue", Ap, dict(Bp, edge=(40, 8)), B["view"], "abc", "basso")
+    prova("fault: colour differs and no sharp edge (panel missing) ⇒ FAIL", e == S.FAIL)
+    e, _ = judge_measure("segue", Ap, dict(Bp, edge=None), B["view"], "abc", "basso")
+    prova("colour differs and edge not measurable ⇒ FAIL", e == S.FAIL)
+    # structure on a synthetic photo: panel of 40 px at the bottom over a smooth wallpaper
+    import io
+    from PIL import Image, ImageDraw
+
+    def foto(w, h, pannello, tinta):
+        im = Image.new("RGB", (w, h), (90, 140, 100))
+        d = ImageDraw.Draw(im)
+        if pannello:
+            d.rectangle([0, h - 40, w, h], fill=(tinta, tinta, tinta))
+        b = io.BytesIO()
+        im.save(b, "PNG")
+        return b.getvalue()
+    ea = panel_edge(foto(1000, 600, True, 200), "basso", [])
+    eb = panel_edge(foto(700, 400, True, 235), "basso", [])
+    en = panel_edge(foto(700, 400, False, 0), "basso", [])
+    prova("synthetic: edge found at 40 px whatever the panel colour (%s %s)" % (ea, eb),
+          ea and eb and ea[0] == eb[0] == 40 and compare_structure(ea, eb)[0])
+    prova("synthetic: no panel ⇒ no sharp edge (%s)" % (en,),
+          not compare_structure(ea, en)[0])
+    # the path used by observe(): edge_of with side None (non-KDE) ⇒ None; with a side ⇒ measured
+    bsint = {"covered": []}
+    prova("edge_of: box without structure judgement ⇒ None", edge_of(foto(700, 400, True, 200), bsint, None) is None)
+    ee = edge_of(foto(700, 400, True, 200), bsint, STRUCTURE_PANEL["kde"])
+    prova("edge_of: kde, synthetic photo ⇒ edge at 40 px (%s)" % (ee,), ee and ee[0] == 40 and ee[1] >= EDGE_MIN)
+    et = panel_edge(foto(700, 400, False, 0), "top", [])
+    prova("synthetic: top side without panel ⇒ no edge (%s)" % (et,), not compare_structure(ea, et)[0])
     return 0 if ok else 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
-def observe(s, text, name, wanted_screen=None):
+def observe(s, text, name, wanted_screen=None, structure=None):
     """Canvas (fields), screen from inside (field), photo (window, text, edges)."""
     ob = G.wait_canvas_still(s)
     try:
@@ -229,6 +331,13 @@ def observe(s, text, name, wanted_screen=None):
     ob.update({"viewer": scr, "window": v.get("window"), "read": v.get("read"),
                "why": v.get("why"), "photo": v.get("photo"), "blind": v.get("png") is None})
     ob["borders"] = G.borders(G.bitmap(v["png"]), v.get("window")) if v.get("png") else None
+    ob["edge"] = None
+    if ob["borders"]:
+        try:
+            ob["edge"] = edge_of(v["png"], ob["borders"], structure)
+        except Exception as e:                   # noqa: BLE001
+            print("   ⚠ panel structure not measured: %r" % (e,), flush=True)
+            ob["edge"] = None
     return ob
 
 
@@ -240,7 +349,7 @@ def brief(ob):
                                   if not k.endswith("_f")}))
 
 
-def reattach(s, largo, alto, text, name, fam):
+def reattach(s, largo, alto, text, name, fam, structure=None):
     """Detach (browser closed) and reattach with the window at largo x alto."""
     s.turn_off_browser()
     time.sleep(2)
@@ -251,9 +360,9 @@ def reattach(s, largo, alto, text, name, fam):
         return None, "the reattach at %dx%d does not get in: %s" % (largo, alto, m)
     G.wake(s)
     ob0 = G.observe_canvas(s)
-    ob = observe(s, text, name, wanted_screen=None)
+    ob = observe(s, text, name, wanted_screen=None, structure=structure)
     if fam == "segue" and ob.get("buffer") and ob.get("viewer") != ob.get("buffer"):
-        ob = observe(s, text, name + "-bis", wanted_screen=ob.get("buffer"))
+        ob = observe(s, text, name + "-bis", wanted_screen=ob.get("buffer"), structure=structure)
     ob["outcome"] = ob0.get("outcome")
     print("   %s: %s" % (name, brief(ob)), flush=True)
     return ob, ""
@@ -261,6 +370,7 @@ def reattach(s, largo, alto, text, name, fam):
 
 def body(o, E):
     fam = family(o.box)
+    structure = STRUCTURE_PANEL.get(o.box)     # side of the panel measured by structure (KDE only)
     with S.Session(o, "018", E) as s:
         try:
             ok, m = s.enter()
@@ -279,12 +389,12 @@ def body(o, E):
             if v.get("read") != text:
                 raise S.Blocked("the PREPARATION input does not reach the scene (it is F-004/F-007, "
                                  "not this function): %s" % " | ".join(note))
-            A = observe(s, text, "A-4k")
+            A = observe(s, text, "A-4k", structure=structure)
             print("   A (creation): %s" % brief(A), flush=True)
             if not A.get("buffer"):
                 raise S.Blocked("the starting canvas cannot be read")
 
-            B, why = reattach(s, NEW_SIZE[0], NEW_SIZE[1], text, "B-2560", fam)
+            B, why = reattach(s, NEW_SIZE[0], NEW_SIZE[1], text, "B-2560", fam, structure)
             if B is None:
                 E.put("F-018", S.FAIL, why)
                 E.put("P-C", S.FAIL, why)
@@ -299,7 +409,7 @@ def body(o, E):
                     expected="canvas and desktop at the new size",
                     observed="A: %s || B: %s" % (brief(A), brief(B)), evidence=ev)
 
-            C, why = reattach(s, 3840, 2160, text, "C-4k", fam)
+            C, why = reattach(s, 3840, 2160, text, "C-4k", fam, structure)
             if C is None:
                 E.put("P-C", S.FAIL, "at 2560x1440 %s; " % eB + why)
                 return

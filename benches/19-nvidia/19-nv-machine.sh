@@ -142,6 +142,69 @@ snapshot_first() {
 # ═══════════════════════════════════════════════════════════════════════════
 # Old Ubuntu ⇒ a version hop and a reboot (exit 10); 26.04 or Debian 13 ⇒ nothing.
 # ⛔ Irreversible: the machine is returned upgraded, and "clean" declares it.
+# ⭐ 28 Oct 2026 (hop 24.04 → 26.04): `grub-efi/install_devices` in debconf points to /dev/disk/by-id/scsi-1ATA_…-partN,
+#    a name that 26.04 no longer creates (it keeps ata-…-partN): grub-efi-amd64-signed stays half configured and
+#    `dpkg` stops.  The cure used by hand, now automatic: rewrite the entry with the ata-… name of the SAME partition,
+#    then `dpkg --configure -a`.  Returns 0 ONLY if an entry was really rewritten and `dpkg --configure -a` succeeded; 1 if the cure failed;
+#    2 if there was nothing to cure (the caller treats 2 as a failure of the hop: the cause is another).
+grub_install_devices_fix() {
+	local cur new="" item eq esp real l changed=0 rc=0
+	command -v debconf-communicate > /dev/null 2>&1 || return 2
+	cur=$(echo "GET grub-efi/install_devices" | debconf-communicate 2> /dev/null | sed -n '1s/^0 //p')
+	[ -n "$cur" ] || return 2
+	local IFS=','
+	for item in $cur; do
+		item=$(echo "$item" | sed 's/^ *//;s/ *$//')
+		if [[ "$item" == /dev/disk/by-id/* ]] && [ ! -e "$item" ]; then
+			eq=""
+			# 1. the same name with the ata- prefix: scsi-1ATA_<model>_<serial>-partN → ata-<model>_<serial>-partN
+			case "${item##*/}" in
+			scsi-1ATA_*) eq="/dev/disk/by-id/ata-${item##*/scsi-1ATA_}" ;;
+			esac
+			# 2. otherwise the ata-… link that points to the partition mounted on /boot/efi
+			if [ -z "$eq" ] || [ ! -e "$eq" ]; then
+				eq=""
+				esp=$(findmnt -n -o SOURCE /boot/efi 2> /dev/null)
+				if [ -n "$esp" ]; then
+					real=$(readlink -f "$esp")
+					for l in /dev/disk/by-id/ata-*-part*; do
+						[ -e "$l" ] && [ "$(readlink -f "$l")" = "$real" ] && { eq=$l; break; }
+					done
+				fi
+			fi
+			if [ -n "$eq" ] && [ -e "$eq" ]; then
+				warning "grub-efi/install_devices: $item does not exist any more ⇒ $eq (same partition)"
+				item=$eq; changed=1
+			else
+				warning "grub-efi/install_devices: $item does not exist and no ata-… equivalent was found"
+				rc=1
+			fi
+		fi
+		new+="${new:+, }$item"
+	done
+	unset IFS
+	if [ $changed = 1 ]; then
+		echo "SET grub-efi/install_devices $new" | debconf-communicate > /dev/null 2>&1 \
+			&& echo "FSET grub-efi/install_devices seen true" | debconf-communicate > /dev/null 2>&1
+		ok "debconf grub-efi/install_devices rewritten: $new"
+		"${APT[@]}" -o Dpkg::Options::=--force-confold -f install > /dev/null 2>&1
+		dpkg --configure -a >> "${1:-/dev/null}" 2>&1 || rc=1
+		[ $rc = 0 ] && ok "dpkg --configure -a: everything configured"
+	elif [ $rc = 0 ]; then
+		rc=2
+	fi
+	return $rc
+}
+# the hop counts as cured ONLY if the entry was rewritten, dpkg has nothing left half configured and
+# the system really is another version than `$1` (otherwise it stays RED, as before)
+hop_cured() {
+	local da=$1 f=$2
+	grub_install_devices_fix "$f" || return 1
+	[ -z "$(dpkg --audit 2> /dev/null)" ] || { warning "dpkg --audit is not empty after the cure"; return 1; }
+	[ "$(. /etc/os-release; echo "${VERSION_ID:-}")" != "$da" ] || { warning "the system is still $da after the cure"; return 1; }
+	return 0
+}
+
 upgrade() {
 	log "(0) the system version"
 	. /etc/os-release
@@ -169,11 +232,15 @@ upgrade() {
 		if grep -q -i "no new release" "$f"; then
 			warning "the hop is not offered yet: forcing it with -d"
 			do-release-upgrade -d -f DistUpgradeViewNonInteractive >> "$f" 2>&1 \
-				|| { ko "do-release-upgrade -d failed ($f)"; outcome upgrade ROSSO "hop from $da"; return 1; }
+				|| { hop_cured "$da" "$f" \
+					|| { ko "do-release-upgrade -d failed ($f)"; outcome upgrade ROSSO "hop from $da"; return 1; }; }
 		else
-			ko "do-release-upgrade failed ($f)"; outcome upgrade ROSSO "hop from $da"; return 1
+			# ⭐ 28 Oct 2026: a dpkg stop on grub-efi-amd64-signed is cured here (debconf by-id), not by hand
+			hop_cured "$da" "$f" \
+				|| { ko "do-release-upgrade failed ($f)"; outcome upgrade ROSSO "hop from $da"; return 1; }
 		fi
 	fi
+	grub_install_devices_fix "$f"      # (preventive on success: rc 2 = nothing to do, fine)
 	outcome upgrade RIAVVIO "ubuntu $da ⇒ $(. /etc/os-release; echo "$VERSION_ID")"
 	touch "$WORKDIR/riavvio-chiesto"
 	return 10
@@ -483,6 +550,7 @@ deps() {
 		ko "apt-get install failed (dipendenze.txt)"; outcome dipendenze ROSSO "apt failed"; return 1
 	fi
 	ok "desktop and tools"
+	enforce_desktop || { outcome dipendenze ROSSO "the desktop ${DESKTOP_NV:-xfce} cannot be imposed"; return 1; }
 	# ⭐ 27 Oct 2026: with CLIENTS=home the browsers are at home: nothing of Firefox or Chrome is installed here
 	#    (and `clean` has less to take away)
 	if [ "$CLIENTS" = machine ]; then
@@ -802,6 +870,45 @@ EOF
 # ═══════════════════════════════════════════════════════════════════════════
 #  (e) THE SUITE: XFCE under labwc (the product starts it), the browsers in a labwc of their own
 # ═══════════════════════════════════════════════════════════════════════════
+# ⭐ 28 Oct 2026: THE DESKTOP THE PRODUCT STARTS is not chosen by the bench: `recognize_desktop` (src/session.c)
+#    looks for the markers in PATH in a FIXED order — startplasma-wayland (without gnome-session) ⇒ KDE, then
+#    gnome-session ⇒ GNOME, then xfce4-session ⇒ XFCE, then lxqt-session ⇒ LXQt — with no user preference.
+#    With XFCE and KDE installed together DESKTOP_NV=xfce therefore started Plasma and wrote «xfce» in the register.
+#    Here the markers of the desktops that would win over the requested one are put aside (dpkg-divert, reversible,
+#    undone by `clean`) and the requested one's is put back; the server is restarted if something changed
+#    (it recognises the desktop once, at startup).  19-nv-suite.py then CHECKS the running processes.
+DESK_MARKERS=(kde:startplasma-wayland gnome:gnome-session xfce:xfce4-session lxqt:lxqt-session)
+enforce_desktop() {
+	local want=${DESKTOP_NV:-xfce} out="" m d bin changed=0
+	case $want in kde) out="gnome" ;; gnome) out="" ;; xfce) out="kde gnome" ;; lxqt) out="kde gnome xfce" ;; *) ko "DESKTOP_NV=$want unknown"; return 1 ;; esac
+	for m in "${DESK_MARKERS[@]}"; do
+		d=${m%%:*}; bin=/usr/bin/${m#*:}
+		if [ "$d" = "$want" ]; then
+			if dpkg-divert --list "$bin" 2> /dev/null | grep -q remotix-off; then
+				dpkg-divert --quiet --local --rename --remove "$bin" && { ok "$bin put back (desktop $want)"; changed=1; }
+			fi
+			[ -e "$bin" ] || { ko "the marker $bin of the desktop $want is not installed"; return 1; }
+		elif [[ " $out " == *" $d "* ]]; then
+			if [ -e "$bin" ] && ! dpkg-divert --list "$bin" 2> /dev/null | grep -q remotix-off; then
+				dpkg-divert --quiet --local --rename --divert "$bin.remotix-off" --add "$bin" \
+					&& { ok "$bin put aside: the product must find $want, not $d"; changed=1; }
+			fi
+		fi
+	done
+	if [ $changed = 1 ] && systemctl is-active --quiet remotix 2> /dev/null; then
+		systemctl restart remotix && ok "remotix restarted: it recognises the desktop again"
+		sleep 3
+	fi
+	return 0
+}
+undivert_desktops() {
+	local m bin
+	for m in "${DESK_MARKERS[@]}"; do
+		bin=/usr/bin/${m#*:}
+		dpkg-divert --list "$bin" 2> /dev/null | grep -q remotix-off && dpkg-divert --quiet --local --rename --remove "$bin"
+	done
+}
+
 suite() {
 	log "(e) the phase 15 suite, subset, on XFCE"
 	if [ "$CLIENTS" = home ]; then
@@ -809,7 +916,8 @@ suite() {
 		outcome suite NON-GUARDATA "CLIENTS=home: the suite is run from home (suite-casa)"
 		return 3
 	fi
-	local nv u uid sock="" mode=finestra
+	local nv u uid sock="" mode=window
+	enforce_desktop || { outcome suite NON-GUARDATA "the desktop ${DESKTOP_NV:-xfce} cannot be imposed (see the log)"; return 3; }
 	nv=$(nvidia_node || true)
 	u="$WORKDIR/suite"
 	mkdir -p "$u"
@@ -937,9 +1045,10 @@ clean() {
 		ko "the archive does not appear to have been taken to the laptop ($WORKDIR/raccolto): first \"19-nvidia.sh collect IP\" (or FORCE=1)"
 		return 1
 	fi
-	[ -f "$BEFORE/fatta" ] || { ko "the snapshot of how the machine was is missing ($BEFORE): I do not know what to remove"; return 1; }
+	[ -f "$BEFORE/fatta" ] || { undivert_desktops; ko "the snapshot of how the machine was is missing ($BEFORE): I do not know what to remove"; return 1; }
 	local restart=0 u
 	# 1. the bench's tests and processes
+	undivert_desktops
 	systemctl stop remotix-nv-banco.service 2>/dev/null
 	for u in $(getent passwd | cut -d: -f1 | grep -E "^($BENCH_USER|c[0-9]+b?u[0-9]+)$"); do
 		loginctl terminate-user "$u" 2>/dev/null
@@ -1033,6 +1142,7 @@ status() {
 		if [ -f "$DONE/$p" ]; then printf '    %-11s done   %s\n' "$p" "$(cat "$DONE/$p")"; else printf '    %-11s —\n' "$p"; fi
 	done
 	[ -f "$EVID/passi.txt" ] && { echo; sed 's/^/    /' "$EVID/passi.txt"; }
+	echo; echo "    desktop diversions active: $(dpkg-divert --list '*remotix-off*' 2> /dev/null | tr '\n' ' ')"
 }
 
 # a step, remembering that it was done (with the exit code): "all" does not redo it
@@ -1058,9 +1168,14 @@ all() {
 	for p in $steps; do
 		case " ${REDO:-} " in *" $p "*) rm -f "$DONE/$p" ;; esac
 		# porta is redone every time: a firewall rule does not survive a reboot
+		# ⭐ 28 Oct 2026: a step that ended RED (exit other than 0 and 3 = «not looked at») is NOT done: on resume it is redone
 		if [ -f "$DONE/$p" ] && [ "$p" != collect ] && [ "$p" != porta ]; then
-			log "$p: already done ($(cat "$DONE/$p")), skipping"
-			continue
+			local prev
+			prev=$(awk '{print $2; exit}' "$DONE/$p")
+			case ${prev:-0} in
+			0|3) log "$p: already done ($(cat "$DONE/$p")), skipping"; continue ;;
+			*) log "$p: ended RED last time ($(cat "$DONE/$p")): redoing it" ;;
+			esac
 		fi
 		step "$p"; c=$?
 		case $c in
@@ -1092,9 +1207,10 @@ case "$ACTION" in
 upgrade|checks|driver|deps|remotix|porta|encode|comparison|suite)
 	step "$ACTION"; c=$? ;;
 collect|clean|status) "$ACTION"; c=$? ;;
+desktop) enforce_desktop; c=$? ;;
 record) shift; record "$@"; c=$? ;;
 all) all; c=$? ;;
-*) echo "usage: $0 upgrade|checks|driver|deps|remotix|porta|encode|comparison|suite|collect|clean|status|record|all"; exit 2 ;;
+*) echo "usage: $0 upgrade|checks|driver|deps|remotix|porta|encode|comparison|suite|desktop|collect|clean|status|record|all"; exit 2 ;;
 esac
 echo "$c" > "$WORKDIR/uscita"
 exit "$c"

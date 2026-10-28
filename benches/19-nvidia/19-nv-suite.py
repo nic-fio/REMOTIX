@@ -115,6 +115,101 @@ def internal(file, rest):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  WHICH DESKTOP REALLY RUNS  (⭐ 28 Oct 2026)
+# ═══════════════════════════════════════════════════════════════════════════
+# The product picks the desktop by itself, from the markers it finds in PATH, in a fixed order
+# (src/session.c `recognize_desktop`: KDE if there is no gnome-session, GNOME, XFCE, LXQt).  The bench
+# imposes the requested one (19-nv-machine.sh `desktop`) and here it CHECKS: a test run on a desktop
+# other than the requested one is NOT GUARDED, with the reason, and is never written under the wrong name.
+MARKERS = {"kde": "startplasma-wayland", "gnome": "gnome-session", "xfce": "xfce4-session", "lxqt": "lxqt-session"}
+# processes of a running session (the brackets: `grep` does not match its own command line)
+SESSION_PROCS = {"kde": "[s]tartplasma-wayland|[p]lasmashell", "gnome": "[g]nome-shell|[g]nome-session-binary",
+                 "xfce": "[x]fce4-session|[x]fce4-panel", "lxqt": "[l]xqt-session|[l]xqt-panel"}
+
+
+def predicted_desktop(present):
+    """The desktop `recognize_desktop` chooses, given the set of the markers present."""
+    if "kde" in present and "gnome" not in present:
+        return "kde"
+    if "gnome" in present:
+        return "gnome"
+    if "xfce" in present:
+        return "xfce"
+    if "lxqt" in present:
+        return "lxqt"
+    return None
+
+
+def desktop_markers():
+    """The desktops whose marker the machine's product finds (PATH of the session's child)."""
+    line = "; ".join('PATH=/usr/local/bin:/usr/bin:/bin command -v %s > /dev/null 2>&1 && echo %s' % (b, d)
+                     for d, b in MARKERS.items())
+    c, t = remote(line, 30)
+    return {x.strip() for x in t.split() if x.strip() in MARKERS}
+
+
+SESSION_USERS = "(%s|c[0-9]+b?u[0-9]+)" % os.environ.get("RXNV_BENCH_USER", "rxbanco")
+
+
+def running_desktops():
+    """({desktop: [lines "user pid command"]}, readable) — the processes of the BENCH's session users only
+    (the bench user and the REMOTIX session users c<N>[b]u<N>): not the greeter, not other people's sessions."""
+    parts = ['P=$(ps -eo user=,pid=,args= 2>/dev/null) || { echo PSFAIL; exit 0; }',
+             'P=$(echo "$P" | awk \'$1 ~ /^%s$/\')' % SESSION_USERS]
+    for d, pat in SESSION_PROCS.items():
+        parts.append('echo "$P" | grep -E "%s" | sed "s/^/%s /"' % (pat, d))
+    parts.append("echo OKPS")
+    c, t = remote("; ".join(parts), 30)
+    out = {}
+    lines = t.splitlines()
+    readable = any(x.strip() == "OKPS" for x in lines) and not any(x.strip() == "PSFAIL" for x in lines)
+    for x in lines:
+        w = x.split(None, 1)
+        if len(w) == 2 and w[0] in MARKERS:
+            out.setdefault(w[0], []).append(" ".join(w[1].split())[:160])
+    return out, readable
+
+
+class SessionWatcher(threading.Thread):
+    """While a test runs, every few seconds, it notes which desktops have processes (session users only)."""
+    def __init__(self, every=15):
+        super().__init__(daemon=True)
+        self.seen, self.every, self._stop_ev = {}, every, threading.Event()
+        self.unreadable = 0
+        self.reads = 0
+
+    def run(self):
+        while not self._stop_ev.is_set():
+            try:
+                got, ok = running_desktops()
+            except Exception:                                    # noqa: BLE001
+                got, ok = {}, False
+            if ok:
+                self.reads += 1
+            else:
+                self.unreadable += 1
+            for d, ls in got.items():
+                self.seen.setdefault(d, [])
+                self.seen[d] += [x for x in ls if x not in self.seen[d]][:3]
+            self._stop_ev.wait(self.every)
+
+    def stop(self):
+        self._stop_ev.set()
+        self.join(timeout=40)
+
+
+def wrong_desktop(wanted, seen):
+    """None if the processes seen (dict desktop → lines) agree with the requested desktop; else the reason."""
+    other = sorted(set(seen) - {wanted})
+    if other:
+        found = " ; ".join("%s: %s" % (d, " | ".join(seen[d][:3])) for d in other)
+        return ("NOT GUARDED: the requested desktop is «%s» but the bench's session users run processes of «%s» "
+                "(user pid command — %s): the test did NOT run on the requested desktop and is not registered as «%s»"
+                % (wanted, "/".join(other), found, wanted))
+    return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  THE RUN
 # ═══════════════════════════════════════════════════════════════════════════
 def load(file):
@@ -156,6 +251,8 @@ def una(o, file, browser, base):
     started = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
     t0 = time.time()
     lines, report = [], ""
+    watcher = SessionWatcher()
+    watcher.start()
     with open(os.path.join(ev, "uscita.log"), "w") as log:
         try:
             pr = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
@@ -187,6 +284,21 @@ def una(o, file, browser, base):
         except Exception as e:                                       # noqa: BLE001
             report = "the bench could not launch the test: %r" % e
     duration = round(time.time() - t0)
+    watcher.stop()
+    # ⭐ the desktop that ran, from the processes: if it is not the requested one, nothing is registered as passed/failed
+    reason = wrong_desktop(DESKTOP, watcher.seen)
+    if reason:
+        print("   ⛔ %s" % reason, flush=True)
+        for r in lines:
+            r["outcome"] = "BLOCKED"
+            r["rationale"] = reason + " · (original: %s)" % str(r.get("rationale", ""))[:200]
+        report = report or reason
+    elif watcher.unreadable:
+        note = (" · desktop surveillance: the session processes could NOT be read %d times (%d readings ok)"
+                % (watcher.unreadable, watcher.reads))
+        print("   ⚠" + note, flush=True)
+        for r in lines:
+            r["rationale"] = str(r.get("rationale", "")) + note
     views = {(r.get("function"), r.get("pass")) for r in lines}
     for f in functions:
         for ps in ("healthy", "fault"):
@@ -273,6 +385,17 @@ def main():
         wanted_flags = ["-%s-" % x.strip() for x in o.tests.split(",") if x.strip()]
         choices = [f for f in sorted(os.listdir(SUITE))
                   if f.startswith("15-f") and f.endswith(".py") and any(v in f for v in wanted_flags)]
+    # ⭐ before anything: the product, as it is set up now, would start the requested desktop?
+    present = desktop_markers()
+    chosen = predicted_desktop(present)
+    print("⭐ markers on the machine: %s · the product would start: %s" % (",".join(sorted(present)) or "none", chosen),
+          flush=True)
+    if chosen != o.desktop:
+        print("NOT GUARDED: the product would start «%s», not the requested «%s» (markers %s): on the machine run "
+              "\"DESKTOP_NV=%s bash 19-nv-machine.sh desktop\" and retry" % (chosen, o.desktop, sorted(present), o.desktop),
+              flush=True)
+        print("END NOT-GUARDED", flush=True)
+        return 3
     for p in choices:
         file = os.path.join(SUITE, p)
         _, per_browser = load(file)
