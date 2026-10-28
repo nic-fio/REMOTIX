@@ -3,6 +3,7 @@
  */
 #include "render_node.h"
 #include "kwin.h"
+#include "card_pick.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -160,7 +161,7 @@ static bool node_of_device(dev_t dev, char *out, size_t n)
 	return found;
 }
 
-bool render_node_of_compositor(char *out, size_t n, char *why, size_t wn, bool *reached)
+bool render_node_of_compositor(char *out, size_t n, char *why, size_t wn, bool *reached, char *driver, size_t dn)
 {
 	char socket[64] = "";
 	struct wl_display *d;
@@ -173,6 +174,8 @@ bool render_node_of_compositor(char *out, size_t n, char *why, size_t wn, bool *
 
 	*reached = false;
 	out[0] = 0;
+	if (driver && dn)
+		driver[0] = 0;
 	d = kwin_display_open(socket, sizeof socket);
 	if (!d) {
 		snprintf(why, wn, "no Wayland compositor reachable yet");
@@ -206,6 +209,12 @@ bool render_node_of_compositor(char *out, size_t n, char *why, size_t wn, bool *
 	if (!a.main_known) {
 		snprintf(why, wn, "the compositor on %s did not state its main_device", socket);
 		goto out;
+	}
+	if (driver && dn) {
+		char *drv = card_pick_driver_of_chardev("/sys", major(a.main), minor(a.main));
+
+		snprintf(driver, dn, "%s", drv ? drv : "");
+		g_free(drv);
 	}
 	if (!node_of_device(a.main, out, n)) {
 		/* ⚠ A display-only card (simpledrm, a KMS-only panel) has no render node. */

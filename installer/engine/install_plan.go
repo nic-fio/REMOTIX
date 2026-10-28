@@ -89,6 +89,10 @@ func InstallPlan(prof *ProfileV, rap *Report, cat *Catalog, env *Environment, o 
 		} else {
 			pn.Declared = append(pn.Declared, T("np.groups", strings.Join(groups, ", ")))
 		}
+		// §11.37 addendum: several graphics cards ⇒ which one the desktop gets, and why (one card: silent)
+		if t := DesktopCardsText(env); t != "" {
+			pn.Declared = append(pn.Declared, t)
+		}
 		// the chosen port (§6.4: the defaults in /usr, the choices in /etc): remotix.service reads it
 		// from /etc/remotix/remotix.conf.d/*.conf. Only if it is not the stock one
 		if o.Porta != 7447 {

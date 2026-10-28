@@ -417,6 +417,9 @@ DesktopSession desktop_session(void);
 /* The choice in words, with the why — for the server's startup line. */
 const char *session_desktop_explain(void);
 
+/* ⭐ 1.5: «XFCE», «LXQt», «Plasma», «GNOME» — for the log */
+const char *session_desktop_name(void);
+
 /*
  * ⭐ PHASE 14 — THE FAMILY, not the desktop: true on XFCE **and** on LXQt.
  *

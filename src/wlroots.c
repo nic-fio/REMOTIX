@@ -161,6 +161,7 @@
  *     skipped for that frame, saying so.
  */
 #include "wlroots.h"
+#include "card_pick.h"
 #include "vulkanvideo.h"
 
 #include "shape.h"
@@ -1085,35 +1086,22 @@ static char *node_from_device(dev_t d)
 
 /*
  * ⚠ THE FALLBACK, when the compositor does not say its node (v < 4): the SAME
- *   rule with which `session.c` chooses `WLR_RENDER_DRM_DEVICE` — the first
- *   openable `renderD*`, in name order.  ⛔ A different rule here would mean
- *   allocating on the other card exactly on the day the nodes swap.
+ *   rule with which `session.c` chooses `WLR_RENDER_DRM_DEVICE` — one function,
+ *   `card_pick_desktop()` (`card_pick.h`): the BIOS primary card if it can draw,
+ *   else the capable card with the lowest PCI address.  ⛔ A different rule here
+ *   would mean allocating on the other card exactly on the day the nodes swap.
+ *   If NO card can draw (labwc is on pixman) the node is still needed for the
+ *   buffer: the first openable one in the same order, without the drawing test.
  */
 static char *node_as_session(void)
 {
-	g_autoptr(GDir) dri = g_dir_open("/dev/dri", 0, NULL);
-	const char *entry;
-	g_autofree char *first = NULL;
+	card_pick_how how;
+	g_autofree char *story = NULL;
+	char *n = card_pick_desktop(&how, &story);
 
-	if (!dri)
-		return NULL;
-	while ((entry = g_dir_read_name(dri))) {
-		g_autofree char *fpath = NULL;
-		int fd;
-
-		if (!g_str_has_prefix(entry, "renderD"))
-			continue;
-		fpath = g_build_filename("/dev/dri", entry, NULL);
-		fd = open(fpath, O_RDWR | O_CLOEXEC);
-		if (fd < 0)
-			continue;
-		close(fd);
-		if (!first || g_strcmp0(entry, first) < 0) {
-			g_free(first);
-			first = g_strdup(entry);
-		}
-	}
-	return first ? g_build_filename("/dev/dri", first, NULL) : NULL;
+	if (n)
+		return n;
+	return card_pick("/dev/dri", "/sys/class/drm", NULL, &how, &story);
 }
 
 /* --- the slabs ------------------------------------------------------------ */
@@ -2287,7 +2275,7 @@ bool wlr_ask_card(WlrStage *p, GError **mistake)
 	if (!p->node) {
 		p->node = node_as_session();
 		come = "⚠ NOT stated by the compositor: taken with the rule of `session.c` "
-		       "(the first openable renderD*), the same as WLR_RENDER_DRM_DEVICE";
+		       "(BIOS primary card, else lowest PCI address), the same as WLR_RENDER_DRM_DEVICE";
 	}
 	if (!p->node) {
 		g_set_error(mistake, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
