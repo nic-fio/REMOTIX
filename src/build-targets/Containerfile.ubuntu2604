@@ -27,3 +27,12 @@ WORKDIR /albero/src
 RUN apt-get update && apt-get install -y --no-install-recommends \
         debhelper dh-apparmor dpkg-dev fakeroot lintian binutils \
     && rm -rf /var/lib/apt/lists/*
+
+# --- PIANO «Correzione B»: what OUR labwc (labwc 0.9.3 + a patched, static wlroots 0.19.2, built by
+#     packaging/labwc-ospite/build.sh from tarballs) needs on Ubuntu 26.04: the Build-Depends that
+#     build-deb.sh adds to debian/control for this target.  Another layer at the end.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        meson patch hwdata wayland-protocols libegl-dev libgles-dev libinput-dev \
+        libpixman-1-dev libseat-dev libudev-dev libdisplay-info-dev libxml2-dev \
+        libcairo2-dev libpango1.0-dev libpng-dev \
+    && rm -rf /var/lib/apt/lists/*

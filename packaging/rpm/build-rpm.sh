@@ -61,14 +61,14 @@ build_one()
 		|| { echo "$b package=NO remotix-firewalld.xml is not valid XML" | tee "$u/outcome.txt"; return 1; }
 	tar -C "$TREE" --transform "s,^,remotix-$VER/," \
 		--exclude='*.o' --exclude='src/remotix' --exclude='*-client-protocol.h' --exclude='*-protocol.c' \
-		-czf "$workdir/SOURCES/remotix-$VER.tar.gz" src benches/rcp packaging/rpm THIRD-PARTY-LICENSES LICENSE.md
-	# ⭐ DECISIONI §10.43: RHEL / Alma 10 only — the upstream source of OUR labwc (Source1),
-	#    fetched once and verified at every build (sha256 + Fedora's sha512)
-	if [ "$b" = alma10 ]; then
+		-czf "$workdir/SOURCES/remotix-$VER.tar.gz" src benches/rcp packaging/rpm packaging/labwc-ospite THIRD-PARTY-LICENSES LICENSE.md
+	# ⭐ PIANO «Correzione B»: Fedora 44, Alma 10, Tumbleweed — the upstream sources of OUR labwc
+	#    (Source1 labwc, Source2 wlroots), fetched once and verified at every build (sha256)
+	if [ "$b" = fedora44 ] || [ "$b" = alma10 ] || [ "$b" = tumbleweed ]; then
 		LABWC_SOURCES=${LABWC_SOURCES:-$TREE/costruzione-uscita/labwc-sources}
-		"$HERE/labwc/fetch.sh" "$LABWC_SOURCES" ||
+		"$HERE/../labwc-ospite/fetch.sh" "$LABWC_SOURCES" ||
 			{ echo "$b package=NO the labwc source" | tee "$u/outcome.txt"; return 1; }
-		install -m 0644 "$LABWC_SOURCES"/labwc-*.tar.gz "$workdir/SOURCES/"
+		install -m 0644 "$LABWC_SOURCES"/labwc-*.tar.gz "$LABWC_SOURCES"/wlroots-*.tar.gz "$workdir/SOURCES/"
 	fi
 	cp "$HERE/remotix.spec" "$workdir/SPECS/"
 
@@ -99,7 +99,7 @@ build_one()
 		rm -rf /work/estratto; mkdir /work/estratto; cd /work/estratto
 		rpm2cpio "$p" | cpio -idm --quiet
 		ldd usr/libexec/remotix/remotix >/work/ldd.txt 2>&1
-		# ⭐ §10.43 (Alma): our labwc — the version, and no library missing
+		# ⭐ our labwc (Fedora, Alma, Tumbleweed) — the version, and no library missing
 		[ -e usr/lib/remotix/labwc ] && { usr/lib/remotix/labwc --version; ldd usr/lib/remotix/labwc; } >/work/ldd-labwc.txt 2>&1
 		# R13: the bench-function sentence NOT in the package binary, and YES
 		# in an rcp.o with BENCH_ON 1 (the positive check: without it, «not
@@ -125,8 +125,8 @@ build_one()
 
 	grep -q 'not found' "$u/ldd.txt" && note="$note ldd:not-found"
 	grep -qE 'ngtcp2|nghttp3' "$u/ldd.txt" && note="$note ldd:quic-dinamiche"
-	if [ "$b" = alma10 ]; then
-		if grep -q '^labwc ' "$u/ldd-labwc.txt" 2>/dev/null && ! grep -q 'not found' "$u/ldd-labwc.txt"; then
+	if [ "$b" = fedora44 ] || [ "$b" = alma10 ] || [ "$b" = tumbleweed ]; then
+		if grep -q '^labwc ' "$u/ldd-labwc.txt" 2>/dev/null && ! grep -qE 'not found|libwlroots' "$u/ldd-labwc.txt"; then
 			note="$note labwc:verde($(head -1 "$u/ldd-labwc.txt" | cut -d' ' -f2))"
 		else
 			note="$note labwc:ROSSO"

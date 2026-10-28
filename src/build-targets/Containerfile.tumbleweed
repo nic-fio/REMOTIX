@@ -20,3 +20,13 @@ RUN sh /usr/local/bin/quic-static.sh
 ENV LIBRARY_PATH=/usr/local/lib \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 WORKDIR /albero/src
+
+# --- PIANO «Correzione B»: what OUR labwc (labwc 0.9.3 + a patched, static wlroots 0.19.2, built by
+#     packaging/labwc-ospite/build.sh from tarballs) needs to be built on Tumbleweed.  The BuildRequires of
+#     packaging/rpm/remotix.spec.  A layer AT THE END: the ones above stay cached.
+RUN zypper -n install --no-recommends meson patch "pkgconfig(hwdata)" \
+        "pkgconfig(wayland-server)" "pkgconfig(wayland-protocols)" "pkgconfig(cairo)" \
+        "pkgconfig(pangocairo)" "pkgconfig(libinput)" "pkgconfig(libxml-2.0)" \
+        "pkgconfig(pixman-1)" "pkgconfig(libpng16)" "pkgconfig(egl)" "pkgconfig(glesv2)" \
+        "pkgconfig(libseat)" "pkgconfig(libudev)" "pkgconfig(libdisplay-info)" "pkgconfig(xkbcommon)" \
+    && zypper -n clean -a

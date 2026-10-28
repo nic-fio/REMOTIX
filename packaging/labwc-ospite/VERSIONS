@@ -1,0 +1,12 @@
+# VERSIONS — OUR labwc that hosts KWin >= 6.5 (PIANO.md «Correzione B»), pinned.
+# labwc 0.9.3 + wlroots 0.19.2 + our patch (wlroots-0.19.2-remotix-presented-root.patch), wlroots
+# linked STATICALLY into the labwc binary, installed as /usr/lib/remotix/labwc and used ONLY to
+# host the nested KWin (src/kwin.c, `make LABWC=/usr/lib/remotix/labwc`).  XFCE and LXQt keep
+# using the distribution's labwc.  Built by Ubuntu 26.04, Fedora 44, Alma 10, Tumbleweed, Arch.
+#
+# name version tarball sha256 url
+# · labwc: GitHub's archive of the annotated tag (labwc publishes no tarball and signs nothing),
+#   fetched on 28 Oct 2026.
+# · wlroots: the official release tarball of gitlab.freedesktop.org, fetched on 28 Oct 2026.
+labwc 0.9.3 labwc-0.9.3.tar.gz 38d273faa4e021b9f99e1bf1a5f4bf881cc6a592e00c7b3426b37c0a0b67d126 https://github.com/labwc/labwc/archive/refs/tags/0.9.3.tar.gz
+wlroots 0.19.2 wlroots-0.19.2.tar.gz 09a0a8d60104c8b0772fee4f60ba76a89aed7e59dff7659d00960fba06bdf267 https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/0.19.2/downloads/wlroots-0.19.2.tar.gz

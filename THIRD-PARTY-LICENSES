@@ -6,8 +6,9 @@ those licences, with their full texts, for every third-party component that is
 INCORPORATED into what REMOTIX distributes:
 
   * the remotix package (/usr/libexec/remotix/remotix and /usr/share/remotix/page.html),
-    and, in the RHEL / Alma 10 package only, the separate program /usr/lib/remotix/labwc
-    (labwc: ITS OWN licence, GPL-2.0, applies to it, not REMOTIX's - see its entry);
+    and, in the Ubuntu 26.04, Fedora 44, RHEL / Alma 10, Tumbleweed and Arch packages only, the
+    separate program /usr/lib/remotix/labwc (labwc with wlroots linked in: labwc has ITS OWN
+    licence, GPL-2.0, which applies to it, not REMOTIX's - see its entry);
   * the remotix-install package and the installation engine inside the .run file.
 
 The libraries of the distribution that REMOTIX uses at run time (OpenSSL, GLib,
@@ -21,9 +22,9 @@ Contents:
     libopus 1.5.2 (WebAssembly, inside the web page)                BSD-3-Clause
     Emscripten 4.0.15 system libraries (with musl libc)             MIT / NCSA, MIT
     Wayland protocol definitions (10 files)                         MIT, HPND-style, LGPL-2.1-or-later
-  Separate program, RHEL / Alma 10 package only (/usr/lib/remotix/labwc):
-    labwc 0.8.4                                                     GPL-2.0-only (2 files LGPL-2.0-or-later)
-    (it links EPEL's wlroots 0.18, MIT: not shipped, text for reference)
+  Separate program, Ubuntu 26.04 / Fedora 44 / Alma 10 / Tumbleweed / Arch packages only (/usr/lib/remotix/labwc):
+    labwc 0.9.3                                                     GPL-2.0-only (2 files LGPL-2.0-or-later)
+    wlroots 0.19.2 (patched, statically linked into that binary)     MIT
   Installation engine (remotix-install):
     Go 1.25.14 (standard library and runtime)                         BSD-3-Clause
     17 Go modules (Bubble Tea, Lip Gloss, godbus, ...)               MIT, BSD-2-Clause, BSD-3-Clause
@@ -1233,25 +1234,28 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 ==============================================================================
-== labwc 0.8.4
-   Used for:  RHEL / Alma 10 only: the screenless compositor that hosts the nested KWin (KDE: the desktop takes the window's size at reattach); the separate program /usr/lib/remotix/labwc
+== labwc 0.9.3
+   Used for:  Ubuntu 26.04, Fedora 44, RHEL / Alma 10, Tumbleweed and Arch only: the screenless compositor that hosts the nested KWin >= 6.5 (KDE: the desktop takes the window's size at reattach); the separate program /usr/lib/remotix/labwc
    Licence:   GPL-2.0-only (two files LGPL-2.0-or-later, see below)
-   Text from: LICENSE of labwc at tag 0.8.4 (https://github.com/labwc/labwc)
+   Text from: LICENSE of labwc at tag 0.9.3 (https://github.com/labwc/labwc)
 ------------------------------------------------------------------------------
 
-ONLY IN THE RHEL / ALMA 10 PACKAGE (EPEL 10 has no labwc; the other distributions use their own).
-labwc is a SEPARATE PROGRAM shipped there unmodified, at /usr/lib/remotix/labwc (the invisible
-compositor that hosts KWin, DECISIONS.md §10.43).  It is not linked with REMOTIX: REMOTIX only
+ONLY IN THE UBUNTU 26.04, FEDORA 44, RHEL / ALMA 10, TUMBLEWEED AND ARCH PACKAGES (the other
+distributions, and XFCE and LXQt everywhere, use the distribution's own labwc).
+labwc is a SEPARATE PROGRAM shipped there, at /usr/lib/remotix/labwc, unmodified (its wlroots, below,
+carries a small patch of ours); it is the invisible compositor that hosts KWin (DECISIONS.md §10.43,
+PIANO.md «Correzione B»).  It is not linked with REMOTIX: REMOTIX only
 starts it.  REMOTIX's licence (LICENSE.md) does NOT apply to it: you may use, study, modify and
 redistribute labwc under the terms of the GNU General Public License version 2 below.
 
 The exact corresponding source of that binary is published with each release: inside the .run
-file (source/labwc/) and next to it (remotix-<version>-labwc-source.tar.gz): the upstream tarball
-labwc-0.8.4.tar.gz as released, with no patches, and the build recipe (packaging/rpm/labwc/ and
-packaging/rpm/remotix.spec of the REMOTIX repository).  The Alma source rpm carries it too.
+file (source/labwc/) and next to it (remotix-<version>-labwc-source.tar.gz): the upstream tarballs
+labwc-0.9.3.tar.gz and wlroots-0.19.2.tar.gz as released, our wlroots patch, and the build recipe
+(packaging/labwc-ospite/ and the packaging files of the REMOTIX repository).  The source rpms
+carry the tarballs too.
 
-Two files of labwc 0.8.4 (src/img/img-xpm.c and src/img/xpm-color-table.h, adapted from
-gdk-pixbuf / GTK) are under LGPL-2.0-or-later: "or later" lets the text of the GNU Lesser
+Two files of labwc 0.9.3 (src/img/img-xpm.c, adapted from gdk-pixbuf / GTK, and
+src/common/xcolor-table.h, generated from X11's rgb.txt) are under LGPL-2.0-or-later: "or later" lets the text of the GNU Lesser
 General Public License version 2.1, printed in full in this file in the entry «Wayland protocol
 zkde-screencast-unstable-v1», apply.
 
@@ -1598,10 +1602,10 @@ library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.
 
 ==============================================================================
-== wlroots 0.18 (EPEL 10)
-   Used for:  the library our labwc links on RHEL / Alma 10; NOT shipped by REMOTIX: the package manager installs it from EPEL (wlroots, libwlroots-0.18.so), linked dynamically — its text is here for reference
+== wlroots 0.19.2
+   Used for:  the library inside our labwc (/usr/lib/remotix/labwc), linked STATICALLY, with a patch of ours (packaging/labwc-ospite/wlroots-0.19.2-remotix-presented-root.patch, a few lines in types/scene/surface.c); the corresponding source is published with labwc's (see the entry «labwc 0.9.3»)
    Licence:   MIT
-   Text from: LICENSE of wlroots at tag 0.18.2 (https://gitlab.freedesktop.org/wlroots/wlroots)
+   Text from: LICENSE of wlroots at tag 0.19.2 (https://gitlab.freedesktop.org/wlroots/wlroots)
 ------------------------------------------------------------------------------
 
 Copyright (c) 2017, 2018 Drew DeVault
@@ -1625,6 +1629,36 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+wlroots also contains its cursor-theme loader (xcursor/xcursor.c and neighbours, from the X.Org
+libXcursor), under this licence:
+
+Copyright © 2002 Keith Packard
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice (including the
+next paragraph) shall be included in all copies or substantial
+portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+The code that wayland-scanner generates from the protocol definitions, compiled into wlroots and
+labwc, carries the licences of those definitions (MIT, HPND-style, LGPL-2.1-or-later): their texts
+are in the entries «Wayland protocol …» of this file.
 
 ==============================================================================
 == Go 1.25.14 (standard library and runtime)

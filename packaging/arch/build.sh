@@ -93,7 +93,7 @@ git -C "$TREE" archive "$COMMIT" packaging/arch/PKGBUILD packaging/arch/remotix.
 [ -n "${RX_REVISION:-}" ] && sed -i "s/^pkgrel=.*/pkgrel=$RX_REVISION/" "$WORKDIR/PKGBUILD"
 sed -i "s/^pkgver=.*/pkgver=$PKGVER/" "$WORKDIR/PKGBUILD"
 git -C "$TREE" archive --format=tar.gz --prefix="remotix-$PKGVER/" \
-	-o "$WORKDIR/remotix-$PKGVER.tar.gz" "$COMMIT" src benches/rcp packaging/arch THIRD-PARTY-LICENSES LICENSE.md
+	-o "$WORKDIR/remotix-$PKGVER.tar.gz" "$COMMIT" src benches/rcp packaging/arch packaging/labwc-ospite THIRD-PARTY-LICENSES LICENSE.md
 {
 	echo "commit $COMMIT"
 	echo "tarball $(sha256sum "$WORKDIR/remotix-$PKGVER.tar.gz" | cut -d' ' -f1)  remotix-$PKGVER.tar.gz"

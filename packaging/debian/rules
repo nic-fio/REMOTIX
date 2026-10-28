@@ -26,6 +26,17 @@ R_CFLAGS := $(CFLAGS) $(CPPFLAGS) -std=gnu11 -Wall -Wextra -Wno-unused-parameter
 
 B := debian/remotix
 
+# ⭐ PIANO «Correzione B» — OUR labwc (/usr/lib/remotix/labwc: labwc + a patched, static wlroots,
+#    packaging/labwc-ospite/) to host the nested KWin >= 6.5.  Built ONLY on Ubuntu 26.04 (KWin 6.6);
+#    Debian 13 (KWin 6.3) and older Ubuntus keep the distribution's labwc, as today.
+#    The criterion is the distribution that builds it, read where the package is built (a container
+#    per target): Ubuntu (dpkg-vendor) at 26.04 or later (/etc/os-release VERSION_ID).  Not the
+#    version of kwin: it is not installed in the build container.  REMOTIX_LABWC_OSPITE=0|1 in
+#    the environment overrides it.  build-deb.sh puts the tarballs in labwc-ospite/sources and
+#    adds the extra Build-Depends to control for ubuntu2604 only.
+REMOTIX_LABWC_OSPITE ?= $(shell . /etc/os-release 2>/dev/null; if dpkg-vendor --is Ubuntu \
+  && dpkg --compare-versions "$$VERSION_ID" ge 26.04; then echo 1; else echo 0; fi)
+
 # ⭐ DECISIONS-11.md §11.50, PHASE F — the network side's user, directories, units and the 1.0 → 1.5 move.
 #    ⭐ ON by default (decided 25 Oct 2026): `REMOTIX_SPLIT=0 dpkg-buildpackage …` (src/build-targets/build-deb.sh
 #    passes it through) builds the single-process package instead.
@@ -36,6 +47,7 @@ REMOTIX_SPLIT ?= 1
 
 override_dh_auto_clean:
 	$(MAKE) -C src clean
+	rm -rf debian/labwc-build debian/labwc-root
 
 override_dh_auto_configure:
 	# nothing to configure: `make deps` checks the minimum versions
@@ -50,13 +62,25 @@ override_dh_auto_build:
 	# ⛔ R13: the package's binary does NOT have the bench feature switched on.
 	grep -qx '#define BENCH_ON 0' src/rcp.c || \
 	  { echo "⛔ src/rcp.c: BENCH_ON is not 0 — not packaging (R13)"; exit 1; }
+ifeq ($(REMOTIX_LABWC_OSPITE),1)
+	# our labwc, with the dpkg flags (hardening, -ffile-prefix-map) already in the environment
+	# (DPKG_EXPORT_BUILDFLAGS); no libwlroots must remain in its dependencies
+	JOBS=$(or $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS))),4) \
+	  BUILD_DIR=$(CURDIR)/debian/labwc-build labwc-ospite/build.sh labwc-ospite/sources $(CURDIR)/debian/labwc-root
+	# kwin.c execs OUR labwc at this exact path (build-time choice, not a switch)
+	$(MAKE) -C src all CFLAGS="$(R_CFLAGS)" LDFLAGS="$(LDFLAGS)" LABWC=/usr/lib/remotix/labwc
+else
 	$(MAKE) -C src all CFLAGS="$(R_CFLAGS)" LDFLAGS="$(LDFLAGS)"
+endif
 
 override_dh_auto_test:
 
 override_dh_auto_install:
 	install -D -m 0755 src/remotix             $(B)/usr/libexec/remotix/remotix
 	install -D -m 0644 src/page.html         $(B)/usr/share/remotix/page.html
+ifeq ($(REMOTIX_LABWC_OSPITE),1)
+	install -D -m 0755 debian/labwc-root/usr/lib/remotix/labwc $(B)/usr/lib/remotix/labwc
+endif
 	install -D -m 0644 debian/remotix.conf     $(B)/usr/share/remotix/remotix.conf
 	# LICENSE.md §8: the licences of the third-party components inside the package, with their texts
 	install -D -m 0644 THIRD-PARTY-LICENSES     $(B)/usr/share/doc/remotix/THIRD-PARTY-LICENSES

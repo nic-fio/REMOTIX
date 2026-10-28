@@ -61,6 +61,19 @@ prepare_copy() {  # prepare_copy <folder> <target>
 	cp -a "$TREE/src" "$c/remotix/src"
 	cp -a "$TREE/benches/rcp" "$c/remotix/benches/rcp"
 	cp -a "$TREE/packaging/debian" "$c/remotix/debian"
+	# ⭐ PIANO «Correzione B»: Ubuntu 26.04 builds OUR labwc (debian/rules decides by itself, here we
+	#    only supply what it needs): the recipe, the two verified tarballs, and the Build-Depends
+	cp -a "$TREE/packaging/labwc-ospite" "$c/remotix/labwc-ospite"
+	rm -rf "$c/remotix/labwc-ospite/patches-upstream"
+	if [ "$b" = ubuntu2604 ]; then
+		"$TREE/packaging/labwc-ospite/fetch.sh" "$CACHE/labwc-sources" || return 1
+		mkdir -p "$c/remotix/labwc-ospite/sources"
+		cp "$CACHE"/labwc-sources/labwc-*.tar.gz "$CACHE"/labwc-sources/wlroots-*.tar.gz "$c/remotix/labwc-ospite/sources/"
+		# what build.sh needs, verified on Ubuntu 26.04 (the last control line gets the list)
+		awk '/^               libvulkan-dev \(>= 1\.3\.274\)$/ { print $0 ","; print "               meson, patch, hwdata, wayland-protocols, libegl-dev, libgles-dev, libinput-dev,"; print "               libpixman-1-dev, libseat-dev, libudev-dev, libdisplay-info-dev, libxml2-dev,"; print "               libcairo2-dev, libpango1.0-dev, libpng-dev"; n++; next } { print } END { exit n != 1 }' \
+			"$c/remotix/debian/control" >"$c/control.new" || { echo "⛔ debian/control: no Build-Depends line to extend"; return 1; }
+		mv "$c/control.new" "$c/remotix/debian/control"
+	fi
 	cp "$TREE/THIRD-PARTY-LICENSES" "$c/remotix/"
 	# the licence text (DECISIONI §10.39) goes into debian/copyright, whose last line is
 	#   «License: LicenseRef-REMOTIX»: DEP-5 continuation lines, « .» for an empty one
@@ -85,7 +98,7 @@ EOF
 }
 
 build_in() {  # build_in <copied> <bitmap> <log>
-	podman run --rm --userns=keep-id -e REMOTIX_SPLIT="${REMOTIX_SPLIT:-1}" -v "$1:/lavoro" -w /lavoro/remotix "$2" \
+	podman run --rm --userns=keep-id -e REMOTIX_SPLIT="${REMOTIX_SPLIT:-1}" -e DEB_BUILD_OPTIONS -v "$1:/lavoro" -w /lavoro/remotix "$2" \
 		sh -c 'dpkg-buildpackage -b -us -uc' >"$3" 2>&1
 }
 

@@ -1,0 +1,23 @@
+labwc-ospite — OUR labwc, only to host the nested KWin >= 6.5
+=============================================================
+
+Why: KWin >= 6.5 draws a special black pixel as the root of its window and puts the content in
+subsurfaces; wlroots never reports that root as «presented», so KWin gives its clients a clock at 0
+and Firefox thinks its window is covered and stops painting.  The fix is a few lines in wlroots
+(types/scene/surface.c, in frame_done).  So that we do not depend on the wlroots of each
+distribution (0.18 / 0.19 / 0.20, different ABI), we build a labwc 0.9.3 with wlroots 0.19.2
+(+ the patch) linked STATICALLY, installed as /usr/lib/remotix/labwc.  src/kwin.c uses it only for
+KDE (`make all LABWC=/usr/lib/remotix/labwc`); XFCE and LXQt keep the distribution's labwc.
+Details: PIANO.md «Correzione B» and DECISIONI §10.43 (the Alma labwc this replaces).
+
+Files
+  VERSIONS    labwc and wlroots, pinned, with sha256
+  fetch.sh    fetch.sh DIR           downloads the tarballs into DIR and verifies them
+  build.sh    build.sh SRCDIR DESTDIR  extracts, patches, builds, installs usr/lib/remotix/labwc
+  wlroots-0.19.2-remotix-presented-root.patch   the patch used here
+  patches-upstream/   the same fix for wlroots 0.18, 0.19 and 0.20: for the upstream reports
+
+Built (see the packaging): Ubuntu 26.04 (deb), Fedora 44, Alma 10, Tumbleweed (rpm), Arch.
+NOT on Debian 13 and Leap 16 (KWin < 6.5: they work as before).
+Licences: labwc GPL-2.0 (corresponding source published with the release), wlroots MIT
+(THIRD-PARTY-LICENSES).

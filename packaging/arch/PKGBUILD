@@ -50,9 +50,15 @@ pkgrel=1
 pkgdesc='The Linux desktop in the browser (server: GNOME, KDE, XFCE, LXQt on Wayland)'
 arch=('x86_64')
 url='https://github.com/nic-fio/REMOTIX'
-license=('LicenseRef-REMOTIX')
+# ⭐ PIANO «Correzione B»: the package also carries OUR labwc (/usr/lib/remotix/labwc, GPL-2.0-only;
+#   wlroots, MIT, linked in statically): a separate program, REMOTIX's terms do not apply to it.
+license=('LicenseRef-REMOTIX' 'GPL-2.0-only' 'MIT')
 _ngtcp2=1.25.0
 _nghttp3=1.18.0
+# ⭐ OUR labwc (hosts the nested KWin >= 6.5): the versions and sha256 are those of
+#    packaging/labwc-ospite/VERSIONS (build.sh checks them again).
+_labwc=0.9.3
+_wlroots=0.19.2
 depends=(
 	glibc
 	systemd                                   # logind, user manager, tmpfiles
@@ -78,7 +84,11 @@ depends=(
 	vulkan-icd-loader libvulkan.so
 	libei libei.so                            # >= 1.1: input on GNOME and KDE
 	libxkbcommon libxkbcommon.so
-	wayland libwayland-client.so
+	wayland libwayland-client.so libwayland-server.so
+	# ⭐ what OUR labwc links (wlroots is inside it, static): `ldd` of the binary built here
+	libinput libinput.so seatd libseat.so libdisplay-info libdisplay-info.so
+	libdrm libdrm.so pixman libpixman-1.so libxml2 libxml2.so libpng libpng16.so
+	cairo libcairo.so pango libpango-1.0.so libpangocairo-1.0.so
 	mesa                                      # libgbm.so.1 (mesa does not declare it)
 	# ⭐ Not linked, but without them the desktop does not come up (§4.6, §11.1):
 	#    XFCE and LXQt run under labwc, which no Arch group brings;
@@ -106,7 +116,9 @@ depends=(
 	wireplumber
 	pipewire-pulse
 )
-makedepends=(cmake ninja pkgconf vulkan-headers) # wayland-scanner: from `wayland`, already in depends; vulkan-headers: phase 19
+# wayland-scanner: from `wayland`, already in depends; vulkan-headers: phase 19; the rest: OUR labwc
+# (meson, wayland-protocols, hwdata; patch comes with base-devel; the libraries are in depends)
+makedepends=(cmake ninja pkgconf vulkan-headers meson wayland-protocols hwdata)
 optdepends=(
 	'vulkan-radeon: Vulkan Video encoding on AMD GPUs (RADV), phase 19'
 	'nvidia-utils: Vulkan Video encoding on NVIDIA GPUs with the proprietary driver'
@@ -123,12 +135,18 @@ source=(
 	"remotix-$pkgver.tar.gz"
 	"https://github.com/ngtcp2/ngtcp2/releases/download/v$_ngtcp2/ngtcp2-$_ngtcp2.tar.xz"
 	"https://github.com/ngtcp2/nghttp3/releases/download/v$_nghttp3/nghttp3-$_nghttp3.tar.xz"
+	"labwc-$_labwc.tar.gz::https://github.com/labwc/labwc/archive/refs/tags/$_labwc.tar.gz"
+	"https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/$_wlroots/downloads/wlroots-$_wlroots.tar.gz"
 )
+# the two labwc tarballs are not unpacked by makepkg: packaging/labwc-ospite/build.sh does it
+noextract=("labwc-$_labwc.tar.gz" "wlroots-$_wlroots.tar.gz")
 # ⚠ The repository tarball changes at every commit: build.sh writes the
 #   commit and its sha256 next to the package (sorgente.txt).
 sha256sums=('SKIP'
             '2a34d2484ba17847a5d11965704e9dd0fac4c6d8efc75ffe1ec7de66d8c6b6fb'
-            'aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19')
+            'aad782c23d3f01bd4bb52c8bac7a553b631ef8115fd1612703df6183449fef19'
+            '38d273faa4e021b9f99e1bf1a5f4bf881cc6a592e00c7b3426b37c0a0b67d126'
+            '09a0a8d60104c8b0772fee4f60ba76a89aed7e59dff7659d00960fba06bdf267')
 
 _quic=quic
 
@@ -152,6 +170,11 @@ build() {
 		return 1
 	fi
 
+	# ── OUR labwc: labwc + a patched wlroots linked statically (the makepkg flags are in the environment);
+	#    the binary goes to $srcdir/labwc-root/usr/lib/remotix/labwc
+	BUILD_DIR="$srcdir/labwc-build" "$srcdir/remotix-$pkgver/packaging/labwc-ospite/build.sh" \
+		"$srcdir" "$srcdir/labwc-root"
+
 	# ── REMOTIX.  Our headers and .a files BEFORE the system ones
 	#    (Arch's `libngtcp2` may be there, curl brings it): CPATH and
 	#    LIBRARY_PATH come before the system folders.
@@ -166,13 +189,19 @@ build() {
 	export CFLAGS="$CFLAGS -std=gnu11 -Wall -Wextra -Wno-unused-parameter"
 	make deps
 	make clean
-	make all
+	# kwin.c execs OUR labwc at this exact path (build-time choice, not a switch)
+	make all LABWC=/usr/lib/remotix/labwc
 }
 
 check() {
 	cd "remotix-$pkgver/src"
 	# R13: bench functions switched off in the package binary (§4.5)
 	grep -q '^#define BENCH_ON 0' rcp.c
+	# our labwc: no libwlroots (it is inside), and no missing library
+	if ldd "$srcdir/labwc-root/usr/lib/remotix/labwc" | grep -E 'wlroots|not found'; then
+		echo "⛔ our labwc asks for libwlroots, or for missing libraries" >&2
+		return 1
+	fi
 	# ngtcp2/nghttp3 really inside, and no missing library
 	if ldd ./remotix | grep -E 'ngtcp2|nghttp3|not found'; then
 		echo "⛔ the binary asks for dynamic ngtcp2/nghttp3, or for missing libraries" >&2
@@ -183,6 +212,7 @@ check() {
 package() {
 	local a="$srcdir/remotix-$pkgver/packaging/arch" s="$srcdir/remotix-$pkgver/src"
 	install -Dm755 "$s/remotix"          "$pkgdir/usr/lib/remotix/remotix"
+	install -Dm755 "$srcdir/labwc-root/usr/lib/remotix/labwc" "$pkgdir/usr/lib/remotix/labwc"
 	install -Dm644 "$s/page.html"      "$pkgdir/usr/share/remotix/page.html"
 	install -Dm644 "$srcdir/remotix-$pkgver/LICENSE.md" "$pkgdir/usr/share/licenses/remotix/LICENSE.md"
 	install -Dm644 "$srcdir/remotix-$pkgver/THIRD-PARTY-LICENSES" \

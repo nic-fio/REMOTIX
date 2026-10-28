@@ -23,3 +23,10 @@ RUN sh /usr/local/bin/quic-static.sh
 ENV LIBRARY_PATH=/usr/local/lib \
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 WORKDIR /albero/src
+
+# --- PIANO «Correzione B»: what OUR labwc (labwc 0.9.3 + a patched, static wlroots 0.19.2, built by
+#     packaging/labwc-ospite/build.sh from tarballs) needs on Arch: the makedepends of the PKGBUILD.
+#     A layer at the end.  (patch: base-devel; EGL/GLES: mesa; libudev: systemd-libs.)
+RUN pacman -S --noconfirm --needed \
+        meson wayland-protocols libinput cairo pango libxml2 pixman libpng seatd libdisplay-info hwdata \
+    && pacman -Scc --noconfirm

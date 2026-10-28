@@ -20,8 +20,10 @@
 #   5. the .RUN: the installer/run.sh header (with the version and the payload's sha256 written
 #      inside) and below it the tar.gz with the engine, LICENSE.md, THIRD-PARTY-LICENSES and packages/<target>/
 #      (product + engine for each distribution); next to it its .sha256, to be published on the website.
-#      ⭐ DECISIONI §10.43 (GPL-2.0): the Alma package carries OUR labwc; its exact corresponding source
-#      (the upstream tarball, unmodified, and the recipe: packaging/rpm/labwc/ and remotix.spec) goes
+#      ⭐ PIANO «Correzione B» (GPL-2.0, replaces DECISIONI §10.43's Alma labwc): the Ubuntu 26.04,
+#      Fedora 44, Alma 10, Tumbleweed and Arch packages carry OUR labwc (labwc 0.9.3 with a patched,
+#      static wlroots 0.19.2); its exact corresponding source (the two upstream tarballs, unmodified,
+#      and the recipe: packaging/labwc-ospite/ with the patch, and the packaging files) goes
 #      INSIDE the .run (source/labwc/) and NEXT TO it, remotix-X.Y.Z-R-labwc-source.tar.gz (+ .sha256),
 #      to be published with every release.
 #
@@ -83,7 +85,7 @@ TPL=$TREE/THIRD-PARTY-LICENSES
 	sed -n 's/^NGTCP2_VER=${NGTCP2_VER:-v\(.*\)}$/ngtcp2 \1/p; s/^NGHTTP3_VER=${NGHTTP3_VER:-v\(.*\)}$/nghttp3 \1/p' \
 		"$TREE/src/build-targets/quic-static.sh"
 	sed -n 's/^OPUS_VER=/libopus /p' "$TREE/src/opus-wasm/build.sh"
-	awk '$1 == "labwc" { print $1, $2 }' "$TREE/packaging/rpm/labwc/VERSIONS"
+	awk '$1 !~ /^#/ && NF { print $1, $2 }' "$TREE/packaging/labwc-ospite/VERSIONS"
 } | sort -u | while read -r c; do
 	grep -qxF "== $c" "$TPL" || { echo "⛔ THIRD-PARTY-LICENSES does not name «$c»"; exit 1; }
 done
@@ -135,14 +137,17 @@ if [ $arch = 1 ]; then
 	mkdir -p "$C/packages/arch"
 	cp "$P/arch"/remotix-"$V"-"$R"-x86_64.pkg.tar.zst "$M"/remotix-install-"$V"-"$R"-x86_64.pkg.tar.zst "$C/packages/arch/"
 fi
-# ⭐ §10.43: the corresponding source of the labwc inside the Alma package, in the .run and next to it
-if [[ " ${rpm[*]} " == *" alma10 "* ]]; then
+# ⭐ PIANO «Correzione B»: the corresponding source of OUR labwc (inside the Ubuntu 26.04, Fedora 44,
+#    Alma 10, Tumbleweed and Arch packages), in the .run and next to it
+if [[ " $TARGETS " =~ " ubuntu2604 " || " $TARGETS " =~ " fedora44 " || " $TARGETS " =~ " alma10 " \
+	|| " $TARGETS " =~ " tumbleweed " || " $TARGETS " =~ " arch " ]]; then
 	SL=$TREE/costruzione-uscita/labwc-sources
-	"$TREE/packaging/rpm/labwc/fetch.sh" "$SL" | tee -a "$REG"
+	"$TREE/packaging/labwc-ospite/fetch.sh" "$SL" | tee -a "$REG"
 	mkdir -p "$C/source/labwc/recipe"
-	cp "$SL"/labwc-*.tar.gz "$C/source/labwc/"
-	cp "$TREE/packaging/rpm/labwc/VERSIONS" "$TREE/packaging/rpm/labwc/fetch.sh" \
-		"$TREE/packaging/rpm/remotix.spec" "$C/source/labwc/recipe/"
+	cp "$SL"/labwc-*.tar.gz "$SL"/wlroots-*.tar.gz "$C/source/labwc/"
+	cp -a "$TREE/packaging/labwc-ospite/." "$C/source/labwc/recipe/"
+	cp "$TREE/packaging/rpm/remotix.spec" "$TREE/packaging/debian/rules" "$TREE/packaging/arch/PKGBUILD" \
+		"$C/source/labwc/recipe/"
 	SRC_LABWC=$OUTPUT/remotix-$VERSION-labwc-source.tar.gz
 	mkdir -p "$OUTPUT"
 	tar --sort=name --owner=0 --group=0 --numeric-owner --mtime="@$(git -C "$TREE" log -1 --format=%ct)" \
@@ -170,6 +175,6 @@ REMOTIX $VERSION — ready: $RUN ($(du -h "$RUN" | cut -f1))
   sha256 (to be published on the website, over HTTPS, next to the file):
       $(cut -d' ' -f1 "$RUN.sha256")
   install with:  sudo sh $(basename "$RUN")
-  labwc's source (GPL-2.0, Alma package; publish it with the .run): ${SRC_LABWC:-none}
+  labwc's source (GPL-2.0, Ubuntu/Fedora/Alma/Tumbleweed/Arch packages; publish it with the .run): ${SRC_LABWC:-none}
   the release log: $REG
 EOF

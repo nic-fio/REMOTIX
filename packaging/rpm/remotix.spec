@@ -39,9 +39,15 @@
 
 %global ngtcp2_ver  1.25.0
 %global nghttp3_ver 1.18.0
-# ⭐ DECISIONI §10.43: our labwc, RHEL / Alma 10 only — the version of packaging/rpm/labwc/VERSIONS
-#   (%%build stops if they differ)
-%global labwc_ver   0.8.4
+# ⭐ PIANO «Correzione B»: OUR labwc, to host the nested KWin >= 6.5 — Fedora 44, RHEL / Alma 10 and
+#   Tumbleweed (not Leap 16: KWin 6.4).  labwc and wlroots (static, patched) as in
+#   packaging/labwc-ospite/VERSIONS (%%build stops if they differ).  On Alma it REPLACES the
+#   labwc 0.8.4 of DECISIONI §10.43.
+%global labwc_ver    0.9.3
+%global wlroots_ver  0.19.2
+%if 0%{?fedora} || 0%{?rhel} || 0%{?suse_version} >= 1699
+%global labwc_ospite 1
+%endif
 
 # openSUSE keeps the packages' PAM files in /usr/lib/pam.d (§4.3)
 %if 0%{?suse_version}
@@ -62,11 +68,11 @@ Release:        %{?rx_release}%{!?rx_release:1}%{?dist}
 Summary:        This machine's desktop in the browser
 # Our own text, not a standard one (DECISIONI §10.39): free for personal and non-profit use,
 # source readable, no modifications, no redistribution. Its text is LICENSE.md.
-%if 0%{?rhel}
-# ⭐ DECISIONI §10.43: on RHEL / Alma 10 the package also carries OUR labwc
-#   (/usr/lib/remotix/labwc), a separate program under its own licence (GPL-2.0-only; two files
-#   LGPL-2.0-or-later); REMOTIX's terms do not apply to it (LICENSE.md §8).
-License:        LicenseRef-REMOTIX AND GPL-2.0-only AND LGPL-2.0-or-later
+%if 0%{?labwc_ospite}
+# ⭐ The package also carries OUR labwc (/usr/lib/remotix/labwc), a separate program under its own
+#   licence (GPL-2.0-only; two files LGPL-2.0-or-later) with wlroots (MIT) linked in statically;
+#   REMOTIX's terms do not apply to it (LICENSE.md §8).
+License:        LicenseRef-REMOTIX AND GPL-2.0-only AND LGPL-2.0-or-later AND MIT
 %else
 License:        LicenseRef-REMOTIX
 %endif
@@ -74,11 +80,11 @@ URL:            https://github.com/nic-fio/REMOTIX
 # An archive of src/, benches/rcp/ (the twin copy that `make` compares) and
 # packaging/rpm/, made by `build-rpm.sh`.
 Source0:        %{name}-%{version}.tar.gz
-%if 0%{?rhel}
-# ⭐ DECISIONI §10.43: EPEL 10 has wlroots 0.18 but NO labwc ⇒ the Alma package builds labwc
-#   %%{labwc_ver} (the last release for wlroots 0.18), unmodified, from the upstream tarball
-#   pinned and verified by packaging/rpm/labwc/ (fetch.sh); the source rpm carries it.
+%if 0%{?labwc_ospite}
+# ⭐ OUR labwc: the two upstream tarballs, unmodified, pinned and verified by packaging/labwc-ospite/
+#   (fetch.sh, VERSIONS; the patch and build.sh are in Source0); the source rpm carries them.
 Source1:        https://github.com/labwc/labwc/archive/refs/tags/%{labwc_ver}.tar.gz#/labwc-%{labwc_ver}.tar.gz
+Source2:        https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/%{wlroots_ver}/downloads/wlroots-%{wlroots_ver}.tar.gz
 %endif
 
 ExclusiveArch:  x86_64
@@ -112,12 +118,14 @@ BuildRequires:  pkgconfig(gbm)
 #   (vulkan-loader-devel; `[M]` 1 Oct 2026: 1.4.328 on Alma 10 AppStream, 1.4.341
 #   on Fedora 44).  The minimum 1.3.274 is the Makefile's.
 BuildRequires:  pkgconfig(vulkan) >= 1.3.274
-%if 0%{?rhel}
-# ⭐ DECISIONI §10.43: OUR labwc — the BuildRequires of Fedora's labwc 0.8.4 spec (dist-git
-#   rpms/labwc fd759d1), minus what the options below switch off (Xwayland/xcb, SVG, icons/libsfdo,
-#   man pages); wlroots 0.18 from EPEL, linked dynamically.
+%if 0%{?labwc_ospite}
+# ⭐ OUR labwc (packaging/labwc-ospite/build.sh): what labwc 0.9.3 needs, minus what the options
+#   switch off (Xwayland/xcb, SVG, icons/libsfdo, man pages), plus what wlroots 0.19.2 needs for
+#   the drm + libinput backends and the gles2/pixman renderers.  wlroots is built from the
+#   tarball, static: NO BuildRequires on the distribution's wlroots.
 BuildRequires:  meson >= 0.59.0
-BuildRequires:  pkgconfig(wlroots-0.18) >= 0.18.1
+BuildRequires:  patch
+BuildRequires:  pkgconfig(hwdata)
 BuildRequires:  pkgconfig(wayland-server)
 BuildRequires:  pkgconfig(wayland-protocols)
 BuildRequires:  pkgconfig(cairo)
@@ -128,6 +136,12 @@ BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(pixman-1)
 BuildRequires:  pkgconfig(libpng16)
 BuildRequires:  pkgconfig(libdrm)
+BuildRequires:  pkgconfig(egl)
+BuildRequires:  pkgconfig(glesv2)
+BuildRequires:  pkgconfig(libseat)
+BuildRequires:  pkgconfig(libudev)
+BuildRequires:  pkgconfig(libdisplay-info)
+BuildRequires:  pkgconfig(xkbcommon)
 %endif
 # ⚠ ngtcp2 >= 1.25.0 and nghttp3: they are NOT a BuildRequires, because almost no
 #   distribution has them (§6.3).  The container builds them, STATIC ONLY, in
@@ -213,10 +227,8 @@ Recommends:     mesa-vulkan-drivers
 # ⛔ Phase 19: here were svt-av1-libs (EPEL 10) and openh264 (Cisco repository for
 #   EPEL 10), the software fallback — out.
 # ⛔ No labwc/XFCE/LXQt in RHEL/EPEL 10 (§3): no dependency to write.
-# ⭐ DECISIONI §10.43: for KDE the package carries OUR labwc, /usr/lib/remotix/labwc, built
-#   against EPEL's wlroots 0.18 (dynamic): the soname requirement rpm computes
-#   (libwlroots-0.18.so) is written here too, so the dependency on EPEL's wlroots is explicit.
-Requires:       libwlroots-0.18.so()(64bit)
+# ⭐ For KDE the package carries OUR labwc, /usr/lib/remotix/labwc (wlroots linked in statically:
+#   no dependency on EPEL's wlroots; rpm computes the sonames of the other libraries).
 #   ⇒ KDE resizes at reattach here too (DECISIONI §10.40): Alma is no longer an exception.
 # ⛔ RHEL 10 Mesa has no VA-API and EPEL lacks the Intel driver (§4.2): GPU
 #   encoding exists only with third-party repositories.
@@ -295,29 +307,26 @@ export LDFLAGS="%{?build_ldflags}"
 CFLAGS="$CFLAGS -fPIE"; LDFLAGS="$LDFLAGS -pie"
 %endif
 make clean >/dev/null
-%if 0%{?rhel}
-# ⭐ §10.43: kwin.c execs OUR labwc at this exact path (build-time choice, not a switch)
+%if 0%{?labwc_ospite}
+# ⭐ kwin.c execs OUR labwc at this exact path (build-time choice, not a switch)
 make %{?_smp_mflags} all LABWC=%{_prefix}/lib/remotix/labwc
 %else
 make %{?_smp_mflags} all
 %endif
 cd ..
 
-%if 0%{?rhel}
-# ⭐ DECISIONI §10.43: OUR labwc, unmodified (no patches), from Source1; the options cut what a
-#    screenless host of KWin does not need.  Distribution flags, PIE.
-test "$(awk '$1 == "labwc" { print $2 }' packaging/rpm/labwc/VERSIONS)" = %{labwc_ver} || \
-    { echo "⛔ packaging/rpm/labwc/VERSIONS: labwc is not %{labwc_ver}"; exit 1; }
-echo "$(awk '$1 == "labwc" { print $4 }' packaging/rpm/labwc/VERSIONS)  %{SOURCE1}" | sha256sum -c -
-rm -rf labwc-build && mkdir labwc-build
-tar -C labwc-build -xzf %{SOURCE1}
-rm -f labwc-build/labwc-%{labwc_ver}/subprojects/*.wrap
-CFLAGS="%{optflags}" LDFLAGS="%{?build_ldflags}" \
-    meson setup labwc-build/b labwc-build/labwc-%{labwc_ver} --buildtype=plain -Db_pie=true \
-    --wrap-mode=nodownload -Dxwayland=disabled -Dsvg=disabled -Dicon=disabled \
-    -Dnls=disabled -Dman-pages=disabled
-meson compile -C labwc-build/b labwc
-labwc-build/b/labwc --version
+%if 0%{?labwc_ospite}
+# ⭐ OUR labwc: labwc %%{labwc_ver} + wlroots %%{wlroots_ver} (patched, static), from Source1/Source2 by
+#    packaging/labwc-ospite/build.sh (which checks the sha256 of both against VERSIONS and applies the
+#    patch).  Distribution flags, PIE.
+test "$(awk '$1 == "labwc" { print $2 }' packaging/labwc-ospite/VERSIONS)" = %{labwc_ver} || \
+    { echo "⛔ packaging/labwc-ospite/VERSIONS: labwc is not %{labwc_ver}"; exit 1; }
+test "$(awk '$1 == "wlroots" { print $2 }' packaging/labwc-ospite/VERSIONS)" = %{wlroots_ver} || \
+    { echo "⛔ packaging/labwc-ospite/VERSIONS: wlroots is not %{wlroots_ver}"; exit 1; }
+CFLAGS="%{optflags}" LDFLAGS="%{?build_ldflags}" JOBS=%{?_smp_build_ncpus}%{!?_smp_build_ncpus:2} \
+    BUILD_DIR=$PWD/labwc-build packaging/labwc-ospite/build.sh "$(dirname %{SOURCE1})" $PWD/labwc-root
+# no libwlroots: it is inside
+if ldd labwc-root/usr/lib/remotix/labwc | grep -q wlroots; then echo "⛔ our labwc is linked to a libwlroots"; exit 1; fi
 %endif
 
 # The SELinux module, with the policy interfaces of THIS distribution.
@@ -339,9 +348,9 @@ cd ../../..
 
 %install
 install -D -m 0755 src/remotix %{buildroot}%{_libexecdir}/remotix/remotix
-%if 0%{?rhel}
-# ⛔ our labwc, private: not on PATH, no clash with a future EPEL labwc (§10.43)
-install -D -m 0755 labwc-build/b/labwc %{buildroot}%{_prefix}/lib/remotix/labwc
+%if 0%{?labwc_ospite}
+# ⛔ our labwc, private: not on PATH, no clash with the distribution's labwc
+install -D -m 0755 labwc-root/usr/lib/remotix/labwc %{buildroot}%{_prefix}/lib/remotix/labwc
 %endif
 install -D -m 0644 src/page.html %{buildroot}%{_datadir}/remotix/page.html
 # The DEFAULTS (port, options): owned by the package, an upgrade rewrites them.
@@ -527,7 +536,7 @@ fi
 %license THIRD-PARTY-LICENSES
 %dir %{_libexecdir}/remotix
 %{_libexecdir}/remotix/remotix
-%if 0%{?rhel}
+%if 0%{?labwc_ospite}
 %dir %{_prefix}/lib/remotix
 %{_prefix}/lib/remotix/labwc
 %endif
