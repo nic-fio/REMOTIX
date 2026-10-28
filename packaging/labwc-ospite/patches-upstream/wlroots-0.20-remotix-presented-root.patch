@@ -1,0 +1,17 @@
+--- a/types/scene/surface.c	2026-10-28 19:41:50.094149794 +0100
++++ b/types/scene/surface.c	2026-10-28 19:41:50.094197888 +0100
+@@ -188,6 +188,14 @@
+ 		return;
+ 	}
+ 
++	/* REMOTIX (KWin >= 6.5 nested in labwc): the root of a surface shown on an
++	 * output counts as presented at every output frame.  KWin's root surface is
++	 * a black single-pixel buffer under opaque subsurfaces: wlr_scene never
++	 * samples it, every wp_presentation feedback of KWin came back «discarded»,
++	 * and KWin's clients got frame callbacks with time 0 (Firefox then marks
++	 * its window occluded and stops painting). */
++	wlr_presentation_surface_textured_on_output(
++		wlr_surface_get_root_surface(surface->surface), event->output->output);
+ 	wlr_surface_send_frame_done(surface->surface, &event->when);
+ }
+ 

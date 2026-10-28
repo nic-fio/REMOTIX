@@ -191,6 +191,10 @@ struct Capture
 	 *   already written: *«the truth is told by the frame, not by the outcome of the
 	 *   request»*. */
 	gboolean measure_divergent;
+	/* ⭐ [M] 28 Oct 2026 — the next frame is delivered even if its damage is
+	 *    declared EMPTY: armed at every (re)negotiated format and at every
+	 *    `capture_resize()`, cleared at the first delivery.  See `on_process`. */
+	gint deliver_next; /* atomic: written by `capture_resize()` (loop lock), read by the RT `on_process` */
 
 	/* --- the counters, which run on the real-time thread ---------------- *
 	 * ⚠ THEY ARE COUNTED, NOT PRINTED: one log line per frame
@@ -741,6 +745,7 @@ static void on_parameters(void *data, uint32_t id, const struct spa_pod *param)
 	}
 
 	capture->known_format = TRUE;
+	g_atomic_int_set(&capture->deliver_next, TRUE); /* new format ⇒ the first frame always goes */
 	registro_dice(AREA, "negotiated format: %ux%u %s (%d bits per channel), modifier 0x%" G_GINT64_MODIFIER "x",
 	              capture->fmt.size.width, capture->fmt.size.height,
 	              capture_color_name(capture->fmt.format),
@@ -876,11 +881,26 @@ static void look_cursor(Capture *capture, struct pw_buffer *bundle)
 		capture->tally.malformed_cursors++;
 }
 
-/* The damage: looked at, counted, and delivered as INFORMATION. */
-static gboolean look_damage(Capture *capture, struct pw_buffer *bundle, CaptureRegion *regions,
-                             guint *how_many, gboolean *covers_all)
+/*
+ * ⛔ [M] 28 Oct 2026 — «NO META» AND «META WITH NO REGION» ARE NOT THE SAME THING.
+ *
+ *    KWin 6.6 sends ~60 frames/s even on a still screen, and for the unchanged
+ *    ones `SPA_META_VideoDamage` is PRESENT but empty: `screencaststream.cpp`
+ *    `addDamage()` writes the rectangles and then a 0,0,0,0 terminator, so an
+ *    empty damage is the terminator alone.  Counted as «absent», those 53 frames/s
+ *    of nothing were encoded and the client fell 1-3 s behind.
+ *
+ * ⭐ ABSENT  = the producer says nothing ⇒ the frame counts (as before).
+ *    EMPTY   = the producer DECLARES that nothing changed.
+ *    PRESENT = at least one valid region.
+ *
+ * Pure function (no `Capture`): `make test-damage` extracts it from this file.
+ */
+enum { DAMAGE_ABSENT, DAMAGE_EMPTY, DAMAGE_PRESENT };
+
+static int damage_classify(struct spa_meta *meta, uint32_t width, uint32_t height,
+                           CaptureRegion *regions, guint *how_many, gboolean *covers_all)
 {
-	struct spa_meta *meta = spa_buffer_find_meta(bundle->buffer, SPA_META_VideoDamage);
 	struct spa_meta_region *region;
 	gboolean vista = FALSE;
 
@@ -888,18 +908,15 @@ static gboolean look_damage(Capture *capture, struct pw_buffer *bundle, CaptureR
 	*covers_all = FALSE;
 
 	if (!meta)
-	{
-		capture->tally.missing_damage++;
-		return FALSE;
-	}
+		return DAMAGE_ABSENT;
 	spa_meta_for_each(region, meta)
 	{
 		if (!spa_meta_region_is_valid(region))
 			break;
 		vista = TRUE;
 		if (region->region.position.x == 0 && region->region.position.y == 0 &&
-		    region->region.size.width >= capture->fmt.size.width &&
-		    region->region.size.height >= capture->fmt.size.height)
+		    region->region.size.width >= width &&
+		    region->region.size.height >= height)
 			*covers_all = TRUE;
 		if (*how_many < MAX_REGIONS)
 		{
@@ -918,9 +935,28 @@ static gboolean look_damage(Capture *capture, struct pw_buffer *bundle, CaptureR
 			break;
 		}
 	}
-	if (!vista)
+	return vista ? DAMAGE_PRESENT : DAMAGE_EMPTY;
+}
+
+/* The damage: looked at, counted, and delivered as INFORMATION.
+ * `*empty` is TRUE when the meta is there and declares «nothing changed». */
+static gboolean look_damage(Capture *capture, struct pw_buffer *bundle, CaptureRegion *regions,
+                             guint *how_many, gboolean *covers_all, gboolean *empty)
+{
+	struct spa_meta *meta = spa_buffer_find_meta(bundle->buffer, SPA_META_VideoDamage);
+	int kind = damage_classify(meta, capture->fmt.size.width, capture->fmt.size.height,
+	                           regions, how_many, covers_all);
+
+	*empty = FALSE;
+	if (kind == DAMAGE_ABSENT)
 	{
 		capture->tally.missing_damage++;
+		return FALSE;
+	}
+	if (kind == DAMAGE_EMPTY)
+	{
+		capture->tally.empty_damage++;
+		*empty = TRUE;
 		return FALSE;
 	}
 	if (*covers_all)
@@ -940,7 +976,7 @@ static void on_process(void *data)
 	CaptureFrameInfo info = { 0 };
 	CaptureDelivery delivery;
 	guint how_many = 0;
-	gboolean covers_all = FALSE, declared_damage;
+	gboolean covers_all = FALSE, declared_damage, empty_damage = FALSE;
 	uint32_t step, offset;
 	guint64 available, byte;
 	guint i;
@@ -1031,7 +1067,20 @@ static void on_process(void *data)
 		goto requeue;
 	}
 
-	declared_damage = look_damage(capture, bundle, regions, &how_many, &covers_all);
+	declared_damage = look_damage(capture, bundle, regions, &how_many, &covers_all,
+	                              &empty_damage);
+	/* ⛔⭐ [M] 28 Oct 2026 — damage DECLARED empty (see `damage_classify`): nothing
+	 *    changed, the frame goes back to PipeWire without being encoded.  ⚠ Except
+	 *    the first one after a (re)negotiation / resize (`deliver_next`): the
+	 *    client must get a picture of the new canvas even if the producer says
+	 *    «unchanged».  CORRUPTED / cursor-only were handled above, untouched.
+	 * ⛔ Also except when `damage_lost`: a frame WITH changes was thrown away for a
+	 *    technical defect (no chunk, stride 0, bad geometry, DMA-BUF unusable), its
+	 *    damage is gone, and the «empty» frames that follow must be encoded (they
+	 *    become «all changed» through `damage_lost`).  Read without lock: written
+	 *    only here, on the same RT thread. */
+	if (empty_damage && !g_atomic_int_get(&capture->deliver_next) && !capture->damage_lost)
+		goto requeue;
 
 	/* ⛔ The authoritative stride is this one, and if it is missing none is computed. */
 	step = (uint32_t) MAX(0, piano->chunk->stride);
@@ -1173,6 +1222,7 @@ static void on_process(void *data)
 		goto requeue;
 	}
 
+	g_atomic_int_set(&capture->deliver_next, FALSE);
 	if (capture->on_frame)
 		capture->on_frame(&info, capture->data);
 
@@ -1355,13 +1405,14 @@ static void on_process(void *data)
 		log_detail(AREA,
 		                   "over %" G_GUINT64_FORMAT " frames: %u distinct buffers, damage "
 		                   "full %" G_GUINT64_FORMAT " partial %" G_GUINT64_FORMAT " absent %"
-		                   G_GUINT64_FORMAT ", without header %" G_GUINT64_FORMAT
+		                   G_GUINT64_FORMAT " empty %" G_GUINT64_FORMAT ", without header %" G_GUINT64_FORMAT
 		                   ", cursor-only %" G_GUINT64_FORMAT
 		                   ", ⭐ replaced in the slot %" G_GUINT64_FORMAT
 		                   " (before 15 Aug they were LOST)",
 		                   capture->tally.incoming, capture->tally.distinct_buffers,
 		                   capture->tally.full_damage, capture->tally.partial_damage,
-		                   capture->tally.missing_damage, capture->tally.without_header,
+		                   capture->tally.missing_damage, capture->tally.empty_damage,
+		                   capture->tally.without_header,
 		                   capture->tally.cursor_only, capture->overwritten);
 
 requeue:
@@ -2028,6 +2079,7 @@ CaptureRecanvas capture_resize(Capture *capture, uint32_t width, uint32_t height
 	/* ⚠ And the divergence is reset: it is a fact of the negotiation that is about to be
 	 *   redone, not a scar of the previous one. */
 	capture->measure_divergent = FALSE;
+	g_atomic_int_set(&capture->deliver_next, TRUE);
 
 	/* ⛔ The same `proposal()` as at startup, with the same colour and route: a
 	 *    proposal written by hand here would be a second rule on the format, and the

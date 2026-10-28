@@ -706,6 +706,7 @@ typedef struct
 {
 	guint64 incoming;
 	guint64 full_damage, partial_damage, missing_damage;
+	guint64 empty_damage;   /* meta present, no region: «nothing changed» */
 	guint64 without_header;
 	guint64 cursor_only;   /* buffers marked CORRUPTED: stale pixels  */
 	guint64 stride_zero;    /* ⛔ discarded instead of computed        */

@@ -332,7 +332,7 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
-.PHONY: all clean deps fingerprints bench-w1 bench-unchanged test-session test-colors709 test-rootside test-walls test-tls-groups test-rediscover FORCE
+.PHONY: all clean deps fingerprints bench-w1 test-damage bench-unchanged test-session test-colors709 test-rootside test-walls test-tls-groups test-rediscover FORCE
 
 all: fingerprints $(NOME)
 
@@ -691,3 +691,12 @@ test-rediscover: ../benches/02-rediscover-test.c rediscover.c rediscover.h
 
 # ⭐ The automatic dependencies written by `-MMD` (absent on the first build: `-include` does not mind).
 -include $(OGGETTI:.o=.d)
+
+# ⭐ [M] 28 Oct 2026 — `damage_classify()` of capture.c (meta absent / only the
+#    terminator / partial / full), extracted from the file, no PipeWire needed.
+test-damage: ../benches/28-damage-test.c capture.c capture.h
+	@d=$$(mktemp -d) || exit 1; trap 'rm -rf "$$d"' EXIT; \
+	sed -n '/^enum { DAMAGE_ABSENT/,/^}$$/p' capture.c > $$d/damage-extract.c; \
+	test -s $$d/damage-extract.c || { echo '  ⛔ damage_classify() is NOT in capture.c'; exit 1; }; \
+	$(CC) $(CFLAGS) -I. -I$$d $$(pkg-config --cflags glib-2.0 libpipewire-0.3) \
+	  -o $$d/test ../benches/28-damage-test.c $$(pkg-config --libs glib-2.0) && $$d/test
