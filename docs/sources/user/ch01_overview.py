@@ -47,8 +47,8 @@ S_DESKTOPS = p("REMOTIX works with four desktops: <b>GNOME</b>, <b>KDE Plasma</b
         "through XWayland.",
         "<b>XFCE and LXQt</b> run on the labwc compositor, which the installation brings along as a dependency.",
         "<b>KDE Plasma</b> runs inside a small labwc that REMOTIX starts without a screen of its own; this is what "
-        "lets the desktop take the size of a new window when you come back. On AlmaLinux and RHEL 10, which have no "
-        "labwc package, REMOTIX brings its own (" + c("/usr/lib/remotix/labwc") + ").",
+        "lets the desktop take the size of a new window when you come back. On Ubuntu 26.04, Fedora 44, AlmaLinux "
+        "and RHEL 10, Tumbleweed and Arch REMOTIX brings its own (" + c("/usr/lib/remotix/labwc") + ").",
     ]) + \
     note("from version 1.5, KDE Plasma 6.5 or newer (Ubuntu 26.04, Fedora 44, AlmaLinux and RHEL 10, openSUSE "
          "Tumbleweed, Arch) works in the browser as it should: windows are redrawn, Firefox keeps drawing and the screen follows "
