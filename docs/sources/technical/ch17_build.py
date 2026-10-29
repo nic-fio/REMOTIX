@@ -318,16 +318,18 @@ S_RPM = p(c("packaging/rpm/remotix.spec") + " is one spec with " + c("%if 0%{?fe
          + c("(labwc if xfce4-session)") + ", " + c("(labwc if lxqt-session)") + ", " + c("(labwc if plasma-workspace)")
          + " / " + c("(labwc if plasma6-workspace)") + " (KDE's host, §10.40), " + c("(wlr-randr if lxqt-session)")
          + ", " + c("(xorg-x11-server-Xwayland if labwc)") + " / " + c("(xwayland if labwc)") + ", a scalable font "
-         + c("if labwc") + ", " + c("(breeze6-wallpapers if plasma6-workspace)") + " on openSUSE. On Alma none: "
-         "the package carries its own labwc and requires " + c("libwlroots-0.18.so()(64bit)") + " from EPEL"],
-        ["Our labwc (Alma only)", "EPEL 10 has KWin and wlroots 0.18 but no labwc (§10.43). Inside "
-         + c("%if 0%{?rhel}") + ": " + c("Source1") + " is labwc " + c("%{labwc_ver}") + " = 0.8.4 (the last release "
-         "for wlroots 0.18), checked against the sha256 of " + c("packaging/rpm/labwc/VERSIONS") + "; the subproject "
-         "wraps are deleted and meson runs with " + c("--wrap-mode=nodownload -Dxwayland=disabled -Dsvg=disabled "
-         "-Dicon=disabled -Dnls=disabled -Dman-pages=disabled") + ", PIE, the distribution's flags, linked dynamically "
-         "to EPEL's wlroots; it is built <b>unmodified</b> (no patches) and installed as " + c("/usr/lib/remotix/labwc")
-         + ", off PATH, so it never clashes with a labwc EPEL may add. REMOTIX itself is built with "
-         + c("make all LABWC=%{_prefix}/lib/remotix/labwc")],
+         + c("if labwc") + ", " + c("(breeze6-wallpapers if plasma6-workspace)") + " on openSUSE. On Alma none for labwc: "
+         "the package carries its own, with wlroots inside it (static), so it requires no wlroots library"],
+        ["Our labwc (Fedora 44, Alma 10, Tumbleweed)", "For KWin 6.5 or later. Inside " + c("%if 0%{?labwc_ospite}")
+         + ": " + c("Source1") + " is labwc " + c("%{labwc_ver}") + " = 0.9.3 and " + c("Source2") + " is wlroots "
+         + c("%{wlroots_ver}") + " = 0.19.2, which must equal " + c("packaging/labwc-ospite/VERSIONS") + " (" + c("%build")
+         + " stops otherwise). " + c("labwc-ospite/build.sh") + " extracts both, applies the wlroots patch, builds with "
+         + c("--wrap-mode=nodownload -Dxwayland=disabled -Dsvg=disabled -Dicon=disabled -Dnls=disabled -Dman-pages=disabled")
+         + ", PIE and the distribution's flags, wlroots " + c("-Ddefault_library=static") + " (drm and libinput backends, "
+         "gles2 renderer), and installs " + c("/usr/lib/remotix/labwc") + ", off PATH. REMOTIX itself is built with "
+         + c("make all LABWC=%{_prefix}/lib/remotix/labwc") + ". The Ubuntu 26.04 .deb (" + c("debian/rules") + ", "
+         + c("REMOTIX_LABWC_OSPITE") + ", on only on Ubuntu 26.04 or later) and the Arch package (" + c("PKGBUILD") + ") do the "
+         "same with the same script"],
         ["Recommends", "on Fedora " + c("mesa-dri-drivers") + ", the Intel VA driver and " + c("mesa-vulkan-drivers")
          + "; on openSUSE " + c("Mesa-libva") + " and " + c("intel-media-driver") + "; on Alma nothing (RHEL 10's Mesa "
          "has no VA-API and EPEL has no Intel driver). The distribution's drivers do not encode H.264 for some cards, "
@@ -348,15 +350,16 @@ S_RPM = p(c("packaging/rpm/remotix.spec") + " is one spec with " + c("%if 0%{?fe
          "preset “enable *” would enable the service); " + c("%preun") + " stops and disables; " + c("%postun")
          + " restarts on upgrade only if running; " + c("%posttrans") + " calls " + c("post-upgrade")],
     ], "«TAB» — The RPM recipe") + \
-    p(c("packaging/rpm/labwc/fetch.sh DIR") + " (download) fetches GitHub's archive of the annotated tag (labwc "
-      "publishes no tarball and signs nothing) and accepts it only if it matches both the sha256 in " + c("VERSIONS")
-      + " and the SHA512 of Fedora's dist-git " + c("sources") + " for the same version; checked on 11 Oct 2026 also "
-      "identical to " + c("git archive") + " of the tag. " + c("build-rpm.sh") + " runs it before " + c("rpmbuild")
-      + " for alma10 and reads back " + c("labwc --version") + " and its " + c("ldd") + " from the finished package. "
-      "The rule of §10.43: at every REMOTIX release check labwc's releases for the wlroots EPEL carries and update "
-      + c("VERSIONS") + " and " + c("%global labwc_ver") + " together; every update reviews the upstream diff "
-      "(network, exec, file writes, setuid, dlopen, environment, build scripts); a serious advisory in labwc or wlroots "
-      "means an extraordinary release; labwc is never patched.") + \
+    p(c("packaging/labwc-ospite/fetch.sh DIR") + " (download) fetches GitHub's archive of the annotated tag of labwc (labwc "
+      "publishes no tarball and signs nothing) and the official wlroots release tarball, and accepts each only if it matches "
+      "the sha256 in " + c("VERSIONS") + ". " + c("build-rpm.sh") + " runs it before " + c("rpmbuild")
+      + " for fedora44, alma10 and tumbleweed, puts the two tarballs in " + c("SOURCES") + " and reads back " + c("labwc --version")
+      + " and its " + c("ldd") + " from the finished package: the check is green only if no wlroots library is listed (it is "
+      "inside the binary). "
+      "The rule of §10.43 as changed in 1.5: at every REMOTIX release check the releases of labwc and wlroots and update "
+      + c("VERSIONS") + " and " + c("%global labwc_ver") + " / " + c("wlroots_ver") + " together; every update reviews the upstream "
+      "diff (network, exec, file writes, setuid, dlopen, environment, build scripts); a serious advisory in labwc or wlroots "
+      "means an extraordinary release; labwc is never patched, wlroots carries the one patch.") + \
     p("The rpm unit starts the binary directly, without " + c("/bin/sh -c") + ": under SELinux systemd moves to "
       + c("remotix_t") + " only when it executes " + c("remotix_exec_t") + " itself (T6). The Debian unit keeps "
       + c("sh -c 'exec …'") + " to expand " + c("REMOTIX_PORT") + " and " + c("REMOTIX_OPTIONS") + ". "
@@ -401,8 +404,8 @@ INSTALLED = [
      "same", "same"],
     ["administrator's choices", c("/etc/remotix/remotix.conf.d/") + " (empty)", "same", "same"],
     ["linked versions", c("/usr/share/remotix/linked.json"), "same", "same"],
-    ["KWin's host (§10.43)", "the distribution's " + c("labwc"), "Fedora, openSUSE: the distribution's; Alma: "
-     + c("/usr/lib/remotix/labwc") + " (labwc 0.8.4, GPL-2.0)", "the distribution's"],
+    ["KWin's host (§10.43, replaced in 1.5)", "Debian 13: the distribution's " + c("labwc") + "; Ubuntu 26.04: ours", "Leap: the distribution's; Fedora 44, Alma, Tumbleweed: "
+     + c("/usr/lib/remotix/labwc") + " (labwc 0.9.3 + wlroots 0.19.2 patched, GPL-2.0)", "Arch: the same own labwc"],
     ["unit", c("remotix.service") + " (via " + c("sh -c") + ")", c("remotix.service") + " (direct exec)",
      c("remotix.service") + " (direct exec)"],
     ["tmpfiles", c("/var/lib/remotix") + " 0700, " + c("/run/remotix") + " 0700", "same", c("/var/lib/remotix")
@@ -580,16 +583,16 @@ S_REPRO = p("The goal (R23) is four levels of reproducibility: binary, package, 
       + "), a DEP-5 " + c("debian/copyright") + " whose last stand-alone paragraph gets the text of " + c("LICENSE.md")
       + " appended by " + c("build-deb.sh") + " (one copy of the text, in the repository root), the same for the "
       "engine's .deb, and " + c("LICENSE.md") + " next to " + c("THIRD-PARTY-LICENSES") + " in the " + c(".run") + ".") + \
-    p("<b>labwc in the Alma package (GPL-2.0).</b> labwc is a separate program, not linked with REMOTIX: GPL-2.0-only "
+    p("<b>labwc in five packages (GPL-2.0).</b> labwc is a separate program, not linked with REMOTIX: GPL-2.0-only "
       "(two files LGPL-2.0-or-later). The obligations are met in four places (§10.43): " + c("THIRD-PARTY-LICENSES")
-      + " carries its entry and full licence text (and wlroots' MIT, for reference: EPEL's, not shipped); "
+      + " carries its entry and full licence text (and wlroots' MIT, linked into it); "
       + c("LICENSE.md") + " §8 says REMOTIX's terms — the bans on modification and redistribution included — do not "
-      "apply to it; the <b>exact corresponding source</b> (the upstream tarball and the recipe: " + c("VERSIONS") + ", "
-      + c("fetch.sh") + ", " + c("remotix.spec") + ") goes with every release, inside the " + c(".run") + " ("
+      "apply to it; the <b>exact corresponding source</b> (the two upstream tarballs, the patch and the recipe: " + c("VERSIONS") + ", "
+      + c("fetch.sh") + ", " + c("build.sh") + ", " + c("remotix.spec") + ") goes with every release, inside the " + c(".run") + " ("
       + c("source/labwc/") + ") and next to it (" + c("remotix-X.Y.Z-R-labwc-source.tar.gz") + ", to publish with the "
-      + c(".run") + "); the Alma source rpm carries it too. " + c("release.sh") + " step 2 stops if "
-      + c("THIRD-PARTY-LICENSES") + " does not name labwc at the version in " + c("VERSIONS") + ". If a patch ever "
-      "became necessary it would be published under GPL-2.0 with the source.")
+      + c(".run") + "); the source rpms carry it too. " + c("release.sh") + " step 2 stops if "
+      + c("THIRD-PARTY-LICENSES") + " does not name labwc at the version in " + c("VERSIONS") + ". The "
+      "wlroots patch is published with the source.")
 
 S_VERSIONS = p("One version per release, written in several dialects.", lead=True) + \
     table(["Artifact", "Release " + c("X.Y.Z-R"), "Without a release (development)"], [
@@ -652,9 +655,9 @@ S_PITFALLS = p("Problems already met while building, and the cure now in the scr
     ], "«TAB» — Build pitfalls already met")
 
 S_ARCH_BACK = p("Phase F (" + c("DECISIONS-11.md") + " §11.50) moves the network side's files from the 1.0 paths to "
-                + c("/var/lib/remotix/net") + ", owned by the user " + c("remotix") + ". The package is <b>inert</b> about it "
-                "unless it was built with " + c("REMOTIX_SPLIT=1") + " (only then " + c("/usr/lib/remotix/remotix-net-move")
-                + " is installed); every call below is skipped when that file is missing.", lead=True) + \
+                + c("/var/lib/remotix/net") + ", owned by the user " + c("remotix") + ". The split is ON by default since 25 Oct 2026, so the package does the move; one "
+                "built with " + c("REMOTIX_SPLIT=0") + " is <b>inert</b> about it (" + c("/usr/lib/remotix/remotix-net-move")
+                + " is not installed); every call below is skipped when that file is missing.", lead=True) + \
     table(["Direction", "What " + c("remotix-net-move") + " does", "Who calls it on Arch"], [
         ["forward (no argument)", "moves " + c("/var/lib/remotix/certificates") + ", " + c("ban") + " and " + c("ban.new")
          + " into " + c("net/") + " with " + c("mv -T") + " (nothing copied, nothing followed, idempotent); owners and modes are set "

@@ -281,8 +281,13 @@ REJECTED
       + " = 1000 ms after receiving it, " + c("ADMITTED") + " included; the answer leaves from " + c("rcp_time()") + " "
       "once both the delay has passed and the verdict is in. The ban removes whoever guesses; the fixed second removes "
       "timing as a channel — without it «no such user» would answer in a millisecond and «wrong password» in fifty. "
-      "Not settled yet: PAM's own delay is not constant (median 2636 ms over 42 rejected attempts, bench B8, 10 August "
-      "2026), so the fixed second does not fully hide whether a user name exists.") + \
+      "PAM's own failure delay is not constant (median 2636 ms over 42 rejected attempts, bench B8, 10 August 2026), and it "
+      "came on top of the fixed second. Since 25 Oct 2026 (" + c("DECISIONS-11.md") + " §11.25) a refusal that goes out as "
+      + c("0x07") + " (PAM's no: denied user, wrong password, unknown user, locked account) leaves <b>not before "
+      + c("REJECT_FLOOR") + " = 2500 ms</b>, so the time does not tell a denied name from a wrong password; a success, the "
+      "limiter's " + c("0x08") + " and " + c("0x0E") + " keep the fixed second. It is a floor: a refusal that PAM delays beyond it is "
+      "paced by PAM, and only that tail could still be told apart. Not settled yet: the floor is a margin still to be measured "
+      "again with the " + c("pam-tempi") + " bench.") + \
     table(["Rule", "Value", "Constant"], [
         ["Levels", "(key, user): 5 failed in 5 min · key: 12 in 5 min · IPv6 /48: 30 in 10 min; sliding windows", c("LIMIT") + ", " + c("WINDOW_MS")],
         ["Ban duration", "progressive per level: 15 min, then 1 h, then 12 h; forgotten after 24 h without a ban", c("LADDER_MS") + ", " + c("FORGET_MS")],

@@ -103,14 +103,15 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
     warn("with no " + c("--command-socket") + " in the packaged command line, a banned address can only wait for "
          "its wait (15 minutes, 1 hour or 12 hours): the unblock command promised by SPECS.md §4.2 is there only if the administrator adds "
          "the option in " + c("REMOTIX_OPTIONS") + " (the " + c("tmpfiles") + " entry creates "
-         + c("/run/remotix") + " for that socket). The only code that exits with 78 (" + c("EXIT_CONFIG") + ", eight places in " + c("main.c") + ") is the startup refusal of the experimental "
-         + c("--split") + " (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side that drops to the "
-         "system user " + c("remotix") + "; off by default). It refuses, and logs why, when: " + c("--split") + " is given without "
-         + c("REMOTIX_SPLIT_EXPERIMENTAL=1") + " in the environment; " + c("--network-side") + " is given without " + c("--split") + "; "
-         + c("--split") + " does not run as root; the network user is missing or has uid/gid 0; the certificates or the ban file are not in "
-         + c("net/") + "; the page is not readable by the network user; or there are too many arguments. The default unit does not pass "
-         + c("--split") + ". The " + c("remotix.service.split") + " unit that the split build installs (debian/rules, remotix.spec, PKGBUILD) does, "
-         "with " + c("Environment=REMOTIX_SPLIT_EXPERIMENTAL=1") + ", so " + c("RestartPreventExitStatus=78") + " matters only there", "Two gaps of the unit.") + \
+         + c("/run/remotix") + " for that socket). The only code that exits with 78 (" + c("EXIT_CONFIG") + ", eight places in " + c("main.c") + ") is the startup refusal of the split (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side that drops to the "
+         "system user " + c("remotix") + "). Since 25 Oct 2026 the split is <b>on by default</b> when the server starts as root; " + c("--split")
+         + " asks for it explicitly and " + c("--no-split") + " goes back to the single process of 1.0; started as an ordinary user (the benches) "
+         "the server stays one process. The old gate " + c("REMOTIX_SPLIT_EXPERIMENTAL") + " is gone from the binary. The split refuses, and logs why, when: "
+         + c("--network-side") + " is given without " + c("--split") + "; " + c("--split") + " does not run as root; the network user is missing or has uid/gid 0; "
+         "the certificates or the ban file are not in " + c("net/") + "; the page is not readable by the network user; or there are too many arguments. "
+         "The packages install the " + c("remotix.service.split") + " unit and the user, tmpfiles and SELinux policy of the split; a package built "
+         "without it (" + c("REMOTIX_SPLIT=0") + ", " + c("--without split") + ") keeps the single process. The "
+         + c("RestartPreventExitStatus=78") + " of the Debian unit matters only for these refusals", "Two gaps of the unit.") + \
     note("the server must not run inside a user's session. " + c("pam_systemd") + ", called by a process that is "
          "already in a logind session, does not create a second one and does not say so: the children stay without "
          "runtime directory, bus and desktop (measured 16 August 2026, eight bench runs out of eight). As a system "
@@ -255,7 +256,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
       "a “ticker” process that touches a 1×1 transparent surface every 16 ms (KWin waits for labwc's answer to "
       "draw again, and labwc answers only when it repaints), and then becomes the KWin wrapper with "
       + c("KWIN_FORCE_SW_CURSOR=1") + " and " + c("--wayland-display") + ". Which labwc is a build-time choice of "
-      "the package: the distribution's from the " + c("PATH") + ", or on RHEL / Alma 10, whose EPEL has none, "
+      "the package: the distribution's from the " + c("PATH") + ", or, where KWin is 6.5 or later (Ubuntu 26.04, Fedora 44, RHEL / Alma 10, Tumbleweed, Arch), REMOTIX's own, "
       + c("/usr/lib/remotix/labwc") + " (" + c("make LABWC=…") + "). Without labwc the session is still born, "
       "with KWin " + c("--virtual") + " as before, and keeps its birth size at reattach: said in the user's "
       "journal and, at the first reattach of another size, in REMOTIX's log.") + \
@@ -514,8 +515,8 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
          + " on openSUSE)"],
         [c("/usr/share/applications/org.kde.remotix.desktop"), "package", "lets KWin offer screen capture to the "
          "binary"],
-        [c("/usr/lib/remotix/labwc"), "package (RHEL / Alma 10 only)", "labwc 0.8.4, built unmodified against "
-         "EPEL's wlroots 0.18 to host KWin; GPL-2.0, its text in " + c("/usr/share/doc/remotix/THIRD-PARTY-LICENSES")
+        [c("/usr/lib/remotix/labwc"), "package (KWin 6.5 or later: Ubuntu 26.04, Fedora 44, Alma 10, Tumbleweed, Arch)", "labwc 0.9.3 with wlroots 0.19.2, patched and "
+         "linked statically, only to host KWin; GPL-2.0, its text in " + c("/usr/share/doc/remotix/THIRD-PARTY-LICENSES")
          + ", its source next to every release (DECISIONS.md §10.43)"],
         [c("/etc/ufw/applications.d/remotix"), "package (Debian)", "a firewall profile for 7447 TCP and UDP, defined "
          "but not opened"],

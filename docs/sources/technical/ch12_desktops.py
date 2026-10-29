@@ -362,33 +362,82 @@ ExecStart=/usr/libexec/remotix/remotix --kwin-nested 1920 1080 /dev/dri/renderD1
       + c("session_settings()") + " writes nothing else for Plasma: the desktop lock "
       "is off from the command line (" + c("--no-lockscreen") + ").")
 
-S5B = p("labwc is needed on KDE only as KWin's host; it is not the desktop's compositor. Where it comes from "
-        "depends on the distribution, and the six distributions that package labwc keep their own.",
+S5B = p("labwc is needed on KDE only as KWin's host; it is not the desktop's compositor. Which one depends on the "
+        "KWin of the distribution: from KWin 6.5 on it is <b>REMOTIX's own</b>, before that it is the distribution's.",
         lead=True) + \
-    table(["Distribution", "labwc for KDE", "How the package asks for it"], [
-        ["Debian 13, Ubuntu", "the distribution's", c("Recommends: labwc") + " (a " + c(".deb") + " cannot say "
+    table(["Distribution", "KWin (28 Oct 2026)", "labwc for KDE", "How the package gets it"], [
+        ["Debian 13", "6.3.6", "the distribution's", c("Recommends: labwc") + " (a " + c(".deb") + " cannot say "
          "«only if Plasma is there», so it is recommended to every machine)"],
-        ["Fedora", "the distribution's", c("Requires: (labwc if plasma-workspace)")],
-        ["openSUSE Leap, Tumbleweed", "the distribution's", c("Requires: (labwc if plasma6-workspace)")],
-        ["Arch", "the distribution's", c("depends") + ", for every desktop"],
-        ["RHEL / Alma 10", "<b>REMOTIX's own</b>, " + c("/usr/lib/remotix/labwc"), "Built inside the package; "
-         + c("Requires: libwlroots-0.18.so()(64bit)")],
+        ["openSUSE Leap 16", "6.4.2", "the distribution's", c("Requires: (labwc if plasma6-workspace)")],
+        ["Ubuntu 26.04", "6.6.6", "<b>REMOTIX's own</b>, " + c("/usr/lib/remotix/labwc"), "built inside the .deb (only on 26.04; "
+         "older Ubuntu keeps the distribution's labwc)"],
+        ["RHEL / Alma 10", "6.6.4", "<b>REMOTIX's own</b>", "built inside the .rpm"],
+        ["Fedora 44", "6.7.5", "<b>REMOTIX's own</b>", "built inside the .rpm"],
+        ["openSUSE Tumbleweed", "6.8.1", "<b>REMOTIX's own</b>", "built inside the .rpm"],
+        ["Arch", "6.8.1", "<b>REMOTIX's own</b>", "built inside the package"],
     ], "«TAB» — Where KWin's labwc comes from") + \
-    p("<b>RHEL / Alma 10</b> (" + c("DECISIONS.md") + " §10.43). EPEL 10 carries KWin 6.6.4 and wlroots 0.18 "
-      "but no labwc, so the Alma package builds <b>labwc 0.8.4</b>, the last release for wlroots 0.18, "
-      "<b>unmodified</b>, in the same rpm build (" + c("packaging/rpm/remotix.spec") + ", " + c("%if 0%{?rhel}")
-      + "), linked dynamically against EPEL's wlroots 0.18, with Xwayland, SVG, icons, translations and man "
-      "pages switched off and no download during the build. It is installed privately, not in " + c("PATH")
-      + ", so it cannot clash with a labwc EPEL may add one day, and the REMOTIX binary of that package is "
-      "built with " + c("LABWC=/usr/lib/remotix/labwc") + ". The source is GitHub's archive of the tag "
-      + c("0.8.4") + " (labwc publishes no tarball and signs nothing), pinned by SHA-256 in "
-      + c("packaging/rpm/labwc/VERSIONS") + " and checked at every build by " + c("fetch.sh")
-      + " also against the SHA-512 in Fedora's dist-git. Licence and updates: "
-      + rif("KWin's labwc on RHEL / Alma 10") + ".") + \
+    p("<b>Why REMOTIX builds its own</b> (1.5; " + c("packaging/labwc-ospite/") + "). KWin 6.5 and later paint a special "
+      "black pixel as the root of their window and put the content in sub-surfaces. wlroots never reports that root as "
+      "«presented», so KWin gives its clients a frame clock stuck at 0, Firefox believes its window is covered and stops "
+      "painting: the windows of the remote desktop stay on their first frame. It is not a matter of the graphics card; it "
+      "happens on every distribution with KWin 6.5 or later. The cure is a few lines in wlroots ("
+      + "scene/surface.c of wlroots, in the " + c("frame_done") + " handler): the root surface of a shown surface counts as "
+      "presented. Measured on a rented NVIDIA server on 28 Oct 2026: 3163 frames presented and 5 discarded, and the KDE suite "
+      "went from 15 passed and 28 blocked to no blocked test (final package: Chrome 22 of 22, Firefox 21 of 22, the red one a "
+      "limit of the test machine).") + \
+    p("<b>What exactly is built.</b> One labwc <b>0.9.3</b> with one wlroots <b>0.19.2</b> plus our patch ("
+      + c("wlroots-0.19.2-remotix-presented-root.patch") + "), wlroots linked <b>statically</b> into the labwc binary, installed as "
+      + c("/usr/lib/remotix/labwc") + " and used <b>only</b> to host KWin (" + c("make LABWC=/usr/lib/remotix/labwc")
+      + " → " + c("REMOTIX_LABWC") + " in " + c("kwin.c") + "; a build-time choice, not a switch). The same versions on the five "
+      "distributions, so REMOTIX does not depend on the wlroots of each (0.18, 0.19, 0.20: different ABIs). XFCE and LXQt keep "
+      "the labwc of the distribution. The sources and their sha256 are pinned in " + c("packaging/labwc-ospite/VERSIONS") + "; "
+      + c("fetch.sh") + " downloads and checks them, " + c("build.sh") + " extracts, patches, builds with the minimum of options "
+      "and installs. The same fix for wlroots 0.18, 0.19 and 0.20 is kept in " + c("patches-upstream/") + ", ready for the "
+      "reports to the upstream projects. Licence and source: " + rif("KWin's own labwc") + ".") + \
+    p("<b>What the 1.5 replaced.</b> Until the correction, RHEL / Alma 10 alone carried a labwc of its own: 0.8.4, unmodified, "
+      "linked dynamically against EPEL's wlroots 0.18 (" + c("DECISIONS.md") + " §10.43, now marked as replaced). That recipe "
+      "folder no longer exists; Alma now builds the same labwc as the others.") + \
     note("without labwc a Plasma session is still born, with KWin " + c("--virtual") + " and the size of its "
-         "birth: a broken install (the file missing on Alma) or a deb installed with "
+         "birth: a broken install (our labwc file missing) or a deb installed with "
          + c("--no-install-recommends") + ". It is declared in the unit's journal and in the child's log.",
-         "Without labwc.")
+         "Without labwc.") + \
+    p("The capture side of the same KDE correction — frames with empty damage are no longer encoded — is in "
+      + rif("Screen capture per compositor") + ".")
+
+S8B = p("REMOTIX draws the desktop and encodes it on the <b>same card</b>, with no copy between cards. On a server with two or "
+        "more cards (for example an Intel integrated one and a Radeon) the card is decided by the <b>BIOS</b>, not by the "
+        "administrator (" + c("DECISIONS-11.md") + " §11.37, addendum of 27 Oct 2026, the user's decision). There is no option "
+        "for it: to change the card, change the primary display in the BIOS.", lead=True) + \
+    table(["Step", "Rule", "Why"], [
+        ["1", "The <b>BIOS primary card</b> (" + c("boot_vga") + " = 1 in sysfs), if it is <b>capable</b>: it has a render node, "
+         "the node opens and " + c("card_can_draw()") + " manages to create the drawing buffer", "On an ordinary machine it is the "
+         "card the user already expects"],
+        ["2", "Otherwise, among the capable cards, the one with the <b>lowest PCI address</b>", "The PCI address is the same "
+         "after every reboot; the names " + c("renderD128") + " and " + c("renderD129") + " swap, so the old rule («the first "
+         "node by name») could change card by itself"],
+        ["3", "No capable card", "The declared software fallback (pixman)"],
+    ], "«TAB» — How the desktop's card is chosen (" + c("card_pick()") + ", " + c("src/card_pick.c") + ")") + \
+    table(["Desktop", "Who chooses the card", "Notes"], [
+        ["XFCE, LXQt", "REMOTIX, with " + c("card_pick()"), "given to labwc with " + c("WLR_RENDER_DRM_DEVICE")],
+        ["KDE Plasma", "REMOTIX, with " + c("card_pick()"), "the card of the labwc that hosts KWin"],
+        ["GNOME", "GNOME itself (Mutter takes the BIOS primary card, Boot VGA)", "REMOTIX does not force it"],
+        ["Encoder", "follows the desktop's card", c("--render-node") + " is unchanged: only the encoder's fallback, with a "
+         "warning if it differs from the compositor's card"],
+    ], "«TAB» — Who decides, per desktop") + \
+    p("<b>A server with a service card.</b> Many servers carry a management card (ASPEED " + c("ast") + ", " + c("mgag200")
+      + ", " + c("hibmc-drm") + ") that has no 3D. REMOTIX takes the capable card. GNOME may still choose the ASPEED, because it "
+      "is the BIOS primary, and then it draws in software: when the compositor's card has a service driver the log carries "
+      "<b>one warning per session</b> that names the desktop and says that it probably draws in software; the encoder goes to "
+      "the compositor's card and, where that cannot encode, to the startup card (a copy between cards). The cure is to make the "
+      "capable card the primary one in the BIOS. The behaviour does not change; the log tells.") + \
+    p("<b>Where it is said.</b> One log line per session gives the node, the PCI address, the driver and why («BIOS primary card», "
+      "«first capable card by PCI address; the BIOS primary … cannot draw: …», «… has no render node»), and the encoder's line "
+      "(«the encoding card: node (PCI, driver) — from …») says where its choice came from. The installer lists the cards (node, "
+      "PCI address, driver, BIOS primary) and says which one REMOTIX will use and why, in " + c("check") + " (" + c("desktop-card")
+      + ") and in the plan — only on a machine with more than one card (" + c("installer/engine/desktop_card.go") + "). The "
+      "installer cannot run " + c("card_can_draw()") + ": «capable» there means «has a render node»; the service's log has the "
+      "last word. Unit test: " + c("benches/unit/card-pick") + " (fake " + c("/dev/dri") + " and sysfs: swapped names, ASPEED "
+      "without node, no " + c("boot_vga") + ", primary that cannot draw, none capable, one card).")
 
 S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is no systemd unit to "
        "override, so " + c("write_dropin()") + " has nothing to do and REMOTIX starts the compositor itself.",
@@ -643,6 +692,7 @@ CHAPTER = ("The four desktops", [
     ("XFCE sessions on labwc", S6),
     ("LXQt sessions on labwc", S7),
     ("Output size on labwc", S8),
+    ("Servers with more than one graphics card", S8B),
     ("What is removed from the session menus", S9),
     ("Ending a session and tidying up", S10),
     ("Where the desktops branch", S11),

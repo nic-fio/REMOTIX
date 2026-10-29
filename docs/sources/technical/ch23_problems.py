@@ -96,11 +96,12 @@ S3 = p("Not defects but declared limits of 1.0.0: each is written in the log or 
          c("src/kwin.c") + ", " + c("src/session.c"),
          "On the Intel UHD 770 (integrated) a 60 fps scene loses 3–4 fps at 3K and 9–14 fps at 4K; nothing at "
          "1080p and 2K (" + rif("The cost of the nested KWin") + ")."],
-        ["<b>Our own labwc on Alma/RHEL 10 must be followed by hand.</b> EPEL 10 has no labwc, so the Alma package "
-         "builds labwc 0.8.4 and installs it at " + c("/usr/lib/remotix/labwc") + ".",
-         c("packaging/rpm/remotix.spec") + ", " + c("packaging/rpm/labwc/"),
-         "At every REMOTIX release the labwc releases for the wlroots EPEL carries must be checked (DECISIONS.md "
-         "§10.43)."],
+        ["<b>Our own labwc must be followed by hand.</b> From KWin 6.5 on the Ubuntu 26.04, Fedora 44, Alma 10, Tumbleweed and "
+         "Arch packages build labwc 0.9.3 with a patched wlroots 0.19.2 (static) and install it at "
+         + c("/usr/lib/remotix/labwc") + ".",
+         c("packaging/labwc-ospite/") + ", " + c("packaging/rpm/remotix.spec"),
+         "At every REMOTIX release the releases of labwc and wlroots must be checked, and the patch dropped if upstream fixes "
+         "it (DECISIONS.md §10.43, replaced in 1.5)."],
         ["<b>KWin 6.6 (Ubuntu 26.04) is untested.</b>", "—",
          "The nested road was tried on KWin 6.3.6 (Debian 13) and 6.4.2 (openSUSE Leap 16) only; no box of Ubuntu "
          "26.04 exists on the test machine."],

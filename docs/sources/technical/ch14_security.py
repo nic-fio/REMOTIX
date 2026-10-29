@@ -546,12 +546,13 @@ S9 = p("«The key of everything is that REMOTIX does not modify the systems it i
         ["Per-user session log", c("~/.local/state/remotix/session.log"), "Installer engine, on uninstall"],
     ], "«TAB» — Everything REMOTIX puts on a machine")
 
-# ── 14.10 KWin's labwc on RHEL / Alma 10 ─────────────────────────────────
+# ── 14.10 KWin's own labwc ─────────────────────────────────
 S9B = p("On KDE, KWin runs nested in a labwc without a screen that REMOTIX starts (" + rif("KDE Plasma sessions")
-        + "). Six distributions provide labwc themselves; EPEL 10 does not, so the RHEL / Alma 10 package carries "
-        "its own: <b>labwc 0.8.4</b>, built unmodified inside the package and installed as "
-        + c("/usr/lib/remotix/labwc") + " (" + c("DECISIONS.md") + " §10.43, the user's decision of 11 Oct 2026). "
-        "It is the only third-party program REMOTIX ships.", lead=True) + \
+        + "). Up to KWin 6.4 (Debian 13, openSUSE Leap 16) that labwc is the distribution's. From KWin 6.5 on (Ubuntu 26.04, "
+        "Fedora 44, RHEL / Alma 10, Tumbleweed, Arch) it is <b>REMOTIX's own</b>: <b>labwc 0.9.3</b> with a wlroots 0.19.2 patched "
+        "in a few lines and linked statically, installed as " + c("/usr/lib/remotix/labwc") + " (" + c("DECISIONS.md")
+        + " §10.43, the user's decision of 11 Oct 2026, replaced in 1.5 by the correction of 28 Oct 2026; " + rif("Where KWin's labwc comes from")
+        + "). It is the only third-party program REMOTIX ships.", lead=True) + \
     table(["Question", "Answer (source review of 11 Oct 2026, labwc 0.9.8 read in full, 0.8.4 checked against it)"], [
         ["Does it use the network?", "No: no " + c("AF_INET") + ", no " + c("getaddrinfo") + ". Its only socket is "
          "the Wayland one, in " + c("$XDG_RUNTIME_DIR/remotix-kwin-host") + " (0700)."],
@@ -571,36 +572,41 @@ S9B = p("On KDE, KWin runs nested in a labwc without a screen that REMOTIX start
          "removed; the build runs only " + c("git describe") + " and " + c("wayland-scanner") + "; no binary "
          "blobs."],
     ], "«TAB» — What labwc can do on the server") + \
+    p("<b>What changed in 1.5 and what the review covers.</b> The source review of 11 Oct 2026 read labwc 0.9.8 in full and "
+      "checked 0.8.4 against it. The 1.5 build is labwc 0.9.3, which lies between the two, and the only change is the wlroots "
+      "patch: it touches the presentation feedback of the scene (scene/surface.c of wlroots) and nothing about the "
+      "network, programs or files. Not settled yet: the review has not been repeated on 0.9.3 itself. The answers above hold "
+      "because labwc is built with the same options as before and runs headless, with the configuration of "
+      + c("kwin.c") + ".") + \
     p("<b>One finding, fixed on all seven distributions.</b> An " + c("rc.xml") + " without bindings made labwc "
       "load its default ones, which start a terminal (Super+Return) and " + c("amixer") + " or "
       + c("brightnessctl") + " (the volume and brightness keys). Measured on labwc 0.8.3, 0.9.8 and REMOTIX's "
       "0.8.4: keys sent through the virtual keyboard started the fake programs put first in " + c("PATH")
       + ". The configuration REMOTIX writes now keeps zero bindings, and the same keys start nothing. The cure "
       "is in " + c("kwin.c") + ", so it also applies to the distributions' labwc.") + \
-    table(["Rule (" + c("DECISIONS.md") + " §10.43)", "What it means"], [
-        ["Updated at every REMOTIX release", "Check labwc's releases for the wlroots that EPEL 10 carries (0.8.x while "
-         "EPEL has wlroots 0.18); change " + c("packaging/rpm/labwc/VERSIONS") + " and " + c("%global labwc_ver")
-         + " in the spec."],
-        ["Every update reviews the diff", "The diff between the pinned and the new version, by the categories of "
-         "the table above (network, exec, file writes, setuid, dlopen, environment, build scripts), recorded in "
-         + c("DECISIONS.md") + "; then the Alma package is rebuilt and the proofs run again."],
-        ["A serious advisory triggers a release", "A serious security advisory in labwc, or in the wlroots it "
-         "links (EPEL's, linked dynamically), means an extraordinary REMOTIX release with the Alma package "
-         "rebuilt at once."],
-        ["labwc is not patched", "If a patch ever becomes necessary, it is published under GPL-2.0 together with "
-         "the source."],
-        ["The source is verified", "GitHub's archive of the tag " + c("0.8.4") + " (labwc publishes no tarball and "
-         "signs nothing), pinned by SHA-256; " + c("fetch.sh") + " checks it at every build, also against the "
-         "SHA-512 in Fedora's dist-git. Checked on 11 Oct 2026 to be identical to " + c("git archive")
-         + " of the tag."],
+    table(["Rule (" + c("DECISIONS.md") + " §10.43, as changed in 1.5)", "What it means"], [
+        ["Updated at every REMOTIX release", "Check the releases of labwc and of wlroots 0.19.x; change "
+         + c("packaging/labwc-ospite/VERSIONS") + " (versions and sha256) and " + c("%global labwc_ver") + " / " + c("wlroots_ver")
+         + " in the spec (the build stops if they differ). If upstream fixes the problem, the patch goes."],
+        ["Every update reviews the diff", "The diff between the pinned and the new version, by the categories of the table "
+         "above (network, exec, file writes, setuid, dlopen, environment, build scripts), recorded in " + c("DECISIONS.md")
+         + "; then the five packages are rebuilt and the proofs run again."],
+        ["A serious advisory triggers a release", "A serious security advisory in labwc or in wlroots means an extraordinary "
+         "REMOTIX release with the five packages rebuilt at once: wlroots is linked <b>statically</b>, so an update of the "
+         "distribution's wlroots does not fix our copy."],
+        ["labwc is unmodified, wlroots has one patch", "labwc is built as released. wlroots (MIT) carries a patch of a few lines; "
+         "it is published with the source."],
+        ["The source is verified", "labwc: GitHub's archive of the tag " + c("0.9.3") + " (labwc publishes no tarball and "
+         "signs nothing); wlroots: the official release tarball of gitlab.freedesktop.org. Both pinned by SHA-256 in "
+         + c("VERSIONS") + "; " + c("fetch.sh") + " checks them at every build."],
     ], "«TAB» — How labwc is kept") + \
-    p("<b>Licence.</b> labwc is GPL-2.0-only (two files LGPL-2.0-or-later), a separate program not linked with "
-      "REMOTIX. " + c("THIRD-PARTY-LICENSES") + " carries its full text; " + c("LICENSE.md") + " §8 and the "
-      "README say that REMOTIX's terms do not apply to it. The exact corresponding source — the upstream tarball "
-      "and the recipe (" + c("VERSIONS") + ", " + c("fetch.sh") + ", " + c("remotix.spec") + ") — goes with every "
-      "release, inside the " + c(".run") + " (" + c("source/labwc/") + ") and next to it ("
-      + c("remotix-<version>-labwc-source.tar.gz") + ", with its " + c(".sha256") + "), written by "
-      + c("packaging/release.sh") + "; the Alma source rpm carries it too.")
+    p("<b>Licence.</b> labwc is GPL-2.0-only (two files LGPL-2.0-or-later), a separate program not linked with REMOTIX; "
+      "wlroots (MIT) is linked into labwc, not into REMOTIX. " + c("THIRD-PARTY-LICENSES") + " carries the full text of both; "
+      + c("LICENSE.md") + " §8 and the README say that REMOTIX's terms do not apply to labwc. The exact corresponding source — the "
+      "two upstream tarballs, the patch and the recipe (" + c("packaging/labwc-ospite/") + ") — goes with every release, inside "
+      "the " + c(".run") + " (" + c("source/labwc/") + ", the recipe in " + c("source/labwc/recipe/") + ") and next to it ("
+      + c("remotix-<version>-labwc-source.tar.gz") + ", with its " + c(".sha256") + "), written by " + c("packaging/release.sh")
+      + "; the source rpms carry it too.")
 
 # ── 14.11 The power belts ────────────────────────────────────────────────
 S10 = p("On 15 Aug 2026 the user decided that nobody powers off, reboots, suspends or hibernates the server — not even "
@@ -682,6 +688,64 @@ S11 = p("The server runs as a systemd system service, as <b>root</b> and outside
       + "); with it, enforcing, 0 denials on Fedora 44, Alma 10, Tumbleweed and Leap 16. A different port needs "
       + c("semanage port -a -t remotix_port_t -p tcp N") + " (and " + c("udp") + ") by the administrator.")
 
+S11A = p("Started as root, the server is <b>two processes</b> (" + c("DECISIONS-11.md") + " §11.11, §11.50; on by default since 25 Oct "
+         "2026). The <b>root side</b> keeps what needs power: PAM, the birth of the desktops, the ban of what PAM refused. The "
+         "<b>network side</b> talks to the Internet — QUIC, TLS, the page, the ban table, the certificates — as the system user "
+         + c("remotix") + ", in a room with no doors, so that a bug in the network code gives a stranger nothing. "
+         + c("--no-split") + " returns to the single process of 1.0; an ordinary user (the benches) always gets one process.",
+         lead=True) + \
+    table(["Wall", "What it does"], [
+        ["Mount namespace", "The whole tree read-only, nosuid and nodev, except " + c("/var/lib/remotix/net") + " and "
+         + c("/run/remotix/net") + " (noexec); a private empty " + c("/tmp") + "; a minimal read-only " + c("/dev") + "; mounts are slaves of the host's"],
+        ["Identity", "No supplementary group, " + c("setgid") + " / " + c("setuid") + " to " + c("remotix") + ", no capability left "
+         "(effective, permitted, bounding, ambient, read back), " + c("PR_SET_NO_NEW_PRIVS") + ", " + c("RLIMIT_NPROC") + " 128"],
+        ["Process and network namespaces", "Its own PID namespace (it sees no desktop and no other process; when it dies the kernel "
+         "kills what it started) and its own network namespace that keeps only the sockets it was given"],
+        ["Landlock", "The scope on abstract unix sockets, where the kernel has it (Linux 6.12 and later)"],
+        ["seccomp", "A raw-BPF filter: no user namespace, " + c("clone3") + " ENOSYS, io_uring, userfaultfd, perf_event_open, bpf, "
+         "keyctl, ptrace and the TIOCSTI ioctls refused, an allow list of socket families"],
+        ["SELinux, AppArmor", "See " + rif("Checked with SELinux and AppArmor")],
+    ], "«TAB» — The network side's walls (" + c("src/walls.c") + ")") + \
+    p("Any wall that fails stops the start of the network side and the reason is logged: a network side without its walls "
+      "would be the 1.0 server with extra steps. The desktops are <b>not</b> behind the walls (their children are forked by the root "
+      "side), so " + c("sudo apt install") + " in a remote desktop keeps working. " + c("/proc") + " of the root side is not hidden "
+      "from the rediscovery of desktops. The files of the network side moved from the 1.0 places into " + c("/var/lib/remotix/net")
+      + " (" + c("remotix-net-move") + ", " + c("--back") + " undoes it). The split costs, against 1.0 (measured 16 Oct 2026 on the "
+      "discarded first attempt, not repeated on the final one): the birth of a desktop +6 ms (noise), motion 61.5 fps in both, idle "
+      "memory +10 MB.")
+
+S11B = p("Confinement is checked with the policy in force and a <b>real login</b> (a password through PAM, a desktop born, "
+         "the first image), not only with the service started. The policy has two parts, one per process of the split "
+         "(" + c("DECISIONS-11.md") + " §11.50), which is on by default in the packages since 25 Oct 2026.", lead=True) + \
+    table(["Process", "SELinux domain", "AppArmor", "What it does"], [
+        ["Root side", c("remotix_t"), "unconfined", "PAM, the birth of the desktops, the ban of what PAM refused; transitions to the "
+         "users' domains"],
+        ["Network side", c("remotix_net_t"), c("remotix_network"), "The UDP and TCP sockets it was given, QUIC and TLS, the page, "
+         "the ban and the certificates in " + c("/var/lib/remotix/net") + "; it opens no card and has no capability"],
+    ], "«TAB» — The two domains") + \
+    table(["Machine", "Policy", "Result"], [
+        ["Fedora 44, AMD Radeon", "SELinux, enforcing", "login with a real user: 0 AVC denials"],
+        ["Debian", "AppArmor", "0 DENIED lines (the profile is in complain mode)"],
+        ["Alma 10 (virtual machine)", "SELinux, enforcing", "package of 25 Oct 2026, split service: 0 AVC from start, private "
+         + c("/proc") + ", the rediscovery of the desktops, journald, the page, stop and the kill of either side"],
+        ["Fedora 44, Alma 10, Tumbleweed, Leap 16", "SELinux, enforcing", "the rules of the split module measured (" + c("DECISIONS-11.md")
+         + " §11.50)"],
+    ], "«TAB» — What was verified") + \
+    p("<b>SELinux.</b> The network side enters " + c("remotix_net_t") + " when the root side calls " + c("setexeccon") + " in the "
+      "fork, before the " + c("execve") + ". The module needs " + c("process2 { nnp_transition nosuid_transition }") + ": without "
+      + c("nosuid_transition") + " the exec fails with EPERM, because the walls' mount counts as nosuid. " + c("remotix_net_t")
+      + " may connect only to itself. Files: " + c("packaging/rpm/selinux/remotix.te.split") + ", " + c("remotix.fc.split") + ".") + \
+    p("<b>AppArmor.</b> The profile " + c("remotix_network") + " (" + c("packaging/debian/remotix_network.apparmor") + ") has "
+      "<b>no attachment path</b>: starting the program never puts anything in it, so the root side stays unconfined. The root side "
+      "writes «exec remotix_network» into " + c("/proc/thread-self/attr/apparmor/exec") + " right before it executes the network "
+      "side (" + c("src/walls.c") + ", what " + c("aa_change_onexec()") + " does). It is installed in <b>complain mode</b> by "
+      + c("dh_apparmor") + ": it logs what it would refuse and confines nothing yet. To tighten it, collect the "
+      + c("apparmor=\"ALLOWED\"") + " lines, add what the network side really needs and switch to enforce only after a clean "
+      "functional suite.") + \
+    p("Known limit: where the kernel lacks Landlock's abstract-socket scope (before Linux 6.12) the abstract unix sockets "
+      "(for example X11's) stay reachable from the network side; on SELinux " + c("remotix_net_t") + " may connect only to itself, "
+      "but on Debian, Ubuntu and Arch only the checks of the peer services (" + c("SO_PEERCRED") + ", cookies) stand.")
+
 # ── 14.13 Known limits ───────────────────────────────────────────────────
 S12 = p("The weaknesses that are known and written in the code, collected in one place for whoever evaluates "
         "exposing a REMOTIX server.", lead=True) + \
@@ -698,9 +762,9 @@ S12 = p("The weaknesses that are known and written in the code, collected in one
         ["Unlock socket absent from the packaged units", "packaging", "Not settled yet"],
         ["Every journal line twice under systemd with " + c("--journal"), c("log.c"), "Not settled yet"],
         ["Card groups include " + c("video"), c("child.c"), "Restriction to " + c("render") + " not settled yet"],
-        ["A third-party program in the Alma package: labwc 0.8.4", c("packaging/rpm/labwc/"), "Reviewed 11 Oct "
-         "2026; updated and reviewed again at every release; an extraordinary release on a serious advisory ("
-         + rif("KWin's labwc on RHEL / Alma 10") + ")"],
+        ["A third-party program in five packages: our labwc 0.9.3 with a patched, static wlroots 0.19.2", c("packaging/labwc-ospite/"),
+         "Reviewed 11 Oct 2026 (labwc 0.9.8 and 0.8.4; 0.9.3 itself not yet); updated and reviewed again at every release; an extraordinary release on a serious advisory ("
+         + rif("KWin's own labwc") + ")"],
         ["Safari and iOS", "—", "Never tested"],
     ], "«TAB» — Known limits of the security model")
 
@@ -714,8 +778,10 @@ CHAPTER = ("Security model", [
     ("Isolation between users", S7),
     ("The graphics card groups", S8),
     ("What REMOTIX does not change", S9),
-    ("KWin's labwc on RHEL / Alma 10", S9B),
+    ("KWin's own labwc", S9B),
     ("The power belts", S10),
     ("The service unit and SELinux", S11),
+    ("Privilege separation: root side and network side", S11A),
+    ("Checked with SELinux and AppArmor", S11B),
     ("Known limits of the security model", S12),
 ])

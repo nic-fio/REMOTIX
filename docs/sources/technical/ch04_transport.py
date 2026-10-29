@@ -107,7 +107,13 @@ S3 = p("The server listens on port 7447 twice: UDP for HTTP/3 and WebTransport, 
       + " in " + c("/usr/share/remotix/remotix.conf") + " and overrides in " + c("/etc/remotix/remotix.conf.d/") + "; "
       "extra options go in " + c("REMOTIX_OPTIONS") + ". The number was chosen on 9 August 2026 because it is free in "
       + c("/etc/services") + " of Debian Trixie. Not settled yet: whether 7447 is free in the IANA registry — nobody "
-      "has checked.")
+      "has checked.") + \
+    warn("both protocols of port 7447 must be reachable: <b>TCP</b> loads the page and <b>UDP</b> carries the session (QUIC, "
+         "WebTransport). With only TCP open the page loads and the desktop never arrives, because there is no fallback to TCP. "
+         "REMOTIX never opens the firewall: the installer warns when firewalld is active. On a rented server the "
+         "provider's own firewall (security group, network ACL), which sits outside the machine, must open 7447 TCP and UDP "
+         "too. A different port needs the same two rules, and under SELinux the port type (" + c("semanage port -a -t "
+         "remotix_port_t") + ", " + rif("The service unit and SELinux") + ").", "TCP and UDP.")
 
 # ── QUIC parameters ─────────────────────────────────────────────────────
 S4 = p("Each connection gets the same transport parameters, set in " + c("transport.c") + " just before "
