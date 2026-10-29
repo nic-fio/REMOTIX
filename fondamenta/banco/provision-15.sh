@@ -125,8 +125,13 @@ scrivi_storage "$CASA/.config/containers/storage.conf" "/run/user/$UID_UTENTE/co
 PKGS=(
     # per compilare nel contenitore e per muovere il repository
     git podman make gcc pkg-config rsync
+    # le intestazioni C: alcuni test unitari di verifica-rami si compilano sull'host (27 ott 2026, dopo un riavvio: «stdint.h»)
+    libc6-dev
     # la rete dei container senza privilegi
     uidmap slirp4netns passt netavark aardvark-dns
+    # podman --init (il contenitore di compilazione di verifica-rami e i test root): senza, «catatonit: executable file
+    # not found» e la verifica della rete va 1 PASS / 68 FAIL in 16 s (27 ott 2026, dopo un riavvio)
+    catatonit
     # la suite: i banchi in Python (immagini, matematica) e l'ambiente isolato
     python3-venv python3-pil python3-numpy python3-xlib wlr-randr libpulse0 pipewire pipewire-pulse wireplumber
     # la suite (F-014C/D, F-015C): wl-copy/wl-paste fuori dal browser, tasti (wtype), focus (wlrctl),
@@ -219,7 +224,9 @@ runuser -u "$UTENTE" -- env XDG_RUNTIME_DIR=/run/user/$UID_UTENTE systemctl --us
 # 5-bis. Le schede per l'utente: i client dei banchi (Firefox, Chrome) aprono /dev/dri/renderD* per decodificare
 #    in hardware; senza i gruppi decodificano in CPU e il 30-perf misura il client (26 ott 2026, dopo un riavvio).
 log "Gruppi video e render per $UTENTE"
-usermod -aG video,render "$UTENTE" && ok "$UTENTE in video e render (vale dalla prossima sessione ssh)"
+# ...e kvm: le VM dei banchi (selinux-vm.sh, 17-vm.sh) con qemu e -enable-kvm. Perso al riavvio del 26 ott 2026:
+#   «Could not access KVM kernel module: Permission denied» il 27 ott
+usermod -aG video,render,kvm "$UTENTE" && ok "$UTENTE in video, render e kvm (vale dalla prossima sessione ssh)"
 
 # 5-ter. I modelli locali: lo script llm.sh sta sul disco (/media/DOWNLOAD/llama-swap), ~/llm e' un collegamento.
 #    (26 ott 2026: l'originale stava in ~/llm, cioe' in RAM, ed e' sparito al riavvio.)

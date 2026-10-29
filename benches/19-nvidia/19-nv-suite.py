@@ -21,16 +21,25 @@ each, like `15-round.py`.  ⭐ The only difference is where things are:
   - the browsers in THE BROWSERS' headless labwc (pixman, 3840x2160) like
     `15-compositors.sh`; if that one is not born, HEADLESS — and the line says so.
 
+⭐ 27 Oct 2026, CLIENTS=home: the browsers are NOT on the machine but on the home server, and
+the machine is far away (`--host IP`).  Then "inside the box" is a command to the machine, over ssh
+(`--ssh user@IP`, with `--ssh-opts` and `--sudo`) or, for the local test, in a home container
+(`--container rete11-xfce`, `sudo podman exec` like `suite.py` does with REMOTIX_ON_SERVER).
+The server log the tests read is then the one on the machine, read the same way.
+Without `--ssh`/`--container` everything is as before (`sudo -n sh -c` on the machine itself).
+
 The log has the lines of `15-round.py` (run "19-nvidia"): `15-report.py` makes the
 report as for the other runs.  Exit: 0 all PASS · 1 at least one FAIL · 3 BLOCKED.
 """
 import argparse
+import base64
 import datetime
 import hashlib
 import json
 import os
 import re
 import runpy
+import shlex
 import subprocess
 import sys
 import threading
@@ -51,6 +60,44 @@ CHROME_OPTIONS = ("--ozone-platform=wayland --disable-backgrounding-occluded-win
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  THE ROAD TO "INSIDE": the machine itself, a remote machine over ssh, or a home container
+# ═══════════════════════════════════════════════════════════════════════════
+def is_remote():
+    return bool(os.environ.get("RXNV_SSH") or os.environ.get("RXNV_CONTAINER"))
+
+
+def remote(line, seconds=90):
+    """(code, output) of `line` as root ON THE MACHINE, whatever the road is.
+
+    - RXNV_SSH=user@IP (+ RXNV_SSH_OPTS, RXNV_SUDO="sudo -n" for a user other than root): the home
+      server drives a rented machine.  ⚠ The line travels in base64, like `Box.inside` of
+      12-c20-real.py: no quote to escape across the shells, whatever the login shell is;
+    - RXNV_CONTAINER=name: the local test, a home container as the "machine" (root podman, with the
+      sudo password of the server, as `suite.py` does with REMOTIX_ON_SERVER);
+    - none of the two: the machine itself (the bench as run by `19-nv-machine.sh suite`)."""
+    if os.environ.get("RXNV_SSH"):
+        b = base64.b64encode(line.encode()).decode()
+        argv = (["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=30",
+                 "-o", "LogLevel=ERROR"]      # no «Permanently added … known hosts» in the output the tests parse
+                + shlex.split(os.environ.get("RXNV_SSH_OPTS", "")) + [os.environ["RXNV_SSH"],
+                "%s sh -c \"$(echo %s | base64 -d)\"" % (os.environ.get("RXNV_SUDO", ""), b)])
+        stdin = None
+    elif os.environ.get("RXNV_CONTAINER"):
+        sys.path.insert(0, SUITE)
+        import suite as S                                          # noqa: E402
+        argv = ["sudo", "-S", "-p", "", "podman", "exec", os.environ["RXNV_CONTAINER"], "sh", "-c", line]
+        stdin = S._sudo_password()
+    else:
+        argv, stdin = ["sudo", "-n", "sh", "-c", line], None
+    try:
+        r = subprocess.run(argv, input=stdin, capture_output=True, text=True, errors="replace",
+                           timeout=seconds)
+    except subprocess.TimeoutExpired:
+        return None, "(no answer within %d s)" % seconds
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  INSIDE A TEST (child process): the graft, then the real test
 # ═══════════════════════════════════════════════════════════════════════════
 def internal(file, rest):
@@ -59,17 +106,107 @@ def internal(file, rest):
 
     def inside(self, line, seconds=90):
         """(code, output) of `line` as root ON THE MACHINE (the "box" is the machine)."""
-        try:
-            r = subprocess.run(["sudo", "-n", "sh", "-c", line], capture_output=True,
-                               text=True, errors="replace", timeout=seconds)
-        except subprocess.TimeoutExpired:
-            return None, "(no answer within %d s)" % seconds
-        return r.returncode, (r.stdout + r.stderr).strip()
+        return remote(line, seconds)
 
     S.C20V.Box.inside = inside
     S.C20V.LOG = os.environ["RXNV_LOG"]
     sys.argv = [file] + rest
     runpy.run_path(file, run_name="__main__")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  WHICH DESKTOP REALLY RUNS  (⭐ 28 Oct 2026)
+# ═══════════════════════════════════════════════════════════════════════════
+# The product picks the desktop by itself, from the markers it finds in PATH, in a fixed order
+# (src/session.c `recognize_desktop`: KDE if there is no gnome-session, GNOME, XFCE, LXQt).  The bench
+# imposes the requested one (19-nv-machine.sh `desktop`) and here it CHECKS: a test run on a desktop
+# other than the requested one is NOT GUARDED, with the reason, and is never written under the wrong name.
+MARKERS = {"kde": "startplasma-wayland", "gnome": "gnome-session", "xfce": "xfce4-session", "lxqt": "lxqt-session"}
+# processes of a running session (the brackets: `grep` does not match its own command line)
+SESSION_PROCS = {"kde": "[s]tartplasma-wayland|[p]lasmashell", "gnome": "[g]nome-shell|[g]nome-session-binary",
+                 "xfce": "[x]fce4-session|[x]fce4-panel", "lxqt": "[l]xqt-session|[l]xqt-panel"}
+
+
+def predicted_desktop(present):
+    """The desktop `recognize_desktop` chooses, given the set of the markers present."""
+    if "kde" in present and "gnome" not in present:
+        return "kde"
+    if "gnome" in present:
+        return "gnome"
+    if "xfce" in present:
+        return "xfce"
+    if "lxqt" in present:
+        return "lxqt"
+    return None
+
+
+def desktop_markers():
+    """The desktops whose marker the machine's product finds (PATH of the session's child)."""
+    line = "; ".join('PATH=/usr/local/bin:/usr/bin:/bin command -v %s > /dev/null 2>&1 && echo %s' % (b, d)
+                     for d, b in MARKERS.items())
+    c, t = remote(line, 30)
+    return {x.strip() for x in t.split() if x.strip() in MARKERS}
+
+
+SESSION_USERS = "(%s|c[0-9]+b?u[0-9]+)" % os.environ.get("RXNV_BENCH_USER", "rxbanco")
+
+
+def running_desktops():
+    """({desktop: [lines "user pid command"]}, readable) — the processes of the BENCH's session users only
+    (the bench user and the REMOTIX session users c<N>[b]u<N>): not the greeter, not other people's sessions."""
+    parts = ['P=$(ps -eo user=,pid=,args= 2>/dev/null) || { echo PSFAIL; exit 0; }',
+             'P=$(echo "$P" | awk \'$1 ~ /^%s$/\')' % SESSION_USERS]
+    for d, pat in SESSION_PROCS.items():
+        parts.append('echo "$P" | grep -E "%s" | sed "s/^/%s /"' % (pat, d))
+    parts.append("echo OKPS")
+    c, t = remote("; ".join(parts), 30)
+    out = {}
+    lines = t.splitlines()
+    readable = any(x.strip() == "OKPS" for x in lines) and not any(x.strip() == "PSFAIL" for x in lines)
+    for x in lines:
+        w = x.split(None, 1)
+        if len(w) == 2 and w[0] in MARKERS:
+            out.setdefault(w[0], []).append(" ".join(w[1].split())[:160])
+    return out, readable
+
+
+class SessionWatcher(threading.Thread):
+    """While a test runs, every few seconds, it notes which desktops have processes (session users only)."""
+    def __init__(self, every=15):
+        super().__init__(daemon=True)
+        self.seen, self.every, self._stop_ev = {}, every, threading.Event()
+        self.unreadable = 0
+        self.reads = 0
+
+    def run(self):
+        while not self._stop_ev.is_set():
+            try:
+                got, ok = running_desktops()
+            except Exception:                                    # noqa: BLE001
+                got, ok = {}, False
+            if ok:
+                self.reads += 1
+            else:
+                self.unreadable += 1
+            for d, ls in got.items():
+                self.seen.setdefault(d, [])
+                self.seen[d] += [x for x in ls if x not in self.seen[d]][:3]
+            self._stop_ev.wait(self.every)
+
+    def stop(self):
+        self._stop_ev.set()
+        self.join(timeout=40)
+
+
+def wrong_desktop(wanted, seen):
+    """None if the processes seen (dict desktop → lines) agree with the requested desktop; else the reason."""
+    other = sorted(set(seen) - {wanted})
+    if other:
+        found = " ; ".join("%s: %s" % (d, " | ".join(seen[d][:3])) for d in other)
+        return ("NOT GUARDED: the requested desktop is «%s» but the bench's session users run processes of «%s» "
+                "(user pid command — %s): the test did NOT run on the requested desktop and is not registered as «%s»"
+                % (wanted, "/".join(other), found, wanted))
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -84,6 +221,9 @@ def load(file):
 
 
 def md5(fpath):
+    if is_remote():                 # the product is on the machine, not here
+        c, t = remote("md5sum %s 2>/dev/null | cut -c1-8" % shlex.quote(fpath), 30)
+        return t if c == 0 and len(t) == 8 else "?"
     try:
         return hashlib.md5(open(fpath, "rb").read()).hexdigest()[:8]
     except OSError:
@@ -98,8 +238,10 @@ def una(o, file, browser, base):
     os.makedirs(ev, exist_ok=True)
     env = dict(os.environ, MOZ_ENABLE_WAYLAND="1")
     cmd = [sys.executable, os.path.abspath(__file__), "--internal", file,
-           "--box", DESKTOP, "--browser", browser, "--host", "127.0.0.1",
+           "--box", DESKTOP, "--browser", browser, "--host", o.host,
            "--port", str(o.port), "--base-port", str(base), "--evidence", ev, "--fault"]
+    if o.cap_s:
+        cmd += ["--cap-s", str(o.cap_s)]
     if o.mode == "window":
         env.update(REMOTIX_NESTED_SCREEN="1", REMOTIX_CHROME_OPTIONS=CHROME_OPTIONS)
     else:
@@ -109,6 +251,8 @@ def una(o, file, browser, base):
     started = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
     t0 = time.time()
     lines, report = [], ""
+    watcher = SessionWatcher()
+    watcher.start()
     with open(os.path.join(ev, "uscita.log"), "w") as log:
         try:
             pr = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
@@ -140,6 +284,21 @@ def una(o, file, browser, base):
         except Exception as e:                                       # noqa: BLE001
             report = "the bench could not launch the test: %r" % e
     duration = round(time.time() - t0)
+    watcher.stop()
+    # ⭐ the desktop that ran, from the processes: if it is not the requested one, nothing is registered as passed/failed
+    reason = wrong_desktop(DESKTOP, watcher.seen)
+    if reason:
+        print("   ⛔ %s" % reason, flush=True)
+        for r in lines:
+            r["outcome"] = "BLOCKED"
+            r["rationale"] = reason + " · (original: %s)" % str(r.get("rationale", ""))[:200]
+        report = report or reason
+    elif watcher.unreadable:
+        note = (" · desktop surveillance: the session processes could NOT be read %d times (%d readings ok)"
+                % (watcher.unreadable, watcher.reads))
+        print("   ⚠" + note, flush=True)
+        for r in lines:
+            r["rationale"] = str(r.get("rationale", "")) + note
     views = {(r.get("function"), r.get("pass")) for r in lines}
     for f in functions:
         for ps in ("healthy", "fault"):
@@ -189,7 +348,24 @@ def main():
     a.add_argument("--tests", default="", help="only these (e.g. f001,f018)")
     a.add_argument("--browser", default=",".join(BROWSER))
     a.add_argument("--desktop", default="xfce", choices=("gnome", "kde", "xfce", "lxqt"))
+    a.add_argument("--host", default="127.0.0.1",
+                   help="the machine's address (default: this one; CLIENTS=home: the rented machine)")
+    a.add_argument("--ssh", default="", help="user@IP: \"inside\" goes to the machine over ssh")
+    a.add_argument("--ssh-opts", default="", help="more ssh options (-p PORT -i KEY …)")
+    a.add_argument("--sudo", default="", help="prefix for the commands inside (\"sudo -n\" if the user is not root)")
+    a.add_argument("--container", default="",
+                   help="the local test: \"inside\" goes to this home container (sudo podman exec)")
+    a.add_argument("--cap-s", type=int, default=0,
+                   help="the tests' own cap for login and first image (0 = the suite's 45 s); "
+                        "the caller raises it, DECLARED, when the round trip is long")
     o = a.parse_args()
+    if o.ssh and o.container:
+        a.error("--ssh and --container exclude each other")
+    # the children (one process per test) inherit the road to "inside"
+    if o.ssh:
+        os.environ.update(RXNV_SSH=o.ssh, RXNV_SSH_OPTS=o.ssh_opts, RXNV_SUDO=o.sudo)
+    if o.container:
+        os.environ["RXNV_CONTAINER"] = o.container
     if "RXNV_LOG" not in os.environ:
         a.error("RXNV_LOG is missing (the file the server writes to)")
     os.makedirs(o.evidence, exist_ok=True)
@@ -197,8 +373,11 @@ def main():
     globals()["DESKTOP"] = o.desktop
     # the desktop's debug ports as in 15-round.py
     base = 3100 + 10 * ("gnome", "kde", "xfce", "lxqt").index(o.desktop)
-    print("⭐ 19-nv-suite · %s · %s · browser %s · port %d" % (
-        o.desktop, o.mode, o.browser, o.port), flush=True)
+    print("⭐ 19-nv-suite · %s · %s · browser %s · host %s · port %d%s" % (
+        o.desktop, o.mode, o.browser, o.host, o.port,
+        (" · inside via %s" % (o.ssh or "container " + o.container)) if is_remote() else ""), flush=True)
+    if o.cap_s:
+        print("⭐ --cap-s %d (the suite's default is 45): raised by the caller, declared" % o.cap_s, flush=True)
     # ⭐ 6 Oct 2026: with --tests one chooses among ALL the phase 15 tests (e.g. f012 for
     #    sound without video), not only among the six of the run; "-f012-" does not pick f012b
     choices = PROVE
@@ -206,6 +385,17 @@ def main():
         wanted_flags = ["-%s-" % x.strip() for x in o.tests.split(",") if x.strip()]
         choices = [f for f in sorted(os.listdir(SUITE))
                   if f.startswith("15-f") and f.endswith(".py") and any(v in f for v in wanted_flags)]
+    # ⭐ before anything: the product, as it is set up now, would start the requested desktop?
+    present = desktop_markers()
+    chosen = predicted_desktop(present)
+    print("⭐ markers on the machine: %s · the product would start: %s" % (",".join(sorted(present)) or "none", chosen),
+          flush=True)
+    if chosen != o.desktop:
+        print("NOT GUARDED: the product would start «%s», not the requested «%s» (markers %s): on the machine run "
+              "\"DESKTOP_NV=%s bash 19-nv-machine.sh desktop\" and retry" % (chosen, o.desktop, sorted(present), o.desktop),
+              flush=True)
+        print("END NOT-GUARDED", flush=True)
+        return 3
     for p in choices:
         file = os.path.join(SUITE, p)
         _, per_browser = load(file)

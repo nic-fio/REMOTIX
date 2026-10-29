@@ -3,6 +3,11 @@
 # with systemd and WITHOUT a GPU: all the steps that do not touch the GPU, for real.
 #
 #   bash benches/19-nvidia/19-nv-test-in-container.sh [debian13|ubuntu2604]
+#   CLIENTS=home bash …/19-nv-test-in-container.sh   # also the step `porta` (no firewall in the container: it says so)
+#
+# ⭐ 27 Oct 2026: it runs with CLIENTS=machine by default (browsers installed, as it has always done). The step
+# `suite-casa` (browsers at home) is NOT tried here: it is tried against a HOME container acting as the
+# machine, see the comment above suite_home in 19-nvidia.sh.
 #
 # What to expect (without a GPU this is correct):
 #   checks   RED ("no NVIDIA card"), but the snapshot of the machine is taken
@@ -27,6 +32,7 @@ esac
 IMAGE=localhost/remotix-nv-prova-$B
 NAME=rxnv-prova-$B
 export CONTAINER=$NAME
+export CLIENTS=${CLIENTS:-machine}
 D=$HERE/19-nvidia.sh
 M=/opt/remotix-nv/albero/benches/19-nvidia/19-nv-machine.sh
 
@@ -46,7 +52,7 @@ x() { podman exec -i "$NAME" bash -c "$1"; }
 
 bash "$D" send || exit 1
 x "dpkg-query -W -f='\${db:Status-Abbrev} \${Package}\n' | awk '\$1==\"ii\"{print \$2}' | sort > /root/pacchetti-inizio.txt; tar -C / -cf /root/apt-inizio.tar etc/apt"
-for p in checks deps remotix encode; do   # the verbs of 19-nv-machine.sh (English since the translation)
+for p in checks deps remotix $([ "$CLIENTS" = home ] && echo porta) encode; do   # the verbs of 19-nv-machine.sh (English since the translation)
 	echo; echo "######## $p"
 	x "bash $M $p"; echo ">> $p: exit $?"
 done

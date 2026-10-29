@@ -191,6 +191,10 @@ typedef struct {
 /* ⭐ 5 Oct 2026, NVIDIA: its GBM refuses LINEAR + RENDERING. */
 static struct gbm_bo *bo_like_product(struct gbm_device *g, uint32_t l, uint32_t a, uint64_t *mod)
 {
+	if (!g) {
+		fprintf(stderr, "⛔ a GBM slab is needed but the GBM device is not open (--route card required)\n");
+		exit(1);
+	}
 	struct gbm_bo *bo = gbm_bo_create(g, l, a, GBM_FORMAT_XRGB8888, GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
 	*mod = DRM_FORMAT_MOD_LINEAR;
 	if (!bo) {
@@ -303,7 +307,7 @@ int main(int argc, char **argv)
 		else { fprintf(stderr, "unknown argument: %s\n", k); return 2; }
 	}
 	if (!output || !l || !a) {
-		fprintf(stderr, "usage: 19-compare --engine vulkan|vaapi|scheda --codec h264|hevc --size LxA --output F [...]\n"
+		fprintf(stderr, "usage: 19-compare --engine vulkan|vaapi|card --codec h264|hevc --size LxA --output F [...]\n"
 		                "     19-compare --capabilities /dev/dri/renderDNNN\n");
 		return 2;
 	}
@@ -422,6 +426,10 @@ int main(int argc, char **argv)
 				}
 			for (int b = 0; b < BUFFER_COUNT; b++) {
 				buffer[b].bo = bo_like_product(gbm, resize_w, resize_h, &buffer[b].modifier);
+				if (!buffer[b].bo) {
+					fprintf(stderr, "⛔ gbm_bo_create %ux%u failed\n", resize_w, resize_h);
+					return 1;
+				}
 				buffer[b].fd = gbm_bo_get_fd(buffer[b].bo);
 				buffer[b].stride = gbm_bo_get_stride(buffer[b].bo);
 			}

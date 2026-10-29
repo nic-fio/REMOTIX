@@ -450,13 +450,23 @@ try:
             ms[k] = int(v)
 except Exception:
     ms = {}      # unreadable or in an unexpected shape: no memory.stat for this sample, box_mem is still recorded
+# ⭐ 27 Oct 2026: the box's systemd journal lives in a tmpfs (/var/log/journal, 1.6 GB in rete11-gnome after a day) and
+# grows hour after hour; tmpfs is shmem, so it was inside box_work.  Its size is recorded apart (bytes), ONLY when
+# /var/log/journal is a mount of its own of type tmpfs (mountinfo); otherwise None: it is not guessed.
+jr = None
+try:
+    for l in open("/proc/self/mountinfo"):
+        f = l.split()
+        if f[4] == "/var/log/journal" and f[f.index("-") + 1] == "tmpfs":
+            sv = os.statvfs("/var/log/journal"); jr = (sv.f_blocks - sv.f_bfree) * sv.f_frsize
+except Exception: jr = None
 fd = {}          # open files of the server processes (comm remotix): a leak shows here before it shows in memory
 for p, v in out.items():
     if v[1] == "remotix":
         try:
             fd[p] = len(os.listdir("/proc/%s/fd" % p))
         except Exception: pass
-print(json.dumps({"t": time.time(), "p": out, "fd": fd, "cpu_us": cpu, "mem": int(open("/sys/fs/cgroup/memory.current").read()), "ms": ms}))
+print(json.dumps({"t": time.time(), "p": out, "fd": fd, "cpu_us": cpu, "mem": int(open("/sys/fs/cgroup/memory.current").read()), "ms": ms, "jr": jr}))
 """
 
 
@@ -636,7 +646,7 @@ def mm(xs):
 
 def server_stats(samples, users, ovh):
     """{name: [values]}: CPU in % of one core, memory in MB, one value per (interval, session)."""
-    v = {k: [] for k in ("srv_cpu", "ses_cpu", "srv_rss", "ses_rss", "box_cpu", "box_mem", "box_work", "box_cache",
+    v = {k: [] for k in ("srv_cpu", "ses_cpu", "srv_rss", "ses_rss", "box_cpu", "box_mem", "box_work", "box_cache", "box_journal",
                          "host_cpu", "host_avail", "client_gpu_busy", "banda_stima_kbps")}
     for a, b in zip(samples, samples[1:]):
         dt = b["t"] - a["t"]
@@ -657,7 +667,19 @@ def server_stats(samples, users, ovh):
         ms = b.get("ms") or {}
         if "anon" in ms:
             kern = ms.get("kernel", ms.get("kernel_stack", 0) + ms.get("pagetables", 0) + ms.get("slab", 0))
-            work = ms["anon"] + ms.get("shmem", 0) + kern - ms.get("slab_reclaimable", 0)
+            jr = b.get("jr")
+            # the journal is taken off the SHMEM only, never off the total: statvfs can count tmpfs pages swapped out or
+            # charged to another cgroup, so jr may exceed the box's shmem and would eat REMOTIX's anon memory
+            work = ms["anon"] + max(0, ms.get("shmem", 0) - (jr or 0)) + kern - ms.get("slab_reclaimable", 0)
+            # ⭐ 27 Oct 2026: WITHOUT the journal tmpfs.  The box's systemd journal grows by itself (1.6 GB in rete11-gnome
+            #   after a day) and was counted here as shmem: a 1.0 reference measured when the journal was small and a 1.5
+            #   measured when it was big differed by +1.4 GB «box working memory» that was the journal, not REMOTIX
+            #   (interleaved pairs at equal journal size differ by about 2 %).  box_journal (MB) says how big it was.
+            #   ⛔ References measured BEFORE this change include the journal in box_work: they are NOT comparable with
+            #   the new ones and must be measured again.  `jr` None (journal not a tmpfs of its own, or an old sampler):
+            #   box_work is as it always was and box_journal stays empty.
+            if jr is not None:
+                v["box_journal"].append(jr / 1048576.0)
             v["box_work"].append(work / 1048576.0)
             v["box_cache"].append(max(0, ms.get("file", 0) - ms.get("shmem", 0) + ms.get("slab_reclaimable", 0)) / 1048576.0)
         ha, hb = a["h"], b["h"]
@@ -759,10 +781,11 @@ def run_step(o, n):
 
 AGE_WRAP_WARN_MS = 3500      # an age this close to the counter's wrap (4096) may hide an older one
 PHOTO_SLOW_MS = 2000         # a photo this slow cannot be placed in time: the age is uncertain by about half of it
-STAT_NAMES = ("srv_cpu", "ses_cpu", "srv_rss", "ses_rss", "box_cpu", "box_mem", "box_work", "box_cache", "host_cpu", "host_avail",
+STAT_NAMES = ("srv_cpu", "ses_cpu", "srv_rss", "ses_rss", "box_cpu", "box_mem", "box_work", "box_cache", "box_journal", "host_cpu", "host_avail",
               "gpu_render", "gpu_video", "gpu_videoenh", "client_gpu_busy", "fps", "age_ms", "photo_ms", "banda_stima_kbps")
 COLS = (["users", "box", "browser", "window", "canvas", "minutes", "samples"]
         + ["%s_%s" % (n, k) for n in STAT_NAMES for k in ("min", "mean", "median", "p90", "max")]
+        + ["box_journal_growth"]
         + ["age_photos", "age_unreadable", "age_future", "age_over_half", "age_unreliable", "client_errors",
            "first_img_s_max", "scene_retries", "client_limited", "status", "scene"])
 
@@ -787,8 +810,12 @@ def step_row(o, n, canvas, users, samples, recs, igt):
            ("canvas", "%sx%s" % tuple(canvas)), ("minutes", o.minutes), ("samples", len(samples))]
     for name in STAT_NAMES:
         row += [("%s_%s" % (name, k), x) for k, x in zip(("min", "mean", "median", "p90", "max"), mm(v[name]))]
+    # how much the box's journal tmpfs grew during the step (MB, last sample minus first; empty if not known): lets one
+    # see that a difference in the box memory between two runs is the journal's (27 Oct 2026, see server_stats)
+    jrs = [b["jr"] for b in samples if b.get("jr") is not None]
+    jgrowth = round((jrs[-1] - jrs[0]) / 1048576.0, 1) if len(jrs) > 1 else ""
     unreliable = int((bool(ages) and max(ages) >= AGE_WRAP_WARN_MS) or max(v["photo_ms"] or [0]) > PHOTO_SLOW_MS)
-    return row + [("age_photos", len(ages)), ("age_unreadable", dl.count(None)),
+    return row + [("box_journal_growth", jgrowth), ("age_photos", len(ages)), ("age_unreadable", dl.count(None)),
                   ("age_future", sum(1 for d in dl if d is not None and d < 0)),
                   ("age_over_half", sum(1 for d in ages if d > F3.MODULE / 2)), ("age_unreliable", unreliable),
                   ("client_errors", sum(r["errors"] for r in recs))] + list(o.step_info) + [

@@ -22,7 +22,7 @@ RADEON_NODE=${RADEON_NODE:-129}
 INTEL_NODE=${INTEL_NODE:-128}
 # ⭐ the engines of the comparison (phase 19, NVIDIA bench): on NVIDIA VA-API does not encode, and the
 #    bench `benches/19-nvidia/` asks for ENGINES="vulkan card"
-ENGINES=${ENGINES:-vaapi vulkan scheda}
+ENGINES=${ENGINES:-vaapi vulkan card}
 FPS=60
 mkdir -p "$OUTPUT"
 cd "$TREE" || exit 1
@@ -71,7 +71,7 @@ prova() {
 	local probe
 	probe=$(ffprobe -v error -f $fmt -show_entries stream=profile,level,width,height,pix_fmt,color_range,color_space,color_transfer,color_primaries -of csv=p=0 "$stream" 2>/dev/null | head -1)
 	local psnr="" ssim=""
-	if [ -f "$source" ] && [ -z "$(echo "$@" | grep -o -E "ridimensiona|ciclo")" ]; then
+	if [ -f "$source" ] && [ -z "$(echo "$@" | grep -o -E "resize|cycle")" ]; then
 		local pix=yuv420p; [ "$prof" = 10 ] && pix=yuv420p10le
 		psnr=$(ffmpeg -v info -f $fmt -r $FPS -i "$stream" -f rawvideo -pix_fmt bgr0 -s "$measure" -r $FPS -i "$source" \
 			-lavfi "[1:v]scale=out_color_matrix=bt709:out_range=tv,format=$pix[r];[0:v]format=$pix[a];[a][r]psnr" -f null - 2>&1 \
@@ -88,7 +88,7 @@ prova() {
 }
 
 matrix() {
-	local node=$RADEON_NODE measures="1920x1080 3840x2160" routes="memoria scheda"
+	local node=$RADEON_NODE measures="1920x1080 3840x2160" routes="memory card"
 	[ "$ACTION" = short ] && measures="1920x1080"
 	for cp in "h264 8" "hevc 8" "hevc 10"; do
 		set -- $cp; local codec=$1 prof=$2
@@ -108,19 +108,19 @@ matrix() {
 		local base="D$node-${codec}8-1920x1080"
 		echo "== $base key on request / new canvas / cap / quality"
 		for engine in $ENGINES; do
-			prova "$base-chiave" "$engine" "$node" "$codec" 8 1920x1080 scheda --key-at 40
-			prova "$base-tela" "$engine" "$node" "$codec" 8 1920x1080 scheda --resize-at 60:1280x720
-			prova "$base-tetto" "$engine" "$node" "$codec" 8 1920x1080 scheda --cap 20
+			prova "$base-chiave" "$engine" "$node" "$codec" 8 1920x1080 card --key-at 40
+			prova "$base-tela" "$engine" "$node" "$codec" 8 1920x1080 card --resize-at 60:1280x720
+			prova "$base-tetto" "$engine" "$node" "$codec" 8 1920x1080 card --cap 20
 			# a cap that BITES: 2 Mbit/s (wire 1.6, target 1.2) on a scene that at QP 26 costs ~8
-			prova "$base-tetto2" "$engine" "$node" "$codec" 8 1920x1080 scheda --cap 2
+			prova "$base-tetto2" "$engine" "$node" "$codec" 8 1920x1080 card --cap 2
 		done
-		prova "$base-qualita" vulkan "$node" "$codec" 8 1920x1080 scheda --quality-at 60:36
+		prova "$base-qualita" vulkan "$node" "$codec" 8 1920x1080 card --quality-at 60:36
 		# ⭐ the canvas in a CYCLE (the Radeon defect, F-018/P-C: 4K→2560→4K): every 20 frames
 		#   the size changes (the list starts from the initial size: the first change goes to the second),
 		#   five changes in 120; with PRODUCT_ORDER=1 the slabs are remade BEFORE
 		#   the encoder reopens, as in `wlroots.c`
 		for engine in $ENGINES; do
-			prova "D$node-${codec}8-3840x2160-ciclo" "$engine" "$node" "$codec" 8 3840x2160 scheda \
+			prova "D$node-${codec}8-3840x2160-ciclo" "$engine" "$node" "$codec" 8 3840x2160 card \
 				--cycle 20:3840x2160,2560x1440
 		done
 	done
@@ -134,10 +134,10 @@ intel() {
 	"$OUTPUT/19-compare" --capabilities /dev/dri/renderD$node | tee "$OUTPUT/capacita-intel.json"
 	ANV_DEBUG=video-encode "$OUTPUT/19-compare" --capabilities /dev/dri/renderD$node | tee "$OUTPUT/capacita-intel-anv-debug.json"
 	for codec in h264 hevc; do
-		local name="D$node-${codec}8-1920x1080-scheda-ANV"
+		local name="D$node-${codec}8-1920x1080-card-ANV"
 		echo "== $name"
-		ANV_DEBUG=video-encode prova "$name" vulkan "$node" "$codec" 8 1920x1080 scheda
-		prova "$name" vaapi "$node" "$codec" 8 1920x1080 scheda
+		ANV_DEBUG=video-encode prova "$name" vulkan "$node" "$codec" 8 1920x1080 card
+		prova "$name" vaapi "$node" "$codec" 8 1920x1080 card
 	done
 }
 
