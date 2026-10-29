@@ -632,7 +632,7 @@ fi
 
 %changelog
 * Thu Oct 29 2026 nicfio <nicfio@gmail.com> - 1.5.0-1
-- 1.5.0: KDE on KWin 6.5+ (our labwc), more cards, privilege separation, Android client, 3K and 8 users.
+- 1.5.0: KDE on KWin 6.5+ (our labwc), servers with more cards, privilege separation on by default; declared limits 3K and 8 users.
 * Sun Oct 11 2026 nicfio <nicfio@gmail.com> - 1.0.0-1
 - 1.0.0: first public release.
 * Wed Sep 30 2026 nicfio <nicfio@gmail.com> - 0.17.0-1
