@@ -104,7 +104,7 @@ S3 = p("Not defects but declared limits of 1.0.0: each is written in the log or 
          "it (DECISIONS.md §10.43, replaced in 1.5)."],
         ["<b>KWin 6.5 and later was proved on Ubuntu 26.04 only.</b>", "—",
          "KWin 6.6.6 (Ubuntu 26.04) was proved by the KDE correction and the KDE suite of 28–29 Oct 2026 (" + rif("Where KWin's labwc comes from")
-         + "); Fedora 44, Alma 10, Tumbleweed and Arch use the same labwc build and were built."],
+         + "); Fedora 44, Alma 10, Tumbleweed and Arch use the same labwc build and were only built: KDE has not been run on them yet."],
     ], "«TAB» — Declared limits")
 
 CHAPTER = ("Appendix C — Known issues", [

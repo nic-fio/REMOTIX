@@ -266,7 +266,7 @@ These are approved and are **not** in the range above; `finale` has them, merged
   an AppArmor profile `remotix_network` in COMPLAIN mode on Debian/Ubuntu (it logs what it would refuse and confines nothing yet; installed by `dh_apparmor`; checked on Debian with a real login: 0 DENIED lines; in complain mode refusals are logged as ALLOWED, and those have not been counted yet).
   R8 is in the code (`walls_fork_pidns()`, the rediscovery in the root side, `src/rediscover.c`). **Not yet**: the live tests on the four machines.
   Measured on the discarded attempt (16 Oct; `benches/24-privsep-cost.sh`, run 20261016-113915); not re-measured on `rootside-completo`. Cost against 1.0 (4 interleaved rounds, one box): login to first frame −98 ms warm /
-  −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. Needs decision D1.
+  −145 ms cold (a separate timing change), desktop birth +6 ms (noise), motion 61.5 fps both, idle CPU 0.00-0.07 %. D1 decided on 25 Oct 2026: ON.
 - **Decoder `PACE` (§11.32)**: present (`4895f2ad`, `c7bfef17`), enabled with `--decoder-pace`; the page declares `video.pace` only then. The measures
   of the first attempt favoured ON (slow decoder: 26 → 61 photos/min on Firefox 4K), but the default is a change seen by the browser. Needs decision D3.
 - **Firefox worker as default (§11.36)**: **ff-worker merged (D2 = A)** in the branch `finale-ff` (default on desktop Firefox only, fallback to the main-thread route; Chrome and Android

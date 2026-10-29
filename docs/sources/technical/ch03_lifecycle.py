@@ -68,7 +68,7 @@ S2 = p("In a package the server runs as " + c("remotix.service") + ", a system u
 Type=simple
 ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --address 0.0.0.0 --name %H \\
     --port "$${REMOTIX_PORT}" --certificates /var/lib/remotix/certificates \\
-    --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban \\
+    --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --no-split \\
     --journal $${REMOTIX_OPTIONS}'
 KillMode=mixed
 LimitRTPRIO=20
@@ -79,7 +79,7 @@ RestartSec=2""", "text", "packaging/debian/remotix.service: the unit of a packag
     p("Since 25 Oct 2026 the packages are built with the split, and the unit they install as " + c("remotix.service") + " is "
       + c("remotix.service.split") + ". It differs from the excerpt above in three places: " + c("--certificates")
       + " and " + c("--ban-file") + " point under " + c("/var/lib/remotix/net/") + " (" + c("certificates") + " and " + c("ban")
-      + "), and " + c("--split") + " is on the command line. The excerpt is the unit of a package built without the split "
+      + "), and " + c("--split") + " instead of " + c("--no-split") + ". The excerpt is the unit of a package built without the split "
       "(" + c("REMOTIX_SPLIT=0") + ", " + c("--without split") + ").") + \
     table(["Setting", "Why"], [
         ["runs as root", "only root verifies any user's password with PAM and can become each user for their child"],
