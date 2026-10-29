@@ -45,7 +45,7 @@ existing page and anchor (`href="#"` included).
 OVH, Caddy block with `~/Documenti/VPS/add-site.sh`, Let's Encrypt certificate). It is republished, with the release, with the commands in «Republishing» below.
 
 The button that pointed to the `.run` was «Coming soon» until the first release; since 1.0.0 (11 Oct 2026) it is
-«Download 1.0.0» → `download/remotix-1.0.0-1.run`, with «SHA-256» → `download/remotix-1.0.0-1.run.sha256` beside it
+«Download 1.0.0» → `download/remotix-1.5.0-1.run`, with «SHA-256» → `download/remotix-1.5.0-1.run.sha256` beside it
 (relative links: `standalone.py` lets `download/` through without looking for it). At every release: change the two
 names in `index.html`, and copy the `.run` and its `.sha256` to `/srv/www/remotix.nicfio.it/download/`.
 REMOTIX's card («Coming soon · Free») is on the nicfio.it homepage (`~/Documenti/VPS/sites/nicfio.it/holding`,
@@ -81,7 +81,7 @@ Commands only, to be run with the release (the manuals first, so that the site c
     scp design/site-mockup/public/docs/user-manual.html design/site-mockup/public/docs/technical-manual.html \
         progetti@57.131.27.241:/srv/www/remotix.nicfio.it/docs/
     ssh progetti@57.131.27.241 mkdir -p /srv/www/remotix.nicfio.it/download
-    scp costruzione-uscita/rilasci/remotix-1.0.0-1.run costruzione-uscita/rilasci/remotix-1.0.0-1.run.sha256 \
-        costruzione-uscita/rilasci/remotix-1.0.0-1-labwc-source.tar.gz \
-        costruzione-uscita/rilasci/remotix-1.0.0-1-labwc-source.tar.gz.sha256 \
+    scp costruzione-uscita/rilasci/remotix-1.5.0-1.run costruzione-uscita/rilasci/remotix-1.5.0-1.run.sha256 \
+        costruzione-uscita/rilasci/remotix-1.5.0-1-labwc-source.tar.gz \
+        costruzione-uscita/rilasci/remotix-1.5.0-1-labwc-source.tar.gz.sha256 \
         progetti@57.131.27.241:/srv/www/remotix.nicfio.it/download/
