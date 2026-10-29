@@ -437,7 +437,7 @@ S8B = p("REMOTIX draws the desktop and encodes it on the <b>same card</b>, with 
       + ") and in the plan — only on a machine with more than one card (" + c("installer/engine/desktop_card.go") + "). The "
       "installer cannot run " + c("card_can_draw()") + ": «capable» there means «has a render node»; the service's log has the "
       "last word. Unit test: " + c("benches/unit/card-pick") + " (fake " + c("/dev/dri") + " and sysfs: swapped names, ASPEED "
-      "without node, no " + c("boot_vga") + ", primary that cannot draw, none capable, one card).")
+      "without node, no " + c("boot_vga") + ", primary that cannot draw, none capable, one card). Not settled yet: not yet run on a machine with two cards (§11.37); proved by the unit test only.")
 
 S6 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is no systemd unit to "
        "override, so " + c("write_dropin()") + " has nothing to do and REMOTIX starts the compositor itself.",

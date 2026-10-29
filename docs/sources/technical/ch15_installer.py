@@ -752,8 +752,8 @@ S_ENC = p("REMOTIX encodes on the card's own encoder and never installs a driver
         ["openSUSE, AMD", "The distribution's own Mesa lacks the H.264 encoder; the package does not add Packman.", c("no_stock_h264") + " = AMD"],
         ["Debian, Ubuntu, AMD", "AMD encodes through Vulkan Video with the official driver.", c("vulkan_encoding") + " = AMD"],
     ], "«TAB» — Encoding drivers the administrator provides") + \
-    p("When the card cannot encode, the installation stops at " + c("--encoding-test") + " with a message, before touching the "
-      "machine (§10.34).")
+    p("The preliminary check stops a machine without an encoding driver before anything is installed (" + c("RX-GPU-…")
+      + "); at the end " + c("remotix --encoding-test") + " (7a) really encodes, and a failure there rolls the installation back (§10.34).")
 
 S_PLAN = p(c("InstallPlan()") + " is the whole installation policy in one function. REMOTIX does not modify the "
            "system, so the plan has few steps; everything else is said, not done.", lead=True) + \

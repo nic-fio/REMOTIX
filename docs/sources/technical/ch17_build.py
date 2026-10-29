@@ -211,10 +211,10 @@ bash src/build-in-container.sh clean             # removes the objects""", "bash
 
 TARGETS = [
     ["debian13", c("debian:13"), "apt", "1.11 / 1.8", "also the .deb tools layer (debhelper, lintian)"],
-    ["ubuntu2604", c("ubuntu:26.04"), "apt", "1.16", "also the .deb tools layer"],
-    ["fedora44", c("registry.fedoraproject.org/fedora:44"), "dnf", "1.21", c("vulkan-loader-devel") + " 1.4.341 (measured 1 Oct 2026)"],
+    ["ubuntu2604", c("ubuntu:26.04"), "apt", "1.16", "also the .deb tools layer, and what our labwc needs (meson, patch, hwdata, wayland-protocols, EGL/GLES, libinput, pixman, libseat, libudev, libdisplay-info, libxml2 development packages; labwc 0.9.3 + wlroots 0.19.2 static from the tarballs)"],
+    ["fedora44", c("registry.fedoraproject.org/fedora:44"), "dnf", "1.21", c("vulkan-loader-devel") + " 1.4.341 (measured 1 Oct 2026); also meson, patch and what our labwc needs (labwc 0.9.3, wlroots 0.19.2 static, from the tarballs)"],
     ["alma10", c("almalinux:10"), "dnf + EPEL + CRB", "1.22 (EPEL)", "libei and pipewire devel in CRB, opus in EPEL; "
-     "also meson and EPEL's wlroots 0.18 devel, to build our labwc (" + rif("The RPM package") + ")"],
+     "also meson and what our labwc needs (labwc 0.9.3, wlroots 0.19.2 static, built from the tarballs; " + rif("The RPM package") + ")"],
     ["arch", c("archlinux:latest"), "pacman", "1.25 with crypto_ossl", "labwc, wlr-randr, wireplumber, "
      "pipewire-pulse installed because makepkg wants runtime depends present"],
     ["tumbleweed", c("registry.opensuse.org/opensuse/tumbleweed:latest"), "zypper", "1.25 with crypto_ossl",

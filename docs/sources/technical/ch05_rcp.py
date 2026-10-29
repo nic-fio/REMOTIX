@@ -295,7 +295,7 @@ REJECTED
         ["Entries tracked", "256; room for 160 bans, and a new ban never drops another one; unknown keys share a counter of 5 failures or attempts in flight in 5 min while the 160 are in force; the keys that logged in lately are kept in the ban file; an entry with an attempt in flight is never evicted", c("MAX_ATTEMPTS")],
         ["Key", "IPv4 whole; IPv6 the /64 (and the /48 aggregate), always in brackets, no port: " + c("[192.168.0.2]"), c("rcp_key_address()")],
         ["Reset", "a successful authentication resets only the failures of (key, user)", ""],
-        ["Persistence", c("--ban-file") + ", default " + c("/var/lib/remotix/ban") + ", format " + c("B2") + ", no user name on disk (HMAC), absolute expiry times", c("rcp_ban_load()")],
+        ["Persistence", c("--ban-file") + ", binary's default " + c("/var/lib/remotix/ban") + " (the installed unit passes " + c("/var/lib/remotix/net/ban") + "), format " + c("B2") + ", no user name on disk (HMAC), absolute expiry times", c("rcp_ban_load()")],
     ], "«TAB» — The login defences (DECISIONS-11.md §11.53, spec change from 1.0; the 1.0 rule is DECISIONS.md §1.9, superseded)") + \
     ul([
         "<b>Only failed authentication counts.</b> That includes an attempt without a verdict (the helper's 8 s timeout, the 12 s ceiling). "

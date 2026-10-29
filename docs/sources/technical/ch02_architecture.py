@@ -403,9 +403,9 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
        "where something can be alive or dead, so shared things travel in structures (" + c("struct ponte")
        + ") and each table is sized once, at startup.", lead=True) + \
     table(["State", "Owner", "Lives", "Notes"], [
-        ["certificates and their fingerprint", c("certificates.c"), "files in " + c("/var/lib/remotix/certificates")
+        ["certificates and their fingerprint", c("certificates.c"), "files in " + c("/var/lib/remotix/net/certificates") + " (" + c("/var/lib/remotix/certificates") + " in the binary's default and with REMOTIX_SPLIT=0)"
          + ", rotated while running", rif("Transport: QUIC, HTTP/3, WebTransport")],
-        ["the address ban", c("rcp.c"), "in memory and in " + c("/var/lib/remotix/ban") + ": survives restarts",
+        ["the address ban", c("rcp.c"), "in memory and in " + c("/var/lib/remotix/net/ban") + " (" + c("/var/lib/remotix/ban") + " with REMOTIX_SPLIT=0): survives restarts",
          "lifted early only through the unblock socket of the running server; three levels, progressive 15 min · 1 h · 12 h"],
         ["RCP sessions and attach slots", c("rcp.c"), "one per connection; the slot is freed on detach or after "
          "30 s of silence", rif("The RCP/1 protocol")],

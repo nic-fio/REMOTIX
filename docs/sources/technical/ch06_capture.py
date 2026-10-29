@@ -214,7 +214,7 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
       "buffer goes back to PipeWire without being encoded) and present — and counts the empty ones in " + c("empty_damage")
       + ". The frame is never skipped right after the start, after a (re)negotiated format or a resize, or when its damage was "
       "lost (" + c("deliver_next") + "). Measured on the rented NVIDIA server: 5 frames a second instead of 53, delay about 0, "
-      "F-003 on KDE green. Mutter never sends an empty meta, so GNOME is not touched. Test: " + c("benches/28-damage-test.c")
+      "F-003 on KDE green. Not settled yet: the " + c("empty_damage") + " counter has still to be checked at 0 on GNOME and on wlroots. Test: " + c("benches/28-damage-test.c")
       + " (commit " + c("29d7c134") + ").") + \
     p("<b>The gate.</b> KWin announces " + c("zkde_screencast_unstable_v1") + " only to a client whose "
       "executable (" + c("/proc/<pid>/exe") + ", canonical) appears in the " + c("Exec=") + " line of a "

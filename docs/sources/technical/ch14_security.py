@@ -706,10 +706,10 @@ S11A = p("Started as root, the server is <b>two processes</b> (" + c("DECISIONS-
          "keyctl, ptrace and the TIOCSTI ioctls refused, an allow list of socket families"],
         ["SELinux, AppArmor", "See " + rif("Checked with SELinux and AppArmor")],
     ], "«TAB» — The network side's walls (" + c("src/walls.c") + ")") + \
-    p("Any wall that fails stops the start of the network side and the reason is logged: a network side without its walls "
+    p("Any wall that fails stops the start of the network side and the reason is logged, except Landlock's scope, which is logged and skipped where the kernel lacks it or refuses it: a network side without its walls "
       "would be the 1.0 server with extra steps. The desktops are <b>not</b> behind the walls (their children are forked by the root "
-      "side), so " + c("sudo apt install") + " in a remote desktop keeps working. " + c("/proc") + " of the root side is not hidden "
-      "from the rediscovery of desktops. The files of the network side moved from the 1.0 places into " + c("/var/lib/remotix/net")
+      "side), so " + c("sudo apt install") + " in a remote desktop keeps working. " "The rediscovery of the desktops runs in the root side, which sees the whole "
+      + c("/proc") + "; the network side sees only itself. The files of the network side moved from the 1.0 places into " + c("/var/lib/remotix/net")
       + " (" + c("remotix-net-move") + ", " + c("--back") + " undoes it). The split costs, against 1.0 (measured 16 Oct 2026 on the "
       "discarded first attempt, not repeated on the final one): the birth of a desktop +6 ms (noise), motion 61.5 fps in both, idle "
       "memory +10 MB.")
@@ -725,7 +725,7 @@ S11B = p("Confinement is checked with the policy in force and a <b>real login</b
     ], "«TAB» — The two domains") + \
     table(["Machine", "Policy", "Result"], [
         ["Fedora 44, AMD Radeon", "SELinux, enforcing", "login with a real user: 0 AVC denials"],
-        ["Debian", "AppArmor", "0 DENIED lines (the profile is in complain mode)"],
+        ["Debian", "AppArmor", "0 DENIED lines; in complain mode refusals are logged as ALLOWED, and those have not been counted yet"],
         ["Alma 10 (virtual machine)", "SELinux, enforcing", "package of 25 Oct 2026, split service: 0 AVC from start, private "
          + c("/proc") + ", the rediscovery of the desktops, journald, the page, stop and the kill of either side"],
         ["Fedora 44, Alma 10, Tumbleweed, Leap 16", "SELinux, enforcing", "the rules of the split module measured (" + c("DECISIONS-11.md")

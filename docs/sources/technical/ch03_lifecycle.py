@@ -75,7 +75,12 @@ LimitRTPRIO=20
 LimitNICE=-11
 Restart=on-failure
 RestartPreventExitStatus=78
-RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the two EnvironmentFile lines)") + \
+RestartSec=2""", "text", "packaging/debian/remotix.service: the unit of a package built with REMOTIX_SPLIT=0 (excerpt, without the two EnvironmentFile lines)") + \
+    p("Since 25 Oct 2026 the packages are built with the split, and the unit they install as " + c("remotix.service") + " is "
+      + c("remotix.service.split") + ". It differs from the excerpt above in three places: " + c("--certificates")
+      + " and " + c("--ban-file") + " point under " + c("/var/lib/remotix/net/") + " (" + c("certificates") + " and " + c("ban")
+      + "), and " + c("--split") + " is on the command line. The excerpt is the unit of a package built without the split "
+      "(" + c("REMOTIX_SPLIT=0") + ", " + c("--without split") + ").") + \
     table(["Setting", "Why"], [
         ["runs as root", "only root verifies any user's password with PAM and can become each user for their child"],
         [c("--name %H"), "the certificate carries the machine's host name; whoever connects by IP address adds "
@@ -103,13 +108,13 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
     warn("with no " + c("--command-socket") + " in the packaged command line, a banned address can only wait for "
          "its wait (15 minutes, 1 hour or 12 hours): the unblock command promised by SPECS.md §4.2 is there only if the administrator adds "
          "the option in " + c("REMOTIX_OPTIONS") + " (the " + c("tmpfiles") + " entry creates "
-         + c("/run/remotix") + " for that socket). The only code that exits with 78 (" + c("EXIT_CONFIG") + ", eight places in " + c("main.c") + ") is the startup refusal of the split (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side that drops to the "
+         + c("/run/remotix") + " for that socket). The only code that exits with 78 (" + c("EXIT_CONFIG") + ", seven places in " + c("main.c") + ") is the startup refusal of the split (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side that drops to the "
          "system user " + c("remotix") + "). Since 25 Oct 2026 the split is <b>on by default</b> when the server starts as root; " + c("--split")
          + " asks for it explicitly and " + c("--no-split") + " goes back to the single process of 1.0; started as an ordinary user (the benches) "
          "the server stays one process. The old gate " + c("REMOTIX_SPLIT_EXPERIMENTAL") + " is gone from the binary. The split refuses, and logs why, when: "
-         + c("--network-side") + " is given without " + c("--split") + "; " + c("--split") + " does not run as root; the network user is missing or has uid/gid 0; "
+         + c("--network-side") + " is given together with " + c("--no-split") + "; " + c("--split") + " does not run as root; the network user is missing or has uid/gid 0; "
          "the certificates or the ban file are not in " + c("net/") + "; the page is not readable by the network user; or there are too many arguments. "
-         "The packages install the " + c("remotix.service.split") + " unit and the user, tmpfiles and SELinux policy of the split; a package built "
+         "The packages install " + c("remotix.service.split") + " as " + c("remotix.service") + ", with the user, tmpfiles and SELinux policy of the split; a package built "
          "without it (" + c("REMOTIX_SPLIT=0") + ", " + c("--without split") + ") keeps the single process. The "
          + c("RestartPreventExitStatus=78") + " of the Debian unit matters only for these refusals", "Two gaps of the unit.") + \
     note("the server must not run inside a user's session. " + c("pam_systemd") + ", called by a process that is "
@@ -521,16 +526,22 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
         [c("/etc/ufw/applications.d/remotix"), "package (Debian)", "a firewall profile for 7447 TCP and UDP, defined "
          "but not opened"],
         ["the unit " + c("remotix.service"), "package", "installed, neither enabled nor started by the package"],
-        [c("/var/lib/remotix/"), "tmpfiles, 0700 root", "the server's state"],
-        [c("/var/lib/remotix/certificates/"), "server", c("page.pem") + "/" + c(".key") + " (365 days) and "
-         + c("session.pem") + "/" + c(".key") + " (13 days, rotated 2 days before expiry); a " + c(".ours")
-         + " mark tells a generated certificate from the administrator's own"],
-        [c("/var/lib/remotix/ban"), "server", "the banned addresses; survives restarts"],
+        [c("/var/lib/remotix/"), "tmpfiles, 0755 root (0700 in a package built with REMOTIX_SPLIT=0)", "the root side's state; 0755 "
+         "only so that the network side can reach " + c("net/") + " below it, and never owned by " + c("remotix")],
+        [c("/var/lib/remotix/net/"), "tmpfiles, 0700 " + c("remotix"), "the network side's own folder (split); its content is given to "
+         + c("remotix") + " at every boot"],
+        [c("/var/lib/remotix/net/certificates/"), "server", c("page.pem") + "/" + c(".key") + " (365 days) and "
+         + c("session.pem") + "/" + c(".key") + " (13 days, rotated 2 days before expiry), " + c("quic-secret") + " and "
+         + c("log-secret") + " (0600); a " + c(".ours") + " mark tells a generated certificate from the administrator's own. In a package "
+         "built with REMOTIX_SPLIT=0 (and in the binary's default) the folder is " + c("/var/lib/remotix/certificates/")],
+        [c("/var/lib/remotix/net/ban"), "server", "the banned addresses; survives restarts (0600). " + c("/var/lib/remotix/ban")
+         + " with REMOTIX_SPLIT=0"],
         [c("/var/lib/remotix/group-enrollments.jsonl"), "server", "one line per group REMOTIX added a user to; "
          "append-only, root-owned, " + c("fsync") + " after each line"],
         [c("/var/lib/remotix/") + " (other files)", "installer", "its records of the installation and of its "
          "operations (" + rif("The installer") + ")"],
-        [c("/run/remotix/"), "tmpfiles, 0700 root", "for the unblock socket, when enabled"],
+        [c("/run/remotix/"), "tmpfiles, 0755 root (0700 with REMOTIX_SPLIT=0)", "root side's runtime files, the unblock socket when enabled"],
+        [c("/run/remotix/net/"), "tmpfiles, 0700 " + c("remotix"), "the network side's runtime files (split)"],
     ], "«TAB» — System files") + \
     table(["Path", "What", "Lives"], [
         [c("$XDG_RUNTIME_DIR/remotix/"), "per-session configuration: the user manager's snapshot ("
