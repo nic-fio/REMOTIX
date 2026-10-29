@@ -83,7 +83,7 @@ needs equipment, not an afternoon.
 
 **What it is.** On the wire the transport uses **CUBIC**. ⛔ Nobody chose it: it is what was there.
 
-**Where it comes from.** Phase 9, listed among the open things in the `README.md`.
+**Where it comes from.** Phase 9, listed among the open things in the `README.md` (now `PHASES.md` §The former README).
 
 **What it costs if it is NEVER done.** `[?]` **Nobody knows, and that is the point.** The contrast
 test has never been done **because no option exposes it** — so it is not that we
@@ -94,27 +94,6 @@ are the theme on which the user corrected the target of phase 9.
 **What is needed first.** An option that exposes it, and two rounds on the same dirty wire.
 
 **How much it weighs.** `[?]` The work is small, the payoff **uncertain**.
-
----
-
-## M5 · Choosing the desktop when there is more than one on the machine
-
-**What it is.** Today a machine has **one** desktop, and REMOTIX starts that one. With GNOME and KDE
-installed together, nobody can say «KDE for me»: neither the user from the page, nor whoever administers the server.
-
-**Where it comes from.** Phase 12, when opening KDE — `DECISIONI.md` **§4.6-duodetricies**, 18 Sep 2026:
-*«la funzionalità di scelta di desktop multipli la lasciamo per una futura implementazione»*.
-
-**What it costs if it is NEVER done.** On a machine with a single desktop, **nothing**. On one with two,
-the second **cannot be reached** by REMOTIX: GNOME wins, always, for all users. ⚠ Whoever
-installs KDE beside GNOME and expects to use it remotely is disappointed without a clear message —
-that is why the server writes it in the log at start-up.
-
-**What is needed first.** That the user says **who** chooses (the administrator for the machine, or each
-user for themselves). ⛔ The second touches the page and the protocol, and changes `RCP.md`.
-
-**How much it weighs.** `[?]` With the choice per machine, little: a setting. With the choice per user,
-a new feature.
 
 ---
 
@@ -236,9 +215,10 @@ and builds to start; after that a fixed cost at every release that grows with ev
 ## The removed entries
 
 ⭐ **21 Sep 2026, decision of the user**: *«M2, M3 e M5 sono gli unici punti da conservare
-nel masterplan»* (then, on 10 Oct, **M6** came in, and on 11 Oct **M7**). ⇒ Removed, and the numbers are **not** reused (rule 3):
+nel masterplan»* (then, on 10 Oct, **M6** came in, on 11 Oct **M7**, and on 12 Oct **M5** left). ⇒ Removed, and the numbers are **not** reused (rule 3):
 
 | | what it was | why it left |
 |---|---|---|
 | **M1** | GNOME delivers fewer frames than it is asked for (to get 60 you would have to ask it for more, and `MOVIMENTO_FPS` is a constant) | decided by the user: it is no longer work for «afterwards». The fact stays written in `DECISIONI.md` §2.5-bis |
 | **M4** | two clients on the same desktop at the same time | decided by the user: it is not work for «afterwards». Invariant I2 (one slot per user) stays as it is, `DECISIONI.md` §7.3 |
+| **M5** | choosing the desktop when there is more than one on the machine | decided by the user on 12 Oct 2026: *«Solo un sysadmin pazzo installa su un server tanti DE»* — the cost of «never» is zero for a real server. One desktop per machine stays the rule (`DECISIONS.md` §0.6, §10.52), and the ambiguous case keeps being declared in the log at start-up |

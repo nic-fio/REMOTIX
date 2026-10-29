@@ -464,7 +464,7 @@ someone else's.
 
 > # 📅 HOW IT WAS ON **20 Aug 2026** — *«the hunt is closed, and now it is implemented»*
 >
-> ⚠ **One does not restart from here**: the project's entry point is the **⏸** box at the top of `README.md`.
+> ⚠ **One does not restart from here**: the project's entry point is the **⏸** box at the top of the former `README.md`, now `PHASES.md` §The former README.
 >
 > *The hunt for artefacts closed on the evening of **17 Aug** with the user's judgement —
 > **«NIENTE ARTEFATTI!»** — on a bench. ⛔ **In the product the cure is not there yet**, and until it
@@ -592,7 +592,7 @@ someone else's.
 > dropped a lot **while the frames delivered were dropping** (`LEZIONI.md` §6.2).
 >
 > ⏳ **The work starts in a new session** (decided by the user). The resume point is in the
-> `README.md`.
+> former `README.md`, now `PHASES.md` §The former README.
 >
 > ---
 >

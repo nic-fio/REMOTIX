@@ -189,7 +189,7 @@ phases 8, 9 and 10 arrived, each with its own theme. ⇒ **It was not hidden: it
 > grows and never shrinks is the drawer where things go to die.
 
 ⚠ **And it does not widen the number of registers**: `MASTERPLAN.md` **decides nothing** and copies nothing.
-The decisions stay here, only once (§0 of `README.md`); the plan of the phases stays in
+The decisions stay here, only once (§0 of the former `README.md`, now `PHASES.md` §The former README); the plan of the phases stays in
 `PIANO.md`; ⛔ **what must happen BEFORE the end does not go into the masterplan**, it goes into a
 phase.
 
@@ -252,7 +252,7 @@ of increment 1.
 was decided that the product **does not offer a choice** between desktops; today more is said — machines
 with several desktops **are not a target**. ⇒ §4.6-duodetricies stays in force for the how (one
 recognises from what is installed, and the ambiguous case is declared in the log); this one says the **how
-far**, and the postponed feature is still in `MASTERPLAN.md` **M5**.
+far**. The postponed feature was `MASTERPLAN.md` **M5**, ⛔ removed on 12 Oct 2026 (§10.52).
 
 ---
 
@@ -3154,7 +3154,7 @@ The machine has **its** desktop, and the server starts that one.
 installed**. If both are there, **GNOME** stays — that is, what the product already does today, and
 no machine served changes behaviour. ⚠ The «both» case is therefore **ambiguous by
 construction** and is declared in the log at startup, instead of choosing in silence.
-⇒ The postponed feature is in `MASTERPLAN.md` **M5**.
+⇒ The postponed feature was in `MASTERPLAN.md` **M5** — ⛔ removed on 12 Oct 2026 (§10.52): the choice will not be built.
 ⭐ **Widened on 20 Sep 2026** — §0.6: machines with several desktops installed are
 **out of scope**, not merely without a choice.
 
@@ -7127,6 +7127,22 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
 
 - **The ruling** (the director, 11 Oct 2026, verbatim): *«a questo punto si e direi che possiamo usare come versione
   1.0»*. ⇒ The release candidate built as 0.19.0 ships as **1.0.0-1**; the mentions of 0.19.0 above are history.
+
+### 10.52 ✅ No choice among several desktops, not even «afterwards»: MASTERPLAN M5 removed (12 Oct 2026)
+
+- **The ruling** (the director, 12 Oct 2026, verbatim): *«Il punto M5 lo eliminiamo. Solo un sysadmin pazzo
+  installa su un server tanti DE»*.
+- ⇒ The choice of desktop (by the administrator per machine, or by each user) is **not** postponed any more: it is
+  **not going to be built**. §4.6-duodetricies and §0.6 stay as they are — one machine, one desktop; with several
+  installed GNOME wins and the server says so in the log at start-up.
+- Why it is removed and not kept: by the rule of `MASTERPLAN.md`, an entry whose cost of «never» is zero leaves.
+  On a real server only one desktop is installed, so the cost of never doing M5 is zero there.
+- ⚠ The number **M5** is not reused (rule 3 of `MASTERPLAN.md`).
+- ⚠ **Left behind on purpose, declared**: the start-up log line of the ambiguous case (`src/session.c`, GNOME+KDE
+  and XFCE+LXQt) still says *«Choosing among several desktops is not available yet (… MASTERPLAN.md M5)»*, and so
+  does the comment in `src/session.h`. Touching `src/` starts the product's test family on the test machine for a
+  wording change; ⇒ it is corrected together with the next real change to `src/session.c`, to read «is not
+  offered (DECISIONS.md §0.6, §10.52)».
 
 ## How this document is kept
 

@@ -48,7 +48,7 @@ invariant (⛔ never as a shortcut).
   see whether a change touches xfce and lxqt. C11 and C14 stay on the four boxes (alignment and
   isolation). We go back to the four when the next desktop is opened.
 - `DECISIONI.md` §4.6-duodetricies — **one desktop per machine**; the choice among several desktops is
-  postponed (`MASTERPLAN.md` M5).
+  postponed (`MASTERPLAN.md` M5) — ⛔ M5 removed on 12 Oct 2026, the choice will not be built (`DECISIONS.md` §10.52).
 
 ## The bench — written before developing
 

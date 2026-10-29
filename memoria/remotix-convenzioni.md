@@ -25,6 +25,6 @@ possible to start again. Distinguishing «the user said yes» from «I deduced i
   where it is, because the XML files are in `data/dbus-interfaces/`;
 - when a measurement contradicts a document, update it **at the same moment**, with date and
   source;
-- the entry point is `README.md`, which says in what order to read.
+- the order in which to read is in `PHASES.md` §The former README (until 1.0.0 that was `README.md`, now the public front page).
 
 See [[nic-regista-non-programmatore]].

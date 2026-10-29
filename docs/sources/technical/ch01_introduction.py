@@ -220,7 +220,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
     "├── design/   # the logo and the mockups (login page, installer TUI, site)",
     "├── previews/   # screenshots of the installer TUI",
     "├── memoria/  # working notes of the assistants",
-    "├── README.md  # the state of the project and where to start reading",
+    "├── README.md  # the public front page: what REMOTIX is, download, licence",
     "├── SPECS.md       # what the product does and does not do",
     "├── RCP.md  # the protocol, written before the code: the referee between page and server",
     "├── DECISIONS.md  # every decision, with date, author and degree of certainty",
@@ -266,7 +266,7 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
          "2026 (DECISIONS.md §10.33): history only."],
     ], "«TAB» — What is in the repository") + \
     warn("several documents carry a status box at the top that was true on the day it was written: "
-         + c("README.md") + " still describes " + c("src/") + " as “not in git” and the project as paused, and "
+         + c("PHASES.md") + " (its last section, the former " + c("README.md") + ") still describes " + c("src/") + " as “not in git” and the project as paused, and "
          "the comment at the top of " + c("main.c") + " still says “phase 1, no video”. The code and the newest "
          "sections of " + c("DECISIONS.md") + " win; " + rif("Conventions") + " explains how the documents are "
          "kept.", "Old headers.")

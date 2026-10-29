@@ -724,7 +724,7 @@ before and green after.
 
 *Detail: commit `d722460` carries the attribution in full — the bytes, the 33 ms against the 3-6 of the
 healthy rounds, and the proof that the server **reads** that zero instead of synthesising it. The story of the
-cure of 11 Aug is in `README.md`. ⚠ This line cited a report that **does not exist**: corrected
+cure of 11 Aug is in `README.md` (now `PHASES.md` §The former README). ⚠ This line cited a report that **does not exist**: corrected
 on 13 Aug 2026, on the report of the agent that went looking for it.*
 
 ### 1.15 ⛔⛔ **On Xvfb `requestAnimationFrame` NEVER runs** — and it holds for all browser benches
