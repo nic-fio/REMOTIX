@@ -61,8 +61,8 @@ S_DISTROS = p("REMOTIX ships one package for each of these distributions, all in
               "The installer refuses any other distribution, except the derivatives named in the table.", lead=True) + distributions() + \
     note("on AlmaLinux and RHEL 10 only GNOME and KDE Plasma are supported. KDE there runs inside REMOTIX's own "
          "copy of labwc, installed at " + c("/usr/lib/remotix/labwc") + " (GPL-2.0; its source is published "
-         "next to each release). From version 1.5 the same copy is used by KDE Plasma 6.5 or newer on Ubuntu 26.04, "
-         "Fedora 44, openSUSE Tumbleweed and Arch.", "AlmaLinux and RHEL 10.") + \
+         "next to each release). From version 1.5 KDE uses the same copy on Ubuntu 26.04, Fedora 44, openSUSE "
+         "Tumbleweed and Arch; XFCE and LXQt keep the distribution's labwc.", "REMOTIX's own labwc.") + \
     p("Out of scope: Debian 12, Ubuntu 24.04, RHEL 9 and its rebuilds, openSUSE Leap 15; Linux Mint (Mint 22 is excluded, "
       "being based on Ubuntu 24.04, and the installation file has no package for Mint 23); distributions without "
       "systemd; immutable distributions (Silverblue, Kinoite, Aeon, Kalpa, Ubuntu Core, SteamOS).")

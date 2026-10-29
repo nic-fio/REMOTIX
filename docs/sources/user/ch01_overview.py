@@ -24,7 +24,7 @@ S_WHAT = p("<b>REMOTIX</b> shows a full Linux desktop inside a browser tab. The 
         "<b>Your own desktop.</b> Each user gets their own desktop on the machine; several people can work on the "
         "same machine at the same time, each in their own desktop.",
         "<b>The size of your window.</b> The desktop is created as large as the browser window at the moment you "
-        "sign in. REMOTIX 1.5 is declared for sizes up to 3K (version 1.0 aimed at 4K).",
+        "sign in, up to 4096×2304. Version 1.5 is tested and declared up to 3K; version 1.0 aimed at 4K.",
         "<b>Several people at once.</b> A machine is tested with up to 8 people connected at the same time. "
         "If the machine cannot give one more desktop of that size, the sign-in is refused.",
         "<b>Keyboard, mouse and touch.</b> The page keeps no key combination for itself. A few (such as Alt+Tab "
@@ -51,8 +51,8 @@ S_DESKTOPS = p("REMOTIX works with four desktops: <b>GNOME</b>, <b>KDE Plasma</b
         "labwc package, REMOTIX brings its own (" + c("/usr/lib/remotix/labwc") + ").",
     ]) + \
     note("from version 1.5, KDE Plasma 6.5 or newer (Ubuntu 26.04, Fedora 44, AlmaLinux and RHEL 10, openSUSE "
-         "Tumbleweed, Arch) works in the browser as it should: windows are redrawn and Firefox is smooth. In version 1.0 "
-         "they could stay frozen on the first picture. Debian 13 and openSUSE Leap 16 were already fine.",
+         "Tumbleweed, Arch) works in the browser as it should: windows are redrawn, Firefox keeps drawing and the screen follows "
+         "without delay. In version 1.0, on these distributions, windows could stay frozen on the first picture. Debian 13 and openSUSE Leap 16 were already fine.",
          "KDE and Firefox.") + \
     note("on KDE this costs a little at very large sizes. Measured on an Intel UHD 770: no loss at 1080p and 2K; "
          "at 3K the desktop goes from 58 to 54-55 frames per second, at 4K from 58 to 44-49.", "KDE at 3K and 4K.")
@@ -80,12 +80,12 @@ S_PHONE = p("A phone or a tablet works like a computer: open the address in <b>C
         ["Tap with two fingers", "Right click."],
         ["Drag with two fingers", "Scrolls."],
         ["Tap, then touch again and drag", "Drags a window or selects text."],
+        ["Tap with three fingers", "Middle click."],
         ["Pinch", "Enlarges the view."],
         ["The small ⌨ button at the top right", "Opens the phone's keyboard. The keyboard never opens by itself."],
     ], "«TAB» — Touch on a phone (SPECS.md §7.2)") + \
     warn("on Android the on-screen keyboard is not right yet. After you close it with the ⌨ button it may open "
-         "again by itself, or the button may not close it. If this happens, use the Back gesture of the phone to "
-         "close it. The correction is planned for version 1.5.1. A physical keyboard and a mouse (for example with "
+         "again by itself. The correction is planned for version 1.5.1. A physical keyboard and a mouse (for example with "
          "Samsung DeX) are not affected.", "Known limit in 1.5: the keyboard on Android.")
 
 S_SESSION = p("Your desktop belongs to you, not to the browser tab. Closing the tab, losing the network or switching "
