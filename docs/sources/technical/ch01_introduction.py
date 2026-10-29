@@ -55,8 +55,9 @@ S1 = p("<b>REMOTIX</b> is a remote desktop for Linux. A server runs on the Linux
         ["Size", f"{righe(conta('.c') + conta('.h'))} lines of C, {righe(conta('page.html'))} lines of page, "
          f"{righe(conta('.go'))} lines of Go"],
         ["Licence", "Our own text, " + c("LICENSE.md") + " (DECISIONS.md §10.39): free for personal and "
-         "non-profit use, source readable, no modifications, no redistribution; not open source. The RHEL / Alma 10 "
-         "package also carries labwc 0.8.4 as a separate program under its own licence, GPL-2.0 (" + c("THIRD-PARTY-LICENSES")
+         "non-profit use, source readable, no modifications, no redistribution; not open source. Where KWin is 6.5 or later "
+         "(Ubuntu 26.04, Fedora 44, RHEL / Alma 10, Tumbleweed, Arch) the package also carries labwc 0.9.3, with a patched wlroots 0.19.2, "
+         "as a separate program under its own licence, GPL-2.0 (" + c("THIRD-PARTY-LICENSES")
          + ", DECISIONS.md §10.43)"],
     ], "«TAB» — REMOTIX at a glance") + \
     p("<b>Why a protocol of our own, and why a browser.</b> REMOTIX v1 spoke RDP and stopped at its phase 11, after "
@@ -243,8 +244,8 @@ S4 = p("The " + c("nic-fio/REMOTIX") + " repository on GitHub (private) holds ev
          + c("run.sh") + " (the self-extracting " + c(".run") + ")."],
         [c("packaging/"), "The " + c(".deb") + ", " + c(".rpm") + " and Arch recipes, the systemd unit, "
          + c("tmpfiles") + ", firewall descriptions, the disabled belts, the packages of the installer itself, the "
-         "release script, the third-party licence tools (" + c("archive/") + ") and, in " + c("rpm/labwc/") + ", the "
-         "recipe that fetches and verifies (by sha256) the labwc built for RHEL / Alma 10."],
+         "release script, the third-party licence tools (" + c("archive/") + ") and, in " + c("labwc-ospite/") + ", the "
+         "recipe, the patch and the pinned sources (sha256) of the labwc that hosts KWin 6.5 or later."],
         [c("benches/"), "About 350 files: one script or folder per bench, named after the phase that wrote it. The "
          "benches of closed phases and those that can no longer run left the tree on 10 and 11 October 2026 "
          "(DECISIONS.md §10.44); their measurements stay where they were recorded, the files in git history. "

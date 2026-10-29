@@ -737,6 +737,24 @@ S_CATALOGUE = p("The catalogue is " + c("installer/catalog/catalog.json") + ", e
       + c("src/Makefile") + ", " + c("packaging/debian/control") + " and " + c("packaging/rpm/remotix.spec") + "; "
       "libopus 1.4 here, 1.3 in the Makefile. Not settled yet: which one is the real floor.")
 
+S_ENC = p("REMOTIX encodes on the card's own encoder and never installs a driver or adds a repository (DECISIONS.md §10.36). So "
+          "on some distributions the administrator must provide the driver before " + c("--encoding-test") + " passes. The catalogue "
+          "records the facts in the " + c("h264") + " key of each platform; " + c("check") + " says what is missing.", lead=True) + \
+    table(["Distribution and card", "What is needed", "Source"], [
+        ["Fedora 44, AMD or Intel", "Fedora's own Mesa and Intel VA drivers lack H.264 and HEVC encoding: enable <b>RPM Fusion</b> "
+         "and install the drivers it carries. The package does not add it.", c("no_stock_h264") + " = AMD, Intel"],
+        ["Arch, Intel", "Install " + c("intel-media-driver") + " (VA-API). On Arch an AMD card encodes through Vulkan Video with "
+         "the official driver.", c("vulkan_encoding") + " = AMD"],
+        ["AlmaLinux / RHEL 10, AMD", "<b>No encoding.</b> RHEL's Mesa is built without H.264 and HEVC, so there is no VA-API on an "
+         "AMD card. Use a machine with an Intel or an NVIDIA card.", c("amd_without_vaapi")],
+        ["AlmaLinux / RHEL 10, Intel", "EPEL 10 has no Intel VA driver (the .rpm recommends nothing on Alma): the administrator "
+         "provides it.", c("no_stock_h264") + " = Intel"],
+        ["openSUSE, AMD", "The distribution's own Mesa lacks the H.264 encoder; the package does not add Packman.", c("no_stock_h264") + " = AMD"],
+        ["Debian, Ubuntu, AMD", "AMD encodes through Vulkan Video with the official driver.", c("vulkan_encoding") + " = AMD"],
+    ], "«TAB» — Encoding drivers the administrator provides") + \
+    p("The preliminary check stops a machine without an encoding driver before anything is installed (" + c("RX-GPU-…")
+      + "); at the end " + c("remotix --encoding-test") + " (7a) really encodes, and a failure there rolls the installation back (§10.34).")
+
 S_PLAN = p(c("InstallPlan()") + " is the whole installation policy in one function. REMOTIX does not modify the "
            "system, so the plan has few steps; everything else is said, not done.", lead=True) + \
     table(["#", "Step / item", "Condition", "Notes"], [
@@ -1066,6 +1084,7 @@ CHAPTER = ("The installer", [
     ("Encoding routes and the card verdict", S_ROUTES),
     ("Phase 2: compatibility and what is missing", S_COMPAT),
     ("The catalogue of platforms", S_CATALOGUE),
+    ("Encoding drivers per distribution", S_ENC),
     ("The installation plan", S_PLAN),
     ("Package manager adapters", S_MANAGERS),
     ("Verification and the certificate", S_VERIFY),

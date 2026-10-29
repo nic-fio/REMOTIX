@@ -563,7 +563,15 @@ S15 = p("The technical minimum is WebTransport <b>and</b> WebCodecs. The list be
          "position, so pointing and clicking hit correctly even without hover; and since 3 October 2026 the first "
          "click on the canvas captures the pointer where hover does not arrive (" + c("DECISIONS.md")
          + " §10.29). Details are in " + rif("Mouse and pointer in the classic layout") + ".", "DeX and the pointer.") + \
+    p("<b>The phone as a client (Android 16).</b> The supported browser on Android is Chrome; the page was tried on a Samsung S23+ "
+      "with Android 16, with the mouse of DeX and with touch. The phone-driven bench (" + c("benches/19-android") + ") "
+      "needs the phone <b>unlocked</b>, on the same network as the server, preferably charging, and reachable by <b>adb</b> "
+      "(USB or wireless debugging switched on in the developer options). It opens only Chrome, in tabs of its own and only towards "
+      "the server; it keeps the screen on and, in one test, rotates the phone, and puts everything back at the end. It stops while a "
+      "call rings. A user who only browses needs none of this: Chrome and the server's address are enough.") + \
     ul([
+        "Not settled yet: the exact list of permissions Android 16 asks the phone owner to grant for the debug bench (debugging "
+        "authorisation, Chrome's own prompts) has not been written down.",
         "Not settled yet: Safari on macOS and iOS has never been opened against REMOTIX.",
         "Not settled yet: Firefox on Windows has never been opened against REMOTIX.",
         "Not settled yet: Android's coming desktop mode, which may change the pointer behaviour; the capture rule "

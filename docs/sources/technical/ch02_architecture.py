@@ -38,11 +38,11 @@ S1 = p("REMOTIX grew out of a few rules, most of them written before the code an
          "DECISIONS.md §10.36, §7.21"],
         ["<b>No GPL dependencies</b>", "No GPL library is linked into the server; what REMOTIX links in itself "
          "(ngtcp2, nghttp3) is MIT. labwc, GPL-2.0, is a separate program REMOTIX starts, never linked: the "
-         "distribution's, or on RHEL / Alma 10 the one the package builds unmodified", "SPECS.md §11.4, "
+         "distribution's, or, to host KWin 6.5 or later, the one the package builds (labwc 0.9.3, wlroots 0.19.2 patched and static)", "SPECS.md §11.4, "
          "DECISIONS.md §10.43"],
         ["<b>Build only what the distribution gets wrong</b>", "REMOTIX uses what the customer's distribution "
          "ships; a component is built by REMOTIX only for a measured problem: ngtcp2 and nghttp3 (no distribution "
-         "ships the version needed) and labwc on RHEL / Alma 10 (EPEL has none)", "DECISIONS.md §10.43, §10.46"],
+         "ships the version needed) and a labwc for KWin 6.5 or later, whose wlroots needs a patch (no distribution has it)", "DECISIONS.md §10.43 (replaced in 1.5), §10.46"],
     ], "«TAB» — The principles that shaped REMOTIX") + \
     p("Eight <b>invariants</b>, inherited from v1 and renumbered in " + c("CODER.md") + " §2, are quoted in the "
       "comments next to the lines that keep them. A change that breaks one of them is a defect even if every test "
@@ -403,9 +403,9 @@ S9 = p("Each piece of state has one owner and one lifetime. The rule in the code
        "where something can be alive or dead, so shared things travel in structures (" + c("struct ponte")
        + ") and each table is sized once, at startup.", lead=True) + \
     table(["State", "Owner", "Lives", "Notes"], [
-        ["certificates and their fingerprint", c("certificates.c"), "files in " + c("/var/lib/remotix/certificates")
+        ["certificates and their fingerprint", c("certificates.c"), "files in " + c("/var/lib/remotix/net/certificates") + " (" + c("/var/lib/remotix/certificates") + " in the binary's default and with REMOTIX_SPLIT=0)"
          + ", rotated while running", rif("Transport: QUIC, HTTP/3, WebTransport")],
-        ["the address ban", c("rcp.c"), "in memory and in " + c("/var/lib/remotix/ban") + ": survives restarts",
+        ["the address ban", c("rcp.c"), "in memory and in " + c("/var/lib/remotix/net/ban") + " (" + c("/var/lib/remotix/ban") + " with REMOTIX_SPLIT=0): survives restarts",
          "lifted early only through the unblock socket of the running server; three levels, progressive 15 min · 1 h · 12 h"],
         ["RCP sessions and attach slots", c("rcp.c"), "one per connection; the slot is freed on detach or after "
          "30 s of silence", rif("The RCP/1 protocol")],

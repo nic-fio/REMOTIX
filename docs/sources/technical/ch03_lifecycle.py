@@ -68,14 +68,19 @@ S2 = p("In a package the server runs as " + c("remotix.service") + ", a system u
 Type=simple
 ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --address 0.0.0.0 --name %H \\
     --port "$${REMOTIX_PORT}" --certificates /var/lib/remotix/certificates \\
-    --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban \\
+    --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/ban --no-split \\
     --journal $${REMOTIX_OPTIONS}'
 KillMode=mixed
 LimitRTPRIO=20
 LimitNICE=-11
 Restart=on-failure
 RestartPreventExitStatus=78
-RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the two EnvironmentFile lines)") + \
+RestartSec=2""", "text", "packaging/debian/remotix.service: the unit of a package built with REMOTIX_SPLIT=0 (excerpt, without the two EnvironmentFile lines)") + \
+    p("Since 25 Oct 2026 the packages are built with the split, and the unit they install as " + c("remotix.service") + " is "
+      + c("remotix.service.split") + ". It differs from the excerpt above in three places: " + c("--certificates")
+      + " and " + c("--ban-file") + " point under " + c("/var/lib/remotix/net/") + " (" + c("certificates") + " and " + c("ban")
+      + "), and " + c("--split") + " instead of " + c("--no-split") + ". The excerpt is the unit of a package built without the split "
+      "(" + c("REMOTIX_SPLIT=0") + ", " + c("--without split") + ").") + \
     table(["Setting", "Why"], [
         ["runs as root", "only root verifies any user's password with PAM and can become each user for their child"],
         [c("--name %H"), "the certificate carries the machine's host name; whoever connects by IP address adds "
@@ -103,14 +108,15 @@ RestartSec=2""", "text", "packaging/debian/remotix.service (excerpt, without the
     warn("with no " + c("--command-socket") + " in the packaged command line, a banned address can only wait for "
          "its wait (15 minutes, 1 hour or 12 hours): the unblock command promised by SPECS.md §4.2 is there only if the administrator adds "
          "the option in " + c("REMOTIX_OPTIONS") + " (the " + c("tmpfiles") + " entry creates "
-         + c("/run/remotix") + " for that socket). The only code that exits with 78 (" + c("EXIT_CONFIG") + ", eight places in " + c("main.c") + ") is the startup refusal of the experimental "
-         + c("--split") + " (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side that drops to the "
-         "system user " + c("remotix") + "; off by default). It refuses, and logs why, when: " + c("--split") + " is given without "
-         + c("REMOTIX_SPLIT_EXPERIMENTAL=1") + " in the environment; " + c("--network-side") + " is given without " + c("--split") + "; "
-         + c("--split") + " does not run as root; the network user is missing or has uid/gid 0; the certificates or the ban file are not in "
-         + c("net/") + "; the page is not readable by the network user; or there are too many arguments. The default unit does not pass "
-         + c("--split") + ". The " + c("remotix.service.split") + " unit that the split build installs (debian/rules, remotix.spec, PKGBUILD) does, "
-         "with " + c("Environment=REMOTIX_SPLIT_EXPERIMENTAL=1") + ", so " + c("RestartPreventExitStatus=78") + " matters only there", "Two gaps of the unit.") + \
+         + c("/run/remotix") + " for that socket). The only code that exits with 78 (" + c("EXIT_CONFIG") + ", seven places in " + c("main.c") + ") is the startup refusal of the split (privilege separation, §11.50: a root side with PAM and the desktops' birth, and a network side that drops to the "
+         "system user " + c("remotix") + "). Since 25 Oct 2026 the split is <b>on by default</b> when the server starts as root; " + c("--split")
+         + " asks for it explicitly and " + c("--no-split") + " goes back to the single process of 1.0; started as an ordinary user (the benches) "
+         "the server stays one process. The old gate " + c("REMOTIX_SPLIT_EXPERIMENTAL") + " is gone from the binary. The split refuses, and logs why, when: "
+         + c("--network-side") + " is given together with " + c("--no-split") + "; " + c("--split") + " does not run as root; the network user is missing or has uid/gid 0; "
+         "the certificates or the ban file are not in " + c("net/") + "; the page is not readable by the network user; or there are too many arguments. "
+         "The packages install " + c("remotix.service.split") + " as " + c("remotix.service") + ", with the user, tmpfiles and SELinux policy of the split; a package built "
+         "without it (" + c("REMOTIX_SPLIT=0") + ", " + c("--without split") + ") keeps the single process. The "
+         + c("RestartPreventExitStatus=78") + " of the Debian unit matters only for these refusals", "Two gaps of the unit.") + \
     note("the server must not run inside a user's session. " + c("pam_systemd") + ", called by a process that is "
          "already in a logind session, does not create a second one and does not say so: the children stay without "
          "runtime directory, bus and desktop (measured 16 August 2026, eight bench runs out of eight). As a system "
@@ -255,7 +261,7 @@ S4 = p("The child is born before it knows the canvas, and it must not start the 
       "a “ticker” process that touches a 1×1 transparent surface every 16 ms (KWin waits for labwc's answer to "
       "draw again, and labwc answers only when it repaints), and then becomes the KWin wrapper with "
       + c("KWIN_FORCE_SW_CURSOR=1") + " and " + c("--wayland-display") + ". Which labwc is a build-time choice of "
-      "the package: the distribution's from the " + c("PATH") + ", or on RHEL / Alma 10, whose EPEL has none, "
+      "the package: the distribution's from the " + c("PATH") + ", or, where KWin is 6.5 or later (Ubuntu 26.04, Fedora 44, RHEL / Alma 10, Tumbleweed, Arch), REMOTIX's own, "
       + c("/usr/lib/remotix/labwc") + " (" + c("make LABWC=…") + "). Without labwc the session is still born, "
       "with KWin " + c("--virtual") + " as before, and keeps its birth size at reattach: said in the user's "
       "journal and, at the first reattach of another size, in REMOTIX's log.") + \
@@ -514,22 +520,28 @@ S11 = p("What REMOTIX puts on the machine, and who puts it there. Paths are thos
          + " on openSUSE)"],
         [c("/usr/share/applications/org.kde.remotix.desktop"), "package", "lets KWin offer screen capture to the "
          "binary"],
-        [c("/usr/lib/remotix/labwc"), "package (RHEL / Alma 10 only)", "labwc 0.8.4, built unmodified against "
-         "EPEL's wlroots 0.18 to host KWin; GPL-2.0, its text in " + c("/usr/share/doc/remotix/THIRD-PARTY-LICENSES")
+        [c("/usr/lib/remotix/labwc"), "package (KWin 6.5 or later: Ubuntu 26.04, Fedora 44, Alma 10, Tumbleweed, Arch)", "labwc 0.9.3 with wlroots 0.19.2, patched and "
+         "linked statically, only to host KWin; GPL-2.0, its text in " + c("/usr/share/doc/remotix/THIRD-PARTY-LICENSES")
          + ", its source next to every release (DECISIONS.md §10.43)"],
         [c("/etc/ufw/applications.d/remotix"), "package (Debian)", "a firewall profile for 7447 TCP and UDP, defined "
          "but not opened"],
         ["the unit " + c("remotix.service"), "package", "installed, neither enabled nor started by the package"],
-        [c("/var/lib/remotix/"), "tmpfiles, 0700 root", "the server's state"],
-        [c("/var/lib/remotix/certificates/"), "server", c("page.pem") + "/" + c(".key") + " (365 days) and "
-         + c("session.pem") + "/" + c(".key") + " (13 days, rotated 2 days before expiry); a " + c(".ours")
-         + " mark tells a generated certificate from the administrator's own"],
-        [c("/var/lib/remotix/ban"), "server", "the banned addresses; survives restarts"],
+        [c("/var/lib/remotix/"), "tmpfiles, 0755 root (0700 in a package built with REMOTIX_SPLIT=0)", "the root side's state; 0755 "
+         "only so that the network side can reach " + c("net/") + " below it, and never owned by " + c("remotix")],
+        [c("/var/lib/remotix/net/"), "tmpfiles, 0700 " + c("remotix"), "the network side's own folder (split); its content is given to "
+         + c("remotix") + " at every boot"],
+        [c("/var/lib/remotix/net/certificates/"), "server", c("page.pem") + "/" + c(".key") + " (365 days) and "
+         + c("session.pem") + "/" + c(".key") + " (13 days, rotated 2 days before expiry), " + c("quic-secret") + " and "
+         + c("log-secret") + " (0600); a " + c(".ours") + " mark tells a generated certificate from the administrator's own. In a package "
+         "built with REMOTIX_SPLIT=0 (and in the binary's default) the folder is " + c("/var/lib/remotix/certificates/")],
+        [c("/var/lib/remotix/net/ban"), "server", "the banned addresses; survives restarts (0600). " + c("/var/lib/remotix/ban")
+         + " with REMOTIX_SPLIT=0"],
         [c("/var/lib/remotix/group-enrollments.jsonl"), "server", "one line per group REMOTIX added a user to; "
          "append-only, root-owned, " + c("fsync") + " after each line"],
         [c("/var/lib/remotix/") + " (other files)", "installer", "its records of the installation and of its "
          "operations (" + rif("The installer") + ")"],
-        [c("/run/remotix/"), "tmpfiles, 0700 root", "for the unblock socket, when enabled"],
+        [c("/run/remotix/"), "tmpfiles, 0755 root (0700 with REMOTIX_SPLIT=0)", "root side's runtime files, the unblock socket when enabled"],
+        [c("/run/remotix/net/"), "tmpfiles, 0700 " + c("remotix"), "the network side's runtime files (split)"],
     ], "«TAB» — System files") + \
     table(["Path", "What", "Lives"], [
         [c("$XDG_RUNTIME_DIR/remotix/"), "per-session configuration: the user manager's snapshot ("

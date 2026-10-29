@@ -239,7 +239,7 @@ A_L = [
      + ", " + c("--virtual") + " only where labwc is missing) and captures through "
      + c("zkde_screencast_unstable_v1") + "." + v("KDE: the KWin screencast protocol")),
     ("labwc", "The wlroots compositor under which REMOTIX runs XFCE and LXQt, and the screenless host of the "
-     "nested KWin on KDE. On Alma/RHEL 10, which has none, the package ships its own labwc 0.8.4 at "
+     "nested KWin on KDE. From KWin 6.5 on (Ubuntu 26.04, Fedora 44, Alma 10, Tumbleweed, Arch) the package ships its own labwc 0.9.3, with a patched static wlroots, at "
      + c("/usr/lib/remotix/labwc") + " (DECISIONS.md §10.43)." + v("XFCE sessions on labwc")),
     ("logind", "systemd's login manager: sessions, seats, local-session checks, and the termination of REMOTIX "
      "sessions at uninstall." + v("The logind sentinel")),

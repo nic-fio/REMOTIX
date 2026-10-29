@@ -485,6 +485,7 @@ not apply (the user is the Author). What follows is what the user decided on eac
 Two answers of the user to the first «end of phase» lanes (`rxtest protocol`, `rxtest installer`), verbatim:
 *«1) nodelay - 2) l'admin deve preparare l'ambiente»*.
 
+- ⚠ **Note, 29 Oct 2026:** the code has no `PAM_FAIL_DELAY` function of ours. What exists is `REJECT_FLOOR` 2500 ms (`src/rcp.c:242`, the entry below), which is now **merged** (no longer 🔸 NOT merged): the refusal `0x07` leaves not before it. The paragraph below is the intention of 14 Oct, kept as history.
 - **nodelay.** `[M]` B8: PAM's failure delay (pam_unix / pam_faildelay, ~2 s) came on top of the fixed second of
   §4.4-bis, so a wrong password was told apart from a right one by the time alone. ⇒ `authentication.c` gives PAM
   its own `PAM_FAIL_DELAY` function, which does not sleep: the effect of `nodelay` on every module, ⭐ without
@@ -500,6 +501,7 @@ Two answers of the user to the first «end of phase» lanes (`rxtest protocol`, 
   wait-verdict cannot be evicted: holding them 2.5 s would fill the 128 pre-login places at ~51 CREDENTIALS per second
   instead of 128). A floor, not a fixed time: a refusal PAM delays beyond it is paced by PAM as before — to be
   re-measured with pam-tempi.
+- ⚠ **Note, 29 Oct 2026 — user's decision: the Recommends stay.** Debian: `va-driver-all | va-driver`, `mesa-vulkan-drivers`; RPM: the Mesa and Intel VA drivers. The preliminary check (`RX-H264-002`, `RX-GPU-006`) covers the case that failed late. The Recommends were not removed, so as not to delay the release; the text below is the intention of 14 Oct and is kept as history.
 - **The card drivers.** `[M]` the installer lane: `Recommends: va-driver-all | va-driver` was satisfied on Ubuntu
   26.04 by Mesa and no Intel driver came; Tumbleweed boxes have recommends off; Arch brings nothing. The install
   then failed late in 7a (RX-AZIONE-003) and rolled back. ⇒ Consistent with §10.36: the .deb and the .rpm recommend
@@ -1663,6 +1665,8 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   kde level-01 is GREEN on memory (its repeat stays FAIL for the lost key, the known KWin defect).
 
 ### 11.50 ✅ §11.11: the shape of the split, the closed list, and the user's choices (16 Oct 2026)
+
+> ⭐ **Note, 25 Oct 2026 (the user's decision D1): the split is ON by default.** `REMOTIX_SPLIT_EXPERIMENTAL` is removed from the binary; `REMOTIX_SPLIT=0` (Debian, Arch), `--without split` (rpm, `RX_SPLIT=0`) builds the package without the split; `--no-split` returns to one process at run time. The «OFF by default» and `REMOTIX_SPLIT=1` / `--with split` wordings below are the state of 16–24 Oct, kept as history (`CHANGES-1.5.md` §7). R8 is in the code (`walls_fork_pidns()`, `rediscover.c`).
 
 > ⚠ In the branch `finale`, NOT in `integrazione2` (25 Oct 2026): the whole section is merged from `rootside-completo` (`ae8cae45`; D1-D7 plus installer and packages), OFF by default (the server stays one process unless `REMOTIX_SPLIT_EXPERIMENTAL=1`). Whether it is ON or OFF in 1.5 waits for the user's decision D1; see CHANGES-1.5.md.
 >

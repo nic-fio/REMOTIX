@@ -358,10 +358,10 @@ OPT = table(["Option", "Default", "Lives in", "Meaning"], [
      "to proceed. Exit 2 if missing."],
     [c("--port N"), c("7447"), "parent", "UDP and TCP port (" + c("RCP.md") + " §2.4)."],
     [c("--certificates DIR"), c("/var/lib/remotix/certificates"), "parent", "Directory of the two certificates, "
-     "created 0700 if missing."],
+     "created 0700 if missing. The binary's default: the installed unit passes " + c("/var/lib/remotix/net/certificates") + "."],
     [c("--page FILE"), c("page.html") + " (relative)", "parent", "The page served over TCP."],
     [c("--ban-file FILE"), c("/var/lib/remotix/ban"), "parent", "Where the address "
-     "ban survives restarts (format B2, no user name on disk)."],
+     "ban survives restarts (format B2, no user name on disk). The binary's default: the installed unit passes " + c("/var/lib/remotix/net/ban") + "."],
     [c("--command-socket PATH"), "none", "parent", "Unix socket 0600 of the unlock command ("
      + rif("The unlock command socket") + "). Without it a ban ends only when its wait runs out (15 minutes, 1 hour or 12 hours)."],
     "Diagnostics",

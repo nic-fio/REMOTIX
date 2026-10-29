@@ -206,6 +206,16 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
       "reference (" + c("capture_unchanged_forget()") + "), and a held frame goes out when the scene goes still. Not measured yet on KDE at 4K "
       "(DECISIONS-11 §11.33, §11.49). Nested KWin also writes the wanted size next to labwc's socket (" + c("wanted") + ") and the "
       "settle insists on it: KWin's output used to come up at labwc's own 1280×720 at the first mount.") + \
+    p("<b>Empty damage (KWin 6.5 and later).</b> KWin 6.6 sends about 60 frames a second even on a still screen. For the "
+      "ones that changed nothing the " + c("SPA_META_VideoDamage") + " meta is <i>present and empty</i> (only the terminating "
+      "rectangle). Until the correction of 28 Oct 2026 " + c("look_damage()") + " counted them as «absent» and encoded all of them: "
+      "53 frames a second of nothing, and a viewer 1–3 s behind. Now " + c("damage_classify()") + " tells three cases apart — "
+      "absent (the producer says nothing: the frame counts, as before), empty (the producer declares that nothing changed: the "
+      "buffer goes back to PipeWire without being encoded) and present — and counts the empty ones in " + c("empty_damage")
+      + ". The frame is never skipped right after the start, after a (re)negotiated format or a resize, or when its damage was "
+      "lost (" + c("deliver_next") + "). Measured on the rented NVIDIA server: 5 frames a second instead of 53, delay about 0, "
+      "F-003 on KDE green. Not settled yet: the " + c("empty_damage") + " counter has still to be checked at 0 on GNOME and on wlroots. Test: " + c("benches/28-damage-test.c")
+      + " (commit " + c("29d7c134") + ").") + \
     p("<b>The gate.</b> KWin announces " + c("zkde_screencast_unstable_v1") + " only to a client whose "
       "executable (" + c("/proc/<pid>/exe") + ", canonical) appears in the " + c("Exec=") + " line of a "
       + c(".desktop") + " file that lists the protocol in " + c("X-KDE-Wayland-Interfaces") + ". Measured on "
@@ -255,8 +265,8 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
          "the pointer hidden was handed to labwc as it is (direct scanout) and the picture froze; any window above "
          "it makes KWin composite as with " + c("--virtual") + "."],
     ], "«TAB» — The nested KWin: what REMOTIX sets, and the trap behind each line") + \
-    p("<b>Which labwc.</b> The distribution's, from " + c("PATH") + ". RHEL and Alma 10 have no labwc in EPEL, so "
-      "only the Alma package ships its own, labwc 0.8.4 built unmodified against EPEL's wlroots 0.18, at "
+    p("<b>Which labwc.</b> The distribution's, from " + c("PATH") + " on Debian 13 and openSUSE Leap 16 (KWin older than 6.5). Where KWin is 6.5 or later — Ubuntu 26.04, Fedora 44, "
+      "RHEL / Alma 10, Tumbleweed and Arch — the package ships its own, labwc 0.9.3 with a patched wlroots 0.19.2 linked statically, at "
       + c("/usr/lib/remotix/labwc") + " (" + c("make LABWC=…") + " → " + c("REMOTIX_LABWC") + " in " + c("kwin.c")
       + "; GPL-2.0, text in " + c("THIRD-PARTY-LICENSES") + ", source next to every release; " + c("DECISIONS.md")
       + " §10.43). labwc never listens on the network, has no screen and no input device, and the user never sees it. "

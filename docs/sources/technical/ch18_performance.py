@@ -299,6 +299,37 @@ sudo systemctl stop r20-campagna
       + " (method and thresholds) and " + c("phases/20-performance.md") + " (this campaign, its anomalies and the "
       "comparison).")
 
+S8 = p("Since 1.5 every change is measured <b>against the 1.0</b>, on the same machine, with the same scene and interleaved "
+       "runs, and may never come out worse (the rule of release: functionality, security and performance). The small bench is " + c("benches/30-perf/30-perf.py") + ", run on the server as the test user.", lead=True) + \
+    table(["Point", "What is done", "Why"], [
+        ["Comparison", "The 1.0 and the 1.5 binaries run in turn, the same box, the same light scene (6 rectangles, fixed seed, a "
+         "1 ms counter), 1, 2, 4 and 8 users, a few minutes per step. One row per step and metric: min, mean, median, p90, max.",
+         "Pairs close in time cancel the drift of the machine"],
+        ["Margins", "Every metric has a margin against the 1.0: fps, CPU and memory ±5 %, delay ±15 %. A result is <b>red</b> only "
+         "when it is worse beyond the margin, and is then measured again or explained. Example: the RTT at rest may rise by 15 % "
+         "at most (the 1.5 measured +5.8 %).", "Noise must not pass as a result, nor a result as noise"],
+        ["Noise accepted by decision", "A red metric that stays red is not hidden: it is decided by the user and written down. "
+         "On 29 Oct 2026, with gnome and Chrome, the total CPU of the host was 0.8–1.4 points above the 1.0 at 1, 3 and 7 users, "
+         "while the REMOTIX processes were equal to the 1.0 and the box's load lower; accepted as measurement noise (the user's "
+         "decision), because the clients' browsers run on the same server, where normally they run on other hardware.",
+         "The decision stays in the record"],
+        ["The box's journal apart", "The box's systemd journal lives in a tmpfs and grows by itself (1.6 GB in a day). It is taken "
+         "out of the box's working memory and reported on its own (" + c("box_journal") + ", " + c("box_journal_growth") + "), "
+         "because a 1.0 reference taken when the journal was small and a 1.5 run taken when it was big differed by 1.4 GB that "
+         "were the journal's. References measured before this change are not comparable and were taken again.",
+         "Memory comparisons count REMOTIX, not the log"],
+        ["Mouse every 4 minutes", "In runs longer than 25 minutes the bench moves a real mouse every 240 s " + c("KEEPALIVE_S")
+         + ".", "REMOTIX detaches a session after 30 minutes without input and ends it 60 minutes later; the endurance run of "
+         "27 Oct 2026 measured nothing after minute 30"],
+        ["Server and tools", "One climb at a time, an empty server (the bench refuses otherwise), a memory guard (stops under 6 GB "
+         "available). Never measure while another bench, a package build or the local language models are running.",
+         "Performance is not measured in parallel"],
+        ["Disturbed network", "Optional: a netem on the loopback for the box's UDP port only (" + c("REMOTIX_PERF_NETEM")
+         + ", e.g. loss 3 %), and a per-sample series (" + c("REMOTIX_PERF_SERIES=1") + ").", "Endurance and lossy-line runs"],
+    ], "«TAB» — How 1.5 is measured against 1.0") + \
+    p("The card matters: the bench states which card the boxes are on (" + c("--box-card") + " intel or amd) and which one the "
+      "clients use, and its GPU columns mean different things on each (" + c("30-perf.py") + " documents them).")
+
 CHAPTER = ("Performance and capacity", [
     ("What was measured, and on what", S1),
     ("The bench, the scene and the classes", S2),
@@ -309,4 +340,5 @@ CHAPTER = ("Performance and capacity", [
     ("A first look at KasmVNC", S5B),
     ("Limits of the measurements", S6),
     ("Repeating the measurements", S7),
+    ("Measuring 1.5 against 1.0", S8),
 ])
