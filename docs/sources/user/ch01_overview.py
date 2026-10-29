@@ -24,7 +24,9 @@ S_WHAT = p("<b>REMOTIX</b> shows a full Linux desktop inside a browser tab. The 
         "<b>Your own desktop.</b> Each user gets their own desktop on the machine; several people can work on the "
         "same machine at the same time, each in their own desktop.",
         "<b>The size of your window.</b> The desktop is created as large as the browser window at the moment you "
-        "sign in, up to 4096×2304.",
+        "sign in. REMOTIX 1.5 is declared for sizes up to 3K (version 1.0 aimed at 4K).",
+        "<b>Several people at once.</b> A machine is tested with up to 8 people connected at the same time. "
+        "If the machine cannot give one more desktop of that size, the sign-in is refused.",
         "<b>Keyboard, mouse and touch.</b> The page keeps no key combination for itself. A few (such as Alt+Tab "
         "or the Super key) may be taken first by your own computer or browser: the small ⌨ button at the bottom "
         "left of the page lists the ones that do not reach the remote desktop.",
@@ -48,6 +50,10 @@ S_DESKTOPS = p("REMOTIX works with four desktops: <b>GNOME</b>, <b>KDE Plasma</b
         "lets the desktop take the size of a new window when you come back. On AlmaLinux and RHEL 10, which have no "
         "labwc package, REMOTIX brings its own (" + c("/usr/lib/remotix/labwc") + ").",
     ]) + \
+    note("from version 1.5, KDE Plasma 6.5 or newer (Ubuntu 26.04, Fedora 44, AlmaLinux and RHEL 10, openSUSE "
+         "Tumbleweed, Arch) works in the browser as it should: windows are redrawn and Firefox is smooth. In version 1.0 "
+         "they could stay frozen on the first picture. Debian 13 and openSUSE Leap 16 were already fine.",
+         "KDE and Firefox.") + \
     note("on KDE this costs a little at very large sizes. Measured on an Intel UHD 770: no loss at 1080p and 2K; "
          "at 3K the desktop goes from 58 to 54-55 frames per second, at 4K from 58 to 44-49.", "KDE at 3K and 4K.")
 
@@ -63,6 +69,24 @@ S_BROWSERS = p("The browser needs two modern features, WebTransport and WebCodec
     ], "«TAB» — The browsers (SPECS.md §11.5)") + \
     p("On an Android phone or tablet, use Chrome. A browser that is too old lacks these features, and the page "
       "cannot show the desktop.")
+
+S_PHONE = p("A phone or a tablet works like a computer: open the address in <b>Chrome</b>, sign in, and the "
+            "desktop appears. The desktop has the shape of the phone's screen, so on a phone held upright it is tall "
+            "and narrow. Turning the phone does not turn the desktop: to get the right shape again, sign in again.",
+            lead=True) + \
+    table(["With your fingers", "What happens"], [
+        ["Drag with one finger", "Moves the pointer."],
+        ["Tap with one finger", "Left click, where the pointer is."],
+        ["Tap with two fingers", "Right click."],
+        ["Drag with two fingers", "Scrolls."],
+        ["Tap, then touch again and drag", "Drags a window or selects text."],
+        ["Pinch", "Enlarges the view."],
+        ["The small ⌨ button at the top right", "Opens the phone's keyboard. The keyboard never opens by itself."],
+    ], "«TAB» — Touch on a phone (SPECS.md §7.2)") + \
+    warn("on Android the on-screen keyboard is not right yet. After you close it with the ⌨ button it may open "
+         "again by itself, or the button may not close it. If this happens, use the Back gesture of the phone to "
+         "close it. The correction is planned for version 1.5.1. A physical keyboard and a mouse (for example with "
+         "Samsung DeX) are not affected.", "Known limit in 1.5: the keyboard on Android.")
 
 S_SESSION = p("Your desktop belongs to you, not to the browser tab. Closing the tab, losing the network or switching "
               "device leaves it running on the machine, with every program open.", lead=True) + \
@@ -105,6 +129,7 @@ CHAPTER = ("What REMOTIX is", [
     ("REMOTIX in short", S_WHAT),
     ("The desktops", S_DESKTOPS),
     ("The browsers", S_BROWSERS),
+    ("On a phone or a tablet", S_PHONE),
     ("Your session waits for you", S_SESSION),
     ("What REMOTIX does not do", S_NOT),
     ("The licence", S_LICENCE),
