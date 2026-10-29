@@ -62,8 +62,8 @@
 Name:           remotix
 # Version and release are given by the release command (packaging/release.sh) through
 # build-rpm.sh: RX_VERSION (--define "rx_version X.Y.Z") and RX_REVISION
-# (--define "rx_release N"); defaults 1.0.0 and 1.
-Version:        %{?rx_version}%{!?rx_version:1.0.0}
+# (--define "rx_release N"); defaults 1.5.0 and 1.
+Version:        %{?rx_version}%{!?rx_version:1.5.0}
 Release:        %{?rx_release}%{!?rx_release:1}%{?dist}
 Summary:        This machine's desktop in the browser
 # Our own text, not a standard one (DECISIONI §10.39): free for personal and non-profit use,
@@ -631,6 +631,8 @@ fi
 %ghost %verify(not md5 size mode mtime) %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/remotix_porta
 
 %changelog
+* Thu Oct 29 2026 nicfio <nicfio@gmail.com> - 1.5.0-1
+- 1.5.0: KDE on KWin 6.5+ (our labwc), more cards, privilege separation, Android client, 3K and 8 users.
 * Sun Oct 11 2026 nicfio <nicfio@gmail.com> - 1.0.0-1
 - 1.0.0: first public release.
 * Wed Sep 30 2026 nicfio <nicfio@gmail.com> - 0.17.0-1

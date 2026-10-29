@@ -85,7 +85,7 @@ S_PHONE = p("A phone or a tablet works like a computer: open the address in <b>C
         ["The small ⌨ button at the top right", "Opens the phone's keyboard. The keyboard never opens by itself."],
     ], "«TAB» — Touch on a phone (SPECS.md §7.2)") + \
     warn("on Android the on-screen keyboard is not right yet. After you close it with the ⌨ button it may open "
-         "again by itself. The correction is planned for version 1.5.1. A physical keyboard and a mouse (for example with "
+         "again by itself. A physical keyboard and a mouse (for example with "
          "Samsung DeX) are not affected.", "Known limit in 1.5: the keyboard on Android.")
 
 S_SESSION = p("Your desktop belongs to you, not to the browser tab. Closing the tab, losing the network or switching "
