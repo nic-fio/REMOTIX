@@ -1,0 +1,7 @@
+# remotix — the identity of the network side (DECISIONS.md §11.50).
+# The service starts as root (the ROOT side: PAM, the desktops' birth); the process
+# that faces the network — TLS, QUIC, the page, the ban table — drops to this user
+# before it reads a single byte from a client.  No groups: it never opens a card.
+# ⛔ The SAME line in packaging/{debian,rpm,arch}/remotix.sysusers
+#    (packaging/arch/build.sh checks they are byte-identical).
+u remotix - "REMOTIX network side" / /usr/sbin/nologin

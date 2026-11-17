@@ -1,0 +1,39 @@
+#!/bin/sh
+# remotix-polkit-seated USER ACTION — asked ONLY by
+# 40-remotix-remote-sessions.rules (DECISIONS.md §10.55).  Prints one line:
+#   none           USER has no REMOTIX session
+#   remotix VALUE  USER has one; VALUE is what this machine gives the SEATED
+#                  user for ACTION (yes, auth_admin_keep, …; "?" if not found)
+#
+# ⛔ It does NOT ask logind over D-Bus: logind's Can* checks call polkitd
+#   synchronously, and polkitd is waiting for THIS program ⇒ [M] 10 s
+#   deadlock.  It reads logind's state files in /run/systemd/sessions, the
+#   same files sd-login (and polkitd itself) reads.
+# ⛔ Never pkaction/pkcheck: they ask polkitd, which is busy with the rule.
+# ⭐ «Seated» value: <allow_active> of the action in the .policy files.
+# Always exits 0: the rule decides; anything unexpected ⇒ "none" or "?".
+PATH=/usr/bin:/bin
+u=$1
+a=$2
+case "$u$a" in *[!A-Za-z0-9._@+-]*|"") echo none; exit 0 ;; esac
+
+found=0
+for f in /run/systemd/sessions/*; do
+	# logind also keeps a FIFO <id>.ref per session: skip it by name, without
+	# looking at it.
+	case $f in *.ref) continue ;; esac
+	[ -f "$f" ] || continue
+	grep -qxF "SERVICE=remotix" "$f" 2>/dev/null || continue
+	grep -qxF "USER=$u" "$f" 2>/dev/null || continue
+	found=1
+	break
+done
+[ "$found" = 1 ] || { echo none; exit 0; }
+
+command -v awk >/dev/null 2>&1 || { echo "remotix ?"; exit 0; }
+v=$(cat /usr/share/polkit-1/actions/*.policy 2>/dev/null | awk -v id="$a" '
+		index($0, "id=\"" id "\"") > 0 { f = 1 }
+		f && /<allow_active>/ { sub(/.*<allow_active>/, ""); sub(/<\/allow_active>.*/, ""); print; exit }
+		f && /<\/action>/ { f = 0 }')
+echo "remotix ${v:-?}"
+exit 0

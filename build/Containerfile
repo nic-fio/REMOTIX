@@ -1,0 +1,27 @@
+# Containerfile — REMOTIX build image: Debian 13 (trixie), the only target.
+#
+# The development dependencies come from apt; ngtcp2 and nghttp3 are built inside,
+# static (quic-static.sh).  Used by build-deb.sh, which builds the context from this folder.
+# ⭐ Vulkan Video (`src/vulkanvideo.c`): `libvulkan-dev` (loader and headers, 1.4.309 on Debian 13).
+FROM docker.io/library/debian:trixie
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential pkg-config git ca-certificates cmake ninja-build \
+        libssl-dev libpam0g-dev \
+        libglib2.0-dev libpipewire-0.3-dev libdrm-dev \
+        libva-dev libopus-dev zlib1g-dev \
+        libei-dev libxkbcommon-dev libgbm-dev libwayland-dev libvulkan-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- nghttp3 1.18.0 and ngtcp2 1.25.0, static (needs network: it clones them from GitHub)
+COPY quic-static.sh /usr/local/bin/quic-static.sh
+RUN sh /usr/local/bin/quic-static.sh
+ENV LIBRARY_PATH=/usr/local/lib \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+WORKDIR /albero
+
+# --- the tools for the .deb package (debian/).  A layer AT THE END, so that the layers
+#     above (and the static libraries) stay cached.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        debhelper dh-apparmor dpkg-dev fakeroot lintian binutils \
+    && rm -rf /var/lib/apt/lists/*

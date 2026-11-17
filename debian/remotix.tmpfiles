@@ -1,0 +1,23 @@
+# remotix — the service's directories (PHASE F, NOT ACTIVE YET: the split build installs this as tmpfiles.d/remotix.conf) (phases/17 §6.4, DECISIONS.md §11.50).
+# /var/lib/remotix: the ROOT side's state (render-grants, group-enrollments.jsonl)
+#   and the engine's; root, 0755 so that remotix can reach net/ below it.
+#   ⛔ Never remotix-owned: a remotix-writable directory holding root's files
+#   would let a hijacked network side swap them under the root side.
+d /var/lib/remotix 0755 root root -
+# /var/lib/remotix/net: the network side's own (certificates/ with quic-secret, ban).
+#   Z: the content too, at every boot — an administrator's page.pem put there by
+#   hand as root is given to remotix (modes are kept).
+d /var/lib/remotix/net 0700 remotix remotix -
+Z /var/lib/remotix/net - remotix remotix -
+#   z: the modes remotix-net-move no longer sets (review 3, F1: a find|chmod run
+#   as root over a remotix-owned tree can be raced) — tmpfiles does not follow links.
+z /var/lib/remotix/net/certificates 0700 remotix remotix -
+z /var/lib/remotix/net/certificates/*.key 0600 remotix remotix -
+z /var/lib/remotix/net/certificates/quic-secret 0600 remotix remotix -
+z /var/lib/remotix/net/certificates/log-secret 0600 remotix remotix -
+z /var/lib/remotix/net/certificates/log-secret.new 0600 remotix remotix -
+z /var/lib/remotix/net/ban 0600 remotix remotix -
+z /var/lib/remotix/net/ban.new 0600 remotix remotix -
+# /run/remotix/net: the network side's runtime files (the bench's command socket).
+d /run/remotix 0755 root root -
+d /run/remotix/net 0700 remotix remotix -

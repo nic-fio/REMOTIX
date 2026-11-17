@@ -1,0 +1,66 @@
+#!/bin/sh
+# remotix.preinst — before the files are unpacked.
+#
+# ⭐ Replaces two checks of the old Go installer (installer/engine/network_side.go, RX-NETUSER-001):
+#    · REFUSE if an account named «remotix» already exists and is a PERSON's (or root's): the network side would
+#      run as that account (the sysusers file only creates the user when it is missing);
+#    · REMEMBER that the account was on the machine BEFORE the package, so that `purge` never deletes it
+#      (the installer's net-user-preexisting record).
+#    The criteria are the installer's PersonAccount(): uid 0 or gid 0, uid in [UID_MIN, 60000), a login shell,
+#    or a home under /home, /root or /var/home.
+set -e
+
+# ⭐ 17 Nov 2026 (owner: «on a server without a video card REMOTIX should not even install»; the old installer refused with
+#    RX-GPU-003).  REMOTIX encodes ONLY on the card (no software fallback): without a render node nothing can ever be shown.
+#    ⇒ A NEW installation is refused when the machine has no DRM render node (/sys/class/drm/renderD*, the kernel's own list:
+#    it does not depend on packages not yet unpacked).  Not on upgrade: an installed REMOTIX is never broken by apt.
+#    A card that is there but cannot encode H.264 is told by postinst (the product's own --encoding-test) and by the server.
+if [ "$1" = install ]; then
+	found=
+	for n in /sys/class/drm/renderD*; do
+		[ -e "$n" ] && found=1 && break
+	done
+	if [ -z "$found" ]; then
+		echo "remotix: this machine has no video card REMOTIX can use (no DRM render node: /dev/dri/renderD* is missing)." >&2
+		echo "remotix: REMOTIX encodes the desktop only on the video card (Intel, AMD or NVIDIA with its driver): it is not installed." >&2
+		exit 1
+	fi
+fi
+
+case "$1" in
+install|upgrade)
+	entry=$(getent passwd remotix || true)
+	if [ -n "$entry" ]; then
+		uid=$(echo "$entry" | cut -d: -f3)
+		gid=$(echo "$entry" | cut -d: -f4)
+		home=$(echo "$entry" | cut -d: -f6)
+		shell=$(echo "$entry" | cut -d: -f7)
+		umin=$(sed -n 's/^UID_MIN[[:space:]]\{1,\}\([0-9]\{1,\}\).*/\1/p' /etc/login.defs 2>/dev/null | head -n 1)
+		[ -n "$umin" ] || umin=1000
+		why=
+		{ [ "$uid" -eq 0 ] || [ "$gid" -eq 0 ]; } && why="$why uid $uid gid $gid (root's);"
+		{ [ "$uid" -ge "$umin" ] && [ "$uid" -lt 60000 ]; } && why="$why uid $uid >= UID_MIN $umin;"
+		case "$shell" in
+		""|*/nologin|*/false) ;;
+		*) why="$why login shell $shell;" ;;
+		esac
+		case "$home" in
+		/home/*|/root|/root/*|/var/home/*) why="$why home $home;" ;;
+		esac
+		if [ -n "$why" ]; then
+			echo "remotix: an account named «remotix» already exists and is a person's:$why" >&2
+			echo "remotix: the network side would run as that account. Rename it (usermod -l NEWNAME remotix) or remove it, then install again." >&2
+			exit 1
+		fi
+		# first installation only: the system user was there before our sysusers file
+		if [ "$1" = install ] && [ -z "${2:-}" ] && [ ! -e /usr/lib/sysusers.d/remotix.conf ]; then
+			install -d -m 0755 /var/lib/remotix
+			echo "the account remotix was on the machine before the package" >/var/lib/remotix/net-user-preexisting
+		fi
+	fi
+	;;
+esac
+
+#DEBHELPER#
+
+exit 0

@@ -1,0 +1,4 @@
+[REMOTIX]
+title=REMOTIX
+description=This machine's desktop in the browser (HTTPS and QUIC/WebTransport)
+ports=7447/tcp|7447/udp

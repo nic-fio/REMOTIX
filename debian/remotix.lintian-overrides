@@ -1,0 +1,5 @@
+# The page the server sends to the browser: it is the program, not documentation.
+remotix: package-contains-documentation-outside-usr-share-doc [usr/share/remotix/page.html]
+# prerm ends the REMOTIX desktops at `apt remove`: what ignores SIGTERM is killed through ITS OWN session scope (a transient unit, not a
+# service of a package), which deb-systemd-invoke cannot address.
+remotix: maintainer-script-calls-systemctl [prerm:*]
