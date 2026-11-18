@@ -1,13 +1,9 @@
-# remotix — the PAM service of the REMOTIX server.  ⭐ DEBIAN AND UBUNTU (and Mint).
+# remotix — the PAM service of the REMOTIX server.  ⭐ DEBIAN 13 ONLY.
 #
-#   installed in /etc/pam.d/remotix   (done by `build.sh`)
+#   installed in /etc/pam.d/remotix   (by debian/rules; a conffile)
 #
-# ⭐ PHASE 17 — one file per family, like Cockpit (`phases/17-the-installer.md`
-#    §4.3): `@include` below is a Debian modification to Linux-PAM, and
-#    elsewhere the line is "illegal module type".  The other three:
-#      remotix.pam.fedora   Fedora, RHEL, Rocky, Alma   → /etc/pam.d/remotix
-#      remotix.pam.suse     openSUSE                    → /usr/lib/pam.d/remotix
-#      remotix.pam.arch     Arch, Manjaro               → /etc/pam.d/remotix
+# ⭐ `@include` below is a Debian modification to Linux-PAM (the files of the old
+#    other-distribution family — Fedora, openSUSE, Arch — are not part of this tree).
 #
 # -----------------------------------------------------------------------------
 # ⛔ WHY IT EXISTS, AND WHY `login` IS NOT USED

@@ -19,7 +19,8 @@
  * Network side → root side: AUTH, SPAWN, CLOSE_ORPHAN, SIGNAL.  Nothing else.
  * Root side → network side: READY (once, first), VERDICT, SPAWNED (+ one fd by
  * `SCM_RIGHTS`: the child's socket end, the only fd that ever crosses),
- * SPAWN_REFUSED, CHILD_EXITED, and (⭐ 1.6, R8) FOUND_AGAIN / FOUND_END / FOUND_GONE:
+ * SPAWN_REFUSED, CHILD_EXITED, CODEC (the card arrived after start-up: the probe now finds
+ * codecs), and (⭐ 1.6, R8) FOUND_AGAIN / FOUND_END / FOUND_GONE:
  * the live REMOTIX desktops that no child holds, which the ROOT side looks for —
  * the network side no longer reads /proc.  The order is part of the list:
  * READY, then N × FOUND_AGAIN, then ONE FOUND_END whose `count` is N, and only
@@ -53,7 +54,7 @@
 /* The root side's own bounds (§11.50, «a hijacked network side is the
  * attacker it is built against»): at most 16 AUTH in flight — the PAM helper's
  * own flight table (helper.c MAX_IN_FLIGHT 16), so the root side never asks it
- * more than it can hold — and 10 per second with a burst of 20, above which an
+ * more than it can hold — and 3 per second with a burst of 8, above which an
  * AUTH is refused without asking PAM (a dictionary attack through a hijacked
  * network side costs PAM nothing).  The grant lives 30 s: a right password is
  * followed by its SPAWN within the same login, `[M]` 1–14 ms (the «SPAWNED

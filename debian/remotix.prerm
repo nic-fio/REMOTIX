@@ -3,8 +3,7 @@
 #
 set -e
 
-# ⭐ Replaces the installer's uninstall steps «close-sessions» and «remove-membership» (installer/engine/action_sessions.go,
-#    uninstall.go).  Only on `remove` (a purge runs `prerm remove` first).
+# ⭐ On removal: close the REMOTIX sessions (the old installer's «close-sessions» and «remove-membership» steps).  Only on `remove` (a purge runs `prerm remove` first).
 #  · close-sessions: logind's sessions of the PAM service «remotix» are ended — ONLY those, never the whole user.
 #    ⛔⭐ 17 Nov 2026, `[M]` check-package, XFCE/LXQt with the user's `systemd --user` already running (linger): the desktop stayed up
 #    for minutes after `apt remove`.  WHY: the server's child is the leader of the logind session and holds its fifo; stopping the
@@ -60,7 +59,7 @@ if [ "$1" = remove ] && [ -d /run/systemd/system ] && command -v loginctl >/dev/
 	remotix_close_sessions
 fi
 
-# With --no-start debhelper does not stop the service on remove: if the engine had
+# With --no-start debhelper does not stop the service on remove: if the administrator had
 # switched it on, the server would stay alive on a deleted binary.  ⇒ Only on
 # `remove` is it stopped (if running).  Not on upgrade: the postinst restarts it.
 if [ "$1" = remove ] && [ -d /run/systemd/system ]; then

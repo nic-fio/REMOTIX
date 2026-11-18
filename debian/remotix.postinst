@@ -1,17 +1,15 @@
 #!/bin/sh
-# remotix.postinst — after the files are in place (phases/17 §6.4).
+# remotix.postinst — after the files are in place.
 #
-# ⛔ DECISIONI §10.12: the package switches nothing on; the service and the
-#    groups are set up by the ENGINE, with consent; the firewall and the two
+# ⛔ DECISIONI §10.12: the package switches nothing on; the service is enabled by the
+#    administrator; the firewall and the two
 #    belts left OFF in /usr/share/remotix/belts/ are the administrator's (DECISIONS §10.36:
 #    REMOTIX does not modify the system); the polkit rules are active (§10.50, §10.55).
-#    (Debian-only tree: there is no installer engine any more; the old `remotix-install post-upgrade` call is gone.)
+#    (There is no installer program: the package is installed with apt.)
 # ⭐ On upgrade (apt upgrade: REMOTIX upgrades with the system, DECISIONI
 #    §10.23) the debhelper part below does `try-restart`: the service
 #    restarts ONLY if it was running, and the desktops stay alive (T2, §5.2) — the new
-#    service finds them again (T7).  Then the engine, if present, records the versions and says
-#    whether the installation is still certified (§10.12 point 4).  ⛔ The engine
-#    never makes apt fail.
+#    service finds them again (T7).
 set -e
 
 # ⭐ DECISIONS-11.md §11.50 (PHASE F) — BEFORE the debhelper part below (whose try-restart starts the new server): the
@@ -27,7 +25,7 @@ fi
 if [ "$1" = configure ] && [ -z "${2:-}" ] && [ -x /usr/libexec/remotix/remotix ]; then
 	if ! timeout 30 /usr/libexec/remotix/remotix --encoding-test h264 >/dev/null 2>&1; then
 		echo "remotix: ⚠ the video card of this machine did not encode a test frame (H.264): REMOTIX will not show any desktop until it can." >&2
-		echo "remotix:   check the card's driver (Intel/AMD: va-driver-all; NVIDIA: its proprietary driver), then: /usr/libexec/remotix/remotix --encoding-test" >&2
+		echo "remotix:   check the card's driver (Intel/AMD: va-driver-all; NVIDIA: its proprietary driver), then: sudo /usr/libexec/remotix/remotix --encoding-test h264" >&2
 	fi
 fi
 

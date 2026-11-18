@@ -1,6 +1,6 @@
 /*
- * encoder.c — HEVC Main10 and AV1, in software **or in hardware via VA-API**,
- * with the confession read from the bytes.  The why of every choice is in
+ * encoder.c — the video encoders, **in hardware via VA-API** (no software
+ * fallback since 1 Oct 2026, DECISIONS §10.27), with the confession read from the bytes.  The why of every choice is in
  * `encoder.h`; here is the how, and next to every odd line the measurement
  * that made it necessary.
  *

@@ -1,7 +1,8 @@
 # remotix_network — AppArmor profile of REMOTIX's NETWORK SIDE (1.5, split audit).
 #
-# ⛔ NON PROVATA / NOT TRIED: written from packaging/rpm/selinux/remotix.te.split and src/walls.c,
-#    never loaded on a real AppArmor.  It starts in COMPLAIN mode on purpose: it logs what it
+# ⭐ STATE (17 Nov 2026): installed by the package in /etc/apparmor.d and LOADED, in COMPLAIN mode
+#    (verified on a Debian 13 VM: 0 denials up to the connection; a session was not tried there
+#    for lack of a video card).  It stays in COMPLAIN mode on purpose: it logs what it
 #    would refuse and refuses nothing.  Collect the audit lines (`journalctl -k | grep -i
 #    'apparmor="ALLOWED"'`), add what the real network side needs, and only with zero unexpected
 #    lines through the functional suite and B10 change `complain` into enforce.

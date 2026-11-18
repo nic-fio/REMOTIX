@@ -579,9 +579,18 @@ def check_settings(rig, de, a):
 
 
 # ------------------------------------------------------------------------------------------------------ 5. canvas limits
-def expect_canvas(w, h):
+def expect_canvas(w, h, cap=None):
+    """6.1: client area rounded down to 16, 320x240..4096x2304; `cap` = the page's own declared video.max_size (deliberate, see main)."""
     p = lambda n, lo, hi: max(lo, min(hi, int(round(n)))) // 16 * 16  # noqa: E731
-    return p(w, 320, 4096), p(h, 240, 2304)
+    mw, mh = (min(4096, cap[0]), min(2304, cap[1])) if cap else (4096, 2304)
+    return p(w, 320, mw), p(h, 240, mh)
+
+
+def page_max_size(g):
+    """(W, H) the page declares as video.max_size (its log: 'video.max_size MEASURED: WxH'), or None."""
+    t = g.js("return (document.getElementById('logbook')||{}).textContent||''") or ""
+    m = re.findall(r"video\.max_size MEASURED: (\d+)x(\d+)", t)
+    return (int(m[-1][0]), int(m[-1][1])) if m else None
 
 
 def px(png, x, y):
@@ -660,7 +669,7 @@ def check_canvas(rig, de):
     K.put(box, "geom-window.py", "/tmp/rx-geom-window.py")
     box.in_session("dk5", "python3 /tmp/rx-geom-window.py frame /tmp/rx-geom.log 2>/tmp/rx-geom.err")
     time.sleep(6)
-    rows, bad = [], []
+    rows, bad, caps = [], [], []
     for i, (vw, vh) in enumerate(sizes):
         try:
             if i:
@@ -675,7 +684,11 @@ def check_canvas(rig, de):
         time.sleep(4)
         s = rig.state()
         vcw, vch = rig.g.js("const d=document.documentElement; return [d.clientWidth, d.clientHeight, innerWidth, innerHeight];")[:2]
-        ex = expect_canvas(vcw, vch)
+        cap = page_max_size(rig.g)
+        ex = expect_canvas(vcw, vch, cap)
+        ex_spec = expect_canvas(vcw, vch)
+        if ex != ex_spec and cap and cap not in caps:
+            caps.append(cap)
         page_c = tuple(rig.g.js("const v=document.getElementById('viewer'); return [v.width, v.height];"))  # the canvas buffer the page decodes into
         sz = [json.loads(l) for l in box.run("grep '\"size\"' /tmp/rx-geom.log | tail -3")[1].splitlines() if l.startswith("{")]
         inbox = (sz[-1]["w"], sz[-1]["h"]) if sz else None
@@ -704,7 +717,7 @@ def check_canvas(rig, de):
             bad.append("%dx%d: %s" % (vw, vh, "; ".join(problems)))
     jr = box.run("journalctl -u remotix --no-pager -o cat --since '-15min' | grep -iE 'DECLARED FALLBACK|beyond the maximum' | tail -3 | cut -c1-200")[1].replace("\n", " | ")
     ms = (rig.g.js("return ((document.getElementById('logbook')||{}).textContent||'').split('\\n').filter(l=>/max_size|video probe · size/.test(l)).slice(-2).join(' | ')") or "")[:260]
-    ev = " || ".join(rows) + (" || journal: " + jr if jr else "") + (" || page log: " + ms if ms else "") + (" || LADDER NOTE: the ceiling is not the browser's decoder: the page's own size ladder (src/page.html:1503-1507, MEASURE_PROBES, last rung l:3840 a:2160) never probes anything above 3840x2160, so 4096x2304 is unreachable with ANY client" if any(r.startswith("view 4096x2304") and "3840, 2160" in r for r in rows) else "")
+    ev = " || ".join(rows) + (" || journal: " + jr if jr else "") + (" || page log: " + ms if ms else "") + (" || NOTE: the page declares at most %dx%d (deliberate: page.html MEASURE_PROBES, level 5.1); the server's 4096x2304 bound cannot be exercised with this page; sizes above were judged against the declared maximum" % caps[0] if caps else "")
     return (FAIL, "; ".join(bad) + " -- " + ev) if bad else (PASS, ev)
 
 

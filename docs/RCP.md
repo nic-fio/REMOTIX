@@ -853,13 +853,15 @@ in any log at any level — not even in `trace`, which in v1 is a keystroke reco
 
 ### 4.4-bis ✅ The address ban — three attempts, then twelve hours (1.0) · 🔸 three levels, progressive (1.5)
 
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
+
 > ⛔ **Rule of 1.5 — `DECISIONS-11.md` §11.53, SPEC CHANGE from 1.0** *(delegated by the user to the project leader on
 > 24 Oct 2026; the decision is taken and the 1.5 rule is the valid one)*. **The wire does not change**:
 > `TOO_MANY_ATTEMPTS` (`0x08`) is still what a banned key, /48 or (key, user) receives, after the fixed second.
 >
 > | | |
 > |---|---|
-> | **the levels** | (key, user): **5** failed in 5 min · key: **12** failed (any user) in 5 min · IPv6 /48: **30** failed in 10 min. Sliding windows, as below |
+> | **the levels** | (key, user): **5** failed in 5 min · key: **20** failed (any user) in 5 min · IPv6 /48: **30** failed in 10 min. Sliding windows, as below |
 > | **the key** | IPv4: the whole address. IPv6: the **/64** (link-local included, zone id cut), plus an aggregate on the /48. `::ffff:a.b.c.d` and NAT64 are the IPv4 inside. In brackets, no port, built in `rcp_key_address()` only |
 > | **the consequence** | a ban **progressive per level: 15 min, then 1 h, then 12 h**; the memory of previous bans is forgotten after 24 h without a ban |
 > | **what counts** | as below, plus an attempt **without a verdict** (the helper's timeout, the server's 12 s ceiling). Not counted: a refusal that is our defect (helper off or dead, socket full, too many in flight) |
@@ -870,6 +872,8 @@ in any log at any level — not even in `trace`, which in v1 is a keystroke reco
 > | **what the page shows** | the banner for the key and /48 levels only (the page does not know the user) |
 >
 > ⚠ **The price**: LAN users (and link-local addresses) share a counter. The text from here on is the **1.0 rule**, kept as history and for what did not change.
+
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
 
 *Decided by the user on 10 Aug 2026, in two steps. First: «se l'utente sbaglia la password per
 3 volte consecutive, non vengono più accettate connessioni da quell'IP per 12 ore (ban)». Then, stricter:
@@ -939,11 +943,15 @@ tripped look the same.
 > <indirizzo>` → `REMOVED` / `NOT-BANNED`, and `PING` → `PONG` to say *«the command is there»*. The full
 > account is in `PHASES.md` §01-filo-nudo («What did NOT work»), not here.
 
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
+
 ⭐ **The fixed delay stays, and it is not redundant with the ban.** The server **MUST NOT** answer
 `CREDENTIALS` before **one second** has passed since reception, **even when the answer is
 `ADMITTED`**. The ban removes whoever guesses; the fixed second removes **timing** as a
 channel — without it, «nonexistent user» answers in a millisecond and «wrong password» in fifty,
 and the distinction that §4.4 forbids writing in the reason can be read with a stopwatch.
+
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
 
 > ⚠ **And on this there is a measurement that does not add up, declared instead of hidden.** `[M]` 10 Aug
 > 2026, bench **B8**: the median of the rejected attempts is **2636 ms** over 42 samples, where this
@@ -2197,6 +2205,8 @@ losing their work.
 | **when it is valid** | ⛔ only with the session **attached**. Before `ATTACH` there is no session to terminate, and §3 gives no discounts: whoever sends it out of place gets `PROTOCOL_ERROR` |
 | **the answer** | ⛔ a `FAREWELL` with reason **`0x10 SESSION_TERMINATED`**, and it **MUST leave before** the graphical session finishes dying: when the compositor falls, the stage falls with it and the channel is no longer needed. A `0x10` sent late is finding **B-7** with a new name |
 | **and to the others** | ⛔ the farewell goes to **all** the sessions of that user, not only to whoever asked: the graphical session is only one (I2), and whoever watched it from a second device would be left with a frozen screen forever |
+
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
 
 ⚠ **And there is no «I am terminating» answer**: the outcome is the farewell. An intermediate message
 would be a deduction in place of a fact (`LESSONS.md` §7.5), and the only fact that counts is that the

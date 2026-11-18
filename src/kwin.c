@@ -776,7 +776,7 @@ bool kwin_check_permission(char *why, size_t how_much)
 	}
 	if (!g_key_file_load_from_file(keys, PERMISSION_DESKTOP_FILE, G_KEY_FILE_NONE, &mistake)) {
 		snprintf(why, how_much,
-		         "RX-KDE-001: %s %s (%s). Remedy: reinstall REMOTIX with the installer",
+		         "RX-KDE-001: %s %s (%s). Remedy: reinstall the package (apt install --reinstall remotix)",
 		         PERMISSION_DESKTOP_FILE,
 		         g_error_matches(mistake, G_FILE_ERROR, G_FILE_ERROR_NOENT) ? "is missing"
 		                                                                  : "cannot be read",
@@ -787,7 +787,7 @@ bool kwin_check_permission(char *why, size_t how_much)
 	if (!exec || !exec_leads_to(exec, canonical, &seen)) {
 		snprintf(why, how_much,
 		         "RX-KDE-002: in %s Exec=%s, but the running binary is %s. Remedy: "
-		         "reinstall REMOTIX with the installer",
+		         "reinstall the package (apt install --reinstall remotix)",
 		         PERMISSION_DESKTOP_FILE, seen ? seen : "(missing)", canonical);
 		goto fine;
 	}
@@ -804,7 +804,7 @@ bool kwin_check_permission(char *why, size_t how_much)
 	if (!va) {
 		snprintf(why, how_much,
 		         "RX-KDE-003: in %s X-KDE-Wayland-Interfaces=%s, without "
-		         "zkde_screencast_unstable_v1. Remedy: reinstall REMOTIX with the installer",
+		         "zkde_screencast_unstable_v1. Remedy: reinstall the package (apt install --reinstall remotix)",
 		         PERMISSION_DESKTOP_FILE, interfaces ? interfaces : "(missing)");
 		goto fine;
 	}

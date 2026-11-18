@@ -10,7 +10,7 @@ Plan and steps: `PIANO.md`. Specs: `docs/SPECS.md`, `docs/RCP.md`, `docs/DECISIO
 ## Build and test
 - `build/build-deb.sh` builds the .deb in a `debian:trixie` podman container; output in `$OUTPUT` (default `/media/REMOTIX-DEBIAN/pacchetti`).
 - Never compile or run heavy work on the CHUWI tablet. Build and test on the server `nicfio@192.168.0.2`, work dir `/media/REMOTIX-DEBIAN`.
-- The owner decides how and when tests run. Licences (`LICENSE.md`, `licenses/`, `THIRD-PARTY-LICENSES`) ship in the package.
+- The owner decides how and when tests run. Licences: only `LICENSE.md` (installed as the package's `copyright`) and `THIRD-PARTY-LICENSES` ship in the package; `licenses/` does NOT.
 ## Conventions
 - Debian trixie only; four desktops; no distro detection or per-distro code (a future distro gets its own, separate code).
 - The old repo `~/Documenti/REMOTIX` is a READ-ONLY reference: never modify, move or delete anything in it.

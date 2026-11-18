@@ -67,7 +67,7 @@ Passi 0–2: circa 1–2 settimane.
 - Pacchetto: `remotix_1.6.0-1+deb13_amd64.deb` (server: /media/REMOTIX-DEBIAN/pacchetti/1.6.0/), costruito da questo albero.
 - Giro finale `prove/all.sh` sui 4 desktop insieme (log server: prove/log/v160-<de>/summary.txt): XFCE 111/118, LXQt 112/118,
   KDE 111/118, GNOME 104/118. Non verdi, tutti spiegati: Ctrl+Alt+Canc (pulsante nascosto dal 16 ago) e Ctrl+Alt+Fine (tolto il
-  17 ago) — specifiche §7.3-bis e §5.2-bis da allineare; dimensione massima 3840×2160 = tetto del decoder del browser di prova;
+  17 ago) — specifiche §7.3-bis e §5.2-bis da allineare; dimensione massima 3840×2160 = tetto della scala di sonde del decoder nella pagina (`MEASURE_PROBES` in page.html, che si ferma a 3840×2160 apposta; non è il decoder del browser di prova; vedi «Revisione dei manuali» in fondo);
   XFCE angolo coperto dal pannello; KDE tasto Canc trattenuto dal desktop (solo in diagnostica); GNOME pkexec (SHELL vuota, voluto).
   GNOME telefono simulato: da solo 18/19 (primo tocco dopo l'ingresso non registrato: in accertamento, priorità bassa).
 - Prova del proprietario con Samsung DeX su GNOME (17 nov): appunti, audio/video, ridimensionamento finestra: tutto regolare.
@@ -79,7 +79,7 @@ Passi 0–2: circa 1–2 settimane.
   primo tocco da telefono (page.html); regola polkit con «halt» (15 azioni); pulizia tranche 1 (docs/PULIZIA-tranche1.md).
 - Rifiniture rimaste (non bloccanti): senza scheda video l'errore si ripete ogni 2 s nel registro; `xfce-chiavi` non viene tolto
   dopo il ripristino; profilo AppArmor da osservare in sessione su macchina con scheda video prima di passarlo a enforce;
-  pulizia tranche 2 (docs/INVENTARIO-non-debian.md); canvas-limits da giudicare sul tetto misurato dal client.
+  pulizia tranche 2 (docs/INVENTARIO-non-debian.md); canvas-limits da giudicare sul tetto che la pagina dichiara (3840×2160, scala di sonde della pagina).
 - Burocrazia (commit, manuali, sito, allineamento del testo delle specifiche): solo su decisione del proprietario.
 - Aggiunta delle 19:40: il pacchetto rifiuta una NUOVA installazione su una macchina senza scheda video (nessun nodo DRM di
   render; richiesta del proprietario) e, se la scheda c'è ma non codifica, lo dice all'installazione (preinst/postinst). Provato:
@@ -93,3 +93,27 @@ Passi 0–2: circa 1–2 settimane.
   stesso codice, provato con quel numero provvisorio). Pacchetto: `remotix_1.0.0-1+deb13_amd64.deb`.
 - Su git e sul sito deve esistere solo questo codice: il vecchio repo GitHub viene eliminato e ricreato con questo solo contenuto.
 - Le altre distribuzioni: nei prossimi giorni, ciascuna con il suo codice.
+
+## Revisione dei manuali (17 nov, sera)
+- La revisione ha trovato testi vecchi (programma di installazione, openSUSE/Fedora/Arch, «motore», sblocco dell'amministratore,
+  «12» tentativi per indirizzo invece di 20, pulsante Ctrl+Alt+Canc, messaggi con `/dev/dri/renderD*`) e due spiegazioni sbagliate
+  qui sopra (il tetto 3840×2160 è la scala di sonde della pagina, non il decoder del browser di prova).
+- Corretto da me (solo testi): messaggi di kwin.c, authentication.c, command.c, preinst, postinst, page.html; commenti di debian/*,
+  rootside*.h, rcp.h, walls.*, encoder.c, page.c, Makefile, AppArmor; CLAUDE.md; prove (check-ban 12→20, fresh.sh/base-check.py cartella
+  `boxes`, lib.sweep con `in` e `ph`); DECISIONS-11 §11.54 con rimandi nelle specifiche. Logica non toccata.
+- Non cambiato, da decidere: `MEASURE_PROBES` si ferma a 3840×2160 apposta (commento in page.html: livello 5.1 dichiarato, HEVC 5.1
+  arriva a 4096×2176; le sonde sono generate da uno script di banco fuori da questo albero), quindi 4096×2304 non è raggiungibile
+  da nessun client; LICENSE.md e THIRD-PARTY-LICENSES sono testi legali del proprietario (proposte nel rapporto).
+
+## Accesso locale con un desktop remoto rimasto «orfano» — FATTO (17-18 nov 2026)
+
+- **Difetto:** dopo un riavvio del servizio REMOTIX, il desktop remoto restava vivo senza più nessuno a sorvegliarlo; l'accesso locale dello stesso utente rompeva la schermata di accesso di GNOME (serviva `systemctl restart gdm3`).
+- **Decisione del proprietario (opzione 1, DECISIONS-11 §11.56):** i desktop remoti si chiudono quando il servizio si ferma; mentre il servizio gira, un desktop rimasto senza il suo processo `child` viene chiuso («no orphan desktops»).
+- **File toccati:** `src/rootside.c`, `src/main.c`, `src/child.c`, `src/child.h`.
+- **Revisione (Fable):** tre giri, APPROVATO.
+- **Pacchetto:** costruito sul server in `/media/REMOTIX-DEBIAN/pacchetti/noorfani/` (nessun errore, lintian E=0 W=0), installato sul tablet il 18 nov alle 07:01.
+- **Prove del proprietario (18 nov, tablet + notebook aziendale, GNOME), confermate dal registro di sistema:** accesso locale dopo il riavvio del servizio; chiusura del desktop remoto al riavvio (servizio fermo e ripartito in meno di 2 s); stacca e riattacca (stesso desktop ripreso); il locale caccia il remoto nel caso normale. Tutte riuscite.
+- **Resta aperto:**
+  1. leggere che cosa succede su KDE, XFCE, LXQt, le cui schermate di accesso non hanno il «fermo» di GNOME nemmeno nel caso normale;
+  2. caso limite noto: servizio ucciso di colpo e non ancora ripartito (circa 2 s), in quell'intervallo nessuno può chiudere il desktop rimasto;
+  3. le modifiche non sono in git (nessun commit senza richiesta).

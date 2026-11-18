@@ -179,11 +179,11 @@ static int set_attr(const char *path, unsigned int flags, uint64_t set, uint64_t
  *    attachment path: nothing but this write can put a process in it — the root side, which
  *    runs the same program, is never confined by it, nor are the desktops.
  * ⛔ Off (AppArmor not in the kernel, or not enabled): said in the notes, go on.  On but the
- *    profile not loaded: said, go on — the package loads it (postinst), and until the engine
- *    certifies the installation a missing profile is a warning, not a stop.  The profile
+ *    profile not loaded: said, go on — the package loads it (postinst, dh_apparmor), and a missing
+ *    profile is a warning, not a stop.  The profile
  *    loaded and the write REFUSED: -1, the network side is not started.
- * ⚠ Written BEFORE /proc goes read-only, first of the walls.  Not tried on a real
- *   AppArmor yet: see packaging/debian/remotix_network.apparmor. */
+ * ⚠ Written BEFORE /proc goes read-only, first of the walls.  The profile is
+ *   debian/remotix_network.apparmor (installed in /etc/apparmor.d, loaded in complain mode). */
 #define WALLS_APPARMOR_PROFILE "remotix_network"
 #define WALLS_APPARMOR_ENABLED "/sys/module/apparmor/parameters/enabled"
 #define WALLS_APPARMOR_PROFILES "/sys/kernel/security/apparmor/profiles"

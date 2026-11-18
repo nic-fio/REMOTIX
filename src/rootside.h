@@ -270,12 +270,12 @@ struct rootside_grant {
 	uint64_t expires_ms;
 };
 /* ⭐ 1.5 (split audit R2) — the BAN of the root side, for a network side that no longer
- * applies its own (`rcp.c`'s 5/12/30 live in the network side).  Counts only what PAM
+ * applies its own (`rcp.c`'s 5/20/30 live in the network side).  Counts only what PAM
  * answered REFUSED (outcome 0) or EXPIRED (4): never «not checked», never a yes.  Three
  * levels, the first two as rcp.c's, the third WIDER and SHORTER:
  *   · (uid, address)   5 refused in 5 min → no AUTH for that user from that address for 15 min,
  *                      then 1 h, then 12 h; forgotten after 24 h without a pause   (rcp.c LK_USER)
- *   · address         20 refused in 5 min → the same ladder, for any user          (rcp.c LK_KEY; it was 12)
+ *   · address         20 refused in 5 min → the same ladder, for any user          (rcp.c LK_KEY; 20 since 1.5)
  *   · uid alone       15 refused in 5 min, from any addresses → no AUTH for that user for 15 min,
  *                      FIXED: it never grows and is never 12 h — a stranger who knows a name must
  *                      not be able to keep its owner out for good.  What a network side that

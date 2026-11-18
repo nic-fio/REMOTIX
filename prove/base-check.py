@@ -126,7 +126,7 @@ def main():
     ap.add_argument("--user", default="prova")
     ap.add_argument("--password", default="prova2026")
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--boxes", default=os.path.join(HERE, "boxes"), help="folder with box.sh")
+    ap.add_argument("--boxes", default=(os.path.join(HERE, "boxes") if os.path.isdir(os.path.join(HERE, "boxes")) else os.path.join(HERE, "..", "boxes")), help="folder with box.sh")
     ap.add_argument("--cap", type=int, default=60, help="seconds allowed for login and first picture")
     ap.add_argument("--shots", default=os.path.join(HERE, "shots"))
     ap.add_argument("--work", default=os.path.join(HERE, "work"), help="browser profiles, compositor dir (persistent disk)")

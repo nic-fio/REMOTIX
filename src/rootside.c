@@ -30,6 +30,8 @@
 #include "render_grant.h"
 #include "rediscover.h"
 #include "kdehost.h"
+#include "sentinel.h" /* 1.0.0: «local excludes remote» — the sentinel's verdict, asked in a fork (localx_sweep) */
+#include "session.h"  /* 1.0.0: … and the light close's own clean-up of the user manager, run as the user in a fork (lx_clean_begin) */
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -62,8 +64,10 @@ extern char **environ;
 #define NET_RESTART_FIRST_MS 1000
 #define NET_RESTART_CAP_MS 30000
 #define NET_STABLE_MS 60000
-/* SIGTERM → the network side's farewell, at most this long (§11.50). */
-#define STOP_WAIT_MS 5000
+/* SIGTERM → the network side's farewell AND, since 1.0.0 (owner's decision, 17 Nov 2026 night: remote desktops are closed
+ * when the service stops), the full close it asks of every child — 4 s of farewell + 15 s of closes at most on its side.
+ * Then `lx_stop_begin()` ends what is left (LX_TERM_MS + LX_CLEAN_MS at most): well inside systemd's 90 s. */
+#define STOP_WAIT_MS 25000
 /* ⛔ Review of the split, findings 2 and 10: what is asked to die is made to.
  *    The network side closed its channel ⇒ SIGTERM, SIGKILL after
  *    NET_TERM_GRACE_MS.  The network side is dead ⇒ its children have
@@ -1285,6 +1289,8 @@ static struct own_child *own_by_uid(uid_t uid)
 	return NULL;
 }
 
+static bool lx_uid_ending(uid_t uid); /* defined with the LX table, further down */
+
 /* The birth for SPAWN (`rhost` the grant's) and CLOSE_ORPHAN (`rhost` NULL). */
 static void birth(uint64_t request, const char *user, const char *rhost, uint32_t w,
                   uint32_t h, bool orphan)
@@ -1306,6 +1312,15 @@ static void birth(uint64_t request, const char *user, const char *rhost, uint32_
 	if (own_by_uid(uid)) {
 		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: a child of uid %ld is still "
 		              "alive here (I2)", orphan ? "CLOSE_ORPHAN" : "SPAWN", user, (long)uid);
+		send_refused(request, RXR_REF_CLOSING);
+		return;
+	}
+	/* ⭐ 1.0.0 (no orphan desktops): a REMOTIX scope of that uid is being ended right now (SIGTERM out, SIGKILL due, or the
+	 *    user manager's clean-up still running): a child born here would pick up a desktop that is dying, or be cleaned
+	 *    from under.  «Closing»: the client asks again and gets a fresh one. */
+	if (lx_uid_ending(uid)) {
+		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: a REMOTIX session of uid %ld is being ended by the root side "
+		              "(asked again in a moment)", orphan ? "CLOSE_ORPHAN" : "SPAWN", user, (long)uid);
 		send_refused(request, RXR_REF_CLOSING);
 		return;
 	}
@@ -1684,6 +1699,691 @@ static void kdehost_sweep(uint64_t now)
 	}
 }
 
+/* ⛔⭐ 1.0.0 — «LOCAL EXCLUDES REMOTE», ENFORCED BY THE ROOT SIDE ITSELF (the owner's principle; holes 1 and 2 of the reading of 17 Nov 2026).
+ *
+ * The network side orders the child's light close within 2–4 s, but it cannot end a REMOTIX session that no child of its own can
+ * reach: the abandoned scope of a desktop found again, the OLD scope left by a child that resumed after a restart, a scope left by
+ * a dead network side.  This side can, and trusts nobody: it reads logind itself, every LX_EVERY_MS, also with no network side.
+ *
+ * THE RULE: a user who has a LOCAL graphical session must have no logind session with SERVICE=remotix and no seat.
+ *   1. /run/systemd/sessions is read (no bus).  A candidate is a seatless SERVICE=remotix session whose uid ALSO has a session
+ *      with a seat.  ⚠ This is only a filter (a seat is necessary for «local»): with no candidate nothing else runs, ever.
+ *   2. The VERDICT is the sentinel's, the same code the network side and the child use (`sentinel_local3()`: seat, Class=user,
+ *      Type wayland/x11/mir, not Remote, not closing; 1 / 0 / -1).  ⛔ GDBus has a worker thread and this side must stay
+ *      single-threaded (box at the top of the file): the question is asked in a short-lived fork that only asks and exits, as
+ *      the card probe does; the answers come back on a pipe, read without waiting.
+ *   3. Only on a «1» answered in THIS round: if a child of ours serves that user, LX_GRACE_MS are given to its own light close;
+ *      then — or at once with no child — the session file is read AGAIN and that scope is ended.
+ *   ⛔ «0», «-1», no answer, a helper that died, an unreadable directory: NOTHING is done, and -1 is said in the log.
+ *
+ * HOW A SCOPE IS ENDED, AND WHY NOT `TerminateSession`: SIGTERM to the processes of
+ * /sys/fs/cgroup/user.slice/user-<uid>.slice/session-<id>.scope, LX_TERM_MS later SIGKILL to what is still in it.  Each pid is
+ * taken with a pidfd and its /proc/<pid>/cgroup must be EXACTLY that scope before the signal leaves: nothing outside the REMOTIX
+ * session's own scope can be hit — not the user manager (user@<uid>.service), not a shared user unit, not the local desktop's
+ * scope (the 1.5.4 lesson: never a Logout, never the session manager).  `TerminateSession` would need the bus here (a thread, or
+ * one more fork) and leaves the timing to systemd's stop timeout (90 s by default); this is bounded by this file, and logind closes
+ * the session by itself when its scope is empty.
+ * The network side learns it by the events that already exist: FOUND_GONE when the stage of a listed desktop dies (`found_check()`),
+ * CHILD_EXITED when a child dies with its scope; a desktop it does not list needs no message.  On KDE our compositor unit lives
+ * outside the scope: `kdehost_stop()` (only if recognised as ours), once the scope is ended and no child of that uid is left —
+ * otherwise `kdehost_sweep()` does it.
+ *
+ * ⛔ AND WHAT REMOTIX PUT IN THE USER MANAGER GOES TOO.  A scope ended here has no child to do the light close's steps 3 and 5
+ * (child.c, `local_light_close()`): the session's dconf profile, our drop-ins in /run/user/<uid>/systemd/user.control (GNOME:
+ * `org.gnome.Shell@….service.d/zz-remotix-monitor.conf`, the HEADLESS Shell — left there, the user's next login at the monitor
+ * is a black screen), the manager's variables that carry our mark.  ⇒ After the ending the SAME two functions the light close
+ * calls (`session_dconf_neutralise()`, `session_clear_out_light()`) run in a fork that has become that user (groups, gid, uid,
+ * no way back, no descriptor of this side): only files with our names and variables whose value carries our mark are removed,
+ * no unit is stopped or restarted, no Logout — exactly what the child's light close does, by the same text.  Not waited for:
+ * its exit is collected in a later turn, LX_CLEAN_MS at most.
+ *
+ * ⛔⭐ THE SECOND RULE, SAME MACHINERY — «NO ORPHAN DESKTOPS» (owner's decision, 17 Nov 2026 night; DECISIONS-11).
+ * A seatless SERVICE=remotix session whose scope still has processes and whose user has NO child of ours must not stay,
+ * local session or not.  `[M]` 17 Nov 2026, the tablet: the service was restarted, the desktop of «user» stayed for the
+ * reattach (§11.50 as it was) with its logind session «closing» — the child, its leader, had left.  GNOME's login screen
+ * holds a local login only while the user's other graphical session is «active»/«online» (gnome-shell 48, loginDialog.js,
+ * `_findConflictingSession`): a «closing» one is no conflict, the local desktop started at once, found
+ * `gnome-session-wayland@gnome.target` still active («Session manager already running!»), died in 0.4 s and left gdm's
+ * screen broken.  The sweep above looks every LX_EVERY_MS: it can never see a local session that lives 0.4 s.
+ *   · while the service runs: an orphan seen in TWO scans in a row (a child that has just been reaped, or is about to be
+ *     born, is not an orphan) is ended with no question to logind — there is nothing to ask;
+ *   · when the service stops: the network side asks every child for the full close; what is still in a REMOTIX scope once
+ *     it is gone (or at the deadline) is ended here, and the root side leaves only when these endings are over
+ *     (`lx_stop_begin()`, `lx_busy()`).
+ * A user who reattaches before the second scan gets a child, and a desktop with a child is not an orphan: it stays. */
+#define LX_CLEAN_MS 15000  /* the clean-up's ceiling (a bus call of 5 s and a daemon-reload inside): then SIGKILL, and said */
+#define LX_EVERY_MS 5000   /* the network side acts within 2–4 s: this is the second belt, and one scan is a few small files */
+#define LX_GRACE_MS 10000  /* a child's light close: the order (2–4 s) + its own 2 s SIGTERM wait + the KDE stop (~3 s) */
+#define LX_TERM_MS  3000   /* between SIGTERM and SIGKILL, as KIDS_TERM_GRACE_MS */
+#define LX_ASK_MS   6000   /* the helper's ceiling: past it the answer is «could not look» */
+#define LX_SAY_MS   60000  /* «could not look» is said once a minute, not every round */
+#define LX_SESS     128    /* session files read per round */
+#define LX_CAND     16     /* candidates per round (a seat has one user, a few with «switch user») */
+#ifndef SYS_pidfd_send_signal
+#define SYS_pidfd_send_signal 424
+#endif
+
+struct lx_sess {
+	char id[RXR_SESSION_MAX];
+	uid_t uid;
+	char user[RXR_USER_MAX];
+	bool seat, ours;                 /* SEAT= not empty; SERVICE=remotix */
+	bool orphan;                     /* candidates only: no child of ours for that uid, and processes in its scope */
+};
+struct lx_answer {
+	char verdict;                    /* '1' local session, '0' surely none, '?' could not look */
+	char detail[160];                /* the sentinel's «session N, wayland on seat0» */
+};
+static struct {
+	uint64_t last_ms, said_ms;
+	pid_t helper;                    /* > 0: a question is in flight */
+	int fd;
+	size_t got;
+	uint64_t deadline;
+	struct lx_sess cand[LX_CAND];
+	int ncand;
+	struct lx_answer ans[LX_CAND];   /* one per candidate, in order */
+	struct { bool used, keep; uid_t uid; uint64_t since; } wait[LX_CAND];          /* the grace, by uid */
+	struct { int phase; struct lx_sess s; uint64_t at; pid_t clean; bool orphan; } end[LX_CAND]; /* 1 SIGTERM sent · 2 ended, KDE stop and clean-up due · 3 clean-up running */
+	char orph[LX_CAND][RXR_SESSION_MAX]; /* the orphans of the previous scan (the second rule: two scans in a row) */
+	int north;
+	int stop_missed;                 /* while stopping: endings that found no slot or signalled nothing (said at the end) */
+	bool stop_begun;                 /* the service is stopping and lx_stop_begin() has run */
+	uint64_t stop_deadline;
+} LX = { .fd = -1 };
+
+/* A logind session id as it may enter a path: letters and digits only (logind's are «12», «c3»). */
+static bool lx_id_ok(const char *id)
+{
+	size_t n = strlen(id);
+
+	if (!n || n >= RXR_SESSION_MAX)
+		return false;
+	for (size_t i = 0; i < n; i++)
+		if (!isalnum((unsigned char)id[i]))
+			return false;
+	return true;
+}
+
+/* One session file of logind (the first of each key, as rediscover.c reads them).  false = not a session we can describe. */
+static bool lx_read(const char *id, struct lx_sess *s)
+{
+	char path[96], *line = NULL;
+	size_t cap = 0;
+	ssize_t len;
+	bool uid_seen = false, uid_ok = false, user_seen = false, seat_seen = false, serv_seen = false;
+	struct stat st;
+	FILE *f;
+	int fd;
+
+	memset(s, 0, sizeof *s);
+	if (!lx_id_ok(id))
+		return false;
+	snprintf(s->id, sizeof s->id, "%s", id);
+	snprintf(path, sizeof path, "/run/systemd/sessions/%s", id);
+	/* a regular file only: NOFOLLOW and NONBLOCK, then S_ISREG (as rediscover.c) */
+	fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+	if (fd < 0)
+		return false;
+	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || !(f = fdopen(fd, "r"))) {
+		close(fd);
+		return false;
+	}
+	while ((len = getline(&line, &cap, f)) > 0) {
+		char *end = NULL;
+
+		if (len > 4096)
+			continue;
+		line[strcspn(line, "\n")] = 0;
+		if (!uid_seen && strncmp(line, "UID=", 4) == 0) {
+			unsigned long v;
+
+			uid_seen = true;
+			errno = 0;
+			v = strtoul(line + 4, &end, 10);
+			uid_ok = line[4] >= '0' && line[4] <= '9' && errno == 0 && *end == 0;
+			s->uid = (uid_t)v;
+		} else if (!user_seen && strncmp(line, "USER=", 5) == 0) {
+			user_seen = true;
+			if (line[5] && strlen(line + 5) < sizeof s->user && !strpbrk(line + 5, "/ \t\r"))
+				snprintf(s->user, sizeof s->user, "%s", line + 5);
+		} else if (!seat_seen && strncmp(line, "SEAT=", 5) == 0) {
+			seat_seen = true;
+			s->seat = line[5] != 0;
+		} else if (!serv_seen && strncmp(line, "SERVICE=", 8) == 0) {
+			serv_seen = true;
+			s->ours = strcmp(line + 8, FOUND_AGAIN_PAM_SERVICE) == 0;
+		}
+	}
+	free(line);
+	fclose(f);
+	/* without the uid or logind's own name for it the session is not judged at all */
+	return uid_ok && s->user[0];
+}
+
+/* Is this session already being ended here? (its SIGTERM is out: it is not asked about again) */
+static bool lx_ending(const char *id)
+{
+	for (int i = 0; i < LX_CAND; i++)
+		if (LX.end[i].phase && strcmp(LX.end[i].s.id, id) == 0)
+			return true;
+	return false;
+}
+
+static bool cgroup_of(pid_t pid, char *out, size_t cap); /* defined further down, with the network side's leftovers */
+static int lx_signal(const struct lx_sess *s, int sig);   /* defined below */
+
+/* Is a REMOTIX scope of this uid being ended right now?  Every phase: SIGTERM out, SIGKILL due, and the clean-up of the
+ * user manager too — a desktop born under that clean-up would lose the drop-ins and variables it has just been given
+ * (the clean-up starts only with no child of that uid, and must not get one while it runs).  `birth()` gives it no child. */
+static bool lx_uid_ending(uid_t uid)
+{
+	for (int i = 0; i < LX_CAND; i++)
+		if (LX.end[i].phase != 0 && LX.end[i].s.uid == uid)
+			return true;
+	return false;
+}
+
+/* Step 1: the candidates into LX.cand.  How many, or -1 if the directory cannot be read.
+ * `all_ours`: the service is stopping — every seatless REMOTIX session with processes is a candidate, at once. */
+static int lx_scan(bool all_ours)
+{
+	char seen[LX_CAND][RXR_SESSION_MAX] = { { 0 } };
+	int nseen = 0;
+
+	struct lx_sess *all = calloc(LX_SESS, sizeof *all);
+	DIR *d = all ? opendir("/run/systemd/sessions") : NULL;
+	struct dirent *e;
+	int n = 0;
+
+	LX.ncand = 0;
+	if (!d) {
+		free(all);
+		return -1;
+	}
+	while (n < LX_SESS && (e = readdir(d)) != NULL)
+		if (lx_read(e->d_name, &all[n])) /* `.ref` pipes and temporary files fail lx_id_ok() */
+			n++;
+	closedir(d);
+	for (int i = 0; i < n && LX.ncand < LX_CAND; i++) {
+		bool seated = false;
+
+		/* ours, WITHOUT a seat, not already being ended: nothing else can ever be a candidate */
+		if (!all[i].ours || all[i].seat || lx_ending(all[i].id))
+			continue;
+		for (int j = 0; j < n; j++)
+			seated |= all[j].seat && all[j].uid == all[i].uid;
+		/* the second rule: nobody of ours holds it and its scope is not empty.  ⚠ By uid, as everything here: with a child
+		 * of that uid alive (an old scope beside a resumed desktop) this is not an orphan, and the first rule covers it */
+		all[i].orphan = !own_by_uid(all[i].uid) && lx_signal(&all[i], 0) > 0;
+		if (all[i].orphan && !all_ours) {
+			bool before = false;
+
+			for (int k = 0; k < LX.north; k++)
+				before |= strcmp(LX.orph[k], all[i].id) == 0;
+			if (nseen < LX_CAND)
+				snprintf(seen[nseen++], sizeof seen[0], "%s", all[i].id);
+			all[i].orphan = before; /* the first sighting only takes note */
+		}
+		if (all_ours ? lx_signal(&all[i], 0) > 0 : (seated || all[i].orphan)) {
+			if (all_ours)
+				all[i].orphan = true; /* ended with no question, child or not: the deadline has passed for it */
+			LX.cand[LX.ncand++] = all[i];
+		}
+		/* else: no seat for this uid and not an orphan twice ⇒ nothing to ask and nothing to end */
+	}
+	free(all);
+	if (!all_ours) {
+		memcpy(LX.orph, seen, sizeof LX.orph);
+		LX.north = nseen;
+	}
+	return LX.ncand;
+}
+
+/* Signals the processes of ONE session scope (`sig` 0: only counts them).  How many it reached, -1 if the scope's cgroup cannot
+ * be read (gone, or not where systemd puts it: then nothing is signalled). */
+static int lx_signal(const struct lx_sess *s, int sig)
+{
+	char path[160], want[160], cg[512];
+	long pid;
+	FILE *f;
+	int fd, n = 0;
+
+	snprintf(path, sizeof path, "/sys/fs/cgroup/user.slice/user-%u.slice/session-%s.scope/cgroup.procs", (unsigned)s->uid,
+	         s->id);
+	/* what /proc/<pid>/cgroup must say, whole: this scope and nothing else (cgroup v2, one «0::» line) */
+	snprintf(want, sizeof want, "0::/user.slice/user-%u.slice/session-%s.scope\n", (unsigned)s->uid, s->id);
+	fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+	if (fd < 0)
+		return -1;
+	if (!(f = fdopen(fd, "r"))) {
+		close(fd);
+		return -1;
+	}
+	while (fscanf(f, "%ld", &pid) == 1) {
+		int pfd;
+
+		if (pid <= 1)
+			continue;
+		/* the pidfd FIRST, then the check: the signal goes to the process that was checked, not to a pid reused meanwhile */
+		pfd = (int)syscall(SYS_pidfd_open, (pid_t)pid, 0);
+		if (pfd < 0)
+			continue;
+		if (cgroup_of((pid_t)pid, cg, sizeof cg) && strcmp(cg, want) == 0 &&
+		    syscall(SYS_pidfd_send_signal, pfd, sig, NULL, 0) == 0)
+			n++;
+		close(pfd);
+	}
+	fclose(f);
+	return n;
+}
+
+/* Step 2: the sentinel's question for every candidate, in a fork that only asks and exits. */
+static void lx_ask_begin(uint64_t now)
+{
+	int pf[2];
+
+	if (pipe2(pf, O_CLOEXEC) != 0)
+		return;
+	LX.helper = fork();
+	if (LX.helper < 0) {
+		close(pf[0]);
+		close(pf[1]);
+		LX.helper = 0; /* no question this round: nothing is done */
+		return;
+	}
+	if (LX.helper == 0) {
+		sentinel *g;
+
+		close(pf[0]);
+		rootside_fork_signals_fresh();            /* not the root side's self-pipe handlers: the ceiling's SIGKILL aside, SIGTERM ends it */
+		(void)prctl(PR_SET_PDEATHSIG, SIGKILL);   /* it does not outlive the root side */
+		g = sentinel_open();                      /* NULL = no system bus: every answer is «could not look» */
+		for (int i = 0; i < LX.ncand; i++) {
+			struct lx_answer a;
+			int v;
+
+			memset(&a, 0, sizeof a);
+			v = g ? sentinel_local3(g, LX.cand[i].user, a.detail, sizeof a.detail) : -1;
+			a.verdict = v == 1 ? '1' : v == 0 ? '0' : '?';
+			if (write(pf[1], &a, sizeof a) != (ssize_t)sizeof a) /* smaller than PIPE_BUF: whole or not at all */
+				_exit(1);
+		}
+		_exit(0);
+	}
+	close(pf[1]);
+	(void)fcntl(pf[0], F_SETFL, O_NONBLOCK);
+	LX.fd = pf[0];
+	LX.got = 0;
+	LX.deadline = now + LX_ASK_MS;
+}
+
+/* 0 = not all here yet · 1 = every answer arrived · -1 = the helper died, wrote less, or passed its ceiling. */
+static int lx_ask_step(uint64_t now)
+{
+	size_t want = (size_t)LX.ncand * sizeof LX.ans[0];
+	bool whole;
+
+	for (;;) {
+		ssize_t n = read(LX.fd, (char *)LX.ans + LX.got, want - LX.got);
+
+		if (n > 0) {
+			LX.got += (size_t)n;
+			if (LX.got == want)
+				break;
+			continue;
+		}
+		if (n < 0 && errno == EINTR)
+			continue;
+		if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && now < LX.deadline)
+			return 0;
+		break; /* EOF before the whole answer, an error, or the ceiling */
+	}
+	whole = LX.got == want;
+	close(LX.fd);
+	LX.fd = -1;
+	if (!whole)
+		kill(LX.helper, SIGKILL);
+	(void)waitpid(LX.helper, NULL, 0); /* by pid, never -1; it has exited or was just killed */
+	LX.helper = 0;
+	return whole ? 1 : -1;
+}
+
+/* The SIGTERM of the ending.  `kid`: a child of ours was still serving that user after the grace.
+ * `detail` NULL: the second rule (an orphan, or the service is stopping) — no local session is claimed in the log. */
+static void lx_end_begin(const struct lx_sess *c, const char *detail, bool kid, uint64_t now)
+{
+	struct lx_sess s;
+	int slot = -1, n;
+
+	for (int i = 0; i < LX_CAND && slot < 0; i++)
+		if (!LX.end[i].phase)
+			slot = i;
+	if (slot < 0) {
+		LX.stop_missed += R.stopping; /* while stopping the next round is lx_stop_again(), and the count is said */
+		return; /* every slot is ending something: this one waits for the next round */
+	}
+	/* ⛔ read AGAIN just before acting: still that uid and name, still SERVICE=remotix, still NO seat — or nothing is done */
+	if (!lx_read(c->id, &s) || !s.ours || s.seat || s.uid != c->uid || strcmp(s.user, c->user) != 0) {
+		registro_dice(LOG_ROOT, "local excludes remote: session %s of «%s» (uid %ld) is no longer a seatless REMOTIX session "
+		              "of that user at the second reading: NOT touched", c->id, c->user, (long)c->uid);
+		return;
+	}
+	n = lx_signal(&s, SIGTERM);
+	if (!detail) {
+		if (n < 0) {
+			registro_dice(LOG_ROOT, "⛔ no orphan desktops: the cgroup of session-%s.scope of «%s» (uid %ld) cannot be read "
+			              "(%s): NOTHING signalled", s.id, s.user, (long)s.uid, strerror(errno));
+			return;
+		}
+		if (n == 0)
+			return; /* it emptied by itself between the scan and here: nothing to end, nothing to say */
+		registro_dice(LOG_ROOT, "⛔ no orphan desktops: the REMOTIX session %s of «%s» (uid %ld) %s — it must not stay: SIGTERM "
+		              "to the %d processes of session-%s.scope and to nothing else; SIGKILL in %d s to what is left in it",
+		              s.id, s.user, (long)s.uid,
+		              R.stopping ? "is still there while the service stops"
+		                         : "has live processes and no child of ours (the service restarted, or its network side died, "
+		                           "and nobody reattached)", n, s.id, LX_TERM_MS / 1000);
+		LX.end[slot].s = s;
+		LX.end[slot].at = now;
+		LX.end[slot].orphan = true;
+		LX.end[slot].phase = 1;
+		return;
+	}
+	if (n < 0) {
+		registro_dice(LOG_ROOT, "⛔ local excludes remote: «%s» (uid %ld) has a LOCAL session (%s) and the REMOTIX session %s, "
+		              "but the cgroup of session-%s.scope cannot be read (%s): NOTHING signalled", s.user, (long)s.uid,
+		              detail[0] ? detail : "no detail", s.id, s.id, strerror(errno));
+		return;
+	}
+	registro_dice(LOG_ROOT, "⛔ local excludes remote: «%s» (uid %ld) has a LOCAL session (%s) — the REMOTIX session %s (no seat, "
+	              "%s) must not stay: SIGTERM to the %d processes of session-%s.scope and to nothing else; SIGKILL in %d s to "
+	              "what is left in it", s.user, (long)s.uid, detail[0] ? detail : "no detail", s.id,
+	              kid ? "its child did not close it within the grace" : "no child of ours holds it", n, s.id,
+	              LX_TERM_MS / 1000);
+	LX.end[slot].s = s;
+	LX.end[slot].at = now;
+	LX.end[slot].orphan = false;
+	LX.end[slot].phase = 1;
+}
+
+/* The light close's clean-up of the user manager, as the user (box above).  The pid of the fork, or 0 if it did not start. */
+static pid_t lx_clean_begin(const struct lx_sess *s, bool orphan)
+{
+	const char *why = orphan ? "no orphan desktops: the root side ended the user's REMOTIX session"
+	                         : "local excludes remote: the root side ended the user's REMOTIX session";
+	struct passwd pw, *r = NULL;
+	char buf[4096], run[64], bus[96];
+	bool journal = log_to_journal();
+	pid_t p;
+
+	/* the gid and the home are the system's for that uid; never for root (a REMOTIX session of uid 0 does not exist) */
+	if (s->uid == 0 || getpwuid_r(s->uid, &pw, buf, sizeof buf, &r) != 0 || !r) {
+		registro_dice(LOG_ROOT, "⛔ local excludes remote: uid %ld cannot be looked up: the user manager of «%s» is NOT cleaned "
+		              "(our drop-ins and variables may still be there)", (long)s->uid, s->user);
+		return 0;
+	}
+	snprintf(run, sizeof run, "/run/user/%u", (unsigned)s->uid);
+	snprintf(bus, sizeof bus, "unix:path=/run/user/%u/bus", (unsigned)s->uid);
+	p = fork();
+	if (p < 0)
+		return 0;
+	if (p == 0) {
+		int rc;
+
+		rootside_fork_signals_fresh();          /* not the root side's self-pipe handlers */
+		(void)prctl(PR_SET_PDEATHSIG, SIGKILL); /* it does not outlive the root side */
+		if (journal)
+			(void)log_journal(false);       /* its socket may be any fd: closed, and opened again below (as net_start) */
+		/* ⛔ become the user BEFORE touching a file: the kernel then applies the user's own permissions (as kdehost_spawn) */
+		if (setgroups(0, NULL) != 0 || setresgid(pw.pw_gid, pw.pw_gid, pw.pw_gid) != 0 ||
+		    setresuid(s->uid, s->uid, s->uid) != 0)
+			_exit(126);
+		if (setuid(0) == 0 || setgid(0) == 0)   /* the way back must be closed */
+			_exit(126);
+		if (close_range(3, ~0U, 0) != 0)        /* the channel, the PAM helper, the port: none stays in a user's process */
+			for (int fd = 3; fd < 4096; fd++)
+				close(fd);
+		if (journal)
+			(void)log_journal(true);
+		/* the user's environment as kdehost_spawn gives it, plus HOME: nothing of the root side's own */
+		if (clearenv() != 0 || setenv("XDG_RUNTIME_DIR", run, 1) != 0 || setenv("DBUS_SESSION_BUS_ADDRESS", bus, 1) != 0 ||
+		    setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin", 1) != 0 || setenv("LANG", "C", 1) != 0 ||
+		    setenv("HOME", pw.pw_dir, 1) != 0 || chdir("/") != 0)
+			_exit(126);
+		log_identity(s->user);                  /* every line of this process says whose it is */
+		session_dconf_neutralise(why);          /* the light close's step 3 */
+		rc = session_clear_out_light(why);      /* the light close's step 5: 0 done, 2 the manager refused something */
+		_exit(rc == 0 ? 0 : 2);
+	}
+	return p;
+}
+
+/* The SIGKILL of the ending, its outcome, and then our KDE compositor unit and the user manager's clean-up. */
+static void lx_end_step(uint64_t now)
+{
+	for (int i = 0; i < LX_CAND; i++) {
+		const struct lx_sess *s = &LX.end[i].s;
+		const char *rule = LX.end[i].orphan ? "no orphan desktops" : "local excludes remote"; /* which rule ended it */
+
+		if (LX.end[i].phase == 1 && now >= LX.end[i].at + LX_TERM_MS) {
+			int left = lx_signal(s, 0); /* who is still in THAT scope */
+			int hit = left > 0 ? lx_signal(s, SIGKILL) : 0;
+
+			if (left > 0 && hit <= 0)
+				LX.stop_missed += R.stopping;
+			registro_dice(LOG_ROOT, "⛔ %s: session-%s.scope of «%s» (uid %ld) %s", rule, s->id, s->user,
+			              (long)s->uid,
+			              left < 0    ? "is gone (its cgroup is no longer there): ended"
+			              : left == 0 ? "is empty after the SIGTERM: ended"
+			              : hit > 0   ? "still had processes after the SIGTERM: SIGKILL sent to them, ended"
+			                          : "still has processes and the SIGKILL reached none: NOT ended, tried again next round");
+			LX.end[i].phase = 2;
+			LX.end[i].at = now;
+		} else if (LX.end[i].phase == 2 && now > LX.end[i].at) {
+			/* a later turn of the loop: a child killed with the scope has been reaped by now.  With a child of that uid
+			 * still here the unit is left to kdehost_sweep(), which stops it when no child and no desktop are left */
+			LX.end[i].phase = 0;
+			if (!own_by_uid(s->uid)) {
+				(void)kdehost_stop(LOG_ROOT, s->uid, LX.end[i].orphan
+				                       ? "no orphan desktops: the user's REMOTIX session was ended"
+				                       : "local excludes remote: the user's REMOTIX session was ended");
+				/* with a child of that uid still here the clean-up is its light close's, not ours */
+				LX.end[i].clean = lx_clean_begin(s, LX.end[i].orphan);
+				if (LX.end[i].clean > 0) {
+					LX.end[i].phase = 3;
+					LX.end[i].at = now;
+				}
+			}
+		} else if (LX.end[i].phase == 3) {
+			int st = 0;
+			pid_t r = waitpid(LX.end[i].clean, &st, WNOHANG); /* by pid, never -1 */
+			bool late = r == 0 && now >= LX.end[i].at + LX_CLEAN_MS;
+
+			if (r == 0 && !late)
+				continue;
+			if (late) {
+				kill(LX.end[i].clean, SIGKILL);
+				(void)waitpid(LX.end[i].clean, &st, 0);
+			}
+			registro_dice(LOG_ROOT, "%s %s: the user manager of «%s» (uid %ld) %s",
+			              !late && r > 0 && WIFEXITED(st) && WEXITSTATUS(st) == 0 ? "⭐" : "⛔", rule, s->user, (long)s->uid,
+			              late ? "was NOT cleaned within the ceiling (the clean-up was killed): our drop-ins or variables may "
+			                     "still be there — the next REMOTIX birth of that user removes them"
+			              : r > 0 && WIFEXITED(st) && WEXITSTATUS(st) == 0
+			                     ? "is as the light close leaves it (dconf profile neutralised, our drop-ins and marked variables "
+			                       "removed, or there were none: the lines of «session» above say what)"
+			                     : "was NOT fully cleaned (the clean-up did not end well: the lines above say why) — the next "
+			                       "REMOTIX birth of that user removes what is left");
+			LX.end[i].clean = 0;
+			LX.end[i].phase = 0;
+		}
+	}
+}
+
+/* Step 3: what the answers allow.  `answered` false = no usable answer for anyone. */
+static void lx_decide(uint64_t now, bool answered)
+{
+	bool doubt = !answered;
+
+	/* the grace of whoever is no longer «local + child of ours» in THIS round is forgotten: it starts again if it comes back */
+	for (int w = 0; w < LX_CAND; w++)
+		LX.wait[w].keep = false;
+	for (int i = 0; answered && i < LX.ncand; i++)
+		for (int w = 0; w < LX_CAND; w++)
+			if (LX.ans[i].verdict == '1' && LX.wait[w].used && LX.wait[w].uid == LX.cand[i].uid && own_by_uid(LX.cand[i].uid))
+				LX.wait[w].keep = true;
+	for (int w = 0; w < LX_CAND; w++)
+		if (!LX.wait[w].keep)
+			LX.wait[w].used = false;
+
+	for (int i = 0; answered && i < LX.ncand; i++) {
+		const struct lx_sess *c = &LX.cand[i];
+		bool kid = own_by_uid(c->uid) != NULL;
+		int w = -1, free_w = -1;
+
+		LX.ans[i].detail[sizeof LX.ans[i].detail - 1] = 0; /* it came through a pipe: terminated here */
+		if (LX.ans[i].verdict != '1') {
+			/* '0' = surely no local session: nothing.  Anything else = could not look: nothing, and said below */
+			doubt |= LX.ans[i].verdict != '0';
+			continue;
+		}
+		if (kid) {
+			for (int k = 0; k < LX_CAND; k++) {
+				if (LX.wait[k].used && LX.wait[k].uid == c->uid)
+					w = k;
+				else if (!LX.wait[k].used && free_w < 0)
+					free_w = k;
+			}
+			if (w < 0) {
+				if (free_w < 0)
+					continue; /* cannot happen (as many places as candidates); if it did: no clock, no action */
+				LX.wait[free_w].used = true;
+				LX.wait[free_w].uid = c->uid;
+				LX.wait[free_w].since = now;
+				registro_dice(LOG_ROOT, "local excludes remote: «%s» (uid %ld) has a LOCAL session (%s) and a child of ours "
+				              "with the REMOTIX session %s: %d s for its own light close, then the root side ends that scope",
+				              c->user, (long)c->uid, LX.ans[i].detail[0] ? LX.ans[i].detail : "no detail", c->id,
+				              LX_GRACE_MS / 1000);
+				continue;
+			}
+			if (now < LX.wait[w].since + LX_GRACE_MS)
+				continue;
+		}
+		lx_end_begin(c, LX.ans[i].detail, kid, now);
+	}
+	if (doubt && (!LX.said_ms || now >= LX.said_ms + LX_SAY_MS)) {
+		LX.said_ms = now ? now : 1;
+		registro_dice(LOG_ROOT, "⚠ local excludes remote: logind could NOT say whether a user with a REMOTIX session has a local "
+		              "session (%s): NOTHING is ended on a doubt; asked again in %d s (this line at most once a minute)",
+		              answered ? "an answer was «could not look»" : "the question got no whole answer", LX_EVERY_MS / 1000);
+	}
+}
+
+static void localx_sweep(uint64_t now)
+{
+	int n;
+
+	lx_end_step(now); /* also while stopping: the endings of lx_stop_begin() are finished here */
+	if (R.stopping)   /* no new question and no new scan: lx_stop_begin() does the last one */
+		return;
+	if (LX.helper > 0) {
+		int r = lx_ask_step(now);
+
+		if (r != 0)
+			lx_decide(now, r > 0);
+		return;
+	}
+	if (LX.last_ms && now < LX.last_ms + LX_EVERY_MS)
+		return;
+	LX.last_ms = now ? now : 1;
+	n = lx_scan(false);
+	if (n < 0) {
+		if (!LX.said_ms || now >= LX.said_ms + LX_SAY_MS) {
+			LX.said_ms = now ? now : 1;
+			registro_dice(LOG_ROOT, "⚠ local excludes remote: /run/systemd/sessions cannot be read (%s): NOTHING is looked at "
+			              "nor ended (this line at most once a minute)", strerror(errno));
+		}
+		return;
+	}
+	/* the second rule first: an orphan is ended with no question, and leaves the list of those to ask about */
+	{
+		int kept = 0;
+
+		for (int i = 0; i < LX.ncand; i++) {
+			if (LX.cand[i].orphan)
+				lx_end_begin(&LX.cand[i], NULL, false, now);
+			else
+				LX.cand[kept++] = LX.cand[i];
+		}
+		LX.ncand = n = kept;
+	}
+	if (n == 0) { /* nobody has both a seat and a REMOTIX session: no question, no grace running */
+		memset(LX.wait, 0, sizeof LX.wait);
+		return;
+	}
+	lx_ask_begin(now);
+}
+
+/* Is an ending still running? (SIGTERM out, SIGKILL or the clean-up due) */
+static bool lx_busy(void)
+{
+	for (int i = 0; i < LX_CAND; i++)
+		if (LX.end[i].phase)
+			return true;
+	return false;
+}
+
+/* The service is stopping and the network side is gone (or the deadline has passed): every REMOTIX session that still has
+ * processes is ended — the second rule, at once.  The first round; `lx_stop_again()` does the others. */
+static void lx_stop_begin(uint64_t now)
+{
+	int n = lx_scan(true);
+
+	LX.stop_begun = true;
+	LX.stop_missed = 0;
+	LX.stop_deadline = now + LX_TERM_MS + LX_CLEAN_MS + 3000;
+	if (n < 0) {
+		registro_dice(LOG_ROOT, "⚠ no orphan desktops: /run/systemd/sessions cannot be read (%s) while stopping: NOTHING is "
+		              "ended here", strerror(errno));
+		return;
+	}
+	if (n == 0) {
+		registro_dice(LOG_ROOT, "⭐ no orphan desktops: no REMOTIX session is left with processes — the service stops clean");
+		return;
+	}
+	for (int i = 0; i < LX.ncand; i++)
+		lx_end_begin(&LX.cand[i], NULL, own_by_uid(LX.cand[i].uid) != NULL, now);
+	LX.ncand = 0;
+}
+
+/* A later round of the stop, when no ending is running: more than LX_CAND scopes, a slot that was taken, a SIGKILL that
+ * reached nobody.  How many endings it began: 0 = nothing is left to end (or nothing can be read).  The caller bounds the
+ * rounds with LX.stop_deadline. */
+static int lx_stop_again(uint64_t now)
+{
+	int n = lx_scan(true), begun = 0;
+
+	for (int i = 0; i < n; i++) {
+		lx_end_begin(&LX.cand[i], NULL, own_by_uid(LX.cand[i].uid) != NULL, now);
+		begun += lx_ending(LX.cand[i].id);
+	}
+	LX.ncand = 0;
+	return begun;
+}
+
+/* What the stop leaves behind, said once: REMOTIX sessions that still have processes when the root side gives up. */
+static void lx_stop_say(void)
+{
+	int n = lx_scan(true);
+
+	LX.ncand = 0;
+	if (n > 0) /* the endings missed on the way (LX.stop_missed) were tried again: only what is STILL there is a fact */
+		registro_dice(LOG_ROOT, "⛔ no orphan desktops: the service stops and %d REMOTIX session(s) still have processes "
+		              "(%d ending(s) found no slot or reached nobody on the way): the next start of the service ends them", n,
+		              LX.stop_missed);
+}
+
 static void tables_minute(uint64_t now)
 {
 	int kids = 0, grants = 0, wiped = 0, pending = 0;
@@ -1755,7 +2455,7 @@ static void reap_net(uint64_t now)
 		return;
 	registro_dice(LOG_ROOT,
 	              "%s the network side (pid %ld) is gone: %s.  Its children see EOF "
-	              "and leave; the desktops stay alive (§11.50)",
+	              "and leave; a desktop left without a child is ended by the root side (no orphan desktops, 1.0.0)",
 	              R.stopping ? "⭐" : "⛔", (long)R.net_pid, status_text(st, said, sizeof said));
 	R.net_pid = 0;
 	R.net_kill_at = 0;
@@ -2485,6 +3185,7 @@ int rootside_main(const struct rootside_options *o)
 		kids_hurry(now);
 		tables_minute(now);
 		kdehost_sweep(now);
+		localx_sweep(now); /* 1.0.0: «local excludes remote», by this side alone (box above lx_scan) */
 		if (i_pam >= 0 && (p[i_pam].revents & (POLLIN | POLLHUP | POLLERR)))
 			helper_move(R.pam, NULL, NULL);
 		helper_expired(R.pam, now, NULL, NULL);
@@ -2496,11 +3197,25 @@ int rootside_main(const struct rootside_options *o)
 				left += R.kids[i].used;
 			kids = left > 0;
 			if (R.net_pid <= 0 && (!kids || now >= R.stop_deadline)) {
+				/* ⭐ 1.0.0, no orphan desktops: what is still in a REMOTIX scope is ended before leaving (a child that
+				 *    did not leave is in its scope and goes with it), and the endings are waited for */
+				if (!LX.stop_begun) {
+					if (kids)
+						registro_dice(LOG_ROOT, "⚠ %d child(ren) still alive at the stop deadline: they are ended "
+						              "with their REMOTIX scopes", left);
+					lx_stop_begin(now);
+				}
+				if (lx_busy() && now < LX.stop_deadline)
+					continue;
+				/* nothing running: is anything left? (more scopes than slots, a SIGKILL that reached nobody) */
+				if (!lx_busy() && now < LX.stop_deadline && lx_stop_again(now) > 0)
+					continue;
+				lx_stop_say();
 				/* review 4 B, finding 16: said, not left to «stopped» */
-				if (kids)
-					registro_dice(LOG_ROOT, "⚠ the root side stops with %d child(ren) "
-					              "still alive at the deadline: systemd's KillMode=mixed "
-					              "takes them", left);
+				if (kids || lx_busy())
+					registro_dice(LOG_ROOT, "⚠ the root side stops with %d child(ren) still alive%s: systemd's "
+					              "KillMode=mixed takes them", left,
+					              lx_busy() ? " and an ending not finished within its ceiling" : "");
 				break;
 			}
 			if (now >= R.stop_deadline && R.net_pid > 0) {

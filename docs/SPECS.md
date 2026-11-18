@@ -297,6 +297,8 @@ address. The ban file never holds a user name (HMAC), and the log writes a name 
 tag. The text below is the **1.0 rule**, kept as history and for the parts that did not change (what counts, what
 the banned sees, the exits).
 
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
+
 > ⚠ *Superseded for 1.5 by `DECISIONS-11.md` §11.53.* **1.0:** ✅ **Three failed authentications from the same address
 > within 5 minutes, and that address is out for 12 hours** *(decided by the user on 10 Aug 2026 — `DECISIONS.md` §1.9,
 > `RCP.md` §4.4-bis)*. The **user name does not count**: three different names count three. A successful sign-in resets
@@ -307,6 +309,8 @@ the banned sees, the exits).
 | **what counts** | ⛔ **only** failed authentication — non-existent user and wrong password are the same thing, as §4.1 requires. Not protocol errors, not timeouts, **and not the refusal of the second connection** (§5.1), which is what the same user's second device receives |
 | **what whoever is banned sees** | the page **loads all the same** and says the attempts are used up. ⛔ Never a silence: whoever is banned by mistake is almost always the owner |
 | **how one gets out** | ⭐ **the wait passing (1.0: 12 hours; 1.5: 15 min, 1 h or 12 h), or an unblock command on the server** — which requires access to the machine, that is the only key that case admits. The ban **survives a restart** |
+
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
 
 ⚠ **The price, declared** *(1.5: five mistakes by one user ban that user for 15 minutes on every machine that shares the
 key, and twelve from the key ban the whole key; the text that follows is the 1.0 form)*: behind a NAT addresses are shared, so three mistakes by one
@@ -323,6 +327,8 @@ a long password on a phone keyboard.
 slow down whoever is guessing: it serves to remove **timing** as a channel. Without it, «non-existent user»
 answers in a millisecond and «wrong password» in fifty — and the distinction the
 protocol forbids writing in the reason can be read with a stopwatch.
+
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
 
 ---
 
@@ -398,6 +404,8 @@ GNOME it must be switched on explicitly, because with one user and a single sess
 |---|---|
 | the **«Log Out…»** entry in the desktop's system menu | the normal road, and ⭐ **it is enough on its own**: it can be reached with the pointer and with a finger, so it is there **on every device**, keyboard or not |
 | ⭐ the shortcut **`Ctrl+Alt+Fine`** | it is handled by **the page**, not the desktop: once for all four desktops, and it works **even if the desktop no longer responds**. ⛔ The page keeps it for itself, so in the remote session that combination **never arrives**. ⛔ **It asks for confirmation** — *«end the session?»* — because it closes all open programs and costs a single gesture, where the menu costs three |
+
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
 
 ⛔ **And no on-screen button for logging out** *(decided by the user on 15 Aug 2026)*: the button
 of §7.3-bis exists for `Ctrl+Alt+Canc`, which **has no menu entry**. Logging out has one.
@@ -936,6 +944,8 @@ any key of the layout — an emoji, a different alphabet — **nothing** comes o
 writes it in the log: never a different letter, never a silence. (`DECISIONS.md` §5-bis.6-7)
 
 ### 7.3-bis The shortcuts the browser keeps for itself — far fewer than it seemed
+
+⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54
 
 > ⛔ **Rewritten on the evening of 9 Aug 2026 by measurement S3** (`STUDIES.md` §web §5). This section said
 > that the Keyboard Lock exists *«only on Chrome and Edge»* and that `F11` and `Ctrl+Shift+I` are lost.

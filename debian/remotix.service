@@ -1,4 +1,4 @@
-# remotix.service — the REMOTIX server (phases/17-the-installer.md §6.4).
+# remotix.service — the REMOTIX server.
 #
 # ⛔ It runs as ROOT, and not for convenience: as root PAM verifies anyone's
 #    password and the server drops to each user's uid for their child
@@ -14,15 +14,12 @@
 #    IP address declares it in /etc/remotix/remotix.conf.d/<something>.conf:
 #        REMOTIX_OPTIONS=--name 192.168.1.10
 #    (the last --name wins).  ⚠ PROVISIONAL format, environment variables: the
-#    real configuration («defaults in /usr, choices in /etc», §6.5 point 7)
-#    belongs to the engine (T4).
+#    configuration is these two files («defaults in /usr, choices in /etc»).
 # ⛔ No bench options (--survey, --command-socket, --audio-test,
 #    --verbose): R13.
-# ⭐ DECISIONI §10.12, point 3 (final version of 30 Sep): only two routes,
-#    the installer or the source by hand; NO guard preventing a start
-#    without the installer.  `remotix state` will only say whether the installation
-#    is certified (the engine writes the mark once an operation is CONFIRMED).
-# ⛔ The package does NOT enable and does NOT start this unit: the engine does.
+#    (`--command-socket` is a test option only: since 17 Nov 2026 there is no administrator unblock.)
+# ⛔ The package does NOT enable and does NOT start this unit: the administrator does
+#    (`systemctl enable --now remotix`).
 [Unit]
 Description=REMOTIX, the desktop in the browser
 After=network.target systemd-logind.service

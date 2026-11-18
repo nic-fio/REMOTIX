@@ -215,8 +215,7 @@ override CFLAGS += $(F18A_CFLAGS)
 # ⭐ 15 Oct 2026 — **zlib**: `page.c` sends the login page gzip-compressed
 #    (`DECISIONS-11.md` §11.44, the user's decision: zlib is a dependency of
 #    REMOTIX).  `zlib.pc` where it exists, plain `-lz` where it does not.
-#    ⚠ On Debian/Ubuntu: `apt install zlib1g-dev`; Fedora/Alma: `zlib-devel`
-#      (or `zlib-ng-compat-devel`); openSUSE: `zlib-devel`; Arch: `zlib`.
+#    ⚠ On Debian: `apt install zlib1g-dev`.
 ZLIB_CFLAGS := $(shell pkg-config --cflags zlib 2>/dev/null)
 ZLIB_LIBS   := $(or $(shell pkg-config --libs zlib 2>/dev/null),-lz)
 override CFLAGS += $(ZLIB_CFLAGS)
@@ -291,8 +290,7 @@ PROTOCOLLI := zkde-screencast-unstable-v1 wlr-data-control-unstable-v1 \
 GENERATI   := $(PROTOCOLLI:%=%-client-protocol.h) $(PROTOCOLLI:%=%-protocol.c)
 
 # ⭐ PHASE 17 — the DEPS_PREFIX's library folder is not always `lib`:
-#    cmake calls it `lib64` on Fedora and openSUSE and `lib/<multiarch>` on Debian
-#    (`phases/17-the-installer.md` §4.4).  ⇒ `pkg-config` is asked INSIDE the
+#    cmake calls it `lib/<multiarch>` on Debian (`lib64` elsewhere).  ⇒ `pkg-config` is asked INSIDE the
 #    prefix (`PKG_CONFIG_LIBDIR`, which REPLACES the system folders, and
 #    without `PKG_CONFIG_PATH`, which would be searched FIRST: `[M]` in the container
 #    the ngtcp2 of `/usr/local` answered instead of the prefix's); if

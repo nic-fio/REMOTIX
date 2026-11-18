@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """check-ban - WRONG PASSWORDS AND THE BAN on a running REMOTIX box, with a real browser (Chrome). SPECS 4.2 (rule of 1.5,
-DECISIONS-11 section 11.53): counters (user on the key 5 in 5 min; the key 12 in 5 min), progressive ban (15 min the first time),
+DECISIONS-11 section 11.53): counters (user on the key 5 in 5 min; the key 20 in 5 min), progressive ban (15 min the first time),
 a fixed answer time, the same sentence for a wrong password and a user that does not exist, no typed name in the log before
 the verification, `UNBLOCK <address>`, the ban survives a restart.
 
@@ -19,7 +19,7 @@ One line per check:  PASS|FAIL|BLOCKED <name> - evidence ;  exit 0 only if all P
   typed-names-not-logged  no typed name (non-existent names: anywhere; the real user's name: in the first 1.5 s of an attempt, i.e.
                           before the verdict) in the unit's journal or in the identifier `remotix` lines
   ban-after-limit         5 wrong passwords of bn1 -> that user is banned (log) and even the RIGHT password is refused (0x08 sentence);
-                          12 failures of the key -> the key is banned: the right password of bn2 is refused, the page loads and says
+                          20 failures of the key -> the key is banned: the right password of bn2 is refused, the page loads and says
                           the attempts are used up (15 min first time); the ban file holds no typed name
   ban-survives-restart    `systemctl restart remotix`: the key is still banned
   unblock                 `UNBLOCK 127.0.0.1` on the command socket -> REMOVED, written in the log; the page is free and the right
@@ -47,7 +47,7 @@ WRONG = "not-the-password-1"
 SENT_WRONG = "incorrect username or password"
 SENT_BAN = "too many wrong passwords from this address or network"
 FLOOR_S, SPEC_S = 2.4, 1.0
-USER_LIMIT, KEY_LIMIT = 5, 20  # SPECS 4.2 table says 12 for the key; rcp.c LIMIT[] says 20 (raised in 1.5 for 8 users behind a NAT): the code's number is judged, the difference reported
+USER_LIMIT, KEY_LIMIT = 5, 20  # 20 for the key (SPECS 4.2, rcp.c LIMIT[]; raised in 1.5 for 8 users behind a NAT)
 NAMES = ("wrong-password", "same-answer", "typed-names-not-logged", "ban-after-limit", "ban-survives-restart", "unblock", "unblock-shipped")
 RE_FAILED = re.compile(r"failed attempt from \[([0-9.]+)\] as (.+?): (\d+) of (\d+) for the user, (\d+) of (\d+) for the address")
 
@@ -263,7 +263,7 @@ def run(a, box, res, b):
         return
     ev.append("5 wrong passwords of bn1 -> user ban (%s); bn1 with the right password refused: \"%s\" in %.2f s" % (
         user_banned[-1].split(" ", 1)[1][:110], right1["outcome"][:50], right1["dt"]))
-    # key level: new names until the key is banned (the key limit is 12 failures of any user)
+    # key level: new names until the key is banned (the key limit is 20 failures of any user)
     banned_key = False
     for i in range(3, 3 + KEY_LIMIT):  # new names until the key is banned (the limit is counted over any user)
         b.attempt(fake[i], WRONG)
@@ -295,7 +295,7 @@ def run(a, box, res, b):
         res.say(FAIL, NAMES[3], "; ".join(ev + ev2) + "; journal: " + " | ".join(x.split(" ", 1)[1][:140] for x in jk[-4:]))
         res.rest(BLOCKED, "the ban did not work: the rest was not run")
         return
-    res.say(PASS, NAMES[3], "; ".join(ev) + "; key banned after %d failed attempts (code limit %d; SPECS table says 12, see NOTE): bn2's right password refused (\"%s\"); page loads, data-banned=yes, \"%s\", %d min left; ban file %d line(s), no name; log: %s" % (
+    res.say(PASS, NAMES[3], "; ".join(ev) + "; key banned after %d failed attempts (limit %d): bn2's right password refused (\"%s\"); page loads, data-banned=yes, \"%s\", %d min left; ban file %d line(s), no name; log: %s" % (
         total_failed, KEY_LIMIT, right2["outcome"][:45], pb[3].strip()[:60], rem // 60000, len(bf.splitlines()), " | ".join(x.split(" ", 1)[1][:120] for x in jk[-2:])))
     # ---- 5: restart
     c, t = box.run("systemctl restart remotix; sleep 2; systemctl is-active remotix", timeout=90)

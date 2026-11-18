@@ -975,7 +975,7 @@ const REASON_TEXT = {
      SINGLE USER on this address receives, and for that one the page shows no time
      (it does not know the user): so the text is true for both.  The 15 minutes are
      the first step of the ladder (then 1 h, 12 h): "the first time". */
-  0x08: "too many wrong passwords from this address or network: wait (15 minutes the first time, longer if it happens again) or ask the administrator to unblock it",
+  0x08: "too many wrong passwords from this address or network: wait (15 minutes the first time, longer if it happens again): the block ends by itself",
   0x09: "the server and this page have nothing in common to speak",
   0x0A: "incompatible protocol version",
   0x0B: "the server and this page misunderstood each other: reload the page and try again",
@@ -6076,7 +6076,7 @@ async function connect(username, password) {
        + "NOTHING_IN_COMMON");
     outcome("Neither of the two video codecs (HEVC, H.264) reaches the pixels on this "
         + "browser: the session would have no image. See the box "
-        + "above.", false);
+        + "below.", false);
   }
 
   /* The depths: those that PAINTED on at least one of the good codecs are
@@ -14180,8 +14180,8 @@ setInterval(function () {
              ? ("⌨ " + p.mark + " on this browser the remote desktop is NOT "
                 + "controlled by " + p.entries.length + " combinations (among them Super, "
                 + "Alt+Tab, Alt+F4): YOUR computer keeps them.  The little button "
-                + "at the bottom left opens the list, and there is a button for "
-                + "Ctrl+Alt+Del.")
+                + "at the bottom left opens the list.  The on-screen Ctrl+Alt+Del button "
+                + "is shown only in diagnostics.")
              : ("⌨ " + p.mark + " on this browser and on this stage none of the "
                 + "combinations tried is lost.")));
     }

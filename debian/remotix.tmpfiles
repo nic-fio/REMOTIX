@@ -1,4 +1,4 @@
-# remotix — the service's directories (PHASE F, NOT ACTIVE YET: the split build installs this as tmpfiles.d/remotix.conf) (phases/17 §6.4, DECISIONS.md §11.50).
+# remotix — the service's directories (PHASE F; installed as tmpfiles.d/remotix.conf and created by postinst; DECISIONS.md §11.50).
 # /var/lib/remotix: the ROOT side's state (render-grants, group-enrollments.jsonl)
 #   and the engine's; root, 0755 so that remotix can reach net/ below it.
 #   ⛔ Never remotix-owned: a remotix-writable directory holding root's files

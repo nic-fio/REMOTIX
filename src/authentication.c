@@ -60,12 +60,11 @@
  *    network login that goes through there inherits policies meant for
  *    something else.
  *
- * ⚠ And the service file must be INSTALLED: `src/remotix.pam` (or the one of
- *   the family: `.fedora`, `.suse`, `.arch`) in `/etc/pam.d/remotix` — on
- *   openSUSE in `/usr/lib/pam.d/remotix`.  Without it, Linux-PAM falls back to
- *   the `other` service, which on Fedora and Arch is `pam_deny` — that is,
- *   **every** right password is refused, with the symptom «user or password
- *   not correct» — and on Debian is a stack that is not ours.  ⛔ This is why
+ * ⚠ And the service file must be INSTALLED: `src/remotix.pam` in
+ *   `/etc/pam.d/remotix` (the package does it).  Without it, Linux-PAM falls back to
+ *   the `other` service, which on Debian is a stack that is not ours (on other
+ *   distributions it is `pam_deny`: **every** right password refused, with the
+ *   symptom «user or password not correct»).  ⛔ This is why
  *   the fallback below is NOT silent: `why_no()` tells «PAM says the
  *   password is wrong» from «PAM could not judge», and whoever starts the
  *   server checks the file at startup (`main.c`). */
@@ -241,12 +240,12 @@ static void why_no(const char *user, const char *step, pam_handle_t *pam,
 		fprintf(stderr,
 		        "RCP: ⛔ PAM COULD NOT JUDGE %s in %s: %s "
 		        "(service «%s») — it is NOT «wrong password».  Check that "
-		        "/etc/pam.d/%s (or /usr/lib/pam.d/%s on openSUSE) and "
-		        "/etc/remotix/denied-users exist: without the first Linux-PAM "
-		        "falls back to «other» (pam_deny on Fedora and Arch), without the "
+		        "/etc/pam.d/%s and "
+		        "/etc/remotix/denied-users exist (both belong to the package): without the first "
+		        "Linux-PAM falls back to the «other» service, without the "
 		        "second pam_listfile refuses everyone.\n",
 		        who, step, pam_strerror(pam, rv), SERVICE_PAM,
-		        SERVICE_PAM, SERVICE_PAM);
+		        SERVICE_PAM);
 	}
 	fflush(stderr);
 }

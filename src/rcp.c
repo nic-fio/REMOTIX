@@ -4830,6 +4830,17 @@ static bool handle_attach(rcp_session *s, reader *l, uint64_t now)
 
 		which[0] = '\0';
 		if (s->g.session_local(s->g.ctx, s->user, which, sizeof which)) {
+			/* ⭐ 1.0.0: a detail that begins with '?' is the hook's «nobody could look» (main.c,
+			 *    `ask_local_session()`): still refused (fail-closed), but with the birth's own answer,
+			 *    0x0E «cannot verify» — 0x05 would tell the client of a local session nobody saw. */
+			if (which[0] == '?') {
+				reg(s, "⛔ attach DENIED to %s from %s: it could NOT be verified that they "
+				       "have no local graphical session — refused, reason 0x0E (fail-closed)",
+				    s->user, s->provenance);
+				dismiss(s, RCP_SESSION_UNSERVABLE,
+				        "cannot verify that no local session exists");
+				return false;
+			}
 			reg(s, "⛔ attach DENIED to %s from %s: they already have a LOCAL "
 			       "graphical session (%s) — §5.1, reason 0x05",
 			    s->user, s->provenance,

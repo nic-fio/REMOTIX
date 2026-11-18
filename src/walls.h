@@ -15,7 +15,7 @@
  *      directories it must write — `/var/lib/remotix/net` (certificates,
  *      QUIC secret, ban) and `/run/remotix/net` (the bench's command socket)
  *      — and a private, empty `/tmp`;
- *   2. (SELinux: removed, Debian has none; AppArmor's profile is entered instead, see `walls.c`);
+ *   2. (AppArmor's profile `remotix_network` is entered instead, see `walls.c`; Debian has no SELinux);
  *   3. no supplementary group, `setgid`/`setuid` to `remotix`, checked with
  *      `getresuid`/`getresgid`; no capability left (effective, permitted,
  *      bounding, ambient: read back from /proc/self/status);

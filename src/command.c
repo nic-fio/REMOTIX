@@ -182,15 +182,16 @@ command *command_open(const char *fpath)
 	int fd;
 
 	if (!fpath || !*fpath) {
-		/* ⛔ And the absence is SAID: §4.4-bis wants two ways out of the ban,
-		 *    and without this socket only one is left — the twelve hours.
-		 *    Whoever starts the server must be able to read it, or «the ban
-		 *    cannot be removed» will look like a defect of the command instead
-		 *    of its absence. */
+		/* ⛔ And the absence is SAID: without this socket (a bench/test option
+		 *    only: since 17 Nov 2026 the product has no administrator unblock,
+		 *    DECISIONS-11 §11.54) the only way out of the ban is the twelve
+		 *    hours.  Whoever starts the server must be able to read it, or
+		 *    «the ban cannot be removed» will look like a defect of the command
+		 *    instead of its absence. */
 		registro_dice(REG_RCP,
-		              "⭐ no --command-socket: the ban is removed ONLY by " /* 17 Nov 2026: ⛔→⭐, a start-up description, not an error */
-		              "the passing of the 12 hours.  §4.4-bis wants two "
-		              "ways, and this half is missing.");
+		              "⭐ no --command-socket (a bench/test option; the packaged service never passes it): the ban is removed ONLY by " /* 17 Nov 2026: ⛔→⭐, a start-up description, not an error */
+		              "the passing of the 12 hours.  There is no administrator unblock "
+		              "(DECISIONS-11 §11.54).");
 		return NULL;
 	}
 

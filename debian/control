@@ -22,8 +22,7 @@ Build-Depends: debhelper-compat (= 13),
                libvulkan-dev (>= 1.3.274)
 
 # ⭐ Phase 19 (`phases/19-nvidia.md`): Vulkan Video (src/vulkanvideo.c) — only the
-#   loader and the headers (libvulkan-dev; `[M]` 1 Oct 2026: 1.4.309 on Debian
-#   13, 1.4.341 on Ubuntu 26.04).  The drivers (ICD) are among the Recommends.
+#   loader and the headers (libvulkan-dev; `[M]` 1 Oct 2026: 1.4.309 on Debian 13).  The drivers (ICD) are among the Recommends.
 # ⭐ Phase 18 (`phases/18-without-ffmpeg.md`): no ffmpeg.  Encoding on the GPU
 #   with libva directly (libva-dev also brings libva-drm), audio with libopus.
 #   `[M]` 30 Sep, in the podman images: libopus0 1.5.2, libva2 2.22, in main.
@@ -33,8 +32,8 @@ Build-Depends: debhelper-compat (= 13),
 #   phases/18 §1) — removed on 30 Sep (T10: dpkg-checkbuilddeps asked for it and the
 #   phase 18 container does not carry it).
 # ⚠ ngtcp2 1.25.0 and nghttp3 1.18.0 are NOT in the Build-Depends: the build
-#   container brings them (src/build-targets/quic-static.sh), static and at a
-#   pinned version (phases/17 §6.3; D2 closed, DECISIONI §10.6).  The
+#   container brings them (build/quic-static.sh), static and at a
+#   pinned version (D2 closed, DECISIONI §10.6).  The
 #   Static-Built-Using field below names them in the finished package (for the SBOM, R24).
 
 Package: remotix
@@ -42,12 +41,12 @@ Architecture: any
 # Depends: dpkg-shlibdeps computes the libraries from the binary (${shlibs:Depends}).
 #   The others are the ones the binary uses at run time and that dpkg does NOT
 #   see: pam_systemd and pam_listfile (modules loaded by the PAM stack), usermod (the first
-#   connection, child.c:1525), loginctl and systemctl
+#   connection, child.c), loginctl and systemctl
 #   --user (child.c), the systemd user bus (dbus-user-session), and the PipeWire
 #   DAEMON + wireplumber: GNOME/KDE video capture goes through PipeWire (mutter/kwin
 #   screencast) and so does the audio of EVERY desktop (sound.c); dpkg sees the LIBRARY
 #   (libpipewire-0.3-0) but not the daemon. Stock desktops bring it, but minimal
-#   installations do not (T10, 30 Sep: on openSUSE GNOME without pipewire the desktop does not arrive).
+#   installations do not (T10, 30 Sep: on a GNOME without pipewire the desktop does not arrive).
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libpam-systemd,
@@ -60,17 +59,16 @@ Depends: ${shlibs:Depends},
 # ⭐ dconf-cli (13 Nov 2026, D-015): GNOME session rules are compiled with dconf compile;
 #   without it GNOME goes back to the declared fallback (user changes from remote are not kept).
 # ⭐ Added when the Go installer was dropped (Debian 13 only; what the installer's plan used to pull in):
-#   · fonts-dejavu-core: labwc dies without a scalable font (labwc #2525); the installer added it only when
-#     /usr/share/fonts had none, apt now gets it as a Recommends (tiny, harmless if another font is there);
-#   ⛔ no desktop among the Recommends: the package never installs a desktop by itself (the old installer refused
-#     without one, RX-MANCA-001); with none of the four the server says so at start-up.
-# Recommends (apt installs them by default; whoever uses --no-install-recommends loses them
-#   and `remotix verify`, T4, will say so):
+#   · fonts-dejavu-core: labwc dies without a scalable font (labwc #2525); apt gets it as a Recommends
+#     (tiny, harmless if another font is there);
+#   ⛔ no desktop among the Recommends: the package never installs a desktop by itself;
+#     with none of the four the server says so at start-up.
+# Recommends (apt installs them by default; whoever uses --no-install-recommends loses them):
 #   · the GPU's VA driver: without it, NOTHING is encoded (phase 19: no
-#     software fallback; the server declares it at startup, and the installer's
-#     preliminary check refuses earlier).
-#     `[M]` 30 Sep: on Ubuntu 26.04 the Mesa VA lives in mesa-libgallium (which
-#     «provides» mesa-va-drivers and va-driver), and va-driver-all only pulls Intel;
+#     software fallback; the server declares it at startup, and the package's preinst
+#     refuses a new installation on a machine without a render node).
+#     `[M]` 30 Sep: on Ubuntu 26.04 (no longer a target) the Mesa VA lives in mesa-libgallium
+#     (which «provides» mesa-va-drivers and va-driver), and va-driver-all only pulls Intel;
 #     ⭐ 14 Nov 2026 (1.5.2): so the declaration is `va-driver-all` ALONE, without the
 #     alternative `| va-driver`.  With the alternative, apt took the Recommends as
 #     already satisfied by mesa-libgallium's «Provides: va-driver» and never pulled
@@ -87,10 +85,9 @@ Depends: ${shlibs:Depends},
 #     size at reattach (DECISIONI §10.40).  Without labwc KDE still starts,
 #     with KWin --virtual and the size of its birth (declared in the journal);
 #     ⚠ on a GNOME-only or KDE-only machine they are installed anyway: the metadata of
-#     a .deb has no «only if XFCE is there».  One package per desktop is for T4;
+#     a .deb has no «only if XFCE is there»;
 #   ⛔ NOT gnome-session (the «vanilla» session from universe): D8 (DECISIONI
-#     §10.20) — on Ubuntu REMOTIX starts the STOCK session, `ubuntu`, which
-#     is already there (ubuntu-session); the criterion lives in session.c, gnome_session().
+#     §10.20); the session criterion lives in session.c, gnome_session().
 #   · ⭐ phase 19 (`phases/19-nvidia.md`): the GPU's VULKAN driver —
 #     `mesa-vulkan-drivers` brings the Mesa ICDs (RADV for AMD: the Vulkan
 #     Video road, tried BEFORE VA-API; ANV for Intel, which does not encode in

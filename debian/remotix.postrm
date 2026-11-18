@@ -1,9 +1,8 @@
 #!/bin/sh
-# remotix.postrm — after the files have been removed (phases/17 §6.4).
+# remotix.postrm — after the files have been removed.
 #
-# ⛔ DECISIONI §10.12: groups and switch-on are set up by the ENGINE, which records
-#    them in ITS log; it undoes them.  The package does not touch them, neither at
-#    installation nor here.  The firewall and the two belts left OFF in
+# ⛔ DECISIONI §10.12: switch-on and groups (if any) are the administrator's.
+#    The package does not touch them, neither at installation nor here.  The firewall and the two belts left OFF in
 #    /usr/share/remotix/belts/ are the administrator's; the two polkit rules
 #    (§10.50, §10.55) belong to the package and leave with it.
 #   remove   the configuration (/etc/remotix, /etc/pam.d/remotix) and
@@ -23,7 +22,7 @@ purge)
 	fi
 	rm -rf /var/lib/remotix/net /var/lib/remotix/certificates /var/lib/remotix/ban /var/lib/remotix/ban.new /run/remotix
 	[ -n "$keep" ] || rm -f /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
-	# ⭐ Replaces the installer's uninstall steps «remove-user-logs» and «remove-system-user» (a Debian purge, not a plain remove):
+	# ⭐ Purge only (not a plain remove): the users' product files and the system user.
 	#  · each person's product files in ~/.local/state/remotix/ — the session log and the state files the product writes there
 	#    (session.c: `xfce-chiavi` the copy of the user's XFCE keys, `xfce-vecchi-ripristinati`, `lxqt-restored` and `gnome-ripristinato`
 	#    the one-time migration marks) — removed BY NAME, and the folder if it is left empty, AS THAT USER (runuser), so a symlink
@@ -53,7 +52,7 @@ remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
 	;;
 esac
 
-# ⭐ 1.5 (AppArmor, NOT TRIED): the profile leaves the kernel when the package leaves.  Written to the kernel's own
+# ⭐ 1.5 (AppArmor, profile in complain mode): the profile leaves the kernel when the package leaves.  Written to the kernel's own
 #    remove file: the profile file may already be gone.  Never fails; inert when the package never carried it.
 case "$1" in
 remove|purge|disappear)

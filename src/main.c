@@ -488,7 +488,10 @@ struct bridge {
  *
  *     `[M]` T2 (`phases/17-the-installer.md` §5.2): stopping the service does
  *     NOT kill the desktops — parent, helper and child die, the stage born
- *     with `setsid --fork` stays with its programs.  ⛔ And this parent
+ *     with `setsid --fork` stays with its programs.  ⭐ 1.0.0, owner's decision
+ *     17 Nov 2026 night: that is now true only when the service FALLS; an orderly stop closes
+ *     the remote desktops (an orphan desktop — logind session "closing" — is not seen as a conflict by GNOME's login
+ *     screen and breaks the user's local login; DECISIONS-11).  ⛔ And this parent
  *     restarted with an empty children table: nobody counted those desktops,
  *     neither the session cap, nor the budget, nor the abandonment clock.
  *
@@ -522,6 +525,11 @@ static uint64_t abandon_ms;
 
 static RediscoveredDesktop *found_again;
 static int found_again_n;
+
+/* ⭐ 1.0.0 — how long the network side waits, when the service is stopping, for the desktops it asked to close.  15 s in all,
+ *    not per desktop: the root side gives the whole network side 25 s (`STOP_WAIT_MS`, rootside.c) before its SIGKILL, and what
+ *    is still alive after our 15 s is closed by the root side (it closes the scopes left), with 10 s to spare. */
+#define STOP_CLOSE_WAIT_MS 15000
 
 static int found_again_index(const char *user)
 {
@@ -917,10 +925,12 @@ static void found_again_close_for_local(const char *user, const char *defence)
 		return;
 	/* ⚠ From 1.5 the network side runs as the user `remotix` and polkit would deny `TerminateSession`: with
 	 *    the root side attached nothing is attempted here (it would fail safely, but do no work).  The
-	 *    desktop leaves the list and is NOT revived; its stage stays alive.  Closing it needs a new
-	 *    request to the root side (rootside_proto.h): not done, it is a protocol change. */
+	 *    desktop leaves the list and is NOT revived.
+	 * ⭐ 1.0.0: its scope is ended by the ROOT side, which enforces «local excludes remote» by itself and asks
+	 *    nobody (`localx_sweep()` in rootside.c: within about ten seconds, no message needed); the FOUND_GONE
+	 *    that follows finds the entry already gone. */
 	if (rootside_attached()) {
-		snprintf(what, sizeof what, "not closed: this is the network side (user remotix), only the root side may terminate a logind session");
+		snprintf(what, sizeof what, "not closed from here (this is the network side, user remotix): the root side ends its scope by itself");
 		closed = false;
 	} else
 		closed = sentinel_terminate_remote_session(local_guard, found_again[i].session, user,
@@ -928,7 +938,7 @@ static void found_again_close_for_local(const char *user, const char *defence)
 	registro_dice(LOG_CHILD,
 	              "⛔ %s: «%s» has a LOCAL session and a desktop found again (stage pid %ld): %s%s",
 	              defence, user, (long)found_again[i].stage, what,
-	              closed ? "" : " — its stage is left alone");
+	              closed || rootside_attached() ? "" : " — its stage is left alone"); /* split: not «left alone», the root side ends it */
 	found_again_remove(user);
 	presence_forget(user);
 }
@@ -2285,7 +2295,9 @@ static bool ask_local_session(void *ctx, const char *user, char *which,
 	/* ⭐ 1.5.4, defence 2 (attach): `rcp.c` refuses the client with 0x05; the child of that user,
 	 *    if any, must not stay alive on the local desktop.  ⛔ Fail-closed: «could not look» (-1)
 	 *    answers «yes, refuse» too (but closes nothing: a healthy session is not closed for a doubt).
-	 *    ⚠ `rcp.c` will say 0x05 for the -1 as well: its hook only knows yes/no. */
+	 * ⭐ 1.0.0: the hook only knows yes/no, so the doubt travels in `which`: a text that BEGINS WITH '?' means
+	 *    «refused because nobody could look» and `rcp.c` answers 0x0E as the birth does (defence 1), not 0x05 —
+	 *    «already has a local session» would be untrue.  The sentinel's own detail starts with «session». */
 	if (state == 1)
 		local_light_close(user, "defence 2: attach", false);
 	else if (state < 0) {
@@ -2293,7 +2305,7 @@ static bool ask_local_session(void *ctx, const char *user, char *which,
 		              "⛔ defence 2: attach — logind could NOT say whether «%s» has a local session: "
 		              "the attach is refused (fail-closed)", user);
 		if (which && how_much)
-			snprintf(which, how_much, "could not verify");
+			snprintf(which, how_much, "?could not verify"); /* '?' first: the mark rcp.c reads */
 	}
 	return state != 0;
 }
@@ -4243,6 +4255,81 @@ int main(int argc, char **argv)
 			              "left at all.  Closing anyway. "
 			              "⚠ B7 `server-in-chiusura` measures exactly this.",
 			              remain, rounds, transport_remain_reason(t));
+	}
+
+	/* ⭐⭐ 1.0.0 — owner's decision 17 Nov 2026 night: REMOTE DESKTOPS ARE CLOSED WHEN THE SERVICE STOPS (DECISIONS-11).  An
+	 *     orphan desktop (logind session "closing") is not seen as a conflict by GNOME's login screen and breaks the user's local
+	 *     login; before this block the children saw EOF on their socket and left the desktop alive for the reattach (§11.50).
+	 *     That road is still there for when the network side FALLS (the EOF branch of `child_alive()`), but an ORDERLY stop
+	 *     (SIGTERM with the root side still there, `stop_requested`) closes them, with the same request as the abandonment (`abandon_expired()`) and its rule 1.5.4:
+	 *     no local session ⇒ full close (`CHILDREN_EXIT_STOP`); local session or «could not look» ⇒ the LIGHT close, never a Logout.
+	 *     ⚠ The clients already have their 0x0c farewell (above): nobody is told anything more.
+	 * ⛔ A request that does not leave is said and the stop goes on; whatever is still alive at the end is the root side's to close. */
+	if (stop_requested && offspring && rootside_attached() && rootside_lost())
+		registro_dice(LOG_STARTUP,
+		              "stopping: the root side is gone: no close is asked; the children see EOF and leave, and the desktops "
+		              "are ended by the next root side — no orphan desktops");
+	else if (stop_requested && offspring) {
+		/* ⚠ `stop_requested` is also raised when the ROOT side dies (the network side is signalled with its parent): that case is
+		 *    the one above, not an orderly stop. */
+		int asked = 0, left;
+		int n_children = children_count(offspring);
+		int unattended = 0;
+
+		for (int i = 0; i < n_children; i++) {
+			const char *name = children_nth_user(offspring, i);
+			char user[257];
+			int why = CHILDREN_EXIT_STOP;
+			int st;
+			char lw[160];
+
+			if (!name || !name[0] || !children_alive_of(offspring, name))
+				continue;
+			snprintf(user, sizeof user, "%s", name);
+			st = local_three(user, lw, sizeof lw);
+			if (st != 0) {
+				why = CHILDREN_EXIT_LOCAL;
+				local_mark(user);
+				registro_dice(LOG_STARTUP,
+				              "⛔ stopping: «%s» %s: its desktop gets the LIGHT close, not the Logout",
+				              user, st == 1 ? "has a LOCAL session" : "could not be checked for a local session");
+			}
+			if (children_terminate_session(offspring, user, why))
+				asked++;
+			else {
+				if (why == CHILDREN_EXIT_LOCAL)
+					(void)local_mark_take(user);
+				registro_dice(LOG_STARTUP,
+				              "⛔ stopping: the request to close the desktop of «%s» did NOT leave towards its child: "
+				              "%s", user,
+				              rootside_attached() ? "the root side will close it"
+				                                  : "its desktop is left as it is (single process: nobody else closes it)");
+			}
+		}
+		for (int i = 0; i < found_again_n; i++)
+			if (found_again[i].user[0] && children_pid_of(offspring, found_again[i].user) <= 0)
+				unattended++;
+		if (unattended)
+			registro_dice(LOG_STARTUP,
+			              "stopping: %d desktops found again have no child here (none is born now): %s",
+			              unattended,
+			              rootside_attached() ? "the root side closes them"
+			                                  : "single process: nobody closes them now, they stay for the next start");
+		if (asked) {
+			int before = children_closing_count(offspring);
+
+			registro_dice(LOG_STARTUP,
+			              "stopping: %d desktops asked to close (waiting at most %d s for them)",
+			              asked, STOP_CLOSE_WAIT_MS / 1000);
+			left = children_wait_closed(offspring, STOP_CLOSE_WAIT_MS);
+			registro_dice(LOG_STARTUP,
+			              "stopping: %d desktops closed, %d still alive after %d s%s",
+			              before - left, left, STOP_CLOSE_WAIT_MS / 1000,
+			              !left ? ""
+			              : rootside_attached() ? ": the root side closes those"
+			                                    : ": single process: their child is ended next (SIGTERM, then SIGKILL) and "
+			                                      "the desktop stays for the next start");
+		}
 	}
 	outcome = 0;
 

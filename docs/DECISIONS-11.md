@@ -2026,3 +2026,57 @@ behaviour (`pam_faillock(8)`, `faillock.conf(5)`); ⚠ **not run live** — `[?]
   paints 64x48 pays nothing more. The log line says when only the second probe painted.
 - **Ported** from `4cfdd4a8` (abandoned first attempt; the §11.48 cited in the original code is this entry). Its bench
   `benches/22-page-decoder-sim.js` (cases J1-J5) does not exist in the new tree and was NOT ported.
+
+### 11.54 ✅ Decisions of 17 Nov 2026 — REMOTIX 1.0.0 for Debian 13 (owner's decisions, recorded after the manuals' review)
+
+The specifications (`SPECS.md`, `RCP.md`) stay the original ones; where a passage below no longer holds it carries a marker
+«⚠ superseded on 17 Nov 2026: see DECISIONS-11 §11.54» and the original text is kept.
+
+- **Debian 13 only, one codebase per distribution.** No distribution detection and no per-distribution code; a future
+  distribution gets its own, separate code. Supersedes every passage of the specifications and of §11.x about Ubuntu, Fedora,
+  Arch, openSUSE, Alma (installer variants, rpm/Arch packages, SELinux).
+- **Version 1.0.0.** This code is the base from which everything restarts; the provisional number 1.6.0 used in the tests of
+  17 Nov names the same code. Supersedes the 1.5.x numbering of §11.50-§11.53 (the content stays).
+- **Installation by `apt` from a `.deb`; no installer program.** The service is installed disabled and not started; the
+  administrator runs `systemctl enable --now remotix`. Supersedes the passages on the installer, its «engine» and its consent steps.
+- **No administrator unblock.** The ban ends only by time (15 min, 1 h, 12 h). Supersedes SPECS §4.2 («or an unblock command
+  on the server») and RCP.md §4.4-bis `UNBLOCK` as a product feature. `--command-socket` remains a bench/test option that the
+  packaged service never passes.
+- **Address-level limit 20** failed attempts in 5 minutes (it was 12 in 1.0); (key, user) 5, /48 30. Already in §11.53; the
+  number 12 in RCP.md is corrected.
+- **Refusal answer time 2.5 s** (`REJECT_FLOOR` in `rcp.c`) for a refused password, against **1 s** for the other answers
+  (`FIXED_DELAY`). Supersedes «one fixed second» of SPECS §4.2 and RCP.md §4.4-bis for the refusals.
+- **Shortcuts.** `Ctrl+Alt+End` was removed from the page on 17 Aug 2026; the on-screen `Ctrl+Alt+Del` button is hidden outside
+  diagnostics since 16 Aug 2026. Supersedes SPECS §5.2-bis (the exit shortcut) and §7.3-bis (the button) as far as these two are
+  concerned; Log Out stays in the desktop's menu.
+- **The session cap answers `0x0E` (`SESSION_UNSERVABLE`)** — already §11.46.
+- **A new installation is refused on a machine without a video card** (no DRM render node: `preinst`); a card that is there
+  but does not encode H.264 is reported by `postinst`. An upgrade is never refused.
+- **The logind session is kept alive through `--session-fd`, and Log Out ends the child** (the §7.6 road) on every desktop.
+  **KDE** has its own logout watch (`session.c`): the Log Out succeeds even if systemd refuses the stop.
+- **No upgrade path from older versions** (no 1.x → 1.0.0 migration).
+
+### 11.56 ✅ Remote desktops are closed when the service stops; no orphan desktops (owner's decision, 17 Nov 2026 night)
+
+**The fact.** `[M]` 17 Nov 2026, Debian 13 with GNOME and gdm on a real machine: `user` had a remote desktop, the service was
+restarted, the desktop stayed for the reattach (§11.50). Its logind session went «closing», because its leader — the child —
+had left (`logind-session.c`, `session_dispatch_leader_pidfd`). GNOME's login screen holds a local login of the same user only
+while another graphical session of that user is «active» or «online» (gnome-shell 48, `loginDialog.js`,
+`_findConflictingSession`); a «closing» one is no conflict. The local desktop started at once, `gnome-session` found
+`gnome-session-wayland@gnome.target` still active in the user manager («Session manager already running!», exit 1) and gdm was
+left with a login screen that refused every password until it was restarted. `localx_sweep()` looks every 5 s: the local
+session lived 0.4 s.
+
+**The decision.** Supersedes §11.50 as far as «the desktops stay alive when the service stops» is concerned.
+- **When the service stops** the network side asks every child for the close of its desktop (`CHILDREN_EXIT_STOP`, the
+  abandonment road; the light close if the user has, or may have, a local session) and waits up to 15 s; the root side then
+  ends what is still in a REMOTIX scope and leaves when those endings are over. Restarting or upgrading REMOTIX closes the
+  remote desktops, as a reboot does.
+- **While the service runs** a seatless `SERVICE=remotix` session with live processes and no child of ours, seen in two scans
+  in a row, is ended by the root side (`rootside.c`, «no orphan desktops»): after a fall of the network side a desktop
+  survives only if its user reattaches within those few seconds.
+- What is left in a REMOTIX scope after the desktop's end is a leftover, whoever launched it — the rule
+  `session_clear_out_scope()` already applies at Log Out.
+- Discarded: reacting to logind's `SessionNew` (ending a desktop takes ~1.5 s, the local login dies in 0.35 s); giving every
+  desktop found again a child at startup (nothing covers the time the service is down); keeping the session «active» after
+  the child's exit (the leader would have to be another process: a rewrite).

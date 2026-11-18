@@ -37,7 +37,7 @@
  *     for a phone on a bad line and for the certificate-warning case, which
  *     fails the handshake at once anyway.
  *   · While the response is written there is NO absolute deadline (review
- *     of 3ed5091f, same day): the page is ~907 KB uncompressed, and 60 s from
+ *     of 3ed5091f, same day): the page is ~940 KB uncompressed, and 60 s from
  *     accept cut every phone under ~125 kbit/s, every time.  The deadline
  *     follows PROGRESS instead: closed when no byte was taken for
  *     PAGE_STALL_MS (60 s: retransmission backoff, a tunnel, a handover —
@@ -229,7 +229,7 @@ enum phase { F_RATE, F_HANDSHAKE, F_READ, F_WRITE, F_DONE };
 
 /* ⭐ A response body SHARED read-only by every client that sends it (fourth
  * review, 15 Oct 2026): before, each writing client held a private copy of
- * the ~907 KB page, and each GET made five more temporary ones — 128 slots
+ * the ~940 KB page, and each GET made five more temporary ones — 128 slots
  * held by an attacker were ~116 MB.  Now the not-banned page is built ONCE
  * per certificate fingerprint and each client keeps its own small header, a
  * reference and an offset. */
@@ -354,7 +354,7 @@ struct page {
 	bool cached_gz_retry;
 	char cached_fp[64];
 	/* ⭐ The banned page (holistic review, 15 Oct 2026: it was rebuilt WHOLE
-	 *   at every banned GET, ~907 KB and 3.2 ms each).  Every marker of
+	 *   at every banned GET, ~940 KB and 3.2 ms each).  Every marker of
 	 *   `page.html` is in its first `split` bytes (~45 KB); the rest never
 	 *   changes.  So a banned response is its own small prefix (the markers
 	 *   replaced, gzip-compressed when asked) + `tail` or `tail_gz` (shared,
@@ -759,7 +759,7 @@ static void gz_free(voidpf opaque, voidpf address)
 }
 
 /* ⭐ §11.44 (the user's decision, 15 Oct 2026): `plain` gzip-compressed
- *   (RFC 1952, level 6) — ~907 KB of page become far fewer for a slow phone.
+ *   (RFC 1952, level 6) — ~940 KB of page become far fewer for a slow phone.
  *   ⚠ Level 6, not 9 (review of 6d8249c4): it runs on the main loop, once per
  *   fingerprint, and 9 held it ~86 ms on the real page against ~45 ms for
  *   +0.25 % of bytes.
@@ -1347,7 +1347,8 @@ static void serve(page *p, client *c)
 	 *    `\uXXXX` escapes.  The banned owner — the one for whom §4.4-bis
 	 *    wrote three normative points — read on the screen, literally,
 	 *    «unblock l'address from_ server» (the Italian page of the time:
-	 *    «unblock the address from the server»).
+	 *    «unblock the address from the server»; ⚠ since 17 Nov 2026 the
+	 *    product has no administrator unblock, DECISIONS-11 §11.54).
 	 *    ⚠ And there was no text right for both: the cure was to separate the
 	 *      two markers, not to fix the sentence.  ⛔ And there was the worse
 	 *      harm: the text ended up **inside a JS string** without any
@@ -1395,14 +1396,12 @@ static void serve(page *p, client *c)
 			          * inside the ban notice. */
 			         "<b>attempts exhausted</b>: too many failed login "
 			         "attempts came from this address or network; wait a few minutes "
-			         "and try again — the wait grows if it happens again "
-			         "(§4.4-bis). There are still "
+			         "and try again — the wait grows if it happens again. "
+			         "There are still "
 			         "<b id=\"hours\">%llu</b> hours and "
-			         "<b id=\"minutes\">%llu</b> minutes to go. There are two "
-			         "ways back in: waiting for the expiry, or with the "
-			         "unblock command on the serving machine — which requires "
-			         "access to that machine, and is the way for whoever "
-			         "banned themselves from their own phone.",
+			         "<b id=\"minutes\">%llu</b> minutes to go. The block "
+			         "ends by itself when that time is up: there is no "
+			         "other way back in.",
 			         minutes / 60, minutes % 60);
 		}
 		/* ⚠ The remaining time in whole minutes, rounded up as the
@@ -1973,7 +1972,7 @@ static bool client_start_tls(page *p, client *c)
 	SSL_set_fd(c->ssl, c->fd);
 	/* ⛔ PARTIAL WRITES: without this mode `SSL_write_ex()` reports
 	 *    nothing until the WHOLE remaining response is out, so
-	 *    `oresponse` would stay 0 for a 907 KB page — and `oresponse` is
+	 *    `oresponse` would stay 0 for a 940 KB page — and `oresponse` is
 	 *    the progress measure where `TCP_INFO` is missing.  With it,
 	 *    every record taken counts. */
 	SSL_set_mode(c->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);

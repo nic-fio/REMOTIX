@@ -603,10 +603,19 @@ bool children_input(children *f, const char *user, uint32_t id, uint8_t action,
 enum {
 	CHILDREN_EXIT_USER = 0,   /* §7.6: a person asked for it */
 	CHILDREN_EXIT_ABANDON = 1, /* §5.3: the ceiling expired, nobody asked for it */
-	CHILDREN_EXIT_LOCAL = 2    /* 1.5.4: the user has a LOCAL session: light close only — no Logout, no unit stopped */
+	CHILDREN_EXIT_LOCAL = 2,   /* 1.5.4: the user has a LOCAL session: light close only — no Logout, no unit stopped */
+	CHILDREN_EXIT_STOP = 3     /* 1.0.0: the service is stopping (orderly): same road as ABANDON in the child, only the log line differs */
 };
 
 bool children_terminate_session(children *f, const char *user, int why);
+
+/* ⭐ 1.0.0, owner's decision 17 Nov 2026 night: remote desktops are closed when the service stops (an orphan desktop — logind
+ *    session "closing" — is not seen as a conflict by GNOME's login screen and breaks the user's local login; DECISIONS-11).
+ *    `children_closing_count()` = how many children (pid known, not yet freed) were asked to close and are still in the table;
+ *    `children_wait_closed()` runs the table's own upkeep (reaping, CHILD_EXITED from the root side) until none is left or
+ *    `timeout_ms` has passed, and returns how many are still there.  For the shutdown of the network side only. */
+int children_closing_count(const children *f);
+int children_wait_closed(children *f, int timeout_ms);
 
 bool children_recanvas(children *f, const char *user, uint32_t width,
                   uint32_t height);

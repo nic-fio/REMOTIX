@@ -161,7 +161,7 @@ typedef struct rcp_session rcp_session;
 #define RCP_RELEASE_NO_COUNT (-1)
 #define RCP_RELEASE_IMPOSSIBLE (-2)
 
-/* The hooks towards the host.  Three, and no more. */
+/* The hooks towards the host (the function pointers below; the host decides which it fills). */
 typedef struct {
 	void *ctx;
 	/* Sends bytes on the control channel (the bidirectional stream the

@@ -197,7 +197,7 @@ def finish_users():
 def sweep(boxname):
     """The final sweep of all.sh: every test user (the names the checks make) of the box has its session ended."""
     box = Box(boxname)
-    t = box.run("getent passwd | cut -d: -f1 | grep -E '^(bc|lc|mu|rs|ac|cb|bn|dkf?|md)[0-9]+$'; true")[1].split()
+    t = box.run("getent passwd | cut -d: -f1 | grep -E '^(bc|lc|mu|rs|ac|cb|bn|dkf?|md|in|ph)[0-9]+$'; true")[1].split()
     left = box.end_users(t) if t else []
     print("sweep %s: %d test user(s) ended%s" % (boxname, len(t), ("; NOT gone: " + " ".join(left)) if left else ""))
     return 1 if left else 0

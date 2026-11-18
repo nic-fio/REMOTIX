@@ -1,5 +1,5 @@
 #!/usr/bin/make -f
-# debian/rules — the REMOTIX .deb package (phases/17-the-installer.md §6.1-§6.4).
+# debian/rules — the REMOTIX .deb package (Debian 13 only; installed with apt, no installer program).
 #
 # ⚠ It is built INSIDE the Debian 13 (trixie) container with `build/build-deb.sh`
 #   (build/Containerfile): static ngtcp2 1.25.0 and nghttp3 1.18.0 live there
@@ -31,7 +31,7 @@ override_dh_auto_configure:
 
 override_dh_auto_build:
 	# ⛔ R24: the linked static libraries are the version declared in
-	#    Static-Built-Using (control), as the rpm spec does: an SBOM naming
+	#    Static-Built-Using (control): an SBOM naming
 	#    a version other than the one in the binary would lie.
 	test "$$(pkg-config --modversion libngtcp2)" = 1.25.0
 	test "$$(pkg-config --modversion libnghttp3)" = 1.18.0
@@ -54,16 +54,14 @@ override_dh_auto_install:
 	  "$$(pkg-config --modversion libngtcp2)" "$$(pkg-config --modversion libnghttp3)" \
 	  >$(B)/usr/share/remotix/linked.json
 	install -d -m 0755                         $(B)/etc/remotix/remotix.conf.d
-	# Debian/Ubuntu PAM (common-*; phases/17 §4.3) and who may not log in (root).
+	# Debian PAM (common-*) and who may not log in (root).
 	# Both are conffiles: dpkg keeps them on remove and deletes them on purge.
 	install -D -m 0644 src/remotix.pam         $(B)/etc/pam.d/remotix
 	install -D -m 0644 debian/denied-users    $(B)/etc/remotix/denied-users
 	# ufw: the «REMOTIX» application profile (7447 TCP and UDP), DEFINED and not
-	#    opened (§10.12, like the firewalld service in the .rpm): `ufw allow REMOTIX`
-	#    is done by the engine, with consent (D6), if ufw is on (phases/17 T6).
+	#    opened (§10.12): `ufw allow REMOTIX` is the administrator's, if ufw is on.
 	install -D -m 0644 debian/remotix.ufw      $(B)/etc/ufw/applications.d/remotix
-	# KWin's capture permission.  ⛔ BYTE FOR BYTE the .rpm one (Arch's differs only
-	# in Exec=), with Exec= on the binary in /usr/libexec/remotix:
+	# KWin's capture permission, with Exec= on the binary in /usr/libexec/remotix:
 	# the package ships it and the program only checks it at start-up
 	# (kwin_check_permission(), kwin.c; RX-KDE-001..003), it never writes it.
 	install -D -m 0644 debian/org.kde.remotix.desktop \
@@ -71,7 +69,7 @@ override_dh_auto_install:
 	# ⛔ DECISIONI §10.12 — the polkit rule (no power-off, DECISIONS §10.50) is
 	#    installed ACTIVE in polkit's vendor folder, like 40-remotix-remote-sessions.rules
 	#    (§10.55); the other two belts of §4.7 (power keys, no suspend) sit SWITCHED OFF
-	#    in /usr/share/remotix/belts/ (nobody reads them there); the engine does not put
+	#    in /usr/share/remotix/belts/ (nobody reads them there); nothing puts
 	#    them into force (§10.36): the administrator does, if wanted.
 	install -D -m 0644 src/remotix-no-poweroff.rules \
 	  $(B)/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules
@@ -88,7 +86,7 @@ execute_after_dh_auto_install:
 	# ⚠ Not dh_installsysusers: it is in dh's sequence only from compat 14 (`[M]` 16 Oct 2026: debhelper
 	#    13.24.2 at compat 13 installed nothing); the postinst runs `systemd-sysusers remotix.conf`.
 	install -D -m 0644 debian/remotix.sysusers $(B)/usr/lib/sysusers.d/remotix.conf
-	# ⭐ 1.5 (AppArmor, NOT TRIED): the network side's profile `remotix_network`, in COMPLAIN mode (it logs, it confines nothing
+	# ⭐ 1.5 (AppArmor, complain mode): the network side's profile `remotix_network`, in COMPLAIN mode (it logs, it confines nothing
 	#    yet), a conffile in /etc/apparmor.d.  dh_apparmor (package dh-apparmor, run here, before dh_installdeb) writes the
 	#    load / reload lines of postinst; the unload on removal is in debian/remotix.postrm.
 	install -D -m 0644 debian/remotix_network.apparmor $(B)/etc/apparmor.d/remotix_network
@@ -96,7 +94,7 @@ execute_after_dh_auto_install:
 
 override_dh_installsystemd:
 	# ⛔ DECISIONI §10.12: the package does NOT enable and does NOT start the service: the
-	#    engine switches it on once the installation is confirmed.  On upgrade it
+	#    administrator switches it on (`systemctl enable --now remotix`).  On upgrade it
 	#    restarts it (deb-systemd-invoke restart) ONLY if it was already active or enabled;
 	#    it does not stop it first: the desktops survive the stop (§5.2).
 	dh_installsystemd --no-enable --no-start --restart-after-upgrade

@@ -1322,6 +1322,8 @@ static struct child *search_login(struct children *f, const char *user)
 #pragma weak rootside_signal
 #pragma weak rootside_hook_child_exited
 #pragma weak rootside_pump_until
+#pragma weak rootside_lost
+#pragma weak rootside_descriptor
 
 /* ⛔ The one road by which the parent half signals a child.  In network mode
  *    the child is the ROOT SIDE's (another uid, not our child): SIGNAL by
@@ -4340,6 +4342,74 @@ bool children_terminate_session(children *f, const char *user, int why)
 	return true;
 }
 
+int children_closing_count(const children *f)
+{
+	int n = 0;
+
+	if (!f)
+		return 0;
+	for (int i = 0; i < f->cap; i++)
+		if (f->v[i].used && f->v[i].pid > 0 && f->v[i].closing_asked_ms)
+			n++;
+	return n;
+}
+
+/* The pump's «something changed» test: one of the children asked to close is gone from the table. */
+struct closing_wait {
+	const children *f;
+	int before;
+};
+
+static bool closing_changed(void *ctx)
+{
+	const struct closing_wait *w = (const struct closing_wait *)ctx;
+
+	return children_closing_count(w->f) != w->before;
+}
+
+/* ⭐ 1.0.0 — the shutdown of the network side waits here for the desktops it asked to close (decision of 17 Nov 2026 night).
+ *    The loop of `main()` has ended, so the table's upkeep is done by hand, in the same shape as the loop's round: in network
+ *    mode the exits arrive as CHILD_EXITED on the root channel (`rootside_pump_until()` reads it, and no verdict is delivered
+ *    from there: no login can be born while stopping); on its own the children's sockets and `waitpid()` say it.  Slices of
+ *    at most 200 ms, no blind sleep: every slice ends as soon as something changes. */
+int children_wait_closed(children *f, int timeout_ms)
+{
+	uint64_t until = log_now_ms() + (uint64_t)timeout_ms;
+
+	if (!f)
+		return 0;
+	children_reap_hold(f, false);
+	for (;;) {
+		uint64_t now = log_now_ms();
+		int left;
+
+		children_move(f, NULL, 0, now);
+		left = children_closing_count(f);
+		if (left == 0 || now >= until)
+			return left;
+		if (f->remote) {
+			struct closing_wait w = { f, left };
+			int slice = (int)(until - now);
+
+			/* ⛔ The channel to the root side is gone: the pump would return at once at every turn (a spin of 100 % CPU for the
+			 *    whole wait) and no CHILD_EXITED can arrive any more ⇒ leave now, saying how many are left. */
+			if ((rootside_lost && rootside_lost()) || (rootside_descriptor && rootside_descriptor() < 0))
+				return left;
+			rootside_pump_until(closing_changed, &w, slice < 200 ? slice : 200);
+			/* ⚠ Never a turn without waiting: if the pump came back at once with nothing changed, wait a little by hand. */
+			if (children_closing_count(f) == left && log_now_ms() == now)
+				poll(NULL, 0, 10);
+		} else {
+			struct pollfd fds[64];
+			size_t n = children_descriptors(f, fds, sizeof fds / sizeof fds[0]);
+			int slice = (int)(until - now);
+
+			if (poll(fds, n, slice < 200 ? slice : 200) > 0)
+				children_move(f, fds, n, log_now_ms());
+		}
+	}
+}
+
 bool children_audio(children *f, const char *user, uint8_t codec)
 {
 	struct child *g;
@@ -4461,7 +4531,10 @@ bool children_video(children *f, const char *user, uint8_t codec,
 	return true;
 }
 
-/* ⭐ 1.5 (DECISIONS-11 §11.4): the card grants (`render_grant.h`) of the desktops that SURVIVE the
+/* ⭐ 1.0.0 (owner's decision 17 Nov 2026 night): on an ORDERLY stop the desktops are closed before this runs
+ *   (`CHILDREN_EXIT_STOP`, `children_wait_closed()`); the ones that SURVIVE are those of a crash or of a child
+ *   that did not finish in time (the root side closes those).
+ * ⭐ 1.5 (DECISIONS-11 §11.4): the card grants (`render_grant.h`) of the desktops that SURVIVE the
  *   shutdown of the service are LEFT IN PLACE here — this function does not call `child_free()`,
  *   so it takes none back.  The desktop lives on without a child (`rediscover.h`), is found again
  *   at the next start, and `render_grant_sweep()` keeps its grant ("KEPT", no child) or takes it
@@ -9646,9 +9719,10 @@ static uint64_t close_only_since_ms;
  *     `SIGTERM_WAIT_MS`, because the signal arrives while the desktop is still
  *     dying)  ⇒ it is a LOGOUT: dconf profile neutralised, user manager cleared out,
  *     one line; then the child dies of the same signal, as before;
- *   · the session still answers (the server stops or restarts, the network side
- *     crashed: the desktop stays for the reattach)  ⇒ ⛔ NOTHING is touched, one line,
- *     and it dies as before;
+ *   · the session still answers (the network side crashed or was killed: the desktop
+ *     stays for the reattach; ⭐ 1.0.0: an ORDERLY stop of the service does not get here, the parent
+ *     asks the child to close the desktop first — owner's decision 17 Nov 2026 night, DECISIONS-11)
+ *     ⇒ ⛔ NOTHING is touched, one line, and it dies as before;
  *   · no live session was ever seen (a birth under way, a desktop never born) or the
  *     close-only child  ⇒ nothing is touched: «does not answer» there does not mean
  *     «logged out», and clearing the manager under a desktop being born would break it.
@@ -10853,6 +10927,12 @@ void child_alive(int argc, char **argv)
 					                    "programs.  ⚠ Nobody asked for it: "
 					                    "the ceiling expired, and the "
 					                    "number is in the parent's line"
+					              : ci.a == CHILDREN_EXIT_STOP
+					                  ? "⭐ 1.0.0: the SERVICE IS STOPPING — "
+					                    "closing the graphical session and with it its "
+					                    "programs (owner's decision 17 Nov 2026 night: "
+					                    "an orphan desktop breaks the user's local login).  "
+					                    "Same road as the abandonment, nobody asked for it"
 					                  : "⭐ §7.6: the user asked to LOG OUT — "
 					                    "closing the graphical session and with it its "
 					                    "programs.  At the next attach a NEW one "
