@@ -54,6 +54,14 @@ remotix_close_sessions() {
 		n=$((n + 1))
 	done
 }
+# ⭐ 1.0.0: first of all, the PAM line of the local-login hook goes out of /etc/pam.d/common-session (only on `remove`, not on
+#    upgrade; the profile file is still in place here).  A failure is said, never makes dpkg fail.
+if [ "$1" = remove ]; then
+	if command -v pam-auth-update >/dev/null 2>&1; then
+		pam-auth-update --package --remove remotix || echo "remotix: ⚠ pam-auth-update --remove remotix failed: check /etc/pam.d/common-session" >&2
+	fi
+fi
+
 rx_users=
 if [ "$1" = remove ] && [ -d /run/systemd/system ] && command -v loginctl >/dev/null 2>&1; then
 	remotix_close_sessions

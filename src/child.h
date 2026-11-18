@@ -604,7 +604,8 @@ enum {
 	CHILDREN_EXIT_USER = 0,   /* §7.6: a person asked for it */
 	CHILDREN_EXIT_ABANDON = 1, /* §5.3: the ceiling expired, nobody asked for it */
 	CHILDREN_EXIT_LOCAL = 2,   /* 1.5.4: the user has a LOCAL session: light close only — no Logout, no unit stopped */
-	CHILDREN_EXIT_STOP = 3     /* 1.0.0: the service is stopping (orderly): same road as ABANDON in the child, only the log line differs */
+	CHILDREN_EXIT_STOP = 3,    /* 1.0.0: the service is stopping (orderly): same road as ABANDON in the child, only the log line differs */
+	CHILDREN_EXIT_PRELOCAL = 4 /* 1.0.0: a LOCAL login of this user is being held in PAM until this desktop is gone: FULL close, same road as ABANDON; never downgraded to the light close */
 };
 
 bool children_terminate_session(children *f, const char *user, int why);

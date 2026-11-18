@@ -318,9 +318,13 @@ LIBS := -lngtcp2_crypto_ossl -lngtcp2 -lnghttp3 -lssl -lcrypto -lpam \
 #   ⛔ but depending on that detail means breaking on a different libc
 #   with an error that does not name the phase that introduced it.
 
+# ⭐ 1.0.0 — the PAM hook that holds a LOCAL graphical login until the user's remote desktop is closed (`pam_exec`, installed
+#    in /usr/libexec/remotix/): plain libc only, same flags as the main program, no library.
+LOCAL_LOGIN := remotix-local-login
+
 .PHONY: all clean deps fingerprints FORCE
 
-all: fingerprints $(NOME)
+all: fingerprints $(NOME) $(LOCAL_LOGIN)
 
 # ⛔ The comparison of the three copies: see the box at the top.  It always prints the
 #    fingerprints of what it compared, so that "compared" is a readable fact
@@ -361,6 +365,9 @@ fingerprints:
 	fi; \
 	exit $$stato
 
+$(LOCAL_LOGIN): local_login.c
+	$(CC) $(CFLAGS) -o $@ local_login.c $(LDFLAGS)
+
 $(NOME): $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o)
 	$(CC) $(CFLAGS) -o $@ $(OGGETTI) $(PROTOCOLLI:%=%-protocol.o) $(LDFLAGS) $(LIBS)
 
@@ -379,7 +386,7 @@ kwin.o clipboard_kde.o wlroots.o wlr_input.o render_node.o: $(PROTOCOLLI:%=%-cli
 	$(SCANNER) private-code $< $@
 
 clean:
-	rm -f $(OGGETTI) $(OGGETTI:.o=.d) $(NOME) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o) .flags
+	rm -f $(OGGETTI) $(OGGETTI:.o=.d) $(NOME) $(LOCAL_LOGIN) $(GENERATI) $(PROTOCOLLI:%=%-protocol.o) .flags
 
 # ⛔ The dependency check SAYS what is missing, instead of making the
 #    compiler fail on an `#include` nobody connects to the missing library.

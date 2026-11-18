@@ -117,3 +117,20 @@ Passi 0–2: circa 1–2 settimane.
   1. leggere che cosa succede su KDE, XFCE, LXQt, le cui schermate di accesso non hanno il «fermo» di GNOME nemmeno nel caso normale;
   2. caso limite noto: servizio ucciso di colpo e non ancora ripartito (circa 2 s), in quell'intervallo nessuno può chiudere il desktop rimasto;
   3. (chiuso) modifiche salvate in git e su GitHub il 18 nov, su richiesta del proprietario.
+
+## L'accesso locale chiude prima il desktop remoto, su tutti i desktop — FATTO e provato dal proprietario sul tablet (18 nov 2026)
+
+- **Difetto (letto nei sorgenti):** su KDE, XFCE e LXQt la schermata di accesso non trattiene chi ha un desktop remoto aperto; il desktop locale partiva mentre quello remoto era ancora vivo (KDE e XFCE: ritorno alla schermata di accesso; LXQt: desktop senza sfondo né notifiche).
+- **Regola unica (DECISIONS-11 §11.57):** all'accesso locale grafico il sistema chiama `remotix-local-login` (PAM, `pam_exec`, riga messa da `pam-auth-update`); REMOTIX chiude del tutto il desktop remoto di quell'utente e solo dopo l'accesso prosegue. Mai un accesso fallito: riga `optional`, uscita sempre 0, tetto 25 s, uscita immediata se il servizio è fermo.
+- **File:** `src/local_login.c` (nuovo), `src/rootside.c`, `rootside.h`, `rootside_proto.h`, `main.c`, `child.c`, `child.h`, `session.c`, `session.h`, `Makefile`, `debian/` (rules, control, postinst, prerm, `remotix.pam-config` nuovo), `prove/check-prelocal.py` (nuovo), `prove/all.sh`, `prove/lib.py`, `prove/check-package.py`.
+- **Revisione (Fable):** due giri, APPROVATO. Note non bloccanti lasciate: abbandono dimenticato se una chiusura già chiesta fallisce (main.c ~1945); pid del genitore preso all'ordine e non all'avvio (session.c ~4461); secondo accesso locale dello stesso utente entro pochi secondi; pulizia saltata se il child ucciso non è ancora raccolto (codice precedente).
+- **Pacchetto:** server `/media/REMOTIX-DEBIAN/pacchetti/prelocal2/`, tablet `~/remotix-prelocal/` (non installato).
+- **Prove sul server (log: `/media/REMOTIX-DEBIAN/prove-prelocal2/log/giro-<de>/`):**
+  - `check-prelocal` 6/6 sui quattro desktop: desktop remoto chiuso dal suo child in 0,6-1,3 s, pagina avvisata con 0x04, nuovo desktop apribile dopo, nessun effetto da accessi che non c'entrano, nessun rallentamento a servizio fermo, riga PAM dopo `pam_systemd`.
+  - Giro completo: GNOME 117, KDE 117, XFCE 117, LXQt 119 righe PASS. Non verdi: quelle di ieri (Ctrl+Alt+Canc, Ctrl+Alt+Fine, coordinate XFCE, pkexec GNOME) più due:
+    - `resilience/service-restart` sui quattro: la prova si aspetta ancora di ritrovare lo stesso desktop dopo il riavvio del servizio; dal 17 nov notte (§11.56) i desktop si chiudono al riavvio. È la prova da allineare, non il prodotto.
+    - `phone/tap-click-portrait` su GNOME: il primo tocco già noto come instabile (vedi sopra, priorità bassa).
+- **Limiti delle prove:** nei contenitori non c'è una schermata di accesso vera: l'accesso locale è simulato chiamando il programma a mano, senza sessione locale registrata. Il salto della guardia nel `child` e l'intreccio con i controlli periodici si esercitano solo con un accesso locale vero (tablet, GNOME). Su KDE/XFCE/LXQt con SDDM/LightDM veri: non provato. Nei contenitori RealtimeKit non parte e trattiene per 25 s l'uscita di un child giovane (la prova aspetta 31 s; sul tablet non succede).
+- **Prova del proprietario sul tablet (GNOME, gdm vero, 18 nov 08:45), confermata dal registro:** accesso locale di `user` con desktop remoto aperto: accesso trattenuto in PAM, desktop remoto chiuso dal suo child in 803 ms (chiusura completa, guardia saltata come previsto), pagina avvisata con 0x04, sessione locale entrata e rimasta. Un minuto prima, a sessione locale aperta, il remoto era stato rifiutato (0x05).
+- **Prova del riavvio allineata (§11.56):** `resilience/service-restart` ora si aspetta il desktop chiuso col servizio e una sessione nuova al rientro; `check-resilience` rigirato sui quattro desktop: tutto PASS (log server: `prove-prelocal2/log/resil2/`).
+- **Resta:** KDE/XFCE/LXQt con schermata di accesso vera mai provati (serve una macchina vera).

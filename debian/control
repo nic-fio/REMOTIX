@@ -50,6 +50,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
          libpam-systemd,
+         libpam-runtime (>= 1.0.1-6),
          libpam-modules,
          passwd,
          systemd,

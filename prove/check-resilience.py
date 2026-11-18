@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """check-resilience - the session survives what goes wrong around it, on a running REMOTIX box, with real browsers (Chrome).
-SPECS 5.1 (one session per user), 5.2 (the session survives the client and the service's restart), 5.3 (the three clocks).
+SPECS 5.1 (one session per user), 5.2 (the session survives the client; the service's restart closes it, §11.56), 5.3 (the three clocks).
 
     python3 check-resilience.py [--box xfce] [--only a,b] [--reps 5]
 
@@ -8,7 +8,9 @@ Runs ON THE DEV SERVER (lib.py; the nft rule of network-drop needs `sudo` on the
 rs10..rs14, made here; a login with a user that may not exist is never tried (a wrong login counts for the ban).
 One line per check:  PASS|FAIL|BLOCKED <name> - evidence ;  exit 0 only if all PASS.
   service-restart          rs1 attached, a test window holds text; `systemctl restart remotix`; the page is told / goes back to the
-                           form; log in again: "resumed", same window pid, same text, mouse and keys work, picture right
+                           form; the desktop was CLOSED with the service (DECISIONS-11 §11.56): no logind session of the service,
+                           the old window pid gone, the root side says «no orphan desktops: … the service stops clean»; log in
+                           again: a NEW session ("new") with a working desktop (shell up, picture settled)
   network-drop             rs2 attached; all UDP of the box's port is dropped (own nft table) for longer than the silence clock
                            (spec 30 s; code 10 s "dead-line"); the rule is removed (always); at once rs2 logs in again: not refused
                            (the slot is free), "resumed", same window pid, same text
@@ -170,7 +172,12 @@ class DeadLine:
 
 
 # ------------------------------------------------------------------------------------------------ the checks
+REMOTE_SESS = ("for i in $(loginctl list-sessions --no-legend | awk -v u=%s '$3==u{print $1}'); do "
+               "[ \"$(loginctl show-session $i -p Service --value)\" = remotix ] && echo $i; done; true")
+
+
 def check_restart(a, box, tag):
+    """§11.56: the desktops are closed with the service. After the restart: told, nothing orphaned, a NEW session on login."""
     rig = lib.Rig(a.box, "chrome", "rs1", PW, tag, cap=a.cap)
     try:
         ctx, text0, pid0 = bring_up(a, box, rig, "rs1", "resil")
@@ -180,16 +187,54 @@ def check_restart(a, box, tag):
             raise Fail("the service is not active after the restart: %s" % t[-150:])
         told = page_told(rig, 45)
         up = wait_port(a.box)
-        found = jlog(box, t0, "found again at startup|clocks in force", n=2)
         if not told:
             st = rig.state()
             return FAIL, "the client was NOT told after the restart in 45 s (session=%s, outcome \"%s\"); service port back: %s; journal: %s" % (
                 st["session"], st["outcome"].strip(), up, jlog(box, t0, "rs1|client|dead-line", 6))
         if not up:
             raise Fail("the page port does not answer 40 s after the restart")
-        bad, ok, tries, dt = back_in(ctx, text0, pid0, "two", retry=60, shot="resil-%s-restart.png" % a.box)
-        ok.append("restart: client told after %.0f s with \"%s\" (form %s); login again took %d try(ies), %.0f s; at start-up: %s" % (
-            told[0], told[2][:80], "back" if told[1] else "NOT shown", tries, dt, found))
+        bad, ok = [], []
+        ok.append("restart: client told after %.0f s with \"%s\" (form %s)" % (told[0], told[2][:80], "back" if told[1] else "NOT shown"))
+        if not told[1]:
+            bad.append("the sign-in form did not come back after the farewell")
+        # nothing orphaned: no REMOTIX session of rs1 and the old window process gone (a few seconds are allowed)
+        t1 = time.time()
+        while True:
+            sess = box.run(REMOTE_SESS % "rs1")[1].split()
+            old = alive(box, pid0)
+            if (not sess and not old) or time.time() - t1 > 10:
+                break
+            time.sleep(1)
+        if sess:
+            bad.append("logind session(s) %s of rs1 with Service=remotix still there %.0f s after the restart (orphaned desktop)" % (sess, time.time() - t1))
+        if old:
+            bad.append("the old window process %s is still alive after the restart (the desktop was not closed with the service)" % pid0)
+        if not sess and not old:
+            ok.append("%.0f s after the restart rs1 has no session of the service and the old window pid %s is gone" % (time.time() - t1, pid0))
+        # the root side's verdict
+        c, jl = box.run("journalctl -u remotix --no-pager -o cat --since '@%d' | grep -F 'no orphan desktops' | tail -3 | cut -c1-240; true" % int(t0))
+        jl = jl.strip()
+        if "still have processes" in jl:
+            bad.append("the root side found orphan desktops: %s" % jl.replace("\n", " | "))
+        elif "the service stops clean" in jl:
+            ok.append("journal: " + jl.replace("\n", " | "))
+        else:
+            bad.append("no root-side line «no orphan desktops: … the service stops clean» in the journal since the restart (got: %s)" % (jl or "nothing"))
+        # a NEW session with a working desktop
+        rig.new_browser()
+        s, tries, dt = LC.enter(ctx, retry=60)
+        if not (s["session"] and s["cls"] == "good"):
+            raise Fail("login again of rs1 not admitted after %d try(ies), %.0f s: \"%s\" (%s); remotix journal: %s" % (
+                tries, dt, s["outcome"].strip(), s["cls"], ctx.journal("rs1")))
+        out = rig.state()["outcome"].strip()
+        if "new" not in out or "resumed" in out:
+            bad.append("login again is not a NEW session: \"%s\"" % out)
+        try:
+            d = rig.settle(still=1)
+            ok.append("login again: \"%s\", %d try(ies), %.0f s; shell up after %.0f s, picture settled (%s)" % (out, tries, dt, d["shell_s"], d["desc"]))
+            lib.save_png("resil-%s-restart.png" % a.box, d["png"])
+        except Fail as e:
+            bad.append("the new desktop did not come up: %s" % e)
         return (FAIL if bad else PASS), "; ".join(bad + ["--"] + ok if bad else ok) + (" | remotix journal: " + jlog(box, t0, "rs1", 8) if bad else "")
     finally:
         rig.stop()

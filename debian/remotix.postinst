@@ -19,6 +19,18 @@ if [ "$1" = configure ]; then
 	systemd-tmpfiles --create remotix.conf || echo "remotix: ⚠ systemd-tmpfiles --create remotix.conf failed" >&2
 fi
 
+# ⭐ 1.0.0: the PAM profile (/usr/share/pam-configs/remotix) goes into /etc/pam.d/common-session: a LOCAL graphical login
+#    closes the user's remote desktop first.  A failure is said, never makes apt fail.
+if [ "$1" = configure ]; then
+	if command -v pam-auth-update >/dev/null 2>&1; then
+		pam-auth-update --package || echo "remotix: ⚠ pam-auth-update --package failed: a local login will not close the user's remote desktop first" >&2
+		grep -q remotix-local-login /etc/pam.d/common-session 2>/dev/null || \
+			echo "remotix: ⚠ common-session was edited by hand: pam-auth-update did not add REMOTIX's line; a local login will not be held, the periodic check remains" >&2
+	else
+		echo "remotix: ⚠ pam-auth-update not found: a local login will not close the user's remote desktop first" >&2
+	fi
+fi
+
 # ⭐ 17 Nov 2026: a card that is there (preinst checked the render node) but cannot encode — said HERE, once, in plain words,
 #    with the product's own test (exit 0 = it encodes, 3 = no card can encode, 1 = it opens and produces nothing).  Only at the
 #    first configuration; never makes apt fail (the VA driver may arrive with the Recommends configured after us).

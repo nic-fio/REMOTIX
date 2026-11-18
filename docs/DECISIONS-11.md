@@ -2080,3 +2080,37 @@ session lived 0.4 s.
 - Discarded: reacting to logind's `SessionNew` (ending a desktop takes ~1.5 s, the local login dies in 0.35 s); giving every
   desktop found again a child at startup (nothing covers the time the service is down); keeping the session «active» after
   the child's exit (the leader would have to be another process: a rewrite).
+
+### 11.57 ✅ A local graphical login closes the user's remote desktop first, on every desktop (owner's order, 18 Nov 2026)
+
+**The defect.** The login screens of KDE (SDDM), XFCE (LightDM) and LXQt do not hold a local login of a user who already has a
+graphical session (only GNOME's does, §11.56). The local desktop starts while the remote one is still alive and collides with it
+on the shared user manager and session bus; REMOTIX notices 2-6 s later. KDE and XFCE fall back to the login screen, LXQt enters
+without wallpaper or notifications.
+
+**The rule.** One rule for every desktop: when a local graphical login of a user starts, before the local desktop starts, the
+remote desktop of that user is closed completely; the local login goes on when it is closed.
+
+**The mechanism.** `pam_exec` runs `/usr/libexec/remotix/remotix-local-login` (a line put in `common-session` by `pam-auth-update`,
+profile `/usr/share/pam-configs/remotix`, `optional`, Priority -1 so after `pam_systemd`) at every session opening. For a graphical
+session on a seat, of class `user`, it leaves `/run/remotix/prelocal/<uid>` and waits for the root side to remove it. The root side
+(`rootside.c`) tells the network side (`main.c`, `local_coming_event()`): the clients get 0x04, the child gets the FULL close
+(`CHILDREN_EXIT_PRELOCAL`), new births of that user are refused for 10 s; if the desktop is still there after 8 s the root side ends
+it itself. The request is removed when nothing is left. The hook has a ceiling of 25 s and ALWAYS exits 0: a failure of ours can
+never stop a login.
+
+**Why FULL and not light.** The light close exists because the session manager is shared with a LOCAL desktop that is
+already running. Here the local desktop has NOT started: its PAM stack is blocked in our hook. The local logind session may already
+be registered (`pam_systemd` runs first), so the child's guard `local_guard()` would see it and downgrade; for this reason the guard
+is not asked, and the Logout, the unit stops and the clean-up cannot hit a local desktop.
+
+**Not covered.** Service down: the hook finds nobody holding the lock and returns at once (nothing can close the desktop, and
+at a stop the desktops are closed anyway, §11.56). Proven in the boxes by calling the hook by hand (`prove/check-prelocal.py`);
+the real login screens: on a machine, GNOME on the tablet.
+
+**What the automated check cannot exercise.** The boxes have no seated session: the child's guard bypass (`local_guard()` skipped for
+`CHILDREN_EXIT_PRELOCAL`) and the interplay with the periodic sweeps (`localx_sweep()`, the 0x04 checks) are exercised only by a
+real local login (GNOME on the tablet).
+**Box artifact.** In a container a child cannot exit before ~25 s after its sound started: its PipeWire client waits for D-Bus
+activation of RealtimeKit1, which cannot start there (`cap_set_proc()` fails). `check-prelocal.py` therefore waits until the
+desktop is 30 s old; on a real machine the same close takes under a second.

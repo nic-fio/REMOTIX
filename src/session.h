@@ -667,5 +667,7 @@ SessionState session_ensure(uint32_t width, uint32_t height, bool *was_started);
  *    run (`PHASES.md` §00-ambiente, defect 4 of phase 0).
  */
 bool session_terminate(void);
+/* ⭐ 1.0.0: with `on`, the forced step of the close is refused if the parent process has changed since this call (PRELOCAL close) */
+void session_force_unless_orphaned(bool on);
 
 #endif

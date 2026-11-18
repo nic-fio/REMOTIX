@@ -45,12 +45,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
+#include <sys/inotify.h>
 #include <sys/prctl.h>
 #include <sys/random.h>
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 extern char **environ;
@@ -1290,6 +1293,7 @@ static struct own_child *own_by_uid(uid_t uid)
 }
 
 static bool lx_uid_ending(uid_t uid); /* defined with the LX table, further down */
+static bool pl_uid_pending(uid_t uid, uint64_t now); /* defined with the PL table, further down */
 
 /* The birth for SPAWN (`rhost` the grant's) and CLOSE_ORPHAN (`rhost` NULL). */
 static void birth(uint64_t request, const char *user, const char *rhost, uint32_t w,
@@ -1321,6 +1325,14 @@ static void birth(uint64_t request, const char *user, const char *rhost, uint32_
 	if (lx_uid_ending(uid)) {
 		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: a REMOTIX session of uid %ld is being ended by the root side "
 		              "(asked again in a moment)", orphan ? "CLOSE_ORPHAN" : "SPAWN", user, (long)uid);
+		send_refused(request, RXR_REF_CLOSING);
+		return;
+	}
+	/* ⭐ 1.0.0 (§11.57): a LOCAL login of that uid is held in PAM until its remote desktop is gone, or has just been let
+	 *    through: no child for it.  A few seconds later the local session is in logind and the usual refusal takes over. */
+	if (pl_uid_pending(uid, log_now_ms())) {
+		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: a local login of uid %ld is being held (or was let through a moment "
+		              "ago): no remote desktop for it now", orphan ? "CLOSE_ORPHAN" : "SPAWN", user, (long)uid);
 		send_refused(request, RXR_REF_CLOSING);
 		return;
 	}
@@ -2384,6 +2396,315 @@ static void lx_stop_say(void)
 		              LX.stop_missed);
 }
 
+/* ⛔⭐ 1.0.0 — «A LOCAL LOGIN CLOSES THE REMOTE DESKTOP FIRST» (the owner's order, 18 Nov 2026; DECISIONS-11 §11.57).
+ *
+ * The sweep above finds a local session that EXISTS, seconds later.  GNOME's login screen makes that enough (it holds the
+ * login while the user has another graphical session); SDDM and LightDM hold nothing, and the local desktop starts on the
+ * user manager and the bus the remote one is still using: Plasma adopts the remote units and dies with them, the local
+ * `xfce4-session` finds its bus name taken and leaves — back to the login screen (read in the sources, 18 Nov 2026).
+ * ⇒ The hold is ours, the same for every desktop: `remotix-local-login` (local_login.c), run by `pam_exec` inside the local
+ * login's own PAM stack, leaves an empty file PL_DIR/<uid> and waits for THIS side to remove it.
+ *
+ *   1. the request is seen (inotify wakes the loop; the directory is also read every second);
+ *   2. a child of ours serves that uid ⇒ LOCAL_COMING to the network side: the clients are sent away (0x04) and the child is
+ *      asked for the FULL close — the logout's road, units stopped and everything put back, because the local desktop has
+ *      NOT started (it is held) and must find a user manager with nothing of ours in it;
+ *   3. no child (a desktop nobody holds), or PL_GRACE_MS passed, or the order could not leave: the scope is ended here, by
+ *      the machinery of the first rule (`lx_end_begin()`: SIGTERM/SIGKILL to that scope only, the KDE stop, the clean-up);
+ *   4. no child of that uid, no seatless REMOTIX session of that uid with processes, no ending running ⇒ the file is
+ *      removed and the login goes on.  PL_CEIL_MS at most: then the file is removed anyway, and said.
+ * Until then, and for PL_HOLD_MS after (the local session is about to appear in logind, where the usual refusal takes
+ * over), `birth()` gives that uid no child.
+ *
+ * ⛔ The request is only a uid, in a directory only root can write (0700): nothing in it is believed beyond «look at this
+ *    uid now» — what is ended is what logind's own files say is a seatless SERVICE=remotix session of that uid, read again
+ *    by `lx_end_begin()` just before the signal.
+ * ⛔ Nobody waits for nobody: this side holds LOCK_EX on PL_DIR/.lock for its whole life (the descriptor is CLOEXEC and
+ *    every fork here either execs or closes everything); the hook returns at once when the lock is free.  While the
+ *    service stops no request is served: every desktop is being closed anyway, and the hook returns when this side exits. */
+#define PL_DIR      "/run/remotix/prelocal"
+#define PL_LOCK     ".lock"
+#define PL_MAX      8      /* logins held at the same time (a seat has one login screen) */
+#define PL_GRACE_MS 13000  /* the child's full close: 0.7 s measured on GNOME (18 Nov 2026, the tablet), but its orderly logout may wait
+                            * WAIT_EXIT_MS (10 s, session.c) before forcing, and cutting it short leaves the user manager half closed:
+                            * this is above that budget plus the scope's clear-out; then this side ends the scope */
+#define PL_CEIL_MS  20000  /* a login is never held longer (the hook's own ceiling is 25 s) */
+#define PL_HOLD_MS  10000  /* no birth for that uid after the answer: the local session is about to be registered */
+#define PL_LOOK_MS  200    /* between two looks at the requests being served */
+
+static struct {
+	int dirfd, lockfd, ino;
+	uint64_t looked_ms;
+	struct {
+		bool used, told, forced, had;
+		uid_t uid;
+		char user[RXR_USER_MAX];
+		uint64_t since;
+	} req[PL_MAX];
+	struct { uid_t uid; uint64_t until; } hold[PL_MAX];
+} PL = { .dirfd = -1, .lockfd = -1, .ino = -1 };
+
+/* A request's name: the uid in decimal, no sign, no leading zero, never 0. */
+static bool pl_name_uid(const char *name, uid_t *uid)
+{
+	size_t n = strlen(name);
+	unsigned long long v = 0;
+
+	if (!n || n > 10 || name[0] == '0')
+		return false;
+	for (size_t i = 0; i < n; i++) {
+		if (name[i] < '0' || name[i] > '9')
+			return false;
+		v = v * 10 + (unsigned)(name[i] - '0');
+	}
+	if (v == 0 || v >= 0xFFFFFFFFull)
+		return false;
+	*uid = (uid_t)v;
+	return true;
+}
+
+static void pl_init(void)
+{
+	struct stat st;
+	struct dirent *e;
+	DIR *d = NULL;
+	bool locked = false;
+	int fd, fd2;
+
+	if (mkdir(PL_DIR, 0700) != 0 && errno != EEXIST)
+		goto off;
+	fd = open(PL_DIR, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd < 0)
+		goto off;
+	if (fstat(fd, &st) != 0 || st.st_uid != 0 || fchmod(fd, 0700) != 0) {
+		close(fd);
+		errno = EPERM;
+		goto off;
+	}
+	PL.dirfd = fd;
+	/* the lock FIRST: a second root side started by hand must not wipe the requests of the one that runs.  A hook's own
+	 * probe (LOCK_SH for a few microseconds) can make one attempt fail: tried a few times */
+	PL.lockfd = openat(PL.dirfd, PL_LOCK, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
+	for (int t = 0; PL.lockfd >= 0 && t < 20; t++) {
+		struct timespec nap = { 0, 5 * 1000000L };
+
+		if (flock(PL.lockfd, LOCK_EX | LOCK_NB) == 0) {
+			locked = true;
+			break;
+		}
+		if (errno != EWOULDBLOCK)
+			break;
+		(void)nanosleep(&nap, NULL);
+	}
+	if (!locked) {
+		int e2 = PL.lockfd >= 0 ? EBUSY : errno;
+
+		if (PL.lockfd >= 0)
+			close(PL.lockfd);
+		close(PL.dirfd);
+		PL.lockfd = PL.dirfd = -1;
+		errno = e2;
+		goto off;
+	}
+	/* the requests of a previous life: nobody waits on them any more (their hooks saw the lock free) */
+	fd2 = openat(fd, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd2 >= 0 && !(d = fdopendir(fd2)))
+		close(fd2);
+	while (d && (e = readdir(d)) != NULL) {
+		uid_t uid;
+
+		if (pl_name_uid(e->d_name, &uid))
+			(void)unlinkat(PL.dirfd, e->d_name, 0);
+	}
+	if (d)
+		closedir(d);
+	PL.ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+	if (PL.ino >= 0 && inotify_add_watch(PL.ino, PL_DIR, IN_CREATE | IN_MOVED_TO) < 0) {
+		close(PL.ino);
+		PL.ino = -1;
+	}
+	registro_dice(LOG_ROOT, "⭐ a local login closes the remote desktop first (§11.57): requests in %s, %s", PL_DIR,
+	              PL.ino >= 0 ? "seen as they arrive" : "⚠ inotify is not there: seen within a second");
+	return;
+off:
+	registro_dice(LOG_ROOT, "⚠ a local login closes the remote desktop first (§11.57): %s cannot be prepared (%s) — a local "
+	              "login is NOT held; the sweeps of «local excludes remote» stay", PL_DIR, strerror(errno));
+}
+
+static bool pl_active(void)
+{
+	for (int i = 0; i < PL_MAX; i++)
+		if (PL.req[i].used)
+			return true;
+	return false;
+}
+
+/* `birth()`: is a local login of this uid being held, or just let through? */
+static bool pl_uid_pending(uid_t uid, uint64_t now)
+{
+	for (int i = 0; i < PL_MAX; i++)
+		if ((PL.req[i].used && PL.req[i].uid == uid) || (PL.hold[i].until > now && PL.hold[i].uid == uid))
+			return true;
+	return false;
+}
+
+/* The seatless REMOTIX sessions of `uid` that still have processes: how many.  `end`: each one not already being ended is
+ * ended (`lx_end_begin()` reads it again and signals its scope only).  `user`, if given, gets logind's name for the uid. */
+static int pl_sessions(uid_t uid, uint64_t now, bool end, bool kid, char *user, size_t user_len)
+{
+	DIR *d = opendir("/run/systemd/sessions");
+	struct dirent *e;
+	int n = 0;
+
+	if (!d)
+		return 0;
+	while ((e = readdir(d)) != NULL) {
+		struct lx_sess s;
+
+		if (!lx_read(e->d_name, &s) || !s.ours || s.seat || s.uid != uid)
+			continue;
+		if (lx_signal(&s, 0) <= 0)
+			continue;
+		n++;
+		if (user && user_len && !user[0])
+			snprintf(user, user_len, "%s", s.user);
+		if (end && !lx_ending(s.id))
+			lx_end_begin(&s, "a local login of this user is held in PAM until it is gone", kid, now);
+	}
+	closedir(d);
+	return n;
+}
+
+static void pl_answer(int i, uint64_t now, bool closed)
+{
+	char name[16];
+	int h = 0;
+
+	snprintf(name, sizeof name, "%lu", (unsigned long)PL.req[i].uid);
+	(void)unlinkat(PL.dirfd, name, 0);
+	for (int k = 1; k < PL_MAX; k++)
+		if (PL.hold[k].until < PL.hold[h].until)
+			h = k;                               /* the oldest (or a free one: until 0) */
+	PL.hold[h].uid = PL.req[i].uid;
+	PL.hold[h].until = now + PL_HOLD_MS;
+	if (!closed)
+		registro_dice(LOG_ROOT, "⚠ local login of «%s» (uid %ld): its REMOTIX desktop is STILL there after %d s — the login "
+		              "is let through anyway (never held longer); the sweeps of «local excludes remote» go on",
+		              PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid, PL_CEIL_MS / 1000);
+	else if (PL.req[i].had && PL.req[i].forced)
+		registro_dice(LOG_ROOT, "⚠ local login of «%s» (uid %ld): its REMOTIX session is gone (%llu ms, scope ended by the root "
+		              "side: the user manager got the light clean-up only, not the child's full close) — the login goes on",
+		              PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid,
+		              (unsigned long long)(now - PL.req[i].since));
+	else if (PL.req[i].had)
+		registro_dice(LOG_ROOT, "⭐ local login of «%s» (uid %ld): nothing of its REMOTIX desktop is left (%llu ms, closed by "
+		              "its child) — the login goes on", PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid,
+		              (unsigned long long)(now - PL.req[i].since));
+	else
+		log_detail(LOG_ROOT, "local login of uid %ld: no REMOTIX desktop of that user — the login goes on",
+		           (long)PL.req[i].uid);
+	memset(&PL.req[i], 0, sizeof PL.req[i]);
+}
+
+static void pl_step(uint64_t now)
+{
+	char buf[1024];
+	bool fired = false;
+	struct dirent *e;
+	DIR *d = NULL;
+	int fd;
+
+	if (PL.dirfd < 0 || R.stopping)
+		return;
+	while (PL.ino >= 0 && read(PL.ino, buf, sizeof buf) > 0)
+		fired = true;
+	if (!fired && PL.looked_ms && now < PL.looked_ms + (pl_active() ? PL_LOOK_MS : 1000))
+		return;
+	PL.looked_ms = now ? now : 1;
+
+	/* 1. the new requests */
+	fd = openat(PL.dirfd, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd >= 0 && !(d = fdopendir(fd)))
+		close(fd);
+	while (d && (e = readdir(d)) != NULL) {
+		struct stat st;
+		uid_t uid;
+		int slot = -1;
+		bool known = false;
+
+		if (!pl_name_uid(e->d_name, &uid))
+			continue;
+		if (fstatat(PL.dirfd, e->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0 || !S_ISREG(st.st_mode) || st.st_uid != 0)
+			continue;
+		for (int i = 0; i < PL_MAX; i++) {
+			known |= PL.req[i].used && PL.req[i].uid == uid;
+			if (slot < 0 && !PL.req[i].used)
+				slot = i;
+		}
+		if (known || slot < 0)
+			continue;                            /* no slot: it is taken at a later look, the hook waits */
+		memset(&PL.req[slot], 0, sizeof PL.req[slot]);
+		PL.req[slot].used = true;
+		PL.req[slot].uid = uid;
+		PL.req[slot].since = now;
+	}
+	if (d)
+		closedir(d);
+
+	/* 2. each request, one step */
+	for (int i = 0; i < PL_MAX; i++) {
+		struct own_child *k;
+		bool ending, at_once = false;
+		int alive;
+
+		if (!PL.req[i].used)
+			continue;
+		k = own_by_uid(PL.req[i].uid);
+		alive = pl_sessions(PL.req[i].uid, now, false, false, PL.req[i].user, sizeof PL.req[i].user);
+		ending = lx_uid_ending(PL.req[i].uid);
+		if (k && !PL.req[i].user[0])
+			snprintf(PL.req[i].user, sizeof PL.req[i].user, "%s", k->user);
+		if (!k && alive <= 0 && !ending) {
+			pl_answer(i, now, true);
+			continue;
+		}
+		PL.req[i].had = true;
+		if (now >= PL.req[i].since + PL_CEIL_MS) {
+			pl_answer(i, now, false);
+			continue;
+		}
+		if (!PL.req[i].told) {
+			bool left = false;
+
+			PL.req[i].told = true;
+			if (k) {
+				struct rxr_local_coming m;
+
+				memset(&m, 0, sizeof m);
+				head_fill(&m.h, RXR_LOCAL_COMING, 0);
+				m.uid = (uint32_t)PL.req[i].uid;
+				snprintf(m.user, sizeof m.user, "%s", k->user);
+				left = R.net_pid > 0 && chan_send(&m, sizeof m, -1);
+			}
+			registro_dice(LOG_ROOT, "⛔ local login of «%s» (uid %ld) HELD in PAM: its REMOTIX desktop is closed first — %s",
+			              PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid,
+			              left ? "the network side is asked for the child's FULL close"
+			              : k  ? "the order could NOT leave towards the network side: its scope is ended here"
+			                   : "no child of ours holds it: its scope is ended here");
+			at_once = k && !left;                /* nobody to wait for: no grace */
+		}
+		if (k && !PL.req[i].forced && (at_once || now >= PL.req[i].since + PL_GRACE_MS)) {
+			/* the child did not close it within the grace (or was never asked): its scope, the child in it, is ended */
+			PL.req[i].forced = true;
+			(void)pl_sessions(PL.req[i].uid, now, true, true, NULL, 0);
+		} else if (!k && alive > 0) {
+			/* no child (any more): what is left in a REMOTIX scope of that uid must not stay, and is not waited for */
+			PL.req[i].forced = true;
+			(void)pl_sessions(PL.req[i].uid, now, true, false, NULL, 0);
+		}
+	}
+}
+
 static void tables_minute(uint64_t now)
 {
 	int kids = 0, grants = 0, wiped = 0, pending = 0;
@@ -3107,6 +3428,7 @@ int rootside_main(const struct rootside_options *o)
 		return 1;
 	}
 	rootside_bounds_init(&R.bounds, log_now_ms());
+	pl_init(); /* 1.0.0 (§11.57): the local login's hold */
 	R.bounds.abandon_ms = (o->abandon_s > ROOTSIDE_ABANDON_S_MAX ? ROOTSIDE_ABANDON_S_MAX
 	                                                          : o->abandon_s) * 1000;
 	registro_dice(LOG_ROOT,
@@ -3118,7 +3440,7 @@ int rootside_main(const struct rootside_options *o)
 	net_start(log_now_ms());
 
 	for (;;) {
-		struct pollfd p[3];
+		struct pollfd p[4];
 		int np = 0, i_chan = -1, i_pam = -1;
 		uint64_t now;
 		unsigned char sigs[64];
@@ -3136,9 +3458,13 @@ int rootside_main(const struct rootside_options *o)
 			p[np].fd = helper_descriptor(R.pam);
 			p[np++].events = POLLIN;
 		}
+		if (PL.ino >= 0) { /* a local login's request: only the wake-up, pl_step() reads it */
+			p[np].fd = PL.ino;
+			p[np++].events = POLLIN;
+		}
 		for (int k = 0; k < np; k++)
 			p[k].revents = 0;
-		(void)poll(p, (nfds_t)np, R.stopping ? 100 : 1000);
+		(void)poll(p, (nfds_t)np, R.stopping || pl_active() ? 100 : 1000);
 		now = log_now_ms();
 
 		while ((n = read(R.pipe_r, sigs, sizeof sigs)) > 0)
@@ -3185,6 +3511,7 @@ int rootside_main(const struct rootside_options *o)
 		kids_hurry(now);
 		tables_minute(now);
 		kdehost_sweep(now);
+		pl_step(now);      /* 1.0.0 (§11.57): a local login held in PAM — its remote desktop is closed first */
 		localx_sweep(now); /* 1.0.0: «local excludes remote», by this side alone (box above lx_scan) */
 		if (i_pam >= 0 && (p[i_pam].revents & (POLLIN | POLLHUP | POLLERR)))
 			helper_move(R.pam, NULL, NULL);
@@ -3248,6 +3575,7 @@ union rpk {
 	struct rxr_found_end fe;
 	struct rxr_found_gone fg;
 	struct rxr_codec codec;
+	struct rxr_local_coming lc;
 };
 
 #define CLIENT_AUTHS 32
@@ -3291,6 +3619,8 @@ static struct {
 	} found;
 	RootsideFoundGone on_gone;
 	void *gone_ctx;
+	RootsideLocalComing on_local;
+	void *local_ctx;
 	RootsideCodec on_codec;
 	void *codec_ctx;
 	struct {
@@ -3324,6 +3654,7 @@ static size_t size_of_event(int kind)
 	case RXR_FOUND_END:     return sizeof(struct rxr_found_end);
 	case RXR_FOUND_GONE:    return sizeof(struct rxr_found_gone);
 	case RXR_CODEC:         return sizeof(struct rxr_codec);
+	case RXR_LOCAL_COMING:  return sizeof(struct rxr_local_coming);
 	default:                return 0;
 	}
 }
@@ -3523,6 +3854,11 @@ static void dispatch(union rpk *pk, int fd)
 		}
 		break;
 	}
+	case RXR_LOCAL_COMING:
+		pk->lc.user[sizeof pk->lc.user - 1] = 0;
+		if (C.on_local)
+			C.on_local(C.local_ctx, (uid_t)pk->lc.uid, pk->lc.user);
+		break;
 	case RXR_SPAWNED:
 		/* ⛔ An answer nobody waits for any more (its wait timed out): a
 		 *    child nobody holds is not left alive. */
@@ -3668,6 +4004,12 @@ void rootside_hook_found_gone(RootsideFoundGone fn, void *ctx)
 {
 	C.on_gone = fn;
 	C.gone_ctx = ctx;
+}
+
+void rootside_hook_local_coming(RootsideLocalComing fn, void *ctx)
+{
+	C.on_local = fn;
+	C.local_ctx = ctx;
 }
 
 int rootside_wait_found(RediscoveredDesktop *v, int cap, int timeout_ms, char *why, size_t why_len)

@@ -217,6 +217,11 @@ int rootside_wait_found(RediscoveredDesktop *v, int cap, int timeout_ms, char *w
 /* FOUND_GONE (after FOUND_END), from `rootside_move()`.  `uid` and `user` are the desktop's. */
 typedef void (*RootsideFoundGone)(void *ctx, uid_t uid, const char *user);
 void rootside_hook_found_gone(RootsideFoundGone fn, void *ctx);
+/* ⭐ 1.0.0 (§11.57) LOCAL_COMING, from `rootside_move()`: a LOCAL graphical login of `user` is held in PAM until the remote
+ *    desktop of that user is completely closed.  The receiver sends the user's clients away and asks the child for the FULL
+ *    close; it answers nothing. */
+typedef void (*RootsideLocalComing)(void *ctx, uid_t uid, const char *user);
+void rootside_hook_local_coming(RootsideLocalComing fn, void *ctx);
 
 /* ⚠ For `children_turn_off()` only (after the last round of the loop): pumps
  *    the channel until `done(ctx)` or `timeout_ms`. */

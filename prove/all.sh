@@ -2,7 +2,7 @@
 # all.sh <de> [--fresh <path-to.deb>] - every check of prove/ on ONE box, in sequence, one log per check, a final table.
 #   <de>      xfce | lxqt | gnome | kde
 #   --fresh   first a fresh box with that package (fresh.sh: reset, install, enable)
-# Order: base (Chrome, Firefox), lifecycle, multiuser, desktop, media, resilience, audio (Chrome, Firefox), clipboard, input (Chrome, Firefox), phone, ban (LAST: it bans the test address
+# Order: base (Chrome, Firefox), lifecycle, multiuser, desktop, media, resilience, audio (Chrome, Firefox), clipboard, input (Chrome, Firefox), phone, prelocal, ban (LAST: it bans the test address
 # of the box's service and unblocks it again at the end, see check-ban.py).
 # Logs: log/<tag>/<check>.out, the table also in log/<tag>/summary.txt. <tag> = $TAG or <de>-<date>-<time>.
 # Exit 0 only if every line of every check is PASS. Safe to run for the four desktops at the same time: the runs share
@@ -48,6 +48,7 @@ run clipboard 480 python3 check-clipboard.py --box "$DE"
 run input-chrome 1500 python3 check-input.py --box "$DE" --browser chrome
 run input-firefox 1500 python3 check-input.py --box "$DE" --browser firefox
 run phone 1250 python3 check-phone.py --box "$DE"
+run prelocal 900 python3 check-prelocal.py --box "$DE"
 run ban 900 python3 check-ban.py --box "$DE"
 
 python3 -c "import lib,sys; sys.exit(lib.sweep('$DE'))" > "$L/sweep.out" 2>&1 || ROWS+=("sweep|BLOCKED (sessions left: $(cat "$L/sweep.out" | tail -1 | cut -c1-60))")

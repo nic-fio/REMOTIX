@@ -4449,6 +4449,28 @@ bool session_terminate(void)
 	return output;
 }
 
+/* ⭐ 1.0.0 — PRELOCAL close, parent gone: the FORCED step (SIGTERM to the compositor, StopUnit, Logout 2) is NOT taken.  When the
+ *    parent that asked for the close dies, the root side's hook is released and the local desktop of the user may be starting:
+ *    forcing could hit it.  Set by the child (`session_force_unless_orphaned()`), consulted before each forced step. */
+static bool force_guard_on;
+static pid_t force_guard_ppid;
+
+void session_force_unless_orphaned(bool on)
+{
+	force_guard_on = on;
+	force_guard_ppid = getppid();
+}
+
+static bool force_refused(void)
+{
+	if (!force_guard_on || getppid() == force_guard_ppid)
+		return false;
+	registro_dice(LOG_SESSION,
+	              "⛔ 1.0.0: the orderly close did not complete and my parent is GONE (a local login held for this close has been "
+	              "released): I do NOT force — the local desktop may be starting");
+	return true;
+}
+
 static bool really_terminate(void)
 {
 	if (!session_alive()) {
@@ -4464,6 +4486,8 @@ static bool really_terminate(void)
 			registro_dice(LOG_SESSION, "the graphical session has exited");
 			return true;
 		}
+		if (force_refused())
+			return false;
 		registro_dice(LOG_SESSION,
 		              "⚠ the session does not exit: I close it by force (SIGTERM to "
 		              SESSION_PROCESS_XFCE "), whatever was not saved is "
@@ -4486,6 +4510,8 @@ static bool really_terminate(void)
 			registro_dice(LOG_SESSION, "the graphical session has exited");
 			return true;
 		}
+		if (force_refused())
+			return false;
 		registro_dice(LOG_SESSION,
 		              "⚠ the session does not exit: I close it by force (SIGTERM to "
 		              SESSION_PROCESS_XFCE "), whatever was not saved is "
@@ -4506,6 +4532,8 @@ static bool really_terminate(void)
 			registro_dice(LOG_SESSION, "the graphical session has exited");
 			return true;
 		}
+		if (force_refused())
+			return false;
 		registro_dice(LOG_SESSION,
 		              "⚠ the session does not exit: I close it by force (StopUnit %s), whatever "
 		              "was not saved is lost",
@@ -4524,6 +4552,8 @@ static bool really_terminate(void)
 		return true;
 	}
 
+	if (force_refused())
+		return false;
 	registro_dice(LOG_SESSION,
 	              "⚠ the session does not exit: I close it by force (Logout 2), whatever was not "
 	              "saved is lost");

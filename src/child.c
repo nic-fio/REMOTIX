@@ -10933,6 +10933,12 @@ void child_alive(int argc, char **argv)
 					                    "programs (owner's decision 17 Nov 2026 night: "
 					                    "an orphan desktop breaks the user's local login).  "
 					                    "Same road as the abandonment, nobody asked for it"
+					                  : ci.a == CHILDREN_EXIT_PRELOCAL
+					                  ? "⭐ 1.0.0: a LOCAL login of this user is WAITING — "
+					                    "closing the graphical session and with it its "
+					                    "programs completely BEFORE the local desktop "
+					                    "starts.  Same road as the abandonment, nobody "
+					                    "asked for it"
 					                  : "⭐ §7.6: the user asked to LOG OUT — "
 					                    "closing the graphical session and with it its "
 					                    "programs.  At the next attach a NEW one "
@@ -10942,11 +10948,24 @@ void child_alive(int argc, char **argv)
 					 *    desktop.  Local session (or «could not look») ⇒ light close and
 					 *    exit, NEVER the Logout.  No message to the parent: the clients
 					 *    already have their farewell. */
-					if (local_guard("before the logout")) {
+					/* ⭐ 1.0.0, PRELOCAL: the local logind session may already be
+					 *    registered (pam_systemd ran before our hook) but the local
+					 *    DESKTOP has not started: its PAM stack is blocked waiting for
+					 *    this very close.  The Logout and the unit stops cannot hit a
+					 *    local desktop ⇒ the guard is NOT asked (it would downgrade to
+					 *    the light close and leave the remote desktop alive). */
+					if (ci.a == CHILDREN_EXIT_PRELOCAL)
+						registro_dice(LOG_CHILD,
+						              "⭐ 1.0.0: defence 3 bypassed — a LOCAL login is held "
+						              "in PAM and its desktop has not started: FULL close, "
+						              "not the light one");
+					if (ci.a != CHILDREN_EXIT_PRELOCAL && local_guard("before the logout")) {
 						local_light_close(&mut, &cat, "instead of the logout");
 						fine = true;
 						break;
 					}
+					/* ⭐ 1.0.0, PRELOCAL: no forced step if the parent dies during the close */
+					session_force_unless_orphaned(ci.a == CHILDREN_EXIT_PRELOCAL);
 					if (!terminate_and_clear()) {
 						registro_dice(LOG_CHILD,
 						              "⛔ the graphical session did NOT "

@@ -85,6 +85,7 @@ enum rxr_kind {
 	RXR_FOUND_END     = 107,
 	RXR_FOUND_GONE    = 108,
 	RXR_CODEC         = 109,   /* ⭐ 1.6 (avvio): the card arrived after startup — the probe now finds codecs */
+	RXR_LOCAL_COMING  = 110,   /* ⭐ 1.0.0 (§11.57): a LOCAL login of that user is held in PAM until its remote desktop is closed */
 };
 
 struct rxr_head {
@@ -277,6 +278,16 @@ struct rxr_found_end {
 /* FOUND_GONE: the stage of a desktop already announced is gone (the root side watches it with a pidfd and its start
  * time, so a reused pid is not the same stage).  Only after FOUND_END. */
 struct rxr_found_gone {
+	struct rxr_head h;
+	uint32_t uid;
+	char user[RXR_USER_MAX];
+};
+
+/* ⭐ 1.0.0 (DECISIONS-11 §11.57): an event (request 0).  A local graphical login of `user` is being HELD in its PAM stack
+ *    (remotix-local-login) until that user's remote desktop is gone: the network side sends its clients away (0x04) and asks
+ *    the child for the FULL close.  No answer: the root side watches logind and its own children, and ends the scope itself
+ *    if the desktop is still there after its grace. */
+struct rxr_local_coming {
 	struct rxr_head h;
 	uint32_t uid;
 	char user[RXR_USER_MAX];

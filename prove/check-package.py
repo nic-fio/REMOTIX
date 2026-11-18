@@ -135,6 +135,10 @@ def short(items, n=8, w=70):
     return s + (" (+%d more)" % (len(items) - n) if len(items) > n else "") if items else "none"
 
 
+# 1.0.0: the line pam-auth-update writes into common-session for debian/remotix.pam-config (exit 0 = present)
+PAM_HOOK_LINE = "grep -Eq '^[[:space:]]*session[[:space:]]+optional[[:space:]]+pam_exec\\.so.*remotix-local-login' /etc/pam.d/common-session"
+
+
 def related(p):
     return "remotix" in p.lower()
 
@@ -169,6 +173,12 @@ def c_install(ctx):
     c, ver = ctx.sh("dpkg -V remotix")
     if ver.strip():
         bad.append("dpkg -V remotix: " + short(ver.splitlines()))
+    # 1.0.0: the local-login hook, its pam-auth-update profile, and the line pam-auth-update put in common-session (the line is NOT
+    # owned by the package, so the checks above do not see it)
+    if ctx.sh("test -x /usr/libexec/remotix/remotix-local-login && test -f /usr/share/pam-configs/remotix")[0] != 0:
+        bad.append("remotix-local-login or /usr/share/pam-configs/remotix missing")
+    if ctx.sh(PAM_HOOK_LINE)[0] != 0:
+        bad.append("/etc/pam.d/common-session has no pam_exec line of remotix-local-login after install (pam-auth-update)")
     extra = [p for p in r["added_unowned"] if related(p) and p not in EXPECT_PATHS and not any(p.startswith(e + "/") for e in EXPECT_PATHS)]
     if extra:
         bad.append("unexpected files of the program/scripts: " + short(extra))
@@ -350,6 +360,8 @@ def c_remove(ctx):
             bad.append("product processes left: %s" % short(rem))
         if ctx.sh("test -e /usr/libexec/remotix/remotix")[0] == 0:
             bad.append("binary still there")
+        if ctx.sh(PAM_HOOK_LINE)[0] == 0:
+            bad.append("/etc/pam.d/common-session still has the pam_exec line of remotix-local-login after remove")
         c, gone = ctx.sh("ls /usr/share/polkit-1/rules.d/*remotix* /usr/lib/systemd/system/remotix.service /usr/share/remotix 2>&1 | grep -v 'No such'")
         if gone.strip():
             bad.append("package files left: " + short(gone.splitlines()))
@@ -417,6 +429,8 @@ def c_purge(ctx):
     for p, w in checks:
         if ctx.sh("test -e %s || test -L %s" % (p, p))[0] == 0:
             bad.append("%s left (%s)%s" % (p, w, (": " + ctx.sh("ls -la %s 2>&1 | tail -n +4 | awk '{print $1,$3,$9}' | head -6" % p)[1].replace("\n", "; ")) if "per-user" in w else ""))
+    if ctx.sh(PAM_HOOK_LINE)[0] == 0:
+        bad.append("/etc/pam.d/common-session still has the pam_exec line of remotix-local-login after purge")
     c, uleft = ctx.sh("find /etc/systemd /usr/lib/systemd /etc/polkit-1 /etc/apparmor.d /var/lib /run -iname '*remotix*' 2>/dev/null | grep -v '^/run/user\\|^/run/systemd'")
     if uleft.strip():
         bad.append("paths named remotix left: " + short(uleft.splitlines()))

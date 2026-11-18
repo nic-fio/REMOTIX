@@ -567,6 +567,8 @@ static int stage_count(const struct bridge *p)
  *    desktop still in the table — one that already has a child was removed by `children_ensure()`, and its clock stays. */
 #define FOUND_AGAIN_WAIT_MS 3000
 
+static void local_coming_event(void *ctx, uid_t uid, const char *user);
+
 static void found_again_gone_event(void *ctx, uid_t uid, const char *user)
 {
 	int i = found_again_index(user);
@@ -601,6 +603,7 @@ static void found_again_at_startup(uint64_t now_ms)
 	}
 	if (rootside_attached()) {
 		rootside_hook_found_gone(found_again_gone_event, NULL);
+		rootside_hook_local_coming(local_coming_event, NULL);
 		n = rootside_wait_found(found_again, MAX_FOUND_AGAIN, FOUND_AGAIN_WAIT_MS, why, sizeof why);
 	} else {
 		n = rediscover_search(found_again, MAX_FOUND_AGAIN, why, sizeof why);
@@ -897,6 +900,38 @@ static void local_light_close(const char *user, const char *defence, bool dismis
 		              "⛔ %s: «%s» has a LOCAL session and the light-close request "
 		              "did NOT leave towards its child",
 		              defence, user);
+}
+
+/* ⭐⭐ 1.0.0 — a LOCAL graphical login of `user` is starting and is HELD in PAM until the remote desktop of that user
+ *    is completely closed (hook `remotix-local-login`, told by the root side).  The local DESKTOP has not started yet, so
+ *    the close is the FULL one (`CHILDREN_EXIT_PRELOCAL`): Logout, units stopped, everything put back.  The logged
+ *    clients get 0x04 now, like with the light close. */
+static void local_coming_event(void *ctx, uid_t uid, const char *user)
+{
+	(void)ctx;
+	if (!user || !user[0])
+		return;
+	if (!local_f || !children_alive_of(local_f, user)) {
+		registro_dice(LOG_CHILD,
+		              "⭐ 1.0.0: a LOCAL login of «%s» (uid %lu) is being held, but there is no live child of this "
+		              "user: nothing to close from here",
+		              user, (unsigned long)uid);
+		return;
+	}
+	size_t n = local_dismiss_logged(user);
+
+	registro_dice(REG_WT, "⛔ local login held: «%s» — %zu logged clients sent away with 0x04", user, n);
+	if (children_terminate_session(local_f, user, CHILDREN_EXIT_PRELOCAL)) {
+		local_mark(user); /* only if the request left: the end of the child will be told with 0x04 */
+		registro_dice(LOG_CHILD,
+		              "⛔ a LOCAL login of «%s» is being held: its child is asked for the FULL close (the local "
+		              "desktop has not started yet)",
+		              user);
+	} else
+		registro_dice(LOG_CHILD,
+		              "⛔ a LOCAL login of «%s» is being held and the full-close request did NOT leave towards its "
+		              "child (the root side will force the close)",
+		              user);
 }
 
 /* ⭐ Three-valued question for the paths that must REFUSE in doubt (fail-closed): 1 local session,
@@ -1905,6 +1940,14 @@ static uint64_t abandon_expired(struct bridge *p, const char *user,
 {
 	size_t amount;
 
+	/* ⭐ 1.0.0: a child whose close was already asked (`closing_asked_ms`, e.g. the FULL close for a held LOCAL login) is not
+	 *    asked a second time: `children_alive_of()` is false for it while `children_pid_of()` is still positive */
+	if (children_pid_of(p->f, user) > 0 && !children_alive_of(p->f, user)) {
+		registro_dice(LOG_STARTUP,
+		              "⭐ §5.3: the child of «%s» is already closing: no abandonment order on top of it", user);
+		presence_forget(user);
+		return 0;
+	}
 	registro_dice(LOG_STARTUP,
 	              "⭐ §5.3 — ABANDONMENT: «%s» has touched nothing for %llu ms (ceiling "
 	              "%llu).  ⛔ I CLOSE the graphical session, and with it its "
