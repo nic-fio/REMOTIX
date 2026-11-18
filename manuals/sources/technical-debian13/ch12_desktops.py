@@ -211,8 +211,10 @@ S4 = p("The server never starts a desktop itself. The per-user child (" + rif("S
         "<b>" + c("start()") + "</b> composes the environment and the command, then runs " + c("setsid --fork sh -c")
         + " with the user's home as working directory. The shell line begins with " + c("exec >>log 2>&1") + ": the "
         "session's output goes to " + sysf("session.log") + " (" + rif("Where the log lines go") + "). Because of "
-        + c("setsid --fork") + " the desktop lives outside the server's unit and outside the child: stopping the service or "
-        "killing the child does not kill the desktop, and a reattach finds the same compositor and windows (the "
+        + c("setsid --fork") + " the desktop lives outside the server's unit and outside the child, so neither the unit's kill nor the "
+        "death of the child ends it by itself. Since 17 Nov 2026 (§11.56) the product ends it on purpose: an orderly stop of the "
+        "service closes every desktop (" + rif("Stopping the service") + "), and a desktop left without a child is ended by the root side "
+        "within about 10 s unless its user returns first. A reattach while the child lives finds the same compositor and windows (the "
         "claim of the comments in " + c("session.c") + " and " + c("child.c") + "; the reattach checks of " + c("prove/")
         + " exercise it, " + rif("Testing") + ").",
     ]) + \
@@ -509,9 +511,9 @@ S7 = p("Plasma is started with " + c("startplasma-wayland") + ", which starts KW
       "socket. The shape of the pointer comes from the metadata, where the session's cursor theme " + c("remotix-invisible")
       + " has one-pixel opaque images of unique colours that the dictionary " + c("shape_from_pixel()") + " maps back to a "
       "real cursor image (" + c("shape.c") + "; " + rif("Screen capture") + ").") + \
-    warn(c("kwin_check_permission()") + " ends its failure message with «Remedy: reinstall REMOTIX with the installer» "
-         "(" + c("RX-KDE-001") + ", " + c("kwin.c") + "). There is no installer in this product; the text is a leftover and "
-         "should say that the package must be reinstalled.", "Stale remedy text.")
+    note(c("kwin_check_permission()") + " ends its failure messages with «Remedy: reinstall the package (apt install --reinstall remotix)» "
+         "(" + c("RX-KDE-001") + ", " + c("RX-KDE-002") + " and " + c("RX-KDE-003") + ", " + c("kwin.c") + "): the remedy is the package's, since there is no installer.",
+         "Remedy text.")
 
 # ═════════════════════════════════════════════════════════════════════════
 # 8. XFCE

@@ -1,4 +1,4 @@
-from build import arrow, box, c, fig, note, p, rif, table, text, ul, warn, zone
+from build import arrow, box, c, fig, note, p, rif, steps, table, text, ul, warn, zone
 
 # ── 14.1 Trust boundaries ────────────────────────────────────────────────
 ZONES = fig(
@@ -54,8 +54,10 @@ S2 = p("The root side and the network side talk over one " + c("SOCK_SEQPACKET")
          + "."],
         ["Root side to network side", c("READY") + " (once, first), " + c("VERDICT") + ", " + c("SPAWNED") + ", "
          + c("SPAWN_REFUSED") + ", " + c("CHILD_EXITED") + ", " + c("FOUND_AGAIN") + ", " + c("FOUND_END") + ", "
-         + c("FOUND_GONE") + ", " + c("CODEC"),
-         "The order READY, N × FOUND_AGAIN, one FOUND_END with the count N, then any FOUND_GONE is part of the "
+         + c("FOUND_GONE") + ", " + c("CODEC") + ", " + c("LOCAL_COMING"),
+         "<b>" + c("LOCAL_COMING") + " (110, " + c("RXR_LOCAL_COMING") + ")</b> carries the uid and the user name of a user whose "
+         "local login is held in PAM (" + rif("The local-login hold") + "); " + c("RXR_VERSION")
+         + " is still 3. The order READY, N × FOUND_AGAIN, one FOUND_END with the count N, then any FOUND_GONE is part of the "
          "protocol; any other order is a broken channel."],
     ], "«TAB» — The messages between the two sides (" + c("enum rxr_kind") + ")") + \
     ul([
@@ -172,11 +174,9 @@ S4 = p("The profile is " + c("debian/remotix_network.apparmor") + ", installed a
       "unexpected audit lines through the functional checks. " + c("check-package.py") + " has an " + c("apparmor")
       + " check that tests that the profile text compiles and, when the interface exists, that it is loaded; "
       "in containers, which have no AppArmor interface, it answers BLOCKED.") + \
-    note("Two parts of the profile's own comments are stale. The header says the profile was never loaded on a real "
-         "AppArmor, while a comment lower in the same file reports ten audit lines seen on 26 Oct 2026 in complain "
-         "mode and " + c("PIANO.md") + " records the virtual machine run. The rules for " + c("/proc") + " are marked "
-         "«not tried». Treat the header as the cautious statement and the machine run as the evidence; neither "
-         "covers a session.", "Stale header.") + \
+    note("The header of the profile now states the same facts (corrected on 17 Nov 2026): loaded in complain mode, 0 denials up to the "
+         "connection on a Debian 13 virtual machine, no session tried there for lack of a video card. The rules for " + c("/proc")
+         + " are still marked «not tried». Neither the header nor the machine run covers a session.", "State of the profile.") + \
     p("On removal, " + c("debian/remotix.postrm") + " writes the profile name to the kernel's " + c(".remove")
       + " file of AppArmor, so the profile leaves the kernel even if its file is already gone.")
 
@@ -203,17 +203,21 @@ S5 = p("The rule is that a user with an active local graphical session gets a re
          "Answers 1 (local), 0 (surely none) or -1 (could not look); 1 and -1 both refuse: the child mounts "
          "nothing, starts no desktop and exits after a light close. -1 is asked once more after about one "
          "second before being decided."],
-    ], "«TAB» — The three defences of " + c("0x05") + " and " + c("0x04")) + \
-    p("Each defence is enough alone. The " + c("0x05") + " is sent only after PAM's yes, so whoever has no password "
+        ["4, at the local login", c("remotix-local-login") + " in PAM (" + c("local_login.c") + "), served by " + c("pl_step()") + " in " + c("rootside.c"),
+         "While the local login is being opened, before the local desktop starts",
+         "The user's REMOTIX desktop is closed completely first and the login goes on only afterwards (" + rif("The local-login hold") + ")."],
+    ], "«TAB» — The four defences of " + c("0x05") + " and " + c("0x04")) + \
+    p("Each of the first three defences is enough alone. The " + c("0x05") + " is sent only after PAM's yes, so whoever has no password "
       "learns nothing about the account, and only to the login that asked, because the other connections carrying "
       "the same name may be strangers. The decision to fail closed, so that a lookup that fails is a refusal and "
       "never a yes, is the owner's of 15 Nov 2026 according to the comments in " + c("main.c") + " and "
       + c("child.c") + ". A light close ends the REMOTIX desktop of that user without touching the local session; "
-      "the details are in " + rif("Startup and life cycle") + ". One case is not covered in the packaged (split) "
-      "service: a desktop found again after a restart of the service, with no child, whose user now has a local "
-      "session, is not revived but is not closed either; its processes stay alive, because only the root side may "
-      "terminate a logind session and the closed list has no message for it ("
-      + c("found_again_close_for_local()") + " in " + c("main.c") + ").") + \
+      "the details are in " + rif("Startup and life cycle") + ". A desktop found again, with no child, whose user now has a "
+      "local session is not revived. The network side does not close it (it is user " + c("remotix") + ": " + c("found_again_close_for_local()")
+      + " in " + c("main.c") + " logs “the root side ends its scope by itself”), and in the packaged (split) service the root "
+      "side ends its scope within about ten seconds (" + c("localx_sweep()") + "); in the single-process mode (" + c("--no-split")
+      + ", not packaged) the process itself is root and closes that session with logind's " + c("TerminateSession") + "; only if that fails "
+      "is the stage left alone.") + \
     p("<b>The session cap answers " + c("0x0E") + ".</b> The default cap is " + c("RCP_SESSION_CAP") + " = 10 users "
       "served at once (" + c("rcp.h") + "; changed by " + c("--session-cap") + " at start-up, " + c("rcp_cap_set()")
       + "). Whoever does not fit gets " + c("0x0E") + " " + c("SESSION_UNSERVABLE") + " with the detail in the body. "
@@ -223,9 +227,77 @@ S5 = p("The rule is that a user with an active local graphical session gets a re
       "the attach. It is deliberately not "
       + c("0x06") + " (no composition capacity left, which is the budget, see " + rif("Quality, degradation and budget")
       + ") and not " + c("0x0F") + " (this user already has a session): the person must be told that the table is full "
-      "and not, falsely, that they are connected elsewhere. The cap is administrative, not a physical limit. "
+      "and not, falsely, that they are connected elsewhere. The cap is administrative, not a physical limit, and 10 is a technical default: the <b>declared</b> limit of the "
+      "product (owner's decision, " + c("DECISIONS-11") + " §11.51, confirmed 18 Nov 2026) is <b>8 users</b> at the same time. "
       "Related: a second device of a user whose first client is alive gets " + c("0x0F") + " "
       + c("ALREADY_ACTIVE_REMOTELY") + "; a client silent for long enough is detached and does not hold the slot.")
+
+# ── 14.5b The local-login hold ───────────────────────────────────────────
+S5C = p("<b>The problem.</b> A user who has a REMOTIX desktop and then logs in at the machine starts a second graphical "
+        "session of the same user. GNOME's login screen holds that login while the user has another graphical session that is "
+        "active or online; SDDM and LightDM hold nothing, and the local desktop starts on the user manager and the bus that the "
+        "remote one is still using (read in the sources on 18 Nov 2026: Plasma adopts the remote units and dies with them, the "
+        "local " + c("xfce4-session") + " finds its bus name taken and leaves, so KDE and XFCE return to the login screen). The "
+        "owner's order (" + c("DECISIONS-11") + " §11.57, 18 Nov 2026) is one rule for every desktop and display manager: "
+        "<b>a local graphical login closes the user's remote desktop first</b>, completely, and goes on only after that.",
+        lead=True) + \
+    table(["Piece", "What it is"], [
+        ["The hook", c("/usr/libexec/remotix/remotix-local-login") + " (mode 0755), built from " + c("src/local_login.c") + " with libc "
+         "only. PAM runs it as root, inside the login's own stack, and the login waits for it."],
+        ["The PAM line", c("session optional pam_exec.so quiet /usr/libexec/remotix/remotix-local-login") + " in " + c("/etc/pam.d/common-session")
+         + ", put there by " + c("pam-auth-update") + " from the profile " + c("/usr/share/pam-configs/remotix") + " ("
+         + rif("The PAM service file remotix.pam") + ", " + rif("Files the package installs") + ")."],
+        ["The requests", c("/run/remotix/prelocal/") + ": a folder of root, mode 0700, made by the root side (not by tmpfiles). "
+         "A request is an empty file named by the uid. The file " + c(".lock") + " in it is held with an exclusive lock for as long "
+         "as the root side lives."],
+        ["The message", c("RXR_LOCAL_COMING") + " (110), root side to network side: the uid and the user name of the user whose login is "
+         "held (" + rif("The closed list between the network side and the root side") + ")."],
+        ["The root side", c("pl_step()") + " and the " + c("PL_*") + " constants in " + c("rootside.c") + ": it serves the requests."],
+    ], "«TAB» — The pieces of the local-login hold") + \
+    p("<b>What happens, in order.</b>") + steps([
+        "<b>The hook decides if the login is its business.</b> Only for " + c("PAM_TYPE=open_session") + " with " + c("XDG_SEAT")
+        + " set, session class " + c("user") + " (or none), type " + c("wayland") + ", " + c("x11") + " or " + c("mir") + " (or none), "
+        "a user that is not root, and a PAM service that is not " + c("remotix") + ". Everywhere else (ssh, a text console, "
+        "REMOTIX's own sessions, and the closing of any session) it returns 0 at once. Cron never runs it: with "
+        + c("Session-Interactive-Only: yes") + " the line is not in " + c("common-session-noninteractive") + ".",
+        "<b>It looks for the root side.</b> The folder must belong to root and not be writable by others; the hook opens " + c(".lock")
+        + " and, if a shared lock can be taken (nobody holds the exclusive one: the service is not running), it returns at once. "
+        "No login waits for a service that is not there.",
+        "<b>It leaves a request and waits.</b> It creates the empty file named by the uid and checks every 50 ms (the first look after 5 ms) "
+        "whether the root side has removed it; every half second it also checks that the service is still there.",
+        "<b>The root side sees the request</b> (inotify, and the folder is read every second). If a child of ours serves that uid, it "
+        "sends " + c("RXR_LOCAL_COMING") + ": the network side sends the logged clients 0x04 and asks the child for the <i>full</i> "
+        "close, the logout's road, because the local desktop has not started and must find a user manager with nothing of REMOTIX in it. "
+        "The log line starts “local login of … HELD in PAM”.",
+        "<b>If there is no child</b> (a desktop that nobody holds), or the order could not leave, or the child has not finished after "
+        + c("PL_GRACE_MS") + " (13 s), the root side ends the scope itself with the machinery of the rule “no orphan desktops” "
+        "(SIGTERM, SIGKILL after 3 s, the clean-up of what REMOTIX put in the user manager).",
+        "<b>The login goes on.</b> When no child of that uid, no seatless REMOTIX session of that uid with processes and no ending in "
+        "progress are left, the root side removes the file and the hook returns. At most " + c("PL_CEIL_MS") + " (20 s): then the file "
+        "is removed anyway and the log warns that the desktop is still there.",
+        "<b>New births are refused for a while.</b> While the login is held and for " + c("PL_HOLD_MS") + " (10 s) after the answer, a "
+        "birth for that uid gets no child; the root side answers it as it does for a child that is still closing ("
+        + c("RXR_REF_CLOSING") + ") and logs “SPAWN for … refused: a local login of uid N is being held”. Once the local session is "
+        "in logind, the usual refusal (0x05) takes over.",
+    ]) + \
+    ul([
+        "<b>It never makes a login fail.</b> The hook always exits 0, the PAM line is " + c("optional") + ", and the hook's own ceiling is "
+        + c("LOCAL_CEIL_MS") + " = 25 s, above the root side's 20 s. Up to " + c("PL_MAX") + " (8) logins can be held at the same time.",
+        "<b>The request is only a uid.</b> The folder is writable only by root; the root side reads logind's own files to decide "
+        "what to end, and does so again just before the signal. Nothing in a request is believed beyond “look at this uid now”.",
+        "<b>While the service stops</b> no request is served: every desktop is being closed anyway, and the hook returns when "
+        "the root side exits.",
+        "<b>The older defences stay as a second belt:</b> the sweep of the root side every 5 s (" + c("localx_sweep()")
+        + ") and the network side's 2 s sweep (" + c("LOCAL_SWEEP_MS") + ").",
+    ]) + \
+    p("<b>The second rule, “no orphan desktops”</b> (" + c("DECISIONS-11") + " §11.56), uses the same machinery. A seatless REMOTIX session "
+      "whose scope still has processes and whose user has no child of ours must not stay: while the service runs, the root side "
+      "ends it when it is seen so in two scans in a row (" + c("LX_EVERY_MS") + " = 5 s), and at an orderly stop it ends whatever "
+      "is left (" + rif("Stopping the service") + "). A user who comes back before the second scan gets a child, and a desktop "
+      "with a child is not an orphan.") + \
+    note("Where the rest is: the log lines in " + rif("Logging and diagnostics") + ", the files and maintainer scripts in "
+         + rif("Files the package installs") + ", the checks in " + rif("Testing") + ", and what was and was not proven in "
+         + rif("Appendix C — Known issues and open points") + ".", "Elsewhere in this manual.")
 
 S5B = p("<b>The denied-users list.</b> " + c("/etc/remotix/denied-users") + " (installed from "
         + c("debian/denied-users") + ", with one line, " + c("root") + ") is consulted twice by two different "
@@ -289,7 +361,7 @@ S6 = p("A REMOTIX session has no seat, so polkit gives it the answer meant for a
       + " §4.7) are not active. " + c("remotix-power-keys.conf") + " (logind ignores the power, reboot, suspend and "
       "hibernate keys and the lid switch, including long presses) and " + c("remotix-no-suspend.conf")
       + " (systemd's " + c("Allow*=no") + " for sleep) are installed under " + c("/usr/share/remotix/belts/")
-      + ", where nothing reads them. REMOTIX does not modify the system beyond what it needs; an administrator "
+      + ", where nothing reads them. REMOTIX does not modify the system beyond what it needs (the list of what it changes is in " + rif("What the security model does not defend") + "); an administrator "
       "who wants them copies them into " + c("/etc/systemd/logind.conf.d/") + " and " + c("/etc/systemd/sleep.conf.d/")
       + ". Consequence: without them, a person at the machine can still switch it off with the power button, "
       "and the polkit rule does not see that road, because logind acts on its own account there.")
@@ -312,8 +384,8 @@ S7 = p("<b>" + c("remotix.service") + " has no sandboxing directive on purpose.<
          "--page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --split --journal"),
          "No bench options (" + c("--command-socket") + ", " + c("--survey") + ", " + c("--verbose") + ")."],
         [c("KillMode"), c("mixed"), "SIGTERM to the main process, SIGKILL to what is left of the unit. The desktops "
-         "live outside the unit (they are started with " + c("setsid --fork") + ") and survive a stop; that is "
-         "deliberate."],
+         "live outside the unit (they are started with " + c("setsid --fork") + "), so the unit's kill does not reach them; "
+         "the root side closes them itself at an orderly stop (" + rif("Stopping the service") + ")."],
         [c("LimitRTPRIO") + ", " + c("LimitNICE"), "20, -11", "Priority for audio and video."],
         [c("Restart"), c("on-failure") + ", " + c("RestartSec=2") + ", " + c("RestartPreventExitStatus=78"),
          "Exit status 78 (" + c("EX_CONFIG") + ") is for a real configuration error, for example the user "
@@ -359,14 +431,18 @@ S8 = p("The honest list, from the code and the decisions:", lead=True) + \
         ["AppArmor in a session", "The profile is in complain mode and was never observed during a session (previous "
          "section)."],
         ["What the package changes on the machine",
-         "At a user's first connection the product adds the user to the groups that own the card's render nodes "
+         "<b>One system file is edited:</b> through " + c("pam-auth-update") + " the package adds one line, " + c("session optional pam_exec.so quiet "
+         "/usr/libexec/remotix/remotix-local-login") + ", to " + c("/etc/pam.d/common-session") + " (a file of "
+         + c("libpam-runtime") + ", not a conffile of REMOTIX) and removes it when the package is removed (" + rif("The local-login hold")
+         + "). At a user's first connection the product adds the user to the groups that own the card's render nodes "
          "(" + c("usermod -aG") + ", run as root after PAM said yes and before the child is forked), records it in " + c("/var/lib/remotix/group-enrollments.jsonl")
          + ", and the removal script undoes it with " + c("gpasswd -d") + ". For a user manager already running, it "
          "puts a POSIX ACL for the user's private group on " + c("/dev/dri/renderD*") + " and records it in "
          + c("/var/lib/remotix/render-grants") + "; " + c("remotix --drop-render-grants") + " takes it back. Both are "
          "necessary for the card, and both are changes to the system that an administrator should know about."],
         ["Hardware and clients not tried", "NVIDIA (deferred), a phone in touch mode (the owner tried Samsung DeX only), a canvas above "
-         "3840x2160 (the page's own size ladder stops there) and the first tap on GNOME touch are open or "
+         "3840x2160 (the page's own size ladder stops there; the protocol canvas is 4096×2304, and the <b>declared</b> limit of the "
+         "product is 3K) and the first tap on GNOME touch are open or "
          "untried items in " + c("PIANO.md") + ". The security model has not been tested with those."],
     ], "«TAB» — What the security model does not cover") + \
     p("The transport limits that bound a flood of connections before login (a cap on connections, on pending "
@@ -379,6 +455,7 @@ CHAPTER = ("Security model", [
     ("The walls of the network side", S3),
     ("The AppArmor profile and its mode", S4),
     ("Local excludes remote and the session cap", S5),
+    ("The local-login hold", S5C),
     ("The denied-users list", S5B),
     ("Polkit rules, password windows and the power belts", S6),
     ("The service unit and why it is not sandboxed", S7),

@@ -33,9 +33,10 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
       "number, and what has been checked.") + \
     table(["Item", "Value"], [
         ["Version", c(VERSION) + ", from " + c("RX_VERSION") + " in " + c("build/build-deb.sh")],
-        ["Server", "C (" + c("-std=gnu11") + "), Linux only, systemd, one binary " + c("/usr/libexec/remotix/remotix")
+        ["Server", "C (" + c("-std=gnu11") + "), Linux only, systemd, one server executable " + c("/usr/libexec/remotix/remotix")
          + " started by " + c("remotix.service") + " as root; it re-executes itself for the network side, the PAM "
-         "helper and the per-user children (" + rif("Overall architecture") + ")"],
+         "helper and the per-user children (" + rif("Overall architecture") + "). The package also ships a second, very small "
+         "program, " + c("remotix-local-login") + ", that PAM runs at a local login (" + rif("The local-login hold") + ")"],
         ["Client", "The page " + c("src/page.html") + " (HTML and JavaScript in one file), served by the server itself "
          "over TCP; a small Opus decoder in WebAssembly (" + c("src/opus-wasm/") + ")"],
         ["Protocol", "RCP/1 over WebTransport, path " + c("/rcp/1") + "; port " + c("7447") + " (" + c("DEFAULT_PORT")
@@ -46,7 +47,9 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
         ["Desktops", "GNOME, KDE Plasma, XFCE and LXQt, Wayland only; X11 programs run through XWayland. One desktop "
          "per machine is recognised at startup (" + c("session_desktop_explain()") + ")"],
         ["Users", "Several at once, one desktop each; the session cap is " + c("RCP_SESSION_CAP") + " = 10 in "
-         + c("rcp.h") + ", moved by " + c("--session-cap")],
+         + c("rcp.h") + ", moved by " + c("--session-cap") + ". The <b>declared</b> limits of the product (owner's decision, "
+         + c("DECISIONS-11") + " §11.51, confirmed 18 Nov 2026) are <b>8 users</b> at the same time and resolution up to <b>3K</b> "
+         "(the size actually used depends on the client); the technical bounds are higher (a protocol canvas of 4096×2304)"],
         ["Clocks", "30 s of client silence (" + c("SILENCE") + " in " + c("rcp.c") + "), 30 min without input "
          "(" + c("DEFAULT_INACTIVITY") + " in " + c("rcp.c") + "), 60 min until the session is closed (" + c("DEFAULT_ABANDON_MS")
          + " in " + c("main.c") + "); see " + rif("Startup and life cycle")],
@@ -78,7 +81,8 @@ S2 = p("Two kinds of statement are made in this manual and they are kept apart. 
          "phone; Safari; Firefox on Windows and Android"],
         ["Life cycle", "Reattach (clean close, killed browser, other window size), Log Out, restart of the service, "
          "network drop, simultaneous entries of one user, one user leaving while another works, the three clocks at "
-         "short values (" + c("prove/check-lifecycle.py") + ", " + c("prove/check-resilience.py") + ")",
+         "short values (" + c("prove/check-lifecycle.py") + ", " + c("prove/check-resilience.py") + "); the local-login hold "
+         "(" + c("prove/check-prelocal.py") + ", the login simulated)",
          "The 30-min and 60-min clocks at their real values (only the mechanism at short values)"],
         ["Package", "Installation, restart, removal and purge on a real Debian 13 VM; AppArmor profile in complain and "
          "enforce mode with no denial up to the connection", "A session under the AppArmor profile on a machine with "
@@ -121,7 +125,7 @@ S3 = p("A handful of words recur in every chapter. Their names in the code are i
          "channel, the clipboard. It belongs to the session, not to the connection (invariant I4)", c("take_stage()"),
          rif("Screen capture")],
         ["<b>Canvas, view</b>", "The canvas is the size of the remote desktop, fixed at attach to the browser window "
-         "(at most 4096×2304); the view is the size at which the page draws it", c("CANVAS") + ", " + c("VIEW"),
+         "(at most 4096×2304 on the protocol; the declared limit is 3K); the view is the size at which the page draws it", c("CANVAS") + ", " + c("VIEW"),
          rif("The RCP/1 protocol")],
         ["<b>Attach slot</b>", "The place of a user's live connection in RCP's registry: one per user; freed when the "
          "client detaches or is silent for 30 s", c("struct slot") + " in " + c("rcp.c"), rif("The RCP/1 protocol")],
@@ -129,8 +133,8 @@ S3 = p("A handful of words recur in every chapter. Their names in the code are i
          "sentence; the server never closes without saying why", c("rcp.h"), rif("The RCP/1 protocol")],
         ["<b>Sentinel</b>", "The code that asks logind whether a user has a local graphical session, and whether the "
          "remote one has no seat", c("sentinel.c"), rif("Security model")],
-        ["<b>Found again</b>", "A desktop left alive by an earlier service process, found at startup and counted until its "
-         "user comes back", c("rediscover.c"), rif("Startup and life cycle")],
+        ["<b>Found again</b>", "A desktop with no child whose user returns within the few seconds before the root side ends it "
+         "(“no orphan desktops”); after an orderly stop there is none", c("rediscover.c"), rif("Startup and life cycle")],
         ["<b>Belts</b>", "The three settings that forbid power-off, reboot and suspend to every user: a polkit rule, "
          "logind settings for the power key and lid, and sleep settings", c("remotix-no-poweroff.rules"),
          rif("Security model")],

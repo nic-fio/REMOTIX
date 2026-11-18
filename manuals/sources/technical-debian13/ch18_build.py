@@ -47,7 +47,7 @@ S1 = p("REMOTIX is never built on the host. " + c("build/build-deb.sh") + " buil
         [c("build/quic-static.sh"), "build/", "nghttp3 " + c("v1.18.0") + " and ngtcp2 " + c("v1.25.0") + " from source, static only, in "
          + c("/usr/local/lib") + " (overridable by " + c("NGHTTP3_VER") + " and " + c("NGTCP2_VER") + ")"],
         [c("build/build-deb.sh"), "build/", "the driver: image, copy, build, lintian, checks, output files"],
-        [c("src/Makefile"), "src/", "compiles and links the binary; called by " + c("debian/rules")],
+        [c("src/Makefile"), "src/", "compiles and links the two programs (the server and " + c("remotix-local-login") + "); called by " + c("debian/rules")],
         [c("debian/rules"), "debian/", "the debhelper recipe: build flags, the guards, what goes where in the package"],
         [c("debian/control"), "debian/", "Build-Depends, Depends, Recommends, " + c("Static-Built-Using")],
     ], "«TAB» — The pieces of the build") + \
@@ -113,8 +113,11 @@ S3 = p("The script is a sequence of steps; every output goes to " + c("$OUTPUT")
       + "). The server folder holds one sub-folder per package built, for example " + sysf("pacchetti/1.0.0") + ".")
 
 # ── 18.4 ─────────────────────────────────────────────────────────────────────
-S4 = p("One Makefile, no configure step. It builds " + c(str(len(SOURCES))) + " C files (the variable " + c("SORGENTI") + ") into the single "
-       "binary " + c("remotix") + ", plus " + c(str(len(PROTOCOLS))) + " Wayland protocol files generated at build time.", lead=True) + \
+S4 = p("One Makefile, no configure step. It builds " + c(str(len(SOURCES))) + " C files (the variable " + c("SORGENTI") + ") into the server "
+       "binary " + c("remotix") + ", plus " + c(str(len(PROTOCOLS))) + " Wayland protocol files generated at build time. The target "
+       + c("all") + " also builds a second, separate program, " + c("remotix-local-login") + ", from " + c("local_login.c")
+       + " alone: libc only, the same flags, no library (the rule " + c("$(LOCAL_LOGIN)") + "). It is the PAM hook of the local-login hold ("
+       + rif("The local-login hold") + ").", lead=True) + \
     table(["Topic", "What the Makefile does"], [
         ["compiler flags", c("CFLAGS ?= -O2 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter") + " as a default, then "
          + c("override CFLAGS += -D_GNU_SOURCE") + " and the " + c("pkg-config") + " flags of every library. gnu11 and not c11 because "
@@ -162,14 +165,15 @@ S5 = p(c("debian/rules") + " is a debhelper (compat 13) recipe with a few delibe
          "(R24) " + c("pkg-config --modversion") + " of ngtcp2 and nghttp3 must equal exactly 1.25.0 and 1.18.0; (R13) " + c("src/rcp.c")
          + " must contain the exact line " + c("#define BENCH_ON 0") + ", else the build stops"],
         [c("override_dh_auto_test"), "empty: the package build runs no tests (testing is in " + rif("Testing") + ")"],
-        [c("override_dh_auto_install"), "installs the binary to " + c("/usr/libexec/remotix/remotix") + ", the page, defaults, licence file, "
-         "the PAM file and denied-users (conffiles), the ufw profile, the KWin permission file, the polkit rules and helper, and the two "
+        [c("override_dh_auto_install"), "installs the binary to " + c("/usr/libexec/remotix/remotix") + " and the hook " + c("remotix-local-login") + " beside it (0755), the page, defaults, licence file, "
+         "the PAM file and denied-users (conffiles), the pam-auth-update profile " + c("debian/remotix.pam-config") + " as " + c("/usr/share/pam-configs/remotix") + ", the ufw profile, the KWin permission file, the polkit rules and helper, and the two "
          "switched-off \"belts\" under " + c("/usr/share/remotix/belts/") + "; it writes " + c("/usr/share/remotix/linked.json") + " with the "
          "pkg-config versions of the linked static libraries"],
         [c("execute_after_dh_auto_install"), "installs the sysusers file and the AppArmor profile (a conffile in " + c("/etc/apparmor.d")
          + ") and runs " + c("dh_apparmor") + " so that the maintainer scripts load and reload it"],
         [c("override_dh_installsystemd"), c("--no-enable --no-start --restart-after-upgrade") + ": the package neither enables nor starts "
-         "the service; on upgrade it restarts it only if it was active or enabled"],
+         "the service; on upgrade it restarts it only if it was active or enabled (the restart closes the remote desktops, see "
+         + rif("Stopping the service") + ")"],
     ], "«TAB» — The overrides of debian/rules") + \
     p("The destination paths and the role of each shipped file are described in " + rif("The package") + ".")
 

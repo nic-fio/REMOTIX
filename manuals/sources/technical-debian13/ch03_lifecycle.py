@@ -68,13 +68,16 @@ S1B = p("A card whose render node appears only after the unit starts (late drive
 # ── Unit ────────────────────────────────────────────────────────────────
 S2 = p("The service is the system unit " + c("debian/remotix.service") + ", installed by " + c("dh_installsystemd") + " with " + c("--no-enable --no-start") + " (" + c("debian/rules") + "): the package "
        "puts the unit there but the administrator enables and starts it, and an upgrade restarts it only if it was already "
-       "running (the postinst's debhelper part does a try-restart). The settings that shape the life cycle:", lead=True) + \
+       "running (the postinst's debhelper part does a try-restart; the restart closes the remote desktops, see "
+       + rif("Stopping the service") + "). The settings that shape the life cycle:", lead=True) + \
     table(["Setting", "Value", "Why"], [
         [c("Type"), c("simple"), "the root side is the main process; " + c("exec") + " in the " + c("ExecStart") + " shell keeps it so"],
         [c("After="), c("network.target") + " and " + sysf("systemd-logind.service"), "logind must be there for sessions and for the sentinel"],
         [c("KillMode"), c("mixed"), "SIGTERM to the root side only, then SIGKILL to what is left of the unit; the desktops "
-         "are outside the unit (" + c("setsid --fork") + ") and survive a stop"],
-        [c("Restart"), c("on-failure") + ", " + c("RestartSec=2"), "a crash restarts the root side, which finds the desktops again"],
+         "are outside the unit (" + c("setsid --fork") + "), so the unit's own kill does not reach them: the root side "
+         "closes them itself at an orderly stop (" + rif("Stopping the service") + ")"],
+        [c("Restart"), c("on-failure") + ", " + c("RestartSec=2"), "a crash restarts the root side, which ends the desktops left without a child, unless their user returns "
+         "within about 10 s (" + rif("Desktops found again after a restart") + ")"],
         [c("RestartPreventExitStatus"), c("78"), "a configuration error (" + c("EXIT_CONFIG") + ") is not retried"],
         [c("LimitRTPRIO"), c("20"), "priority for audio and video threads"],
         [c("LimitNICE"), c("-11"), "the same"],
@@ -84,7 +87,11 @@ S2 = p("The service is the system unit " + c("debian/remotix.service") + ", inst
     ], "«TAB» — The unit's settings that matter for the life cycle") + \
     warn("The comments at the top of the unit are partly stale: they say the package does not enable the unit “the engine "
          "does” (there is no engine in this tree), and they mention a " + c("--without split") + " build that no longer "
-         "exists. The settings in the table are those in force.", "Old comments in the unit.")
+         "exists. The settings in the table are those in force. The comment in " + c("remotix.service") + " about "
+         + c("KillMode") + " (and the same sentence in the comments of " + c("debian/rules") + ", " + c("debian/remotix.postinst")
+         + " and " + c("debian/remotix.prerm") + ") still says that the desktops survive the stop (SPECS §5.2): since "
+         "the decision of 17 Nov 2026 (" + c("DECISIONS-11") + " §11.56) an orderly stop closes them. These are comments "
+         "in the product's files, to be corrected at the next build.", "Old comments in the unit.")
 
 # ── Login ────────────────────────────────────────────────────────────────
 LOGIN = seq([("Page", "browser", "light"), ("Network side", "user remotix", "navy"), ("Root side", "root", "navy"),
@@ -135,7 +142,7 @@ S3 = p("A login crosses five processes. Only the order and the numbers are given
         + c("RXR_SPAWNED") + " with the child's socket end and a pidfd. A refusal is an " + c("rxr_refusal") + " code that "
         "the network side turns into a sentence.",
         "<b>ADMITTED and ATTACH.</b> Only now does " + c("ADMITTED") + " go out. " + c("ATTACH") + ", in the order of the code, "
-        "reduces a canvas above " + c("RCP_CANVAS_MAX_W") + "×" + c("RCP_CANVAS_MAX_H") + " (4096×2304) with a logged fallback, "
+        "reduces a canvas above " + c("RCP_CANVAS_MAX_W") + "×" + c("RCP_CANVAS_MAX_H") + " (4096×2304; the declared limit of the product is 3K) with a logged fallback, "
         "refuses one below " + c("RCP_CANVAS_MIN_W") + "×" + c("RCP_CANVAS_MIN_H") + " (320×240) or with an odd side with "
         + c("0x0B PROTOCOL_ERROR") + ", asks the sentinel once more for a "
         "local session (" + c("0x05") + ", also when logind could not say), takes the attach slot (" + c("slot_take()") + "; if another live client of that user "
@@ -144,9 +151,10 @@ S3 = p("A login crosses five processes. Only the order and the numbers are given
         + " with state 1 (NEW) or 2 (RESUMED, the stage was already there).",
     ]) + \
     tip("None of the admission checks forks a process: a user refused for a local session, a full cap or the budget costs no "
-        "child. One case is not closed completely: a desktop found again of a user who then opens a local session is left "
-        "alone and removed from the list, because only the root side may end a logind session and the closed list has no "
-        "message for it (" + c("found_again_close_for_local()") + " says so in the log; Appendix C).",
+        "child. A desktop found again of a user who then opens a local session is not closed by the network side (it is "
+        "user " + c("remotix") + ", and only the root side may end a logind session): it leaves the list (" + c("found_again_close_for_local()")
+        + " says so in the log, “the root side ends its scope by itself”), and the root side ends its scope within about "
+        "10 s; the local-login hook does it before the local desktop starts (" + rif("The local-login hold") + ").",
         "Refuse before forking.")
 
 # ── Birth ───────────────────────────────────────────────────────────────
@@ -163,8 +171,8 @@ S4 = p("The child is born before it knows the window's size, and it must not sta
         "the fallback canvas and says so.",
         "<b>The desktop.</b> " + c("session_ensure()") + " (or the non-blocking " + c("session_spawn()") + ") asks whether the "
         "session exists and has the right monitor. If the session is dead it starts one with " + c("setsid --fork sh -c") + ": "
-        "the desktop is detached from the child's process group, which is why it survives the child, the service and a "
-        "restart. Its output goes to " + c("~/.local/state/remotix/session.log") + " (the user's state folder). The start "
+        "the desktop is detached from the child's process group, which is why it survives the child. An orderly stop of "
+        "the service closes it (" + rif("Stopping the service") + "). Its output goes to " + c("~/.local/state/remotix/session.log") + " (the user's state folder). The start "
         "command is the desktop's own: " + c("gnome-session") + " with the Shell's unit overridden to start headless, "
         + c("startplasma-wayland") + ", " + c("xfce4-session") + " on a labwc, or " + c("lxqt-session") + " on a labwc "
         "(" + rif("The four desktops") + ").",
@@ -218,14 +226,18 @@ S5 = p("Detaching is the normal end of a connection, and it ends nothing else: t
          "(“spec 30 s; code 10 s dead-line”).", "Two clocks look like one.")
 
 # ── Found again ─────────────────────────────────────────────────────────
-S6 = p("Stopping or crashing the service does not stop the desktops. The service, the PAM dispatcher and the children die; "
-       "each desktop, started with " + c("setsid --fork") + " outside the unit, lives on with its programs (measured on 29 "
-       "September 2026, ten runs out of ten on the four desktops, and re-verified for the restart on 17 November: "
-       + c("prove/check-resilience.py") + ", “service-restart”). A new service must therefore find them, or nobody counts "
-       "them, and the first new user could have them knocked down.", lead=True) + \
+S6 = p("Only a fall of the service (a crash, a SIGKILL) or of the network side leaves a desktop with no process that "
+       "watches it. The root side ends such a desktop within about 10 s (it must be seen in two scans of "
+       + c("LX_EVERY_MS") + " = 5 s in a row: “no orphan desktops”); a user who comes back before that finds it again "
+       "(RESUMED), and after that the next login is NEW. An <b>orderly</b> stop closes every desktop (" + rif("Stopping the service")
+       + "), so there is nothing to find after it. The mechanism below (" + c("rediscover.c") + ", " + c("FOUND_*")
+       + ") still runs at every start of the network side, but it now describes a window of a few seconds, not a normal outcome. "
+       "Until 17 Nov 2026 (" + c("DECISIONS-11") + " §11.56) a stop left the desktops alive for the reattach; the owner decided "
+       "that they are closed because an orphan desktop breaks the local login of the same user on GNOME's login screen.",
+       lead=True) + \
     p("<b>The criterion</b> (" + c("rediscover.h") + "), the same for all desktops: a logind session with " + c("Service=remotix")
       + ", in any state (it is “closing” as soon as the child that held the session's fifo is gone, which is the case after "
-      "a stop of the service; the comment in " + c("rediscover.h") + " still describes the behaviour before 17 November "
+      "a fall of the service; the comment in " + c("rediscover.h") + " still describes the behaviour before 17 November "
       "2026, when it was “closing” a moment after birth), that contains a process of the user which is leader of its own process session (pid equals sid) and whose "
       "parent is not in the same scope. That is the signature of " + c("setsid --fork") + ": " + c("gnome-session-binary")
       + ", " + c("startplasma-wayland") + " or " + c("labwc") + ". A terminal opened inside the desktop does not match, because "
@@ -247,7 +259,8 @@ S6 = p("Stopping or crashing the service does not stop the desktops. The service
         ["Return", c("delivery_verdict()"), "When the user logs in, a new child is born (" + c("ensure_from_clearing_mark()")
          + "); it finds the same desktop; " + c("SESSION") + " says RESUMED; the table entry is removed"],
         ["Abandon", c("abandon_expired()"), "If nobody returns within the abandonment time, a <i>close-only</i> child is born "
-         "(" + c("RXR_CLOSE_ORPHAN") + ", no password) to close it (" + rif("Ending a graphical session") + ")"],
+         "(" + c("RXR_CLOSE_ORPHAN") + ", no password) to close it (" + rif("Ending a graphical session") + "). In the split "
+         "server the root side's own rule (“no orphan desktops”, above) ends a desktop without a child much earlier"],
     ], "«TAB» — Desktops found again, step by step") + \
     p("If the search cannot look (the sessions directory or " + c("/proc") + " unreadable) the outcome is " + c("RXR_FOUND_UNKNOWN")
       + " and the network side counts nothing, and says so: found desktops then count for neither cap, budget nor clock. If "
@@ -296,11 +309,22 @@ S7 = p("Clocks run on scales from milliseconds to an hour. Each one is listed wi
         ["Network side restart pause", "1 s doubling to 30 s; 60 s stable", c("NET_RESTART_FIRST_MS") + ", " + c("NET_RESTART_CAP_MS") + ", " + c("NET_STABLE_MS"),
          "how soon a dead network side is restarted"],
         ["Children after the network side dies", "5 s, then 3 s", c("KIDS_EOF_GRACE_MS") + ", " + c("KIDS_TERM_GRACE_MS"), "SIGTERM, then SIGKILL"],
-        ["Network side stops", "5 s", c("STOP_WAIT_MS"), "SIGKILL"],
+        ["Network side stops", "25 s", c("STOP_WAIT_MS") + ", " + c("rootside.c"), "SIGKILL to the network side"],
+        ["Desktops asked to close at a stop", "15 s", c("STOP_CLOSE_WAIT_MS") + ", " + c("main.c"),
+         "what is still alive then is closed by the root side"],
+        ["Desktops left in a REMOTIX scope", "scan every 5 s; SIGKILL 3 s after SIGTERM; clean-up up to 15 s",
+         c("LX_EVERY_MS") + ", " + c("LX_TERM_MS") + ", " + c("LX_CLEAN_MS") + ", " + c("rootside.c"),
+         "the root side ends a desktop with no child (seen in two scans in a row) and, at a stop, what is left"],
         ["Orphan close hold", "30 s per uid", c("ROOTSIDE_ORPHAN_UID_MS") + ", " + c("rootside.h"), "a second close for the same user is refused"],
         ["Sentinel", "1 s (asked twice) at attach, before a birth and before a logout; 300 ms periodic check; 2 s sweep",
          c("FAIL_CLOSED_WAIT_MS") + ", " + c("WAIT_MS") + ", " + c("LOCAL_SWEEP_MS") + " (" + c("ATTACH_WAIT_MS")
          + ", 100 ms, belongs to " + c("sentinel_local()") + ", no longer called)", "how long the loop may wait for logind"],
+        "Local login hold (" + rif("The local-login hold") + ")",
+        ["Child's full close before the root side acts", "13 s", c("PL_GRACE_MS") + ", " + c("rootside.c"),
+         "the root side ends the scope itself"],
+        ["Longest hold of a login by the root side", "20 s", c("PL_CEIL_MS"), "the request is removed and the login goes on, with a warning"],
+        ["No birth after the answer", "10 s", c("PL_HOLD_MS"), "a new desktop for that uid is refused"],
+        ["The hook's own ceiling", "25 s", c("LOCAL_CEIL_MS") + ", " + c("local_login.c"), "the hook gives up and exits 0"],
     ], "«TAB» — The clocks, each cited from its constant") + \
     p("<b>How the abandonment clock is fed.</b> By the five real input gestures of RCP §7.3 (pointer, button, wheel, letter, "
       "key by position), recorded by " + c("presence_mark()") + " per user in a table sized on the cap. Not by the release "
@@ -326,7 +350,9 @@ EXIT = seq([("Page", "browser", "light"), ("Network side", "user remotix", "navy
     ("sep", "logind closes the session when the child's fifo closes"),
 ], "«FIG» — Log Out from the desktop's own menu")
 
-S8 = p("Only the user ends their session, and the server ends it itself only when it is abandoned. Whatever the cause, the reason "
+S8 = p("The user ends their session; the server ends it itself when it is abandoned, when the service stops, when a "
+       "local login of the same user is held, and when no child holds it (the root side's rule “no orphan desktops”). "
+       "Whatever the cause, the reason "
        "is sent to whoever is watching before the desktop dies (RCP.md §8.1, finding B-7: a silence would read as “network "
        "error”).", lead=True) + \
     table(["Cause", "Reason to the client", "How it ends"], [
@@ -339,6 +365,10 @@ S8 = p("Only the user ends their session, and the server ends it itself only whe
          "then the child (or a close-only child for a found-again desktop) closes the session"],
         ["The user has a local session", c("0x04 LOCAL_SESSION_PREVAILED") + " or " + c("0x05"), "The <i>light</i> close: only what is "
          "REMOTIX's is taken away (" + rif("Security model") + ")"],
+        ["A local login of the user is held in PAM", c("0x04 LOCAL_SESSION_PREVAILED"), "The <i>full</i> close, because the local "
+         "desktop has not started yet (" + rif("The local-login hold") + ")"],
+        ["The service stops", c("0x0C SERVER_CLOSING"), "The full close (the light one for a user with a local session), "
+         "then the root side ends what is left (" + rif("Stopping the service") + ")"],
     ], "«TAB» — How a graphical session ends") + EXIT + \
     p("<b>The close itself</b> (" + c("session_terminate()") + " in " + c("session.c") + ") asks the desktop's own manager to exit and "
       "waits " + c("WAIT_EXIT_MS") + " (10 s) for the session to be gone, then forces: GNOME " + c("Logout(1)") + " then "
@@ -365,28 +395,54 @@ S8 = p("Only the user ends their session, and the server ends it itself only whe
       + "). XFCE ignores a Log Out asked while the desktop is still starting; that is the desktop's behaviour.")
 
 # ── Shutdown ────────────────────────────────────────────────────────────
-S9 = p("When systemd stops the unit, the root side asks the network side to stop; the network side says goodbye to every client "
-       "before it closes QUIC, then lets its children go; the desktops stay.", lead=True) + steps([
+S9 = p("When systemd stops the unit (" + c("systemctl stop") + " or " + c("restart") + ", a package upgrade that restarts the "
+       "service, a shutdown), <b>every remote desktop is closed</b>, as at a reboot. Until 17 Nov 2026 the desktops stayed "
+       "for the new service to find; the owner's decision of that night (" + c("DECISIONS-11") + " §11.56) reversed it, "
+       "because a desktop left without anyone to watch it breaks the local login of the same user (" + rif("The local-login hold")
+       + ").", lead=True) + steps([
         "<b>Signal.</b> SIGTERM reaches the root side, which sends SIGTERM to the network side and waits " + c("STOP_WAIT_MS")
-        + " (5 s).",
+        + " (25 s, " + c("rootside.c") + ") for it and for the children; the log says “the network side is asked to stop (SIGTERM), 25 s at most”.",
         "<b>Farewell.</b> The network side leaves its loop and calls " + c("transport_dismiss_all()") + " with " + c("RCP_SERVER_CLOSING")
         + " (0x0C), “the server is shutting down”, polling the socket for at most 4000 ms until every session is closed, then 50 "
         "more rounds of 10 ms so that the closing capsule really leaves; if some sessions did not finish it says so.",
+        "<b>The desktops are asked to close.</b> For every child that is alive the network side sends the request to close its "
+        "desktop and waits at most " + c("STOP_CLOSE_WAIT_MS") + " (15 s, " + c("main.c") + "). A user with no local session gets the full "
+        "close (the desktop's own logout); a user who has a local session, or for whom logind could not be asked, gets the "
+        "<i>light</i> close, never the session manager's logout (the log says “its desktop gets the LIGHT close, not the "
+        "Logout”). Desktops found again that have no child here are left to the root side. If the root side is already gone "
+        "no request is sent: the children see the end-of-file and leave, and the next root side ends the desktops.",
         "<b>Tidy.</b> " + c("helper_turn_off()") + ", " + c("sentinel_close()") + ", " + c("page_close()") + ", " + c("transport_close()")
         + ", then " + c("children_turn_off()") + ": each child's socket is closed (the end-of-file is the second net, "
         "beside " + c("PR_SET_PDEATHSIG") + "), the child gets SIGTERM and " + c("TURN_OFF_WAIT_MS") + " (1500 ms) to be reported "
-        "gone by the root side. A child on SIGTERM dismounts its stage (capture, virtual monitor) and exits; its desktop "
-        "stays, unless the user had logged out.",
-        "<b>The root side</b> reaps the children, waits at most the same deadline for stragglers, and exits with 0; "
-        + c("KillMode=mixed") + " takes anything left.",
+        "gone by the root side. A child on SIGTERM dismounts its stage (capture, virtual monitor) and exits.",
+        "<b>The root side ends what is left.</b> Once the network side is gone (or at the deadline) the root side ends whatever "
+        "is still in a REMOTIX scope: SIGTERM to that scope's processes, SIGKILL " + c("LX_TERM_MS") + " (3 s) later, the clean-up "
+        "of what REMOTIX put in the user manager (up to " + c("LX_CLEAN_MS") + ", 15 s), all bounded by the root side itself; it "
+        "waits for these endings (21 s at most) before it exits. If nothing was left at its scan it says “⭐ no orphan desktops: no REMOTIX "
+        "session is left with processes — the service stops clean”; if it had to end something, the lines are the per-session “⛔ no orphan "
+        "desktops: the REMOTIX session N of «user» (uid N) is still there while the service stops — it must not stay: SIGTERM …”; if something is "
+        "still there at the ceiling it says “⛔ no orphan desktops: the service stops and N REMOTIX session(s) still have processes (…): the "
+        "next start of the service ends them”. " + c("KillMode=mixed") + " takes anything left of the unit.",
     ]) + \
+    p("The stop takes a few seconds when the desktops close by themselves. The code states these bounds and no other total: "
+      "25 s for the network side and the children, 15 s of those for the close of the desktops, and the root side's own endings "
+      "after that (SIGTERM, SIGKILL after 3 s, clean-up up to 15 s). A user with a client open is sent away with 0x0C; a new login "
+      "gives a NEW session, and the programs of the old desktop, with their unsaved work, are gone. In the journal, area "
+      + c("startup") + ", the lines are “stopping: N desktops asked to close (waiting at most 15 s for them)” and “stopping: N desktops "
+      "closed, M still alive after 15 s”; a request that did not leave says “the request to close the desktop of … did NOT leave "
+      "towards its child”. Area " + c("rootside") + " has the “no orphan desktops” lines.") + \
     p("A restart of the network side alone (a crash, or the root side's decision after a malformed packet) closes the clients' "
-      "connections without a farewell, since the process is gone; the root side then restarts it and the desktops are found "
-      "again. After a restart of the whole service, " + c("prove/check-resilience.py") + " (“service-restart”) verified that the "
-      "page is told or returns to the form, and that a new login says RESUMED with the same window, text and working input.") + \
-    tip("Restarting the unit to install a new package is safe for the users: the postinst's debhelper part does a try-restart, "
-        "so the service restarts only if it was running, and the desktops stay. A user with a client open must log in again.",
-        "Upgrades keep the desktops.")
+      "connections without a farewell, since the process is gone; the root side then restarts it. The children see the "
+      "end-of-file, and a desktop left without a child is listed as found again for the new network side and ended by the root "
+      "side within about 10 s, unless its user logs in first (" + rif("Desktops found again after a restart") + "). "
+      "After a restart of the whole service, " + c("prove/check-resilience.py") + " (“service-restart”) checks that the client is "
+      "told or returns to the form (within 45 s), that no REMOTIX session of the user and no process of the old window are left, "
+      "that the root side's journal says “the service stops clean”, and that a new login is a NEW session with a working "
+      "desktop.") + \
+    tip("Restarting the unit to install a new package closes the remote desktops: the postinst's debhelper part restarts the "
+        "service if it was running, and the restart is a stop followed by a start. The prerm does not close sessions on an "
+        "upgrade, but the stop does. Warn the users of a busy server before upgrading; they log in again and get a new session.",
+        "Upgrades close the desktops.")
 
 # ── Log lines ───────────────────────────────────────────────────────────
 S10 = p("A defect in this chain rarely names its cause: the user sees “black”, “slow” or “nothing happens”. The log line "
@@ -408,6 +464,11 @@ S10 = p("A defect in this chain rarely names its cause: the user sees “black�
         ["Abandonment", "startup, child", "“§5.3 — ABANDONMENT”, “the session is ABANDONED”"],
         ["Local session", "child", "“defence 1”, “defence 2”, “defence 3”, “light close”"],
         ["Shutdown", "startup", "“shutdown requested”, “farewell 0x0c sent to all sessions”"],
+        ["Stop: desktops closed", "startup, rootside", "“stopping: N desktops asked to close”, “N desktops closed, M still alive after 15 s”, "
+         "“no orphan desktops: no REMOTIX session is left with processes”"],
+        ["Orphan desktop ended", "rootside", "“no orphan desktops: the REMOTIX session N of … has live processes and no child of ours”"],
+        ["Local login hold", "rootside", "“local login of … HELD in PAM”, “nothing of its REMOTIX desktop is left”, "
+         "“STILL there after 20 s” (the other lines are in " + rif("Logging and diagnostics") + ")"],
     ], "«TAB» — The log line that marks each step") + \
     p("The priority marks of the journal (a leading ⛔ is an error, a leading ⚠ a warning, anything else information) were "
       "reviewed on 17 November 2026: of 33 message patterns seen at error priority, 29 routine ones were lowered to "

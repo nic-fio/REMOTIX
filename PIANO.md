@@ -140,3 +140,13 @@ Passi 0–2: circa 1–2 settimane.
 ## Rifiniture rimandate (non bloccanti, decisione del proprietario 18 nov 2026)
 
 - **XFCE, sessione remota: sfondo nero invece di quello scelto dall'utente** (visto dal proprietario sulla live XFCE; nelle prove del server l'immagine era al 93% di un solo colore). REMOTIX non tocca le impostazioni dello sfondo. Ipotesi non verificata: XFCE salva lo sfondo per nome del monitor e lo schermo virtuale remoto ha un altro nome. Da accertare su una macchina con XFCE; controllare anche gli altri tre desktop (regola unica: nel remoto l'utente ritrova il suo sfondo). Cosmesi: si fa dopo.
+
+## Manuali allineati al prodotto prima del rilascio — FATTO (18 nov 2026)
+
+- **Controllo:** due agenti in sola lettura hanno confrontato i manuali con codice, pacchetto e decisioni. Numeri, blocchi, tempi, opzioni, PAM e pacchetto erano giusti; sbagliato o mancante tutto ciò che è cambiato il 17 e 18 nov.
+- **Corretto (solo testi, sorgenti in `manuals/sources/`, HTML rigenerati con `build.py`, `--check` allineato):** riavvio del servizio che chiude i desktop (§11.56) in entrambi i manuali; accesso locale che chiude il desktop remoto (§11.57), con sezione nuova nel tecnico (ch14) e i fatti distribuiti negli altri capitoli; limiti noti dichiarati (sfondo XFCE, servizio ucciso di colpo, cosa è stato provato e come, artefatto RealtimeKit, finestra della password su GNOME non verificata); resti vecchi tolti (sezione «altre distribuzioni», «installer», «NOT ACTIVE YET», «one binary»); limiti dichiarati 3K e 8 utenti (§11.58) accanto a quelli tecnici veri.
+- **Revisione (Fable):** due giri, APPROVATO.
+- **Limite del controllo:** il manuale tecnico non è stato riletto tutto per intero; ch05, ch06, ch09, ch10, ch11, ch21 solo per parole chiave (parti non toccate dal 17 nov).
+- **Aperto, decisione del proprietario:** scrivere «3K» anche in pixel nei manuali.
+- **Testi vecchi dentro il prodotto, da sistemare alla prossima costruzione (già annotati nel manuale tecnico):** messaggio di registro in `main.c` ~466-473 che nomina i file PAM di Fedora/SUSE/Arch; messaggio in `main.c` ~3918-3923 («the desktops stay alive»); commenti in `debian/rules`, `postinst`, `prerm`, `remotix.service` che dicono che i desktop sopravvivono allo stop.
+- **Da verificare su macchina vera (non bloccante):** su GNOME, `pkexec true` in un terminale del desktop remoto: compare la finestra della password?

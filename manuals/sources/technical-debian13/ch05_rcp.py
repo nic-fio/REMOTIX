@@ -211,14 +211,14 @@ S6 = p(c("handle_credentials()") + " receives user and password in one message. 
 S7 = p(c("ATTACH") + " asks for a desktop: the canvas the client would like (width, height), the view it will draw into (width, height) and the keyboard layout name. " + c("handle_attach()") +
        " is a sequence of checks, in this order; the first failure ends the session.", lead=True) + \
     table(["#", "Check", "Outcome on failure"], [
-        ["1", "Canvas wider than 4096 or taller than 2304 (" + c("RCP_CANVAS_MAX_W") + ", " + c("RCP_CANVAS_MAX_H") + ")", "reduced, logged, not a failure"],
+        ["1", "Canvas wider than 4096 or taller than 2304 (" + c("RCP_CANVAS_MAX_W") + ", " + c("RCP_CANVAS_MAX_H") + ")", "reduced, logged, not a failure (the declared limit of the product is 3K)"],
         ["2", "Canvas below 320 by 240 (" + c("RCP_CANVAS_MIN_W") + ", " + c("RCP_CANVAS_MIN_H") + ") or an odd side", c("PROTOCOL_ERROR")],
         ["3", "A view with a zero side", c("PROTOCOL_ERROR")],
         ["4", "Layout name malformed (" + c("layout_well_formed()") + ": letters, digits, " + c("_") + ", " + c("-") + ", optionally a parenthesised variant, up to 64 bytes)", c("PROTOCOL_ERROR")],
         ["5", "Layout the machine does not have (" + c("layout_known()") + ": the " + c("layout_exists") + " hook asks XKB; without it a fixed list of twenty is used, logged)", c("SESSION_UNSERVABLE")],
         ["6", "The user already has a local graphical session (" + c("session_local") + " hook)", c("ALREADY_ACTIVE_LOCALLY")],
         ["7", "The slot of this user (" + c("slot_take()") + "): held by another live client", "ghost eviction (" + c("evict_ghost()") + ") if the holder is silent more than " + c("DEFAULT_EVICTION") + " = 15 s, else " + c("ALREADY_ACTIVE_REMOTELY")],
-        ["8", "The registry of sessions is full (" + c("RCP_SESSION_CAP") + " = 10 by default, " + c("--session-cap") + ")", c("SESSION_UNSERVABLE")],
+        ["8", "The registry of sessions is full (" + c("RCP_SESSION_CAP") + " = 10 by default, " + c("--session-cap") + "; the declared limit is 8 users)", c("SESSION_UNSERVABLE")],
         ["9", "Canvas against the client's decoder ceiling, then against the stage's own canvas", "reduced or replaced, logged; below 320 by 240 after the ceiling is " + c("SESSION_UNSERVABLE")],
     ], "«TAB» — The order of the checks in handle_attach()") + \
     p("Then " + c("SESSION") + " goes out: one state byte (1 = a new desktop, 2 = the stage was already there, from the " + c("session_resumed") + " hook), the granted canvas (two " + c("u32") + ") and the "

@@ -316,7 +316,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
       "record that a size the producer cannot hold kills the stream about 2 ms later («no more input formats»); "
       + c("capture_take()") + " looks at the state before waiting, so the failure surfaces in one loop turn instead of a "
       "timeout. The size rule itself (" + c("RCP_CANVAS_MIN_W") + " 320 to " + c("RCP_CANVAS_MAX_W") + " 4096, " + c("RCP_CANVAS_MIN_H")
-      + " 240 to " + c("RCP_CANVAS_MAX_H") + " 2304, even sides, larger requests reduced) lives in " + c("rcp_size_allowed()")
+      + " 240 to " + c("RCP_CANVAS_MAX_H") + " 2304, even sides, larger requests reduced; the declared limit of the product is 3K) lives in " + c("rcp_size_allowed()")
       + " (" + rif("The RCP/1 protocol") + ").") + \
     h4("Waking a still desktop") + \
     p("A Wayland compositor delivers only when the scene changes, and a desktop just started is still. Wayland has no «repaint "

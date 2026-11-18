@@ -68,9 +68,19 @@ S2 = p("REMOTIX authenticates against its own PAM service, named " + c("remotix"
          + " open",
          "Never run by the authentication step. It is run by the per-user child (" + c("pam_open_session()")
          + "), and the logind session is born from " + c("pam_systemd") + ", which is inside "
-         + c("common-session") + "."],
+         + c("common-session") + ". That include now also carries REMOTIX's own " + c("pam_exec") + " line (next paragraph); for "
+         "the service " + c("remotix") + " the program exits at once (" + c("local_login.c") + " leaves service " + c("remotix") + " alone)."],
         [c("password"), c("@include common-password"), "Present as in sshd; REMOTIX never changes a password."],
     ], "«TAB» — The four PAM stacks of the " + c("remotix") + " service") + \
+    p("<b>The other PAM line the package adds.</b> " + c("/etc/pam.d/common-session") + " is not a REMOTIX file (it belongs to "
+      + c("libpam-runtime") + ", which the package depends on, and it is not a conffile of REMOTIX), but the package edits it "
+      "through " + c("pam-auth-update") + ": the profile " + c("/usr/share/pam-configs/remotix") + " (" + c("debian/remotix.pam-config")
+      + ": " + c("Default: yes") + ", " + c("Priority: -1") + ", " + c("Session-Interactive-Only: yes") + ", " + c("Session-Type: Additional")
+      + ") adds " + c("session optional pam_exec.so quiet /usr/libexec/remotix/remotix-local-login") + ". Every service that includes "
+      + c("common-session") + " (sshd, su, the display managers, and " + c("/etc/pam.d/remotix") + " itself) runs it at each opening and closing of a session (the non-interactive stack, used for example by cron, "
+      "does not carry the line: " + c("Session-Interactive-Only") + "); the program acts only for a graphical session on a seat and returns 0 at once everywhere else, and the line is "
+      + c("optional") + ", so it can never make a login fail. What it does, and why, is in " + rif("The local-login hold")
+      + "; the package side (postinst, prerm, the dependency) is in " + rif("Files the package installs") + ".") + \
     p("The reason the service is not " + c("login") + ": on Debian " + c("/etc/pam.d/login") + " is the local console "
       "stack (" + c("pam_securetty") + " and others), policies meant for whoever sits at the machine, and the "
       "network login would inherit them in a way that depends on how that machine is configured. sshd's stack is "
@@ -84,11 +94,14 @@ S2 = p("REMOTIX authenticates against its own PAM service, named " + c("remotix"
       "address (no brackets, no port, an IPv4-mapped IPv6 address turned back into IPv4; "
       + c("rcp_rhost_from_provenance()") + "), so " + c("pam_faillock") + ", " + c("pam_unix") + " and logind see "
       "where the attempt comes from; " + c("PAM_TTY") + " is the service name.") + \
-    note("Several comments in " + c("remotix.pam") + ", " + c("authentication.c") + " and " + c("main.c")
-         + " still mention other distributions' variants of the file (" + c(".fedora") + ", " + c(".suse") + ", "
-         + c(".arch") + ") and a " + c("build.sh") + " that installs it; none of that exists in this tree. They are "
-         "leftovers of the multi-distribution code and are listed in " + rif("Appendix C — Known issues and open points")
-         + ".", "Stale comments.")
+    note("Some text of the product still mentions other distributions' variants of the file. The one an administrator can "
+         "read is a <b>run-time log message</b>, not a comment: when " + c("/etc/pam.d/remotix") + " is missing, " + c("look_pam_service()")
+         + " in " + c("main.c") + " writes at start-up a line that begins “the PAM service «remotix» DOES NOT EXIST” and ends "
+         "“Install the file of the family: src/remotix.pam (Debian/Ubuntu), .fedora, .suse, .arch.”, and it also says that "
+         "on Fedora and Arch the fallback is " + c("pam_deny") + ". On this package the administrator should do one thing: "
+         + c("apt install --reinstall remotix") + ". A comment in " + c("authentication.c") + " also quotes a variant of the file "
+         "for another distribution. None of those files exists in this tree; the texts are to be corrected at the next build "
+         "(" + rif("Appendix C — Known issues and open points") + ").", "Stale text.")
 
 # ── 13.3 One PAM transaction ─────────────────────────────────────────────
 S3 = p("Only one function in the product touches " + c("libpam") + ": " + c("rcp_authenticate_judged()") + " in "
@@ -389,11 +402,10 @@ S9 = p("Every number in this chapter was read in the code. Against " + c("SPECS.
     ], "«TAB» — The login defences, SPECS against code") + \
     p("The 1.0 form of the rule (three failed attempts from one address, twelve hours) is kept in " + c("SPECS.md")
       + " §4.2 as history; it is not in the code.") + \
-    p("Two comments in the code contradict the code next to them, and the code wins: " + c("rootside.h")
-      + " says " + c("rcp.c") + "'s limits are 5/12/30 (they are 5/20/30), and says a paused request gets «not "
-      "checked» and is not counted (it gets " + c("RXR_PAUSED") + ", a plain refusal that is counted unless the key logged in within 30 days, as "
-      + c("rootside_proto.h") + " and " + c("rootside.c") + " say). " + c("check-ban.py") + " also names the key "
-      "limit as 12 in its description and in a comment, while its constant " + c("KEY_LIMIT") + " is 20.")
+    p("One comment in the code still contradicts the code next to it, and the code wins: " + c("rootside.h")
+      + " says a paused request gets «not checked» and is not counted (it gets " + c("RXR_PAUSED") + ", a plain refusal that is counted unless the key logged in within 30 days, as "
+      + c("rootside_proto.h") + " and " + c("rootside.c") + " say). The other two that this manual used to list, the key limit "
+      "written as 12 in " + c("rootside.h") + " and in " + c("check-ban.py") + ", were corrected on 17 Nov 2026 (both say 20 now).")
 
 CHAPTER = ("Login and its defences", [
     ("The path of one login attempt", S1),

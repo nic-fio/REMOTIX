@@ -1,10 +1,12 @@
 from build import arrow, box, c, fig, flow, note, p, path, rif, sysf, table, text, tip, warn, zone
 
-# ── The roles of the one binary ──────────────────────────────────────────
-S1 = p("REMOTIX is one executable, " + c("/usr/libexec/remotix/remotix") + ", that plays several roles. The role is "
+# ── The roles of the server executable ──────────────────────────────────────────
+S1 = p("The server is one executable, " + c("/usr/libexec/remotix/remotix") + ", that plays several roles. The role is "
        "chosen by the first argument, read at the top of " + c("main()") + " in " + c("main.c") + " before any option, "
        "certificate or socket is touched, so that each role starts from a fresh memory image: a child must not hold the "
-       "server's TLS key, and the PAM dispatcher must not hold any password or secret.", lead=True) + \
+       "server's TLS key, and the PAM dispatcher must not hold any password or secret. The package ships one more, very "
+       "small program, " + c("/usr/libexec/remotix/remotix-local-login") + " (" + c("local_login.c") + ", libc only): it is "
+       "not a role of the server but a hook that PAM runs at a local login (" + rif("The local-login hold") + ").", lead=True) + \
     table(["First argument", "Role", "Runs as", "Entry point", "Started by"], [
         ["(none)", "<b>Root side</b>: the process systemd starts; the main PID of the unit. Parses the options, binds the "
          "UDP and TCP port, then hands everything to " + c("rootside_main()") + " and never comes back",
@@ -23,7 +25,7 @@ S1 = p("REMOTIX is one executable, " + c("/usr/libexec/remotix/remotix") + ", th
          "any user", c("child_test_encoding()"), "an administrator or a check, by hand"],
         [c("--drop-render-grants"), "Takes back the card ACLs the service granted; run by the package's removal scripts "
          "before the binary is deleted", "root", c("render_grant_drop_all()"), "the maintainer scripts"],
-    ], "«TAB» — The roles of the one binary, by first argument") + \
+    ], "«TAB» — The roles of the server executable, by first argument") + \
     p("The unit's command line is in " + c("debian/remotix.service") + ": " + c("--address 0.0.0.0") + ", "
       + c("--name %H") + " (the certificate carries the machine's name), the port from " + c("REMOTIX_PORT") + " (default "
       "7447, " + c("debian/remotix.conf") + "), " + c("--certificates") + " and " + c("--ban-file") + " in "
@@ -111,11 +113,12 @@ S3 = p("The root side is " + c("rootside_main()") + " in " + c("rootside.c") + "
          + c("execve()"), "No network side without its walls: if " + c("walls_apply()") + " fails the process exits with "
          "126 and is not started"],
     ], "«TAB» — How the root side starts") + \
-    p("Then it loops on " + c("poll()") + " over the self-pipe, the channel to the network side and the PAM dispatcher, "
-      "with a timeout of 1000 ms (100 ms while stopping). Each round it reads the channel (" + c("chan_read()")
+    p("Then it loops on " + c("poll()") + " over the self-pipe, the channel to the network side, the PAM dispatcher and the inotify descriptor of the "
+      "local-login requests, with a timeout of 1000 ms (100 ms while stopping or while a local login is being served). Each round it reads the channel (" + c("chan_read()")
       + "), flushes queued answers, reaps children (" + c("reap_kids()") + ") and the network side (" + c("reap_net()")
       + "), checks the desktops found again (" + c("found_check()") + ", " + c("found_pump()") + "), repeats the card "
-      "probe if needed (" + c("codec_retry()") + "), sends overdue signals (" + c("kids_hurry()") + "), keeps its tables "
+      "probe if needed (" + c("codec_retry()") + "), sends overdue signals (" + c("kids_hurry()") + "), serves the "
+      "requests of a local login that is held in PAM (" + c("pl_step()") + ", " + rif("The local-login hold") + "), keeps its tables "
       "(" + c("tables_minute()") + ") and sweeps the KDE compositor hosts (" + c("kdehost_sweep()") + ").") + \
     p("<b>If the network side dies</b> the root side reaps it, closes the channel, gives each of its children "
       + c("KIDS_EOF_GRACE_MS") + " (5000 ms) to leave on the end-of-file, then sends SIGTERM and, " + c("KIDS_TERM_GRACE_MS")
@@ -128,11 +131,14 @@ S3 = p("The root side is " + c("rootside_main()") + " in " + c("rootside.c") + "
       "(" + c("found_look()") + ").") + \
     p("<b>If the root side dies</b> the network side sees end-of-file on its channel, leaves its loop and exits (" + c("rootside_lost()")
       + " in the loop of " + c("main()") + "); systemd restarts the unit (" + c("Restart=on-failure") + ", "
-      + c("RestartSec=2") + "). The desktops stay: they live outside the unit (" + rif("Desktops found again after a restart")
+      + c("RestartSec=2") + "). The desktops are outside the unit, so a crash does not end them by itself; the restarted "
+      "root side ends every REMOTIX desktop that has no child, unless its user comes back first (" + rif("Desktops found again after a restart")
       + ").") + \
-    p("<b>Stopping.</b> On SIGTERM the root side sends SIGTERM to the network side, waits at most " + c("STOP_WAIT_MS")
-      + " (5000 ms) for it and for the children, then SIGKILLs the network side; the unit's " + c("KillMode=mixed")
-      + " takes anything left.")
+    p("<b>Stopping.</b> On SIGTERM the root side sends SIGTERM to the network side and waits at most " + c("STOP_WAIT_MS")
+      + " (25 000 ms) for it and for the children, then SIGKILLs the network side. An orderly stop closes the remote "
+      "desktops: the network side asks each child for the close of its desktop (at most " + c("STOP_CLOSE_WAIT_MS")
+      + ", 15 000 ms), and the root side ends what is still in a REMOTIX scope before it exits; " + c("KillMode=mixed")
+      + " takes anything left (" + rif("Stopping the service") + ").")
 
 # ── The network side ─────────────────────────────────────────────────────
 WALL_ORDER = flow([
@@ -205,7 +211,8 @@ S5 = p("Everything the network side may ask of the root side crosses one " + c("
         ["Root side to network side", c("RXR_READY") + " (first, once), " + c("RXR_VERDICT") + ", " + c("RXR_SPAWNED") + " "
          "(with the child's socket end and a pidfd by " + c("SCM_RIGHTS") + "), " + c("RXR_SPAWN_REFUSED") + ", "
          + c("RXR_CHILD_EXITED") + ", " + c("RXR_FOUND_AGAIN") + ", " + c("RXR_FOUND_END") + ", " + c("RXR_FOUND_GONE")
-         + ", " + c("RXR_CODEC")],
+         + ", " + c("RXR_CODEC") + ", " + c("RXR_LOCAL_COMING") + " (110: a local login of that user is held in PAM; "
+         + rif("The local-login hold") + ")"],
         ["Names come from the root side", "The child's options (canvas, survey folder, quality switches, card route) come "
          "from the root side's own argument list, never from a request. A SPAWN names no user: it carries a one-time "
          "grant, and the user and address are those of the grant"],
@@ -344,7 +351,8 @@ S9 = p("The sentinel answers questions for which logind is the authority, throug
         ["Close one remote session", c("sentinel_terminate_remote_session()"), "only the single-process mode, for a "
          "desktop found again whose user has a local session (" + c("found_again_close_for_local()") + " in " + c("main.c") + ")",
          "logind " + c("TerminateSession") + ", only for a session that is certainly REMOTIX's. In the split server the "
-         "network side does not attempt it (it is not root): the desktop leaves the list and its stage is left alone"],
+         "network side does not attempt it (it is not root): the desktop leaves the list, and the root side ends its "
+         "scope by itself (" + c("localx_sweep()") + ", " + rif("Local excludes remote and the session cap") + ")"],
     ], "«TAB» — What the sentinel is asked") + \
     p("<b>A local session is one with a seat.</b> The obvious criterion (graphical type, not remote) would refuse REMOTIX "
       "itself: REMOTIX's own sessions are created without a seat, and a seat is what separates a real screen from a "
@@ -409,25 +417,28 @@ S11 = p("Each piece of state has one owner and one lifetime. Two of them are del
         ["Presence table (abandonment clock)", c("main.c"), "a slot per user from their first input to the end of their stage",
          "sized on the cap; survives clients"],
         ["Desktops found again", c("main.c") + " and " + c("struct found_slot") + " in " + c("rootside.c"),
-         "from startup until the user returns or the desktop dies", "at most " + c("MAX_FOUND_AGAIN") + " (256)"],
+         "from startup until the user returns, the desktop dies or the root side ends it (a few seconds)", "at most " + c("MAX_FOUND_AGAIN") + " (256)"],
         ["The budget's accounts", c("budget.c"), "per user", rif("Quality, degradation and budget")],
         ["Card ACL record, enrolments", c("render_grant.c") + ", " + c("child.c") + " (root)", c("/var/lib/remotix/render-grants")
          + ", " + c("/var/lib/remotix/group-enrollments.jsonl"), "root-owned, never writable by " + c("remotix")],
         ["The stage: capture, encoders, input, clipboard", "the child", "as long as the child", "statics of " + c("child.c")
          + ": one stage per process"],
-        ["The desktop and the user's programs", "the compositor", "until logout or abandonment", "survives clients, "
-         "children and the service"],
+        ["The desktop and the user's programs", "the compositor", "until logout, abandonment, a local login of that user "
+         "or a stop of the service", "survives clients and a network side that dies for a few seconds; an orderly stop of "
+         "the service closes it"],
     ], "«TAB» — Where state lives") + \
     p("<b>One number for the cap.</b> " + c("RCP_SESSION_CAP") + " (10) in " + c("rcp.h") + " is the default, " + c("--session-cap N")
       + " moves it at startup, and " + c("rcp_cap()") + " is read once by every table that counts users: the attach slots of "
       + c("rcp.c") + ", the children of " + c("child.c") + ", the presence table of " + c("main.c") + ", the root side's "
-      "children and the budget's cells. The root side's children table is sized on the cap handed to it in " + c("struct rootside_options") + ".") + \
+      "children and the budget's cells. The root side's children table is sized on the cap handed to it in " + c("struct rootside_options") + ". "
+      "The default of 10 is a technical value; the <b>declared</b> limit of the product (owner's decision, "
+      + c("DECISIONS-11") + " §11.51, confirmed 18 Nov 2026) is <b>8 users</b> at the same time.") + \
     tip("the cap counts <b>stages</b>, not connections: a user who closed the browser still holds a stage until logout or "
         "abandonment. " + c("stage_count()") + " adds the children and the desktops found again; a new user who finds them "
         "all taken is refused with " + c("0x0E SESSION_UNSERVABLE") + " before any process is forked.", "Stages, not connections.")
 
 CHAPTER = ("Overall architecture", [
-    ("The roles of the one binary", S1),
+    ("The roles of the server executable", S1),
     ("Process tree and privileges at a glance", S2),
     ("The root side", S3),
     ("The network side and its walls", S4),

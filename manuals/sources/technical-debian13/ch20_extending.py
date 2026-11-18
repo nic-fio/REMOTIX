@@ -90,7 +90,7 @@ S3 = p("The following code existed on the way from the old multi-distribution pr
     ]) + \
     h4("Risks recorded by tranche 1") + \
     ul([
-        "The local-login folder mechanism relies on x11-common not shipping " + c("60x11-common_xdg_path") + ". If a future Debian adds it, the removed "
+        "The session-folder lookup that imitated a local login (D-153) relies on x11-common not shipping " + c("60x11-common_xdg_path") + ". If a future Debian adds it, the removed "
         "code (never tested on Debian) would be needed again.",
         "An administrator who installs SELinux on Debian finds no SELinux handling in REMOTIX.",
         "A build against libei older than 1.3.901 now fails at " + c("make deps") + " by design.",

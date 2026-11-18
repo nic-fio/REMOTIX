@@ -337,9 +337,15 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
         ["What the parent passes to every child on its command line (" + c("child") + ")", c("children_phase9()")],
         ["The command socket, only if requested with the bench option " + c("--command-socket") + " (never in the packaged "
          "unit)", c("command_open()")],
-        ["The PAM service file found, or " + c("⛔ the PAM service «remotix» DOES NOT EXIST"), c("look_pam_service()")],
+        ["The PAM service file found, or " + c("⛔ the PAM service «remotix» DOES NOT EXIST") + " (the message ends by naming the "
+         "files of other distributions, which do not exist here: the administrator runs " + c("apt install --reinstall remotix")
+         + ")", c("look_pam_service()")],
         ["Certificates: generated or reused, fingerprints (" + c("cert") + ")", c("certificates_prepare()")],
-        ["Desktops found alive from a previous server (reattach pending)", c("found_again_at_startup()")],
+        ["Desktops found alive from a previous server (reattach pending); the root side ends them about 10 s later if the user "
+         "does not return (" + rif("Desktops found again after a restart") + ")", c("found_again_at_startup()")],
+        ["Whether the local-login hold can work (" + c("rootside") + "): " + c("⭐ a local login closes the remote desktop first (§11.57): "
+         "requests in /run/remotix/prelocal") + ", or the " + c("⚠") + " form that says " + c("a local login is NOT held"),
+         c("pl_init()") + " in " + c("rootside.c")],
         [c("⭐ ready: https://<name>:<port>"), c("main.c")],
     ], "«TAB» — What the parent declares before serving") + \
     p("While running, the parent writes once a minute a cumulative line about the local-session guardian "
@@ -347,6 +353,53 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
       + c("GUARDIAN_COUNT_MS") + " = 60,000 ms) instead of one line per two-second pass. At shutdown it sends the "
       "farewell " + c("RCP_SERVER_CLOSING") + " to every session and reports how many sessions did not finish "
       "within the wait (" + c("main.c") + ").")
+
+# ── Lines of the stop, the orphan rule and the local-login hold ─────────
+S8B = p("The lines below are those of the stop of the service (" + rif("Stopping the service") + "), of the rule “no orphan desktops” and "
+        "of the local-login hold (" + rif("The local-login hold") + "). The text is that of the code; N stands for a number, "
+        "and long lines are cut with “…”. Follow them with " + c("journalctl -t remotix | grep 'local login'") + " or "
+        + c("journalctl -t remotix | grep -E 'no orphan|stopping'") + ".", lead=True) + \
+    table(["Area", "The line contains", "Means"], [
+        "At a stop",
+        [c("rootside"), "⭐ signal N: the network side is asked to stop (SIGTERM), 25 s at most", "The stop begins."],
+        [c("startup"), "stopping: N desktops asked to close (waiting at most 15 s for them)", "The children were asked for the close."],
+        [c("startup"), "⛔ stopping: «user» has a LOCAL session: its desktop gets the LIGHT close, not the Logout "
+         "(or “could not be checked for a local session”)", "Light close for that user."],
+        [c("startup"), "stopping: N desktops closed, M still alive after 15 s", "The result; the root side closes the M that are left."],
+        [c("startup"), "⛔ stopping: the request to close the desktop of «user» did NOT leave towards its child: …",
+         "The root side will close it."],
+        [c("startup"), "stopping: the root side is gone: no close is asked; the children see EOF and leave, and the desktops are "
+         "ended by the next root side — no orphan desktops", "Not an orderly stop: the root side had died."],
+        [c("rootside"), "⭐ no orphan desktops: no REMOTIX session is left with processes — the service stops clean", "Nothing was left at the scan of the stop: the expected end."],
+        [c("rootside"), "⛔ no orphan desktops: the REMOTIX session N of «user» (uid N) is still there while the service stops — it must not stay: SIGTERM …",
+         "At the stop the root side ends a desktop that is still in a REMOTIX scope (it then waits for the endings, 21 s at most)."],
+        [c("rootside"), "⛔ no orphan desktops: the service stops and N REMOTIX session(s) still have processes … the next start of "
+         "the service ends them", "Some ending found no slot or reached nobody."],
+        [c("rootside"), "⚠ no orphan desktops: /run/systemd/sessions cannot be read (…) while stopping: NOTHING is ended here",
+         "The root side could not look."],
+        [c("rootside"), "⚠ the network side did not stop within 25 s: SIGKILL", "The network side exceeded " + c("STOP_WAIT_MS") + "."],
+        "While the service runs",
+        [c("rootside"), "⛔ no orphan desktops: the REMOTIX session N of «user» (uid N) has live processes and no child of ours … "
+         "SIGTERM to the N processes of session-N.scope and to nothing else; SIGKILL in 3 s …",
+         "An orphan desktop, seen in two scans, is being ended."],
+        "Local-login hold",
+        [c("rootside"), "⛔ local login of «user» (uid N) HELD in PAM: its REMOTIX desktop is closed first — …",
+         "A request arrived; the end of the line says if the child is asked for the full close, or the scope is ended by the root side."],
+        [c("wt"), "⛔ local login held: «user» — N logged clients sent away with 0x04", "The network side told the clients."],
+        [c("child"), "⭐ 1.0.0: a LOCAL login of «user» (uid N) is being held, but there is no live child of this user: nothing to "
+         "close from here", "No child on the network side; the root side ends the scope."],
+        [c("rootside"), "⭐ local login of «user» (uid N): nothing of its REMOTIX desktop is left (N ms, closed by its child) — the login goes on",
+         "The normal end."],
+        [c("rootside"), "⚠ local login of «user» (uid N): its REMOTIX session is gone (N ms, scope ended by the root side: …) — the login goes on",
+         "The end by the root side's own machinery (light clean-up only)."],
+        [c("rootside"), "⚠ local login of «user» (uid N): its REMOTIX desktop is STILL there after 20 s — the login is let through anyway …",
+         "The ceiling " + c("PL_CEIL_MS") + " was reached."],
+        [c("rootside"), "⛔ SPAWN for «user» refused: a local login of uid N is being held (or was let through a moment ago): no remote desktop for it now",
+         "A birth for that uid was refused during the hold and the " + c("PL_HOLD_MS") + " after it."],
+    ], "«TAB» — The lines of the stop, the orphan rule and the local-login hold") + \
+    p("A request whose user has no REMOTIX desktop leaves only a detail line (" + c("local login of uid N: no REMOTIX desktop of that user — "
+      "the login goes on") + ", " + c("--verbose")+ "). What the page of a client that is refused a birth during the hold shows was not "
+      "traced for this manual.")
 
 # ── Environment variables ────────────────────────────────────────────────
 S10 = p("REMOTIX reads almost nothing from the environment, on purpose. The complete list of names that start with "
@@ -463,6 +516,7 @@ CHAPTER = ("Logging and diagnostics", [
     ("Journal priorities and the rule of the head mark", S6B),
     ("What never enters the log", S7),
     ("The startup declarations", S8),
+    ("Lines of the stop, the orphan rule and the local-login hold", S8B),
     ("Environment variables read by the product", S10),
     ("Diagnostic instruments", S11),
 ])

@@ -340,7 +340,7 @@ S11 = p("The GOP is infinite (" + c("chiavi_ogni") + " = 0): periodic keyframes 
 
 S12 = p(c("codificatore_ridimensiona()") + " reopens the encoder at the new size; the first frame after is a true key. The size it receives has already been checked by "
         + c("rcp_size_allowed()") + ": at least " + c("RCP_CANVAS_MIN_W") + "×" + c("RCP_CANVAS_MIN_H") + " (320×240), at most " + c("RCP_CANVAS_MAX_W") + "×" + c("RCP_CANVAS_MAX_H")
-        + " (4096×2304), even sides; a larger request is <i>reduced</i> (the side that overflows goes to the maximum, the other stays), a smaller one is refused. The driver's own "
+        + " (4096×2304; the declared limit of the product is 3K), even sides; a larger request is <i>reduced</i> (the side that overflows goes to the maximum, the other stays), a smaller one is refused. The driver's own "
         "maximum is still read at every opening (" + c("max_size_w") + ", " + c("max_size_h") + "), and " + c("vulkan_fit()") + " compares the canvas with the card's limits.", lead=True) + \
     p("<b>The frame ceiling.</b> " + c("FRAME_CAP") + " is 16 × 1024 × 1024 bytes. A frame that exceeds it is re-encoded at lower quality and never sent; the ladder "
       "(" + c("lower_quality()") + ", " + c("CRF_STEP") + " = 9, " + c("MAX_REENCODES") + " = 3) and its way back are in " + rif("Quality, degradation and budget") + ".") + \

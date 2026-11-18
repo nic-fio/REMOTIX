@@ -82,6 +82,17 @@ Le voci aperte stanno in fondo.
   l'elenco delle righe non verdi si confronta con quello del giro precedente: non deve essercene una di più.
 - **Su una distribuzione nuova:** avere il giro completo funzionante **prima** di cominciare a correggere.
 
+### B5. I manuali e gli obiettivi dichiarati restano indietro se non li si aggiorna nello stesso lavoro
+- **Che cosa è successo (18 nov 2026):** al controllo prima del rilascio i manuali descrivevano ancora il
+  comportamento della sera prima (desktop che sopravvivono al riavvio del servizio) e non parlavano
+  dell'accesso locale. In più gli obiettivi erano stati abbassati sulla carta (massimo 3K, 8 utenti) ma né il
+  programma né i manuali li avevano seguiti: il programma accetta ancora 4K e 10 utenti.
+- **Soluzione:** controllo dei manuali frase per frase contro il codice, correzioni, limiti noti dichiarati;
+  i numeri garantiti sono 3K e 8 utenti, il programma non viene cambiato (`DECISIONS-11` §11.58).
+- **Regola:** una decisione che cambia ciò che l'utente vede si chiude solo quando sono aggiornati insieme
+  codice, prove, manuali e registro delle decisioni. Su una distribuzione nuova il manuale tecnico va scritto
+  dal codice di quella distribuzione, non copiato e adattato.
+
 ---
 
 ## C. Pacchetto e installazione

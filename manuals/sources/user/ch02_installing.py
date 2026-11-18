@@ -1,11 +1,10 @@
-"""User Manual, chapter 2 — installing REMOTIX: common steps, then one section group per distribution.
+"""User Manual, chapter 2 — installing REMOTIX (Debian 13): the steps, then one section for each part.
 Sources: debian/control, debian/remotix.preinst, .postinst, .prerm, .postrm, .service, .conf, .ufw, denied-users,
 src/remotix.pam, src/certificates.c, src/main.c (options), docs/SPECS.md §4.1."""
 from build import c, note, p, rif, steps, sysf, table, term, ui, ul, warn
 
 S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. There is no installer program. These "
-             "are the steps, which are the same on every distribution; the commands are in the section of your "
-             "distribution below.", lead=True) + \
+             "are the steps; the commands are in the sections below. REMOTIX 1.0.0 is for Debian 13 (trixie).", lead=True) + \
     steps([
         "<b>Check the machine</b>: one of the four desktops installed, a video card that encodes (see "
         + rif("What you need") + "), and a way to reach it on the network.",
@@ -64,7 +63,7 @@ S_DEB_INSTALL = p("This section is for <b>Debian 13 (trixie)</b>. The package is
     term("remotix: ⚠ the video card of this machine did not encode a test frame (H.264): REMOTIX will not show "
          "any desktop until it can.\n"
          "remotix:   check the card's driver (Intel/AMD: va-driver-all; NVIDIA: its proprietary driver), then: "
-         "/usr/libexec/remotix/remotix --encoding-test", "A warning at installation") + \
+         "sudo /usr/libexec/remotix/remotix --encoding-test h264", "A warning at installation") + \
     p("Once the driver is in place, repeat the test yourself:") + \
     term("$ sudo /usr/libexec/remotix/remotix --encoding-test h264", "Repeat the test") + \
     p("It prints one line and ends with <b>0</b> if the card encodes, <b>3</b> if no card of the machine can encode, "
@@ -73,8 +72,8 @@ S_DEB_INSTALL = p("This section is for <b>Debian 13 (trixie)</b>. The package is
 S_DEB_REFUSALS = p("The package refuses to install, on purpose, in two cases. apt then ends with an error whose "
                    "last lines are the messages below.", lead=True) + \
     table(["The message", "What it means", "What to do"], [
-        [ui("remotix: this machine has no video card REMOTIX can use (no DRM render node: /dev/dri/renderD* is "
-            "missing).") + "<br>" + ui("remotix: REMOTIX encodes the desktop only on the video card (Intel, AMD or "
+        [ui("remotix: this machine has no video card REMOTIX can use (no DRM render node: nothing named renderD* in "
+            "/sys/class/drm).") + "<br>" + ui("remotix: REMOTIX encodes the desktop only on the video card (Intel, AMD or "
                                        "NVIDIA with its driver): it is not installed."),
          "The machine shows no video card that programs can use for encoding. This is checked on a "
          "<b>new</b> installation only: an upgrade of REMOTIX that is already there is never refused for this.",
@@ -138,8 +137,8 @@ S_DEB_CERT = p("REMOTIX is reached with an address like <code class=\"sys\">http
          "$ sudo systemctl start remotix", "Make the machine's certificate again") + \
     p("The third command is written with " + c("sh -c") + " and quotes on purpose: the folder can be read only by "
       "root and by REMOTIX, so the <code class=\"sys\">page.*</code> has to be worked out by root. "
-      "After this every browser asks once more. Stopping the service disconnects the people who are working, but "
-      "their desktops keep running.") + \
+      "After this every browser asks once more. Stopping the service closes the desktops of the people who are "
+      "working: warn them first.") + \
     p("<b>Your own certificate.</b> If you have a domain name and a real certificate (from Let's Encrypt or from "
       "your organisation), REMOTIX will use it for the page, and the browser's warning disappears. Put the "
       "certificate (with its chain) and its key in the folder where REMOTIX keeps its own, under the names "
@@ -177,9 +176,8 @@ S_DEB_SETTINGS = p("The settings are a few lines in a small file. REMOTIX's defa
     term("$ sudo systemctl restart remotix", "Apply") + \
     p("The two lines are " + c("REMOTIX_PORT") + " (the port, for TCP and UDP; default 7447) and "
       + c("REMOTIX_OPTIONS") + " (extra options, separated by spaces). Which options are safe to use, and what "
-      "they do, is in " + rif("Settings you can change") + ". Restarting the service disconnects the people who "
-      "are connected for a moment; their desktops keep running and are found again when they sign in "
-      "(see " + rif("What a restart of the service does") + ").") + \
+      "they do, is in " + rif("Settings you can change") + ". Restarting the service closes the people's desktops "
+      "and the programs in them (see " + rif("What a restart of the service does") + "): warn them first.") + \
     note("the page and the video use the same port number. If you change it, open the new port in the firewall for "
          "TCP and UDP, and tell people to type it after the name: <code class=\"sys\">https://machine-name:7500</code>.",
          "Changing the port.")
@@ -203,14 +201,17 @@ S_DEB_WHO = p("Anyone who has a user account on the machine, with a password, ca
     ]) + \
     p("<b>Two more things stop a sign-in</b>, and they are not settings: a user who is <b>already signed in at the "
       "machine itself</b>, in front of its screen, is refused remotely; and a user who is already connected from "
-      "another browser is refused a second connection (see " + rif("When something does not work") + ").")
+      "another browser is refused a second connection (see " + rif("When something does not work") + "). And the "
+      "other way round: if a user signs in at the machine's own screen while their remote desktop is open, that "
+      "remote desktop is closed with its programs.")
 
 S_DEB_UPGRADE = p("<b>Upgrading.</b> Install the newer file in the same way. If the service is running, it is "
-                  "restarted by the package; if it is switched off, it stays off.", lead=True) + \
+                  "restarted by the package; if it is switched off, it stays off. <b>Warn the people connected "
+                  "first</b>, as for a removal.", lead=True) + \
     term("$ sudo apt install ./remotix_NEW-VERSION_amd64.deb", "Upgrade") + \
     ul([
-        "People who are connected lose the connection for a moment; their desktops and programs keep running and "
-        "they find them again when they sign in.",
+        "The restart closes every remote desktop with its programs: unsaved work is lost. At the next sign-in "
+        "people get a new desktop.",
         "If you changed a file that the package also ships (for example " + sysf("/etc/pam.d/remotix")
         + "), apt asks which version to keep.",
         "An upgrade is never refused because of the video card.",
@@ -223,6 +224,8 @@ S_DEB_UPGRADE = p("<b>Upgrading.</b> Install the newer file in the same way. If 
         "after fifteen seconds is killed).",
         "The users that REMOTIX had added to a group for the video card are taken out of it again, and the "
         "permissions it gave on the card are taken back.",
+        "The line REMOTIX had added to " + sysf("/etc/pam.d/common-session") + " (see "
+        + rif("Users, groups and what REMOTIX changes") + ") is taken out again.",
         "Your settings stay: " + sysf("/etc/remotix/") + ", " + sysf("/etc/pam.d/remotix") + ", the AppArmor "
         "profile, and the data folder " + sysf("/var/lib/remotix/") + " (certificates, ban list).",
     ]) + \
@@ -239,13 +242,8 @@ S_DEB_UPGRADE = p("<b>Upgrading.</b> Install the newer file in the same way. If 
     p("The packages that apt installed together with REMOTIX (drivers, labwc, PipeWire…) are not removed. "
       "If you want them gone, " + c("sudo apt autoremove") + " lists them first: read the list before you agree.")
 
-S_OTHER = p("REMOTIX 1.0.0 is available for <b>Debian 13</b> only, and this chapter covers it. When REMOTIX exists for "
-            "another distribution, this chapter gets a section for it, next to the Debian one, with its own commands "
-            "and its own refusals; the rest of this manual — connecting, using, solving problems, looking after the "
-            "installation — is the same for every distribution.", lead=True)
-
 CHAPTER = ("Installing REMOTIX", [
-    ("The steps, on every distribution", S_BEFORE),
+    ("The steps", S_BEFORE),
     ("Debian 13: installing", S_DEB_INSTALL),
     ("Debian 13: the two refusals", S_DEB_REFUSALS),
     ("Debian 13: the firewall", S_DEB_FIREWALL),
@@ -253,5 +251,4 @@ CHAPTER = ("Installing REMOTIX", [
     ("Debian 13: port, name and other settings", S_DEB_SETTINGS),
     ("Debian 13: who may connect", S_DEB_WHO),
     ("Debian 13: upgrading and removing", S_DEB_UPGRADE),
-    ("Other distributions", S_OTHER),
 ])

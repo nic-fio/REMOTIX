@@ -2,13 +2,13 @@
 Sources: debian/remotix.service, .conf, .tmpfiles, .sysusers, .postinst, .prerm, .postrm, debian/rules,
 src/main.c (options and defaults), src/child.c (group enrolment), src/render_grant.c, src/session.c,
 src/remotix-*.rules, debian/remotix_network.apparmor, docs/SPECS.md §4.1, §5.2, §5.4."""
-from build import c, note, p, rif, sysf, table, term, tree, ul, warn
+from build import c, note, p, rif, sysf, table, term, tree, ui, ul, warn
 
 S_SERVICE = p("REMOTIX is one systemd service called <b>remotix</b>. It is installed switched off and not started "
               "(see " + rif("Debian 13: installing") + ").", lead=True) + \
     term("$ sudo systemctl enable --now remotix     # start now and at every boot\n"
          "$ sudo systemctl disable --now remotix    # stop now and do not start at boot\n"
-         "$ sudo systemctl restart remotix          # restart (see below)\n"
+         "$ sudo systemctl restart remotix          # restart: closes the desktops (see below)\n"
          "$ systemctl status remotix                # is it running?", "The service") + \
     ul([
         "As installed it listens on all the machine's IPv4 addresses, on <b>TCP and UDP 7447</b>: the page and "
@@ -19,18 +19,20 @@ S_SERVICE = p("REMOTIX is one systemd service called <b>remotix</b>. It is insta
         + ").",
         "If the service stops by itself because of a fault it is started again after two seconds. If it cannot "
         "start because of a wrong setting (status 78), it is not retried: read the journal.",
+        "Stopping or restarting it closes the people's desktops: see " + rif("What a restart of the service does") + ".",
     ])
 
 S_RESTART = p("<b>What a restart of the service does to people at work.</b> Stopping, restarting or upgrading the "
-              "service disconnects everybody for a moment, but <b>does not close their desktops</b>: the desktops "
-              "and their programs keep running on the machine, outside the service. When the service is "
-              "running again, each person signs in again — the page asks them to type the password again — and finds "
-              "the same windows.", lead=True) + \
+              "service <b>closes every remote desktop and its programs</b>: each is asked to end, and whatever has "
+              "not ended after fifteen seconds is forced. Unsaved work is lost, so warn people first. The page "
+              "tells them " + ui("the server is shutting down") + ". When the service is running again, each person "
+              "signs in and gets a new desktop.", lead=True) + \
     ul([
-        "While the service is stopped nobody can connect, and the desktops keep running (and keep using memory).",
-        "The 60-minute abandonment clock starts counting again from the moment the service starts.",
-        "The service counts the desktops it finds again against the session ceiling.",
-        "<b>Restarting the machine</b> is another matter: every desktop and every program ends.",
+        "If the service falls by itself (a fault) it is restarted after two seconds, and a desktop whose service "
+        "fell is closed unless its user comes back within those few seconds.",
+        "<b>Restarting the machine</b> ends every desktop and every program in the same way.",
+        "A user who signs in at the machine's screen while their remote desktop is open waits a moment (a few "
+        "seconds, at most about 25) while the remote desktop is closed; if the service is stopped there is no wait.",
     ])
 
 S_OPTIONS = p("Settings go in " + sysf("/etc/remotix/remotix.conf.d/") + " as described in "
@@ -43,7 +45,8 @@ S_OPTIONS = p("Settings go in " + sysf("/etc/remotix/remotix.conf.d/") + " as de
          "name. It only counts when the certificate is made (see " + rif("Debian 13: the first visit and the "
                                                                           "certificate") + ")."],
         [c("--session-cap N"), "10",
-         "The most sessions served at once. Whoever does not fit gets the generic “could not open your session” "
+         "The most sessions served at once (the program's default is 10; what is supported is 8 people at the same "
+         "time). Whoever does not fit gets the generic “could not open your session” "
          "sentence. The real limit is also decided by the machine's power: a higher number does not make a weak "
          "machine stronger."],
         [c("--inactivity-s N"), "1800 (30 minutes)",
@@ -94,6 +97,11 @@ S_USERS = p("REMOTIX adds very little to the machine. This is the whole list.", 
          "forbid and forbids nothing. It has not yet been watched during a full session on a machine with a video "
          "card, so it is not switched to enforcing."],
         ["A ufw profile " + sysf("/etc/ufw/applications.d/remotix"), "Describes the port; it opens nothing."],
+        ["A line in " + sysf("/etc/pam.d/common-session") + ", put there by <code class=\"sys\">pam-auth-update</code> "
+         "from " + sysf("/usr/share/pam-configs/remotix"),
+         "When somebody signs in at the machine's own screen, the login waits until that user's remote desktop is "
+         "closed. The line is <i>optional</i> and ends within 25 seconds: it can never stop a login. "
+         "<i>remove</i> takes it out again."],
     ], "«TAB» — What REMOTIX adds to the machine") + \
     p("<b>Users' own settings.</b> While a user's remote session lasts, REMOTIX applies the session's rules to the "
       "desktop (no shut down, restart, suspend or lock buttons; “Log Out” always shown) and puts the user's values "
@@ -151,6 +159,7 @@ S_FILES = p("Where REMOTIX keeps things on a Debian 13 machine:", lead=True) + \
         "├── denied-users  # users who cannot sign in",
         "└── remotix.conf.d/  # your settings",
         "/etc/pam.d/remotix  # the sign-in rules",
+        "/usr/share/pam-configs/remotix  # the line pam-auth-update adds to /etc/pam.d/common-session",
         "/etc/ufw/applications.d/remotix  # the ufw profile",
         "/etc/apparmor.d/remotix_network  # the AppArmor profile (complain mode)",
         "/usr/share/polkit-1/rules.d/  # the two polkit rules (40 and 50)",

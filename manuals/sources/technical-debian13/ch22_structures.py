@@ -104,6 +104,9 @@ S2 = p("Every packet is one " + c("SOCK_SEQPACKET") + " message of exactly the s
          "has gone; only after " + c("FOUND_END")],
         ["109", c("RXR_CODEC"), "root → network", c("rxr_codec") + " (1072)", "the codecs and explanation, once, when a repeated probe "
          "finds some after a startup that found none"],
+        ["110", c("RXR_LOCAL_COMING"), "root → network", c("rxr_local_coming") + " (280)", "uid and user of a user whose LOCAL login is held "
+         "in PAM; the network side sends that user's logged clients 0x04 and asks the child for the full close ("
+         + rif("The local-login hold") + ")"],
     ], "«TAB» — The closed list between the root side and the network side") + \
     p("<b>Constants.</b> " + c("RXR_FOUND_MAX") + " = 256 (the most desktops found again, equal to " + c("MAX_FOUND_AGAIN")
       + " in " + c("main.c") + "), " + c("RXR_GRANT_BYTES") + " = 16, " + c("RXR_AUTH_IN_FLIGHT_MAX") + " = 16, " + c("RXR_AUTH_PER_S")
@@ -181,7 +184,7 @@ S4 = p("The header is the same for all (" + rif("Overall architecture") + "): " 
     table(["Enumeration", "Values"], [
         [c("CHILDREN_INPUT_*") + " (the " + c("action") + " of " + c("MSG_INPUT") + ")", "1 pointer · 2 button · 3 wheel · 4 letter · 5 position · "
          "6 release all (at detach) · 7 recanvas · 8 terminate (the session)"],
-        [c("CHILDREN_EXIT_*") + " (the argument of terminate)", "0 the user asked · 1 abandonment · 2 a local session (light close only)"],
+        [c("CHILDREN_EXIT_*") + " (the argument of terminate)", "0 the user asked · 1 abandonment · 2 a local session (light close only) · 3 the service is stopping (same road as abandonment in the child) · 4 a local login is held in PAM (full close, never downgraded to the light one)"],
         [c("NAME_*") + " in " + c("body_whoami"), "0 not asked · 1 the name resolves to this uid · 2 it no longer resolves · 3 it resolves to another uid"],
     ], "«TAB» — Enumerations inside the child's messages")
 

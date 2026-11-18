@@ -65,7 +65,7 @@ S2 = p("Quality is not decided in one place. The encoder lives in the per-user c
         "Capacity",
         ["Composition budget", c("--budget-mpixel-s N") + " (0 = off)", "server · " + c("budget.c"), "Refuses a newcomer with 0x06 when the machine has no composition capacity left"],
         ["Reserve fraction", c("--reserve F") + " (" + c("BUDGET_DEFAULT_RESERVE") + " = 0.5)", "server · " + c("budget.c"), "How much of an idle tenant's worst case is kept aside"],
-        ["Session cap", c("--session-cap N") + " (" + c("RCP_SESSION_CAP") + " = 10)", "server · " + c("rcp.c") + ", " + c("main.c"), "Administrative limit; refused with 0x0E"],
+        ["Session cap", c("--session-cap N") + " (" + c("RCP_SESSION_CAP") + " = 10)", "server · " + c("rcp.c") + ", " + c("main.c"), "Administrative limit; refused with 0x0E. The declared limit of the product is 8 users"],
     ], "«TAB» — Every quality and capacity switch, its default and where it lives") + \
     p("Three of these live in the child, which is a separate program started with " + c("execve") + " and a freshly composed environment: they cannot travel as environment variables. "
       + c("children_phase9()") + " stores them and the child's command line carries " + c("--quality-recovery") + ", " + c("--bandwidth-cap-mbit") + " and "

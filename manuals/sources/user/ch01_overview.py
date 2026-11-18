@@ -24,23 +24,26 @@ S_WHAT = p("<b>REMOTIX</b> shows the desktop of a Linux machine inside a browser
         "<b>Your own desktop.</b> Every user of the machine gets a desktop of their own. Several people can work on "
         "the same machine at the same time, each in their own desktop and without seeing the others.",
         "<b>The size of your window.</b> The desktop is created as large as the browser window at the moment you "
-        "sign in (at most 4096×2304 pixels).",
+        "sign in. REMOTIX is supported up to 3K; the size you really get depends on the device and the browser "
+        "you connect from.",
         "<b>Keyboard, mouse and touch.</b> On a PC, and on a tablet or phone with a mouse and keyboard (for example "
         "Samsung DeX), you work as at the machine. On a touch screen without a mouse the page switches by itself to "
         "a touch layout (see " + rif("On a phone or a tablet") + ").",
         "<b>Sound.</b> What the desktop plays, you hear in the browser.",
         "<b>Copy and paste.</b> Text can be copied between your device and the remote desktop, in both directions "
         "(text only: not images or files).",
-        "<b>Leave and come back.</b> Closing the tab does not close the desktop: its programs keep running. Sign in "
-        "again, from the same device or from another one, and you find your windows as you left them (see "
-        + rif("Leaving and coming back") + ").",
+        "<b>Leave and come back.</b> Closing the tab, a dropped line or moving to another device does not close the "
+        "desktop: its programs keep running. Sign in again, from the same device or from another one, and you find "
+        "your windows as you left them. It is closed, with its programs, if the service is stopped or restarted, if "
+        "the machine is switched off, or if you sign in at the machine's own screen with the same user: unsaved "
+        "work is then lost (see " + rif("Leaving and coming back") + ").",
         "<b>Encrypted.</b> Everything travels encrypted, on a single port, 7447.",
     ]) + \
     note("how many people one machine can serve at once depends on its video card and on how large the windows are. "
-         "REMOTIX refuses new sign-ins beyond 10 sessions (the default ceiling, which the administrator can change); "
-         "a machine may well serve fewer, and no number is promised.", "How many people?")
+         "REMOTIX is supported for up to 8 people at the same time. The program's default ceiling is 10 sessions "
+         "(the administrator can change it); a machine may well serve fewer.", "How many people?")
 
-S_NEED = p("Four things have to be in place.", lead=True) + \
+S_NEED = p("Five things have to be in place.", lead=True) + \
     table(["What", "What it has to be"], [
         ["The machine",
          "A Linux machine running <b>Debian 13</b> with systemd, on which REMOTIX is installed (see "
@@ -101,6 +104,7 @@ S_DESKTOPS = p("REMOTIX works with <b>GNOME</b>, <b>KDE Plasma</b>, <b>XFCE</b> 
         "by the machine's display-manager configuration (lightdm or sddm); if there is none, it takes GNOME, then "
         "KDE Plasma, then XFCE, then LXQt. The choice is written in the service's journal at start-up, on the "
         "line “the desktop of this machine”.",
+        "<b>XFCE: background.</b> On XFCE the background of the remote desktop may be black instead of your wallpaper. It is a known cosmetic defect, seen only on XFCE so far; its cause is not yet established. It does not affect the programs.",
         "<b>XFCE, LXQt and KDE Plasma</b> run on a small compositor called labwc, which the installation brings "
         "along (it is among the packages apt installs with REMOTIX).",
         "<b>No desktop at all</b> on the machine: the service says so at start-up and no desktop can be shown.",

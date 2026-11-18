@@ -76,12 +76,14 @@ S4 = p("From " + c("check-lifecycle.py") + ", " + c("check-resilience.py") + ", 
         ["login refused (wrong password), three tries", "2.64, 2.53, 2.64 s", "2.63, 2.63, 2.64 s", "2.64, 2.64, 2.64 s",
          "2.65, 2.65, 2.65 s", c("wrong-password")],
         ["Log Out: client told", "0 s", "0 s", "5 s", "4 s", c("logout")],
-        ["login again after a service restart, with the session found", "1 s", "1 s", "1 s", "1 s", c("service-restart")],
         ["three users admitted together (each, to a working session)", "6 s", "6 s", "6 s", "6 s", c("three-users")],
         ["client told of inactivity (short-clock run, ceiling 30 s)", "29 s", "29 s", "29 s", "29 s", c("clocks")],
         ["session closed after abandonment (short-clock run, ceiling 90 s)", "89 s", "92 s", "92 s", "92 s", c("clocks")],
     ], "«TAB» — Session and login timings measured on 17 Nov 2026") + \
     ul([
+        "The row of the table that timed a login after a restart of the service, “with the session found”, was removed: it belonged to "
+        "the check as it was before 18 Nov 2026, which expected the same desktop back. Since the desktops are closed with the service "
+        "(§11.56) the check was re-aligned (" + rif("Testing") + ") and no timing of it is recorded here.",
         "The refusal time is the floor " + c("REJECT_FLOOR") + " = 2500 ms in " + c("rcp.c") + " plus the page's reaction; it is constant by design "
         "so that a wrong password and an unknown user are indistinguishable.",
         c("network-drop") + " (XFCE log): the UDP port was cut for 40 s; the server's own verdict (the dead-line close) came 10 s after the cut, "
@@ -130,13 +132,17 @@ S5 = p("The question \"how many users can one machine serve\" has no measured an
 # ── 19.6 ─────────────────────────────────────────────────────────────────────
 S6 = p("These are properties of the source, not observations. Each names its definition.", lead=True) + \
     table(["Limit", "Value", "Where"], [
-        ["sessions at once, default", "10 (configurable with " + c("--session-cap") + ")", c("RCP_SESSION_CAP") + " in " + c("rcp.h")],
+        ["<b>declared limit: users at the same time</b>", "<b>8</b> (owner's decision, " + c("DECISIONS-11") + " §11.51, confirmed 18 Nov 2026)",
+         "a declared value, not a constant: the technical default below is higher"],
+        ["<b>declared limit: resolution</b>", "<b>up to 3K</b>; the size actually used depends on the client",
+         "a declared value; the technical bounds below are higher"],
+        ["sessions at once, default (technical)", "10 (configurable with " + c("--session-cap") + ")", c("RCP_SESSION_CAP") + " in " + c("rcp.h")],
         ["composition budget", "off by default (" + c("--budget-mpixel-s") + " 0); reserve 0.5 of the demand kept for whoever is inside",
          c("budget.h") + ", " + c("BUDGET_DEFAULT_RESERVE")],
-        ["canvas size accepted", "320 to 4096 wide, 240 to 2304 high, multiples of 16 per side as the checks judge it", c("rootside.c") + "; " + c("RCP_CANVAS_MAX_W") + " and " + c("RCP_CANVAS_MAX_H") + " in " + c("rcp.h")],
+        ["canvas size accepted (technical)", "320 to 4096 wide, 240 to 2304 high, multiples of 16 per side as the checks judge it", c("rootside.c") + "; " + c("RCP_CANVAS_MAX_W") + " and " + c("RCP_CANVAS_MAX_H") + " in " + c("rcp.h")],
         ["frame rate of a stage", "60 frames per second at most", c("MOTION_FPS") + " in " + c("child.c")],
         ["minimum of the quality ladder (SPECS)", "480p, 25 fps, 24 bit (a guarantee, not a goal)", c("docs/SPECS.md") + " §3.1"],
-        ["target of the specification", "4K, 60 fps, 10 bit per channel", c("docs/SPECS.md") + " §3.1 (a target)"],
+        ["target of the specification", "4K, 60 fps, 10 bit per channel", c("docs/SPECS.md") + " §3.1 (a target; superseded as declared limit by §11.51/§11.58)"],
         ["frame ceiling on the video stream", "16 MiB; above it the frame is re-encoded smaller, not sent", c("V_CAP") + " in " + c("rcp.c") + ", " + c("FRAME_MAX") + " in " + c("child.c") + ", RCP §6.2"],
         ["audio cushion", "250 ms", c("AUDIO_BUFFER_MS") + " in " + c("page.html")],
         ["refusal floor for a wrong password", "2500 ms", c("REJECT_FLOOR") + " in " + c("rcp.c")],
@@ -154,13 +160,13 @@ S7 = p("This list is deliberate: a manual that stays silent about a missing meas
         ["a card by vendor and model", "the log shows " + c("/dev/dri/renderD128") + " and not the card; no per-card table exists. Intel and AMD are the first-version targets "
          "(PIANO.md)"],
         ["NVIDIA", "no run recorded; the first version targets Intel and AMD, NVIDIA later (PIANO.md)"],
-        ["4096x2304 and larger canvases", "the coded limit is 4096x2304; the largest canvas obtained is 3840x2160, the last rung of the page's own size ladder "
+        ["4096x2304 and larger canvases", "the declared limit is 3K; the coded limit is 4096x2304; the largest canvas obtained is 3840x2160, the last rung of the page's own size ladder "
          "(" + c("MEASURE_PROBES") + " in " + c("page.html") + ": the page never declares a larger " + c("video.max_size") + ", with any browser; " + c("canvas-limits") + " is not PASS on any desktop for this reason). No frame rate or quality figure at 4096x2304 exists"],
         ["bitrate of the current build", "none printed by the final round. The only bitrate figures in the files read are the phase 9 ones above"],
         ["real networks", "all figures are on loopback; no loss, delay, jitter or throughput measurement of 1.0.0 over a real link is recorded"],
         ["a real phone or tablet as client", "owner's hand test on Samsung DeX (clipboard, audio, video, window resize \"regular\", PIANO.md); no numbers"],
         ["CPU and memory per session", "no per-session CPU or memory figure was found in the PIANO.md, the docs read or the logs read"],
-        ["duration of a whole run of all.sh", "only the sum of the time limits, 16 960 s (" + rif("Testing") + ")"],
+        ["duration of a whole run of all.sh", "only the sum of the time limits, 17 860 s (" + rif("Testing") + ")"],
         ["why GNOME paints 39 fps at 60 Hz", "the figure is measured; no cause is recorded"],
     ], "«TAB» — Where no measurement exists") + \
     tip("A measurement worth adding first, if capacity matters: " + c("check-multiuser.py") + " style runs at 4, 6, 8 and 10 users with the "

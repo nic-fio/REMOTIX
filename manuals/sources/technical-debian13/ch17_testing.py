@@ -84,8 +84,8 @@ S2 = p("Everything is under " + c("prove/") + ". The Python files form three lay
         "Checks",
         [c("check-base.py") + ", " + c("check-lifecycle.py") + ", " + c("check-multiuser.py") + ", " + c("check-desktop.py")
          + ", " + c("check-media.py") + ", " + c("check-resilience.py") + ", " + c("check-audio.py") + ", "
-         + c("check-clipboard.py") + ", " + c("check-input.py") + ", " + c("check-phone.py") + ", " + c("check-ban.py"),
-         "the eleven checks that " + c("all.sh") + " runs (next section)"],
+         + c("check-clipboard.py") + ", " + c("check-input.py") + ", " + c("check-phone.py") + ", " + c("check-prelocal.py") + ", " + c("check-ban.py"),
+         "the twelve checks that " + c("all.sh") + " runs (next section)"],
         [c("check-package.py"), "the package check: install, first start, remove, purge, reinstall, the refusal of a person "
          "called remotix. NOT part of " + c("all.sh") + ": it resets the box"],
         [c("base-check.py"), "the earlier form of " + c("check-base.py") + " (user " + c("prova") + ", options " + c("--user")
@@ -148,7 +148,9 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (ports 8811 to 88
         [c("check-resilience.py") + " (2700 s)",
          c("service-restart") + ", " + c("network-drop") + ", " + c("simultaneous-first-login") + ", "
          + c("login-after-other-logout") + ", " + c("clocks"),
-         "the session survives " + c("systemctl restart remotix") + "; a cut of all UDP (own nft table) for longer than the "
+         "after " + c("systemctl restart remotix") + " the client is told or returns to the form, the old desktop is closed "
+         "with the service (no REMOTIX session of the user and no process of the old window left, the root side's journal "
+         "says “the service stops clean”) and a new login is a NEW session with a working desktop; a cut of all UDP (own nft table) for longer than the "
          "silence clock; the same fresh user logging in from two browsers at the same instant, five times: exactly one is "
          "admitted; one user's Log Out does not touch another; the three clocks of SPECS §5.3 at their defaults and, through a "
          "drop-in that is always removed, at short values"],
@@ -170,6 +172,18 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (ports 8811 to 88
          "the page used as a phone, by emulation: portrait and landscape geometry, tap, drag, two- and three-finger taps, "
          "on-screen keyboard open, text, enter, delete and close, tap-and-half-drag selection, two-finger scroll, pinch zoom, "
          "rotation"],
+        [c("check-prelocal.py") + " (900 s)",
+         c("P1-hook-closes-desktop") + ", " + c("P2-new-desktop-after") + ", " + c("P3-hook-ignores") + ", " + c("P4-no-desktop")
+         + ", " + c("P5-service-stopped") + ", " + c("P6-pam-line-order"),
+         "the local-login hold (" + rif("The local-login hold") + "), with Chrome and the check's own users " + c("pl1") + " and " + c("pl2")
+         + ". P1: with a remote desktop open the hook returns 0 within 15 s and afterwards nothing of the user is left (no logind "
+         "session of the service, no program, no unit of the desktop in the user manager), the page was told with 0x04 and the "
+         "journal has the request and the root side's answer. P2: 12 s later (births are refused for 10 s) a new remote login of "
+         "the same user gets a working desktop. P3: five calls that are not a local graphical login (no seat, close_session, "
+         "greeter, tty, service remotix) each return 0 in under 1 s and the desktop is still alive. P4: a user with no remote "
+         "desktop: the hook returns 0 in under 2 s. P5: with the service stopped the hook returns 0 in under 2 s (the service is "
+         "started again at the end). P6: " + c("/etc/pam.d/common-session") + " has the " + c("pam_exec") + " line of the hook after the "
+         + c("pam_systemd") + " line"],
         [c("check-ban.py") + " (900 s, always last)",
          c("wrong-password") + ", " + c("same-answer") + ", " + c("typed-names-not-logged") + ", " + c("ban-after-limit")
          + ", " + c("ban-survives-restart") + ", " + c("unblock") + ", " + c("unblock-shipped") + ", " + c("cleanup"),
@@ -184,6 +198,11 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (ports 8811 to 88
         "that box. To unblock it uses a drop-in with " + c("--command-socket") + " (a bench option of the binary that the packaged "
         "unit never passes; the check adds it through " + c("REMOTIX_OPTIONS") + " in " + c("/etc/remotix/remotix.conf.d/") + ") and at the end it ALWAYS unblocks, removes the drop-in, restarts the service and logs a user in normally "
         "(" + c("cleanup") + "). Run it last and alone on a box.",
+        c("check-prelocal.py") + " <b>simulates</b> the local login: the boxes have no display manager, so the hook is run as root "
+        "inside the box by hand, with the environment " + c("pam_exec") + " would give it (" + c("PAM_TYPE=open_session") + ", "
+        + c("XDG_SEAT=seat0") + ", class " + c("user") + ", type " + c("wayland") + "), and no local session is registered in logind. It "
+        "proves the hook and the root side's answer; it does not prove the interplay with the periodic sweeps, which only a real local "
+        "login exercises (" + rif("Appendix C — Known issues and open points") + ").",
         c("check-phone.py") + " is an emulation, not a phone: Chrome with DevTools device emulation (412x915 CSS px, device scale 2, "
         "touch events with pointer type touch, a mobile user agent, Italian language). What it cannot prove is listed in "
         + rif("What only a real machine or a real phone can prove") + ".",
@@ -192,10 +211,10 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (ports 8811 to 88
         "operating system's own cursor are in no screenshot, so the cursor is judged by the CSS rule on the canvas.",
         c("check-desktop.py") + " check " + c("session-cap") + " needs a quiet box. " + c("canvas-limits") + " judges the canvas "
         "against SPECS §6.1 (up to 4096x2304), while the page never declares more than 3840x2160 (the last rung of its size ladder, "
-        + c("MEASURE_PROBES") + " in " + c("page.html") + "): the check says so in its own evidence line.",
-        "The check docstrings can lag behind the code: the docstring of " + c("check-ban.py") + " still says that the address ban "
-        "is after 12 failures and that " + c("unblock-shipped") + " looks for an unblock command, while the code uses "
-        + c("KEY_LIMIT") + " 20 and passes " + c("unblock-shipped") + " when the package ships none. The code is the reference.",
+        + c("MEASURE_PROBES") + " in " + c("page.html") + "): the check says so in its own evidence line. The <b>declared</b> limit of "
+        "the product is 3K (owner's decision, " + c("DECISIONS-11") + " §11.51, confirmed 18 Nov 2026); the sizes above are technical bounds.",
+        "The check docstrings can lag behind the code: the docstring of " + c("check-ban.py") + " still describes " + c("unblock-shipped") + " as «the PACKAGE gives the administrator a way to unblock», "
+        "while the code passes it when the package ships none. The code is the reference.",
     ])
 
 # ── 17.4 ─────────────────────────────────────────────────────────────────────
@@ -217,7 +236,7 @@ $ TAG=myround /media/REMOTIX-DEBIAN/prove/all.sh kde        # logs in log/myroun
         "The table is printed and saved as " + c("log/<tag>/summary.txt"
         ) + ". The script exits 0 only if every row is PASS (the last line is " + c("ALL PASS") + ").",
         "SIGTERM, SIGINT and SIGHUP stop the running check and mark the remaining ones BLOCKED (aborted).",
-        "The limits of the " + c("run") + " calls add up to 16 960 s (about 4 h 43 min). That is a ceiling, not a measured "
+        "The limits of the " + c("run") + " calls add up to 17 860 s (about 4 h 58 min). That is a ceiling, not a measured "
         "duration: no measured duration of a whole run is recorded in the files read for this chapter.",
     ]) + \
     table(["Command", "Use"], [
@@ -239,7 +258,9 @@ S5 = p(c("check-package.py") + " tests the .deb itself on a box that it may rese
        "and the service enabled (" + c("fresh.sh") + "), so it must not run on a box somebody else is testing.", lead=True) + \
     table(["Verdict name", "What it proves"], [
         [c("install"), "apt install on a fresh box: the expected files only (a snapshot diff from " + c("package-snap.py")
-         + "), service installed but NOT enabled and NOT running, system user remotix with nologin shell, nothing listening on 7447"],
+         + "), service installed but NOT enabled and NOT running, system user remotix with nologin shell, nothing listening on 7447; "
+         "the hook " + c("remotix-local-login") + " and the profile " + c("/usr/share/pam-configs/remotix") + " are there and "
+         + c("pam-auth-update") + " has put the " + c("pam_exec") + " line into " + c("/etc/pam.d/common-session")],
         [c("first-start"), "after enable --now: active, TCP and UDP listening, certificates and secrets with safe modes, no error "
          "in the journal, and the two processes as designed (root side as root; network side as remotix with an empty "
          + c("CapEff") + ", " + c("NoNewPrivs") + " and seccomp on)"],
@@ -247,7 +268,8 @@ S5 = p(c("check-package.py") + " tests the .deb itself on a box that it may rese
          "the containers it is BLOCKED (securityfs is not mounted); what it can tell is that the profile text compiles with "
          + c("apparmor_parser -Q") + " and that the shipped profile has flags " + c("complain")],
         [c("remove"), "a test user logged in, then apt remove with the session alive: sessions closed, desktop processes gone, "
-         "group enrolments undone, /dev/dri grants taken back, service stopped, binary gone, configuration and /var/lib/remotix "
+         "group enrolments undone, /dev/dri grants taken back, the " + c("pam_exec") + " line gone from " + c("common-session")
+         + ", service stopped, binary gone, configuration and /var/lib/remotix "
          "kept, no process left, nothing else touched"],
         [c("purge"), "apt purge: everything the package or the program made is gone; the box is as before the install except for "
          "the dependencies apt pulled in"],
@@ -358,11 +380,13 @@ S8 = p("Each item below is something no file in " + c("prove/") + " or " + c("se
         ["Canvases above 3840x2160",
          "the largest canvas obtained by " + c("canvas-limits") + " is 3840x2160: the page's size ladder (" + c("MEASURE_PROBES") + " in "
          + c("page.html") + ") stops there, so the page declares no larger " + c("video.max_size") + " with any browser; SPECS "
-         "§6.1 allows up to 4096x2304, which is therefore not proven in the picture (see below)."],
+         "§6.1 allows up to 4096x2304, which is therefore not proven in the picture (see below). The declared limit of the product is 3K."],
         ["A machine with a real local graphical session",
-         "the boxes boot to " + c("multi-user.target") + " with no display manager running. No file in " + c("prove/") + " exercises "
-         "the RCP reasons 0x04 and 0x05 (local session prevails or is already active), so the rule that a local graphical session "
-         "excludes a remote one is not covered by an automated check."],
+         "the boxes boot to " + c("multi-user.target") + " with no display manager running. The only automated check of this rule is "
+         + c("check-prelocal.py") + ", which covers the 0x04 on the hook's road and simulates the login by calling the hook by hand. "
+         "The RCP reason 0x05 (a local session is already active) and the sweeps of the network side and of the root side against a "
+         "real local session are not covered by an automated check. The hold was tried by the owner on the four real login screens: GNOME "
+         "on the tablet with the journal read; KDE, XFCE and LXQt on live Debian 13 systems, as reported by the owner (journals not read). See " + rif("Appendix C — Known issues and open points") + "."],
         ["Real networks",
          "the tests run on 127.0.0.1. The only fault injected is the nft cut of UDP in " + c("network-drop") + "; loss, jitter, NAT "
          "and mobile links are not exercised by this suite."],
@@ -416,13 +440,26 @@ S9 = p("This section reports what PIANO.md and the logs on the dev server say. T
         "with a card gives 8 of 8.",
         "The earlier round " + c("pulizia1b") + " (after clean-up tranche 1, see " + c("docs/PULIZIA-tranche1.md") + "): 34 PASS lines per "
         "desktop; the summaries on the server hold two more rows that are not PASS on every desktop, " + c("ban/unblock-shipped") + " FAIL (the "
-        "check then expected an unblock command; since the decision of 17 Nov its absence is the PASS) and the final sweep BLOCKED. Package " + c("2.0.0~dev-4") + ". " + c("docs/PULIZIA-tranche1.md") + " also compares the contents of that package and of the one before it, "
+        "check then expected an unblock command; since the decision of 17 Nov its absence is the PASS) and the final sweep BLOCKED. The package of that round carried the provisional label " + c("2.0.0~dev-4") + ". " + c("docs/PULIZIA-tranche1.md") + " also compares the contents of that package and of the one before it, "
         "file by file.",
         "Owner's hand test with Samsung DeX on GNOME (17 Nov): clipboard, audio and video, and window resize all regular.",
         "The package labelled 1.0.0 was built by " + c("build/build-deb.sh") + " (checks R4, R13, R14 SI) and installed in the four boxes; "
         "the logs " + sysf("v100-<de>.out") + " contain only a service-active answer, and the logs " + sysf("v100c-<de>.out") + " record "
         + c("check-base.py") + " and " + c("check-ban.py") + " on a fresh box with that file: 13 PASS lines on each of the four desktops. "
         "No full " + c("all.sh") + " round on the file named 1.0.0 is recorded in the logs read for this chapter.",
+    ]) + \
+    h4("18 November 2026: the local-login hold and the restart check") + \
+    ul([
+        c("check-prelocal.py") + " (new): 6 of 6 PASS on the four desktops; the remote desktop was closed by its own child in 0.6 to "
+        "1.3 s, the page was told with 0x04, a new desktop could be opened afterwards, calls that are not a local login had no effect, "
+        "nothing was slowed with the service stopped, and the PAM line came after " + c("pam_systemd") + ".",
+        "A full round after it: 117 PASS lines on GNOME, KDE and XFCE and 119 on LXQt. The lines that were not green were those of "
+        "the day before (Ctrl+Alt+Del, Ctrl+Alt+End, the XFCE coordinates, the GNOME " + c("pkexec") + ") and two more: "
+        + c("resilience/service-restart") + " on the four desktops, because that check still expected to find the same desktop after "
+        "the restart of the service, while since the night of 17 Nov (§11.56) the desktops are closed at the restart; and "
+        + c("phone/tap-click-portrait") + " on GNOME (the first tap, a known unstable case, low priority).",
+        c("service-restart") + " was then re-aligned (it expects the desktop closed with the service and a NEW session at re-entry) and "
+        + c("check-resilience.py") + " was run again on the four desktops: all PASS.",
     ]) + \
     h4("Open items of PIANO.md that touch the tests") + \
     ul([

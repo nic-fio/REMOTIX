@@ -40,8 +40,9 @@ S_SIGNIN = p("These are the sentences the page shows when you sign in or when th
          "See the sessions with " + c("loginctl list-sessions") + "; the one with a seat and a graphical type is the "
          "local one. Only a graphical session at the machine counts; a text login (ssh, console) does not."],
         [ui("the local session on that machine took precedence"),
-         "You were in the browser, and the same user signed in at the machine's own screen: the local session "
-         "wins and the remote one is closed.",
+         "You were in the browser, and the same user signed in at the machine's own screen. The local session "
+         "wins: your remote desktop is closed completely, with its programs, as with Log Out. Unsaved work in it "
+         "is lost.",
          "Sign in again after you have signed out at the machine.", "Nothing."],
         [ui("the server could not open your session, and it is not your mistake: try again in a moment, and if it "
             "happens again ask whoever administers the server — the precise reason is in its log"),
@@ -152,11 +153,12 @@ S_FAREWELL = p("When a session ends or the connection is lost, the page returns 
          "The 30-minute inactivity clock. Sign in again."],
         [ui("the session was abandoned"), "The 60-minute abandonment clock: the desktop was closed."],
         [ui("the server is shutting down"),
-         "The service is stopping or the machine is going down. After a restart of the service the desktops are "
-         "found again; after a restart of the machine they are gone."],
+         "The service is stopping (a restart, an upgrade) or the machine is going down. Your desktop and its "
+         "programs are closed; at the next sign-in you get a new desktop."],
         [ui("timed out during the handshake"), "The connection took too long to be set up: try again."],
         [ui("the connection to the server was interrupted: to get back in, type your password again"),
-         "The line dropped, or the service was restarted. The desktop is still there; sign in again."],
+         "The line dropped. The desktop is still there; sign in again. (If the service was restarted, the page "
+         "says " + ui("the server is shutting down") + " instead, and the desktop is gone.)"],
         [ui("the session closed because of an error: to get back in type your password again — the precise reason "
             "is in the log"),
          "The page closed the connection because of a fault. The desktop is still there; sign in again and tell "

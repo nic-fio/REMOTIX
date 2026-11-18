@@ -2114,3 +2114,17 @@ real local login (GNOME on the tablet).
 **Box artifact.** In a container a child cannot exit before ~25 s after its sound started: its PipeWire client waits for D-Bus
 activation of RealtimeKit1, which cannot start there (`cap_set_proc()` fails). `check-prelocal.py` therefore waits until the
 desktop is 30 s old; on a real machine the same close takes under a second.
+
+
+### 11.58 ✅ 1.0.0 declares 3K and 8 users; the program is not changed (owner's decision, 18 Nov 2026)
+
+- The limits the manuals DECLARE for 1.0.0 are the ones of §11.51: **maximum resolution 3K** and **8 users** at the same
+  time. Owner's words on the resolution: *«lascia 3K come risoluzione, tanto quella dipende dal client»*.
+- The program is NOT changed for this release: the protocol canvas stays at most 4096×2304 (`RCP.md` §4.5; `SPECS.md` §6.1-bis), the page's
+  decoder probes stop at 3840×2160, and `--session-cap` keeps its default 10. What the program accepts above the declared
+  limits is not supported and not promised.
+- The manuals give the declared limits to the user, and both the declared limits and the technical ones to the
+  administrator.
+- ⚠ Found while checking the manuals: the goals had been lowered on paper (§11.51, `PIANO.md`) but neither the code nor
+  the manuals had followed. Enforcing the limits in the program (a ceiling at 3K, a default cap of 8) is a possible later
+  change, to be decided by the owner; it needs a build and a full round.

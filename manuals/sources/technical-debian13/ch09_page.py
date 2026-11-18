@@ -340,7 +340,8 @@ S8 = p("Two sizes must never be confused. The <b>canvas</b> (" + c("canvas") + "
       "card stops at 4096 per side and Firefox on Linux receives only H.264; 2304 is 16:9 at 4096 and the " + c("MaxFS") + " of level 5.1. A larger window gets the maximum on the "
       "side that overflows (5120×2880 → 4096×2304, 5120×1440 → 4096×1440), shown at scale 1 with bands; the "
       "server applies the same rule in " + c("rcp_size_allowed()") + ". Whether a 4096×2304 canvas is actually granted and shown has not been verified: "
-      "the decoder ceiling of the browser used in " + c("prove/") + " is 3840×2160 (" + rif("Measuring the decoder ceiling") + ").") + \
+      "the decoder ceiling of the browser used in " + c("prove/") + " is 3840×2160 (" + rif("Measuring the decoder ceiling") + "). "
+      "Both are technical bounds: the declared limit of the product is 3K (the size actually used depends on the client).") + \
     p("<b>The canvas the server grants is checked.</b> The page does not take the "
       "canvas of " + c("SESSION") + " and " + c("CANVAS") + " as it comes (a u32 per side): a width or height of zero, or "
       "above 4096×2304 (" + c("CANVAS_MAX_W") + " × " + c("CANVAS_MAX_H") + "), closes the session with "

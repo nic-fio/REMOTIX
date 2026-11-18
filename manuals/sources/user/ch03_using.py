@@ -16,7 +16,7 @@ S_SIGNIN = p("Open the machine's address in the browser: <code class=\"sys\">htt
         "timing, whether a user name exists.",
         "A green line then says “Admitted, new session…” (or “resumed session…” if you are coming back), with the size "
         "of the desktop, and the desktop appears in place of the form.",
-        "The first sign-in after the machine has restarted, or after you logged out, is slower: the page says "
+        "The first sign-in after the machine has restarted, after the service was restarted, or after you logged out, is slower: the page says "
         + ui("Connected. The desktop is on its way…") + " and the desktop appears by itself, in a few seconds on "
         "most desktops and up to about thirty seconds on the first start. You do not have to do anything.",
         "<b>Who can sign in:</b> any user of the machine except <code class=\"sys\">root</code> and the users the "
@@ -29,9 +29,10 @@ S_DESKTOP = p("Once signed in you have your own desktop — GNOME, KDE Plasma, X
               "uses — in the browser tab.", lead=True) + \
     table(["", "What you should know"], [
         ["The size",
-         "The desktop is created <b>as large as the browser window at the moment you sign in</b> (between 320×240 "
-         "and 4096×2304 pixels, counted in screen pixels). A window larger than that gets the desktop at the "
-         "maximum, with bands around it."],
+         "The desktop is created <b>as large as the browser window at the moment you sign in</b> (from 320×240 "
+         "pixels, counted in screen pixels). REMOTIX is supported up to <b>3K</b>; the size you really get depends "
+         "on the device and the browser you connect from. The program may accept a larger window, but that is not "
+         "supported; a window larger than the maximum gets the desktop at the maximum, with bands around it."],
         ["Resizing the window",
          "Changing the size of the window during the session <b>does not change the desktop</b>: the page scales the "
          "picture to fit the new window. To get a desktop of exactly the new size, close the tab and sign in again "
@@ -50,12 +51,15 @@ S_DESKTOP = p("Once signed in you have your own desktop — GNOME, KDE Plasma, X
         ["No power buttons",
          "There is no shut down, restart, suspend or hibernate in the desktop's menus, on any of the four desktops, "
          "because other people may be working on the same machine."],
+        ["XFCE: the background",
+         "On XFCE the background of the remote desktop may be black instead of your wallpaper. It is a known cosmetic defect, seen only on XFCE so far; its cause is not yet established. It does not affect the programs."],
         ["A background tab",
          "A browser may freeze a tab left in the background for a few minutes. REMOTIX then sees silence, detaches "
          "you, and keeps the desktop waiting: come back and sign in again."],
     ], "«TAB» — The desktop in the browser") + \
     note("an administrator action inside the desktop (installing a program, for example) asks for a "
-         "password as it would with sudo, as at the machine. Three requests that a desktop makes on its own at "
+         "password, as at the machine. On GNOME the password window of graphical programs was not verified for this "
+         "release: if it does not appear, do the same action with sudo in a terminal. Three requests that a desktop makes on its own at "
          "sign-in, and that would only confuse, are settled quietly (see "
          + rif("Users, groups and what REMOTIX changes") + ").", "Passwords inside the desktop.")
 
@@ -79,8 +83,8 @@ S_KEYS = p("<b>Typing.</b> Letters, numbers and symbols travel as <i>letters</i>
       "Ctrl+S or F5 should go to the desktop only; this was <b>not measured</b> key by key). The one exception is "
       "Ctrl+V, which the browser must see in order to paste. What cannot be recovered is what the <i>browser or "
       "your own computer</i> keeps before the page sees it: in a normal Chrome window, for example, Ctrl+W still "
-      "closes the tab. The table is what the page itself lists for Chrome and for Firefox; it was measured "
-      "on GNOME with Chrome 151 and Firefox 140 ESR:") + \
+      "closes the tab. The table comes from measurements made for this release, on GNOME with Chrome 151 and "
+      "Firefox 140 ESR:") + \
     table(["Browser", "Kept by the browser or by your computer (does not reach the desktop)"], [
         ["Chrome, Edge (normal window)",
          key("Ctrl", "T") + ", " + key("Ctrl", "W") + ", " + key("Ctrl", "N") + ", " + key("Ctrl", "Shift", "N")
@@ -125,7 +129,10 @@ S_CLIP = p("<b>Text only, in both directions.</b> You can copy text on your devi
     note("this is what the page is built to do. For this release the clipboard was checked with Chrome; the check "
          "with Firefox is still open, so treat the Firefox column as <b>not yet verified</b>.", "Firefox.")
 
-S_LEAVE = p("Your desktop belongs to <i>you</i>, not to the browser tab. Leaving the page does not close it.",
+S_LEAVE = p("Your desktop belongs to <i>you</i>, not to the browser tab. Closing the tab, a dropped line or moving to "
+            "another device does <b>not</b> close it. Stopping, restarting or upgrading the service, switching the "
+            "machine off, or signing in at the machine's own screen with the same user <b>does</b> close it, with "
+            "its programs: unsaved work is lost.",
             lead=True) + \
     table(["What you do or what happens", "What happens to the desktop"], [
         ["You close the tab or the browser, switch off your PC, or lose the network",
@@ -149,11 +156,20 @@ S_LEAVE = p("Your desktop belongs to <i>you</i>, not to the browser tab. Leaving
          "The second one is refused with “this session's slot shows as taken by another client”. Close the tab on "
          "the first device, or, if the first simply dropped, wait up to about half a minute and try again (see "
          + rif("When something does not work") + ")."],
-        ["The administrator restarts or upgrades the service",
-         "You are disconnected for a moment: the page asks you to type your password again. The desktop is found "
-         "again."],
+        ["The administrator stops, restarts or upgrades the service",
+         "The page says " + ui("the server is shutting down") + ". Every desktop is closed with its programs, as at "
+         "a shutdown of the machine: unsaved work is lost. When the service is running again, sign in: you get a "
+         "new, empty desktop."],
         ["The machine is restarted or switched off",
-         "All the desktops and their programs end. Nothing survives a restart of the machine itself."],
+         "The page says " + ui("the server is shutting down") + " (when it is shut down in the normal way; after a power cut "
+         "the page only says " + ui("the connection to the server was interrupted: to get back in, type your password "
+         "again") + "). All the desktops and their programs end: unsaved work is lost. Nothing survives a restart "
+         "of the machine itself."],
+        ["Somebody signs in at the machine's screen with your user name",
+         "Your remote desktop is closed at once, with all its programs: unsaved work is lost. The page says "
+         + ui("the local session on that machine took precedence") + ". While that person is signed in at the "
+         "machine you cannot sign in from the browser (the page says " + ui("that user is already signed in locally")
+         + "); after they sign out you can, and you get a new desktop."],
     ], "«TAB» — Leaving and coming back") + \
     warn("only your own input — keys, mouse, touch — counts as touching the desktop. A desktop left for an hour "
          "without any input is closed even if a video is playing in it.", "The one-hour clock.")
