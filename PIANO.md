@@ -116,4 +116,4 @@ Passi 0–2: circa 1–2 settimane.
 - **Resta aperto:**
   1. leggere che cosa succede su KDE, XFCE, LXQt, le cui schermate di accesso non hanno il «fermo» di GNOME nemmeno nel caso normale;
   2. caso limite noto: servizio ucciso di colpo e non ancora ripartito (circa 2 s), in quell'intervallo nessuno può chiudere il desktop rimasto;
-  3. le modifiche non sono in git (nessun commit senza richiesta).
+  3. (chiuso) modifiche salvate in git e su GitHub il 18 nov, su richiesta del proprietario.
