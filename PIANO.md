@@ -150,3 +150,34 @@ Passi 0–2: circa 1–2 settimane.
 - **Aperto, decisione del proprietario:** scrivere «3K» anche in pixel nei manuali.
 - **Testi vecchi dentro il prodotto, da sistemare alla prossima costruzione (già annotati nel manuale tecnico):** messaggio di registro in `main.c` ~466-473 che nomina i file PAM di Fedora/SUSE/Arch; messaggio in `main.c` ~3918-3923 («the desktops stay alive»); commenti in `debian/rules`, `postinst`, `prerm`, `remotix.service` che dicono che i desktop sopravvivono allo stop.
 - **Da verificare su macchina vera (non bloccante):** su GNOME, `pkexec true` in un terminale del desktop remoto: compare la finestra della password?
+
+## Rilascio 1.0.0 — FATTO (18 nov 2026)
+
+- Pacchetto definitivo: `remotix_1.0.0-1+deb13_amd64.deb`, SHA-256 `d2ec4771…4f61`. Programma identico byte per byte
+  a quello provato dal proprietario sulle quattro schermate di accesso; rispetto a quello cambia solo l'indirizzo del
+  responsabile del pacchetto (ora `remotix@nicfio.it`). Copia sul tablet in `~/remotix-1.0.0-definitivo/`; installato sul tablet.
+- Sito di nuovo online (https://remotix.nicfio.it): testi controllati dal revisore contro i manuali (tre giri,
+  APPROVATO), pagine rigenerate con `site/standalone.py`, pacchetto in `download/`. La pagina di avviso del 16 nov è
+  salvata sul VPS (`~/remotix-avviso-ritiro-20261116.html`).
+- GitHub: repo `nic-fio/REMOTIX` cancellato dal proprietario e ricreato pubblico con la storia ripulita; release
+  `v1.0.0` con pacchetto e manuali. Copia del repo com'era prima: `~/remotix-repo-prima-pulizia-20261118.git`.
+- Server ripreparato dopo la pulizia (`server/prepara-server.sh`); le macchine di prova NON sono state ricostruite.
+- Rimandati alla versione successiva: tre testi vecchi dentro il prodotto, sfondo nero su XFCE, verifica di `pkexec`
+  su GNOME. `site/` resta fuori dal repo.
+
+## XFCE: sfondo nero nella sessione remota — accertato, nessuna modifica a REMOTIX (18 nov 2026)
+
+- **Riprodotto** sulla macchina di prova Debian 13 XFCE con il pacchetto 1.0.0, anche con utente nuovo: non dipende
+  dallo sfondo scelto. `xfdesktop` non dipinge né immagine né colore (icone sì).
+- **Causa:** difetto della libreria di XFCE `libxfce4windowing` 4.20.2 (quella di Debian 13). Il compositore (labwc)
+  dice a quale schermo appartiene l'area di lavoro, ma la libreria riceve il messaggio prima di conoscere lo schermo e
+  lo perde; senza quel dato `xfdesktop` dipinge nero. Non è REMOTIX e non è una modifica di Debian.
+  (Una prima lettura attribuiva la mancanza a labwc: era sbagliata, un filtro nei comandi nascondeva delle righe.)
+- **Già corretto dagli autori di XFCE:** modifica del 25 lug 2025 («Connect to XfwScreen::monitor-(added|removed)»),
+  presente da `libxfce4windowing` 4.20.4. Debian 13 ha la 4.20.2; Debian testing (forky) ha la 4.20.7.
+- **Non verificato sul campo:** che con la libreria nuova lo sfondo compaia davvero (la compilazione di prova non è
+  stata completata). Verificato invece: fornendo a mano il dato mancante lo sfondo compare (foto prima/dopo).
+- **Deciso con il proprietario:** difetto solo estetico; niente rimedio dentro REMOTIX per Debian 13. Si ricontrolla
+  quando si passa a forky, dove dovrebbe sparire da solo.
+- **Resta comunque vero:** XFCE tiene uno sfondo per ogni schermo; lo sfondo scelto in locale non passa da solo allo
+  schermo remoto (la prima volta si vede quello di base).

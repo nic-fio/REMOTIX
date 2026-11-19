@@ -109,6 +109,17 @@ Le voci aperte stanno in fondo.
 - Rimozione con un utente collegato: i desktop vengono chiusi prima, senza lasciare residui.
 - Nessun programma di installazione: solo `apt install ./remotix_….deb`.
 
+### C3. Un indirizzo personale era finito nel pacchetto e nella storia del repo
+- **Quando:** 18 nov 2026, trovato nel controllo fatto prima di rendere pubblico il repo.
+- **Che cosa è successo:** come «responsabile del pacchetto» c'era l'indirizzo personale del proprietario invece di
+  quello del progetto, in `debian/control` e in `build/build-deb.sh`; quindi anche dentro il `.deb` già messo sul sito.
+- **Soluzione:** indirizzo del progetto nei due file; pacchetto ricostruito con la stessa data di costruzione e
+  confrontato file per file con quello provato (programma identico, cambia solo quella riga); storia del repo
+  riscritta; repo su GitHub cancellato e ricreato, perché GitHub conserva i commit vecchi anche dopo la riscrittura.
+- **Su una distribuzione nuova / prima di ogni pubblicazione:** cercare dati personali (indirizzi, chiavi, nomi di
+  macchine) nei file, nella storia **e dentro il pacchetto finito** (`dpkg-deb -f … Maintainer`) *prima* di
+  pubblicare qualunque cosa. La costruzione riproducibile permette di rifare il pacchetto senza rifare le prove.
+
 ---
 
 ## D. Comportamenti dei desktop da ricordare
@@ -125,11 +136,17 @@ Le voci aperte stanno in fondo.
 
 ## E. Aperti (non bloccanti)
 
-### E1. XFCE: nella sessione remota lo sfondo è nero invece di quello scelto dall'utente
-- **Visto:** dal proprietario sulla live XFCE, 18 nov 2026. Rimandato per sua decisione (cosmesi).
-- **Che cosa si sa:** REMOTIX non tocca le impostazioni dello sfondo. Ipotesi non verificata: XFCE salva lo sfondo
-  per nome del monitor, e lo schermo virtuale della sessione remota ha un altro nome.
-- **Da fare:** accertare su una macchina con XFCE; controllare lo stesso punto sugli altri desktop.
+### E1. XFCE: nella sessione remota lo sfondo è nero
+- **Visto:** dal proprietario sulla live XFCE, 18 nov 2026; riprodotto sulla macchina di prova, anche con utente nuovo.
+- **Causa:** la libreria di XFCE `libxfce4windowing` 4.20.2 perde il messaggio con cui il compositore (labwc) dice su
+  quale schermo sta l'area di lavoro, se arriva prima che lo schermo sia noto; `xfdesktop` allora dipinge nero.
+  Non dipende da REMOTIX né dallo sfondo scelto. Corretto dagli autori dalla versione 4.20.4 (lug-ago 2025).
+- **Deciso (18 nov 2026):** solo estetico, nessun rimedio in REMOTIX per Debian 13 (che ha la 4.20.2).
+- **Su una distribuzione nuova (e su Debian forky):** guardare la versione di `libxfce4windowing`: da 4.20.4 in su lo
+  sfondo dovrebbe comparire da solo — da verificare con una foto della sessione, non è stato provato sul campo.
+  Ricordare che XFCE tiene uno sfondo per ogni schermo: quello scelto in locale non passa da solo allo schermo remoto.
+- **Nota di metodo:** un filtro nei comandi di diagnosi (`grep -v tput`) nascondeva ogni riga con la parola «output» e
+  ha fatto dare la colpa a labwc per errore. Filtrare sempre con un motivo preciso (`^tput:`).
 
 ### E2. Righe non verdi note nel giro di prove
 - Pulsanti Ctrl+Alt+Canc e Ctrl+Alt+Fine (prove da allineare, vedi B3); coordinate del mouse su XFCE nell'angolo
