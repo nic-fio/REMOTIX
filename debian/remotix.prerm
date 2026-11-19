@@ -6,7 +6,7 @@ set -e
 # ⭐ On removal: close the REMOTIX sessions (the old installer's «close-sessions» and «remove-membership» steps).  Only on `remove` (a purge runs `prerm remove` first).
 #  · close-sessions: logind's sessions of the PAM service «remotix» are ended — ONLY those, never the whole user.
 #    ⛔⭐ 17 Nov 2026, `[M]` check-package, XFCE/LXQt with the user's `systemd --user` already running (linger): the desktop stayed up
-#    for minutes after `apt remove`.  WHY: the server's child is the leader of the logind session and holds its fifo; stopping the
+#    for minutes after `apt remove`.  WHY: the server's child is the leader of the logind session; stopping the
 #    service ends the child, logind then closes the session and ABANDONS its scope (the desktop stays inside it, by design: §5.2,
 #    the desktops outlive the service) — and from then on `terminate-session` has no scope left to stop.  Without linger the user
 #    manager dies with the last session and takes the leftovers along; with linger it stays, and so do they.

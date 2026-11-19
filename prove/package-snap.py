@@ -27,6 +27,7 @@ SKIP = ("/var/lib/dpkg", "/var/lib/apt", "/var/lib/systemd", "/var/lib/ucf", "/v
         "/run/blkid", "/run/utmp", "/run/wtmp", "/run/ConsoleKit", "/run/rpcbind", "/run/avahi-daemon", "/run/cups",
         "/run/NetworkManager", "/run/lightdm", "/run/gdm3", "/run/sddm", "/run/accounts-daemon", "/run/polkit", "/run/libvirt",
         "/run/pcscd", "/run/lightdm.pid", "/run/gdm3.pid", "/run/wpa_supplicant", "/run/sm-notify.pid", "/run/lock",
+        "/var/lib/snapd", "/run/snapd", "/run/snapd.socket", "/run/snapd-snap.socket", "/var/lib/cloud", "/run/cloud-init",
         "/run/udisks2", "/run/upower", "/run/rtkit", "/run/media", "/run/pipewire", "/run/bluetooth", "/run/colord")
 # the databases the users/groups comparison reads directly, and caches the system rewrites by itself
 NOISE_CHANGED = ("/etc/passwd", "/etc/group", "/etc/shadow", "/etc/gshadow", "/etc/subuid", "/etc/subgid", "/etc/.pwd.lock",

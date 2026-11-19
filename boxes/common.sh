@@ -1,5 +1,5 @@
 #!/bin/sh
-# common.sh — one-time build steps of the box (Debian 13 only):
+# common.sh — one-time build steps of the box (Ubuntu 26.04):
 #   common.sh <ssh port> <sshd unit>
 # boot into multi-user (no display manager: the box has no monitor), sshd on 127.0.0.1 and
 # on the box's port, the key folder, the alignment of the GPU groups, the persistent journal.

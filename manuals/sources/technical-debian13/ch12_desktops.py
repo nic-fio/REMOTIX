@@ -133,7 +133,7 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
         ["Toolkit", "—", "—", c("GDK_BACKEND=wayland"), c("QT_QPA_PLATFORM=wayland") + ", " + c("QT_QPA_PLATFORMTHEME=lxqt")],
         [c("XFCE4_SESSION_COMPOSITOR"), "—", "—", c("labwc -m --session xfce4-session"), "—"],
         [c("SHELL"), "empty", "the user's login shell from passwd", "same", "same (qterminal falls back to /bin/sh without it)"],
-        [c("DCONF_PROFILE"), "the session profile", "—", "—", "—"],
+        [c("DCONF_PROFILE"), "the session profile (Ubuntu 26.04 tree, 19 Nov 2026: not set; dconf reads " + sysf("$XDG_RUNTIME_DIR/dconf/profile") + ")", "—", "—", "—"],
         [c("LANG") + " (a UTF-8 locale that exists), " + c("HOME") + ", " + c("USER") + ", " + c("PATH"), "yes", "yes", "yes",
          "yes, with REMOTIX's " + c("bin-lxqt") + " folder at the head of " + c("PATH")],
     ], "«TAB» — The composed environment") + \
@@ -299,7 +299,7 @@ S5 = p("A session ends in three ways: the user chooses «Log Out» in the deskto
         + c("CLEAR_OUT_EXIT_WAIT_MS") + " = 2 s and otherwise leaves the work to the next child, with a ⛔ line.",
         c("session_dconf_neutralise()") + " (GNOME): a belt for when that clear-out is late. When the session is over, the "
         "dconf profile file is rewritten atomically with the user's base alone, so anyone who inherited " + c("DCONF_PROFILE")
-        + " reads normal settings. Never under a live desktop.",
+        + " reads normal settings (Ubuntu 26.04 tree: the file is the runtime profile, removed if the base is the default alone). Never under a live desktop.",
         c("session_clear_out_scope()") + ": after the session has exited, what is left in the session's logind scope and "
         "belongs to the user (programs that detached from the session manager by D-Bus activation or a double fork) gets "
         "SIGTERM, then SIGKILL after 2 s. The comment records the case: after a XFCE logout, " + c("localsearch-3")
@@ -353,6 +353,19 @@ S6 = p("GNOME is started through the machine's own GNOME session, with a systemd
         + " turns it into the wire's " + c("CURSOR_SHAPE") + " and discards sizes the protocol forbids.",
     ]) + \
     h4("The session dconf") + \
+    p("<b>Ubuntu 26.04 tree (19 Nov 2026).</b> The text below is the model of the Debian 1.0.0 release and, in the Ubuntu tree, the "
+      "declared fallback. There, Flutter and snap programs (Firmware Updater, Security Center, the live installer) could not read "
+      "a profile with " + c("file-db") + " or " + c("service-db") + " lines. The Ubuntu package therefore compiles the locks into the "
+      "system database " + sysf("/etc/dconf/db/remotix") + " (postinst, from keyfiles generated at build time out of " + c("DCONF_KEYS")
+      + " by " + c("remotix --dconf-keyfiles") + "; removed on remove and purge) and the session profile becomes the file dconf reads "
+      "when " + c("DCONF_PROFILE") + " is not set, " + sysf("$XDG_RUNTIME_DIR/dconf/profile") + ": the base's first line, "
+      + c("system-db:remotix") + ", " + c("user-db:remotix") + ", then the rest of the base. What changes during the session "
+      "(the layout) is written to " + c("user-db:remotix") + ", that is the small file " + sysf("~/.config/dconf/remotix")
+      + " in the user's home (three keys; emptied at every birth; removed by the postrm on purge, as the user, only that regular file; a user the system does not list at purge time, for example a network directory that is down, keeps it, and it is inert without REMOTIX), instead of the in-memory layer; "
+      + sysf("~/.config/dconf/user") + " is never written. There is no " + c("DCONF_PROFILE") + " in the session or in the user manager. "
+      "At the end of the session the runtime profile is removed (base = default alone) or rewritten with the base alone. "
+      "If " + sysf("/etc/dconf/db/remotix") + " or " + c("dconf") + " is missing, or a runtime profile that is not REMOTIX's (no mark on its first line) is already there, the program uses the fallback and says so in its log; the service itself compiles the database at its start when it is missing or older than the package's keyfiles. The runtime file is written at the birth, not at the child's start, so a child that dies before the birth leaves nothing. An administrator's " + c("DCONF_PROFILE") + ", in the child's environment or in the user manager's, stays the base profile and the session is told REMOTIX's file instead; a hot upgrade with a desktop born by the old model keeps its old layer until its next birth.",
+      lead=False) + \
     p(c("session_dconf_prepare()") + " writes " + sysf("$XDG_RUNTIME_DIR/remotix/dconf/profile") + ", a profile of three "
       "layers, and sets " + c("DCONF_PROFILE") + " before any GSettings call; the session gets the same variable through the "
       "composed environment. The reason for three layers is measured: a " + c("file-db") + " recompiled during the session "
@@ -633,7 +646,7 @@ S10 = p("One table to answer «where does REMOTIX write, for this desktop?». " 
         + ".", lead=True) + \
     table(["Desktop", "What is imposed", "Where it lives", "How it is verified"], [
         ["GNOME", "the keys of " + c("DCONF_KEYS") + " (value and lock), the keyboard layout, " + c("--headless --no-x11"),
-         sysf("$XDG_RUNTIME_DIR/remotix/dconf/") + ", the drop-in in " + sysf("user.control") + ", the in-memory dconf layer",
+         sysf("$XDG_RUNTIME_DIR/remotix/dconf/") + ", the drop-in in " + sysf("user.control") + ", the in-memory dconf layer (Ubuntu tree: " + sysf("/etc/dconf/db/remotix") + ", " + sysf("$XDG_RUNTIME_DIR/dconf/profile") + ", " + sysf("~/.config/dconf/remotix") + ")",
          c("session_dconf_verify()") + " re-reads every key; the drop-in's " + c("ExecStart") + " is re-read"],
         ["KDE", "KIOSK " + c("[KDE Action Restrictions][$i]") + ": " + c("action/lock_screen") + ", " + c("action/start_new_session")
          + ", " + c("action/switch_user") + " false in " + c("kdeglobals") + "; " + c("BorderSize=Normal") + ", "

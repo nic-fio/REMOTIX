@@ -125,6 +125,12 @@ CFLAGS   ?= -O2 -g -std=gnu11 $(AVVERTIMENTI)
 #    line together with the rest, and `struct in6_pktinfo` would vanish with an error that
 #    names no option.
 override CFLAGS += -D_GNU_SOURCE
+# ⭐ DECISIONI §10.43 — the labwc that hosts the nested KWin (`kwin.c`): OUR labwc, at this exact
+#    path (build/labwc-ospite/; the distribution's does not work with KWin >= 6.5).  A build-time
+#    choice of the package (debian/rules passes the same path), never a runtime switch.
+#    `make clean` first when it changes.
+LABWC ?= /usr/libexec/remotix/labwc
+override CFLAGS += -DREMOTIX_LABWC='"$(LABWC)"'
 # ⭐ DECISIONS §11.6, §11.10 — bench-only endpoints and messages (`BENCH_MARK`).
 BENCH ?= 0
 ifeq ($(BENCH),1)

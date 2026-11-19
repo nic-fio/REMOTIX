@@ -94,8 +94,8 @@
  * ⛔ The command is the EASY part.  What decides whether the compositor is born with
  *    something to capture is the override of the `ExecStart` of the Shell's
  *    unit: `gnome-session` does NOT launch `gnome-shell`, it starts the Shell's
- *    user unit (`org.gnome.Shell@wayland.service` up to GNOME 49,
- *    `org.gnome.Shell@user.service` from GNOME 50), whose `ExecStart` is fixed.
+ *    user unit (an instance of the template `org.gnome.Shell@.service`: `@ubuntu` for the
+ *    `ubuntu` session, `@user` for `gnome`), whose `ExecStart` is fixed.
  */
 /* ⭐ PHASE 17, D8 (`DECISIONS.md` §10.20): the GNOME session is NO longer always
  *    `gnome`.  It is the distribution's default one (`ubuntu` on Ubuntu), read
@@ -104,12 +104,20 @@
  *    FALLBACK, when no offered session launches gnome-session. */
 #define SESSION_GNOME_FALLBACK "gnome"
 /*
- * ⛔⭐ PHASE 17 — the Shell's unit on GNOME ≤ 49 (Debian 13 has 48): one file per mode,
- *   `org.gnome.Shell@wayland.service`.  `unit_shell()` in `session.c` asks the user manager for it.
- *   ⛔ The drop-in goes in the folder of this INSTANCE.
- *   (The GNOME 50 template `org.gnome.Shell@.service` was removed: see docs/PULIZIA-tranche1.md.)
+ * ⛔⭐ PHASE 17 — the Shell's unit on GNOME 50 (Ubuntu 26.04): the TEMPLATE
+ *   `org.gnome.Shell@.service` with `ExecStart=gnome-shell --mode=%i`.  The instance belongs TO THE
+ *   SESSION, it is not fixed: `ubuntu` asks for `@ubuntu`
+ *   (`gnome-session@ubuntu.target.d/ubuntu.session.conf`, `Requires=org.gnome.Shell@ubuntu.service`),
+ *   `gnome` asks for `@user` — and the instance is the Shell's MODE (`--mode=%i`): Ubuntu's dock
+ *   and colours live there.
+ *   ⇒ `unit_shell()` in `session.c` asks the user manager for it (`Requires` of
+ *   `gnome-session@<session>.target`), and the drop-in keeps `--mode=%i`.
+ *   ⛔ The drop-in goes in the folder of the INSTANCE, never in that of the template
+ *   (`org.gnome.Shell@.service.d/`): that one also applies to GDM's Shell.
  */
-#define SESSION_UNIT_SHELL_48 "org.gnome.Shell@wayland.service"
+#define SESSION_UNIT_SHELL_MODEL "org.gnome.Shell@.service"
+/* ⛔ GNOME 50: while this target of the user manager is active, gnome-session refuses to start */
+#define SESSION_UNIT_GRAPHICAL "graphical-session.target"
 /* ⚠ The session manager unit is `gnome-session-manager@<session>.service`:
  *   the name is composed by `gnome_session()` (D8). */
 /* ⛔ And the SECOND unit to wait for: when a GNOME session ends, GNOME
@@ -145,7 +153,7 @@
  * ⇒ The consequences that change the code, and are not a matter of style:
  *
  *   1. ⛔ **There is no systemd user unit to override.**  On GNOME
- *      the `ExecStart` of `org.gnome.Shell@wayland.service` is rewritten, on KDE
+ *      the `ExecStart` of the Shell's instance (`org.gnome.Shell@<session>.service`) is rewritten, on KDE
  *      that of `plasma-kwin_wayland.service`; here the compositor is a
  *      process we start ourselves, and `write_dropin()` **has no object**.
  *   2. ⛔ **The size does NOT enter the birth.**  `[M]` 20 Sep 2026, inside
@@ -402,6 +410,10 @@ const char *session_desktop_explain(void);
 /* ⭐ 1.5: «XFCE», «LXQt», «Plasma», «GNOME» — for the log */
 const char *session_desktop_name(void);
 
+/* ⭐ 18 Nov 2026: the program the chosen desktop needs and this machine lacks (`labwc` for
+ * XFCE and LXQt), or NULL when nothing is missing.  Looked up at every call. */
+const char *session_missing_component(void);
+
 /*
  * ⭐ PHASE 14 — THE FAMILY, not the desktop: true on XFCE **and** on LXQt.
  *
@@ -503,18 +515,18 @@ GDBusConnection *sess_bus(GError **mistake);
 char *session_folder_kde(void);
 
 /*
- * ⭐ PHASE 15, D-015 — the SESSION's dconf (GNOME only): writes the profile
- * `$XDG_RUNTIME_DIR/remotix/dconf/profile` (an in-memory database on top,
- * the user's below, read-only) and sets `DCONF_PROFILE` in the
- * process.  ⛔ It must be called BEFORE any `GSettings`: the dconf engine
- * reads the variable only once.  False on another desktop, or if the cure
- * cannot hold (said in the log).
+ * ⭐ PHASE 15, D-015 — the SESSION's dconf (GNOME only).  Since 19 Nov 2026: writes the RUNTIME profile
+ * `$XDG_RUNTIME_DIR/dconf/profile` (the user's first line, `system-db:remotix` = locks, `user-db:remotix` = what changes
+ * mid-session, the rest of the base) and leaves `DCONF_PROFILE` unset; without `/etc/dconf/db/remotix` or `dconf` it is the
+ * declared fallback of 1.0.0 (`$XDG_RUNTIME_DIR/remotix/dconf/profile`, in-memory database, `DCONF_PROFILE` set).
+ * ⛔ It must be called BEFORE any `GSettings`: the dconf engine reads the profile only once.  False on another desktop, or
+ * if the cure cannot hold (said in the log).
  */
 bool session_dconf_prepare(void);
-/* ⭐ 14 Nov 2026 — the session's profile file rewritten (atomic) with the user's base
- * alone, when the child sees the session over and when the child exits with the session
- * over (⛔ never under a live desktop): whoever inherited `DCONF_PROFILE` reads the normal
- * settings.  The child's startup and every birth put the session's layers back.  Does
+/* ⭐ 14 Nov 2026 — the session's profile file(s) rewritten (atomic) with the user's base
+ * alone (19 Nov: the runtime file is REMOVED if that base is the default), when the child sees the session over and when the child exits with the session
+ * over (⛔ never under a live desktop): whoever reads the profile (the runtime file; in the fallback, whoever inherited
+ * `DCONF_PROFILE`) reads the normal settings.  The birth puts the session's layers back (the child's startup does it only if a live desktop is found again; with its life UNKNOWN it touches nothing).  Does
  * nothing if the file is not there. */
 void session_dconf_neutralise(const char *why);
 
@@ -526,12 +538,19 @@ bool session_dconf_of_session(void);
 
 /*
  * ⭐ D-015 — a direct write to a `dconf-service` writer (`DCONF_SESSION_OBJECT` = the
- * session's in-memory database, below the locks; `/ca/desrt/dconf/Writer/user` = the
+ * session's database `remotix`, below the locks; `/ca/desrt/dconf/Writer/user` = the
  * USER's: never to be used for the user's settings except the one-time restore).
  * `value` NULL = remove (`fpath` ending with `/`: the whole folder).  `value` may be
  * floating: it is taken.
  */
-#define DCONF_SESSION_OBJECT "/ca/desrt/dconf/shm/remotix"
+const char *session_dconf_object(void); /* `Writer/remotix` (user-db:remotix) in the runtime model, `shm/remotix` in the fallback */
+#define DCONF_SESSION_OBJECT session_dconf_object()
+
+/* ⭐ 19 Nov 2026 — `remotix --dconf-keyfiles DIR`, at BUILD time: writes `DIR/00-remotix` (values) and `DIR/locks/00-remotix`
+ * from `DCONF_KEYS`, the one list of the keys; the postinst compiles them into `/etc/dconf/db/remotix`.  0 = done. */
+int session_dconf_keyfiles_write(const char *keydir);
+/* ⭐ N5 — at the service's start (root side): compiles `/etc/dconf/db/remotix` if it is missing or older than the package's keyfiles. */
+void session_dconf_system_db_ensure(void);
 gboolean dconf_change(const char *object, const char *fpath, GVariant *value, GError **mistake);
 
 /*
@@ -558,7 +577,7 @@ void session_clear_out_handler(const char *why);
 int session_clear_out_handler_due(const char *why);
 void session_clear_out_retry(void);
 /* ⭐ 17 Nov 2026: KDE only — finishes a Plasma logout that stopped halfway; own frequency limit, see `session.c` */
-void session_kde_logout_watch(void);
+bool session_kde_logout_watch(void);
 int session_clear_out_handler_exit(const char *why);
 /* ⭐ 1.5.4: clear-out for the light close, also while the user's LOCAL session answers; 0 done, 2 partial */
 int session_clear_out_light(const char *why);
@@ -571,6 +590,11 @@ int session_clear_out_light(const char *why);
  *   capture calls `session_state()`.
  */
 bool session_alive(void);
+
+/* ⭐ 19 Nov 2026: the same question with THREE answers.  DEAD only when the bus ANSWERED and the compositor's name
+ * has no owner; UNKNOWN when I could not look (no bus, slow or failed call).  Whoever acts on «dead» uses this. */
+typedef enum { SESSION_LIFE_ALIVE = 0, SESSION_LIFE_DEAD = 1, SESSION_LIFE_UNKNOWN = 2 } SessionLife;
+SessionLife session_life(void);
 
 /*
  * What state the session is in, with the REQUESTED size next to it.

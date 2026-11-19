@@ -29,10 +29,10 @@ COMMON = ("mouse-buttons", "mouse-doubleclick", "mouse-wheel", "mouse-drag", "mo
           "pointer-shape-text", "pointer-shape-arrow", "pointer-shape-edge", "edge-drag", "no-double-cursor",
           "kbd-text", "kbd-ctrl-clipboard", "kbd-shift-arrows", "kbd-alt-tab", "kbd-super", "kbd-function-keys", "kbd-repeat",
           "kbd-accents", "kbd-altgr", "kbd-not-producible", "kbd-capslock",
-          "page-shortcuts-declared", "page-cad-button", "page-cad-chain")
+          "page-shortcuts-declared", "page-cad-hidden", "page-cad-chain")
 CHROME_ONLY = ("page-keyboard-lock",)
 FIREFOX_ONLY = ("clipboard-firefox-session-to-browser", "clipboard-firefox-browser-to-session")
-LAST = ("page-ctrl-alt-end",)
+LAST = ("page-ctrl-alt-end-passes",)
 IGNORE_KEYS = {"Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R", "ISO_Level3_Shift", "Meta_L", "Super_L"}
 
 
@@ -531,15 +531,24 @@ def main():
         rig.mouse.click(*c)
 
     def t_cad():
+        # DECISIONS-11 §11.54 (16 Aug 2026, page.html stylesheet): outside diagnostics (?logbook) the page offers NO on-screen
+        # Ctrl+Alt+Del / Ctrl+Alt+End button. t_cad_chain below covers the button that remains inside diagnostics.
         fresh()
-        r = rig.g.js("const b=document.getElementById('shortcuts-open'); if(!b) return {exists:false}; const r=b.getBoundingClientRect();"
-                     " return {exists:true, w:r.width, h:r.height, disp:getComputedStyle(b).display, diag:document.body.classList.contains('diagnostics')};")
-        if r.get("exists") and r.get("w", 0) > 0 and r.get("disp") != "none":
-            return PASS, "the control that opens the Ctrl+Alt+Del button is on screen (%dx%d px)" % (r["w"], r["h"])
-        raise Fail("SPECS §7.3-bis: an on-screen Ctrl+Alt+Del button «is a requirement». As shipped there is none a user can see: the little ⌨ control that opens it exists (%s) but is not displayed (display %s, %s px) because page.html's stylesheet hides #shortcuts and #shortcuts-open unless diagnostics are on (?logbook), a change made on 16 Aug 2026 («it blocks everything for me»); the button is unreachable by default" % (
-            r.get("exists"), r.get("disp"), r.get("w")))
+        r = rig.g.js("const vis=e=>{const s=getComputedStyle(e), b=e.getBoundingClientRect(); return s.display!=='none' && s.visibility!=='hidden' && b.width>0 && b.height>0;};"
+                     " const ids=['shortcuts-open','shortcuts','shortcuts-buttons'].map(i=>document.getElementById(i)).filter(Boolean);"
+                     " const btns=Array.from(document.querySelectorAll('button,[role=button]')).filter(b=>/Ctrl\\+Alt/i.test(b.textContent));"
+                     " return {diag:document.body.classList.contains('diagnostics'), present:ids.map(e=>e.id).concat(btns.map(b=>b.textContent.trim())),"
+                     " shown:ids.concat(btns).filter(vis).map(e=>e.id||e.textContent.trim())};")
+        if not rig.state()["session"]:
+            return BLOCKED, "no session is on: the page is not showing the desktop, so the absence of the buttons proves nothing"
+        if r.get("diag"):
+            return BLOCKED, "the page's diagnostics are on (?logbook): the buttons are shown by design there, nothing to judge"
+        if not r.get("shown"):
+            return PASS, "outside diagnostics the page shows no Ctrl+Alt+Del / Ctrl+Alt+End button and no control that opens one (in the page but not displayed: %s)" % (r.get("present") or "none")
+        raise Fail("outside diagnostics the page must not offer the Ctrl+Alt+Del / Ctrl+Alt+End buttons (DECISIONS-11 §11.54), but these are displayed: %s" % r.get("shown"))
 
     def t_cad_chain():
+        # What the page still offers, inside diagnostics only (DECISIONS-11 §11.54): the Ctrl+Alt+Del button, which must send the three keys.
         fresh()
         rig.g.js("REMOTIX.logbook(true); return 1;")  # the page's own service route (?logbook): shows the hidden control
         time.sleep(1.0)
@@ -588,6 +597,9 @@ def main():
         raise Fail("full screen + Keyboard Lock: fullscreen %s lock %s (%s); the call answered %s" % (st.get("fs"), st.get("lock"), st.get("why"), r))
 
     def t_ctrl_alt_end():
+        # DECISIONS-11 §11.54 (17 Aug 2026): the page keeps no key combination, Ctrl+Alt+End included: it reaches the desktop like any
+        # other, no «end the session?» question, the session stays on (the exit is «Log Out…» in the desktop's menu, checked by
+        # check-lifecycle). The check is the page not intercepting it AND the application receiving all three keys.
         rig.stop_windows()
         rig.start_input_window("a")
         if rig.boxname == "gnome":
@@ -599,17 +611,12 @@ def main():
         dlg = rig.g.js("const d=document.getElementById('confirm'); return !!d && d.classList.contains('yes');")
         saw = [(e["name"], e["mods"]) for e in rig.since(m, "a", ("key",)) if e["down"]]
         s = rig.state()
-        if dlg:
-            c = rig.center("confirm-yes")
-            rig.mouse.click(*c)
-            s, ok = rig.wait_state(lambda s: not s["session"], 40)
-            gone = rig.box.run("for i in $(seq 40); do [ -z \"$(loginctl list-sessions --no-legend | awk '$3==\"%s\"')\" ] && echo gone && break; sleep 1; done" % rig.user, timeout=70)[1]
-            form = rig.g.js(lib.JS_FORM).get("form")
-            if ok and form and "gone" in gone:
-                return PASS, "Ctrl+Alt+End: confirmation shown, confirmed: the session ended, the page is back at the sign-in form (outcome %r), no logind session of %s is left" % (
-                    (s.get("outcome") or "").strip()[:60], rig.user)
-            raise Fail("Ctrl+Alt+End: confirmation shown and confirmed but the session did not end cleanly: page session %s form %s logind %s" % (s["session"], form, gone[-40:]))
-        raise Fail("Ctrl+Alt+End (SPECS §5.2-bis: kept by the page, asks «end the session?», then ends it like Log Out): no confirmation appeared, the page session is still on (%s), and the desktop application RECEIVED the combination %s. The page says it removed this shortcut on 17 Aug 2026 (page.html comment before the keydown listener; «this page keeps NO key combination»), but no DECISIONS entry and SPECS §5.2-bis/§12 C2 still promise it" % (s["session"], saw[-3:]))
+        names = [n for n, _ in saw[-3:]]
+        end_mods = saw[-1][1] if saw else []
+        if not dlg and s["session"] and names == ["Control_L", "Alt_L", "End"] and "ctrl" in end_mods and "alt" in end_mods:
+            return PASS, "Ctrl+Alt+End typed on the client keyboard: no confirmation, the session is still on, the desktop application received %s, End carrying modifiers %s" % (names, end_mods)
+        raise Fail("Ctrl+Alt+End typed on the client keyboard must reach the desktop untouched (DECISIONS-11 §11.54): confirmation shown %s, page session %s, application received %s (wanted Control_L, Alt_L, End, with ctrl and alt held on End)" % (
+            dlg, s["session"], saw[-3:]))
 
     # ------------------------------------------------------------------------------------- Firefox clipboard
     def ff_clip_get():
@@ -692,12 +699,12 @@ def main():
                 ("no-double-cursor", t_no_double), ("kbd-text", t_text), ("kbd-ctrl-clipboard", t_ctrl), ("kbd-shift-arrows", t_shift_arrows),
                 ("kbd-function-keys", t_fkeys), ("kbd-repeat", t_repeat), ("kbd-accents", t_accents), ("kbd-altgr", t_altgr),
                 ("kbd-not-producible", t_not_producible), ("kbd-capslock", t_caps), ("page-shortcuts-declared", t_declared),
-                ("page-cad-button", t_cad), ("page-cad-chain", t_cad_chain), ("kbd-super", t_super), ("kbd-alt-tab", t_alt_tab)]
+                ("page-cad-hidden", t_cad), ("page-cad-chain", t_cad_chain), ("kbd-super", t_super), ("kbd-alt-tab", t_alt_tab)]
         if ff:
             todo += [("clipboard-firefox-session-to-browser", t_ff_s2b), ("clipboard-firefox-browser-to-session", t_ff_b2s)]
         else:
             todo += [("page-keyboard-lock", t_lock)]
-        todo += [("pointer-shape-edge", t_shape_edge), ("edge-drag", t_edge_drag), ("page-ctrl-alt-end", t_ctrl_alt_end)]
+        todo += [("pointer-shape-edge", t_shape_edge), ("edge-drag", t_edge_drag), ("page-ctrl-alt-end-passes", t_ctrl_alt_end)]
         for name, fn in todo:
             if only and name not in only:
                 continue

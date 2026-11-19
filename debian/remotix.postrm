@@ -28,10 +28,15 @@ purge)
 	#    the one-time migration marks) — removed BY NAME, and the folder if it is left empty, AS THAT USER (runuser), so a symlink
 	#    planted in a home cannot make root delete something else.  ⛔ Never `rm -rf` of a folder in a home.  If the product writes
 	#    another file there, its name goes into this list.
+	#  · ⭐ 19 Nov 2026 (the owner: «uninstalling must leave the system clean»): the same walk, the same way of acting as the user, also
+	#    removes the small dconf database of the remote session's changing values, ~/.config/dconf/remotix (three keyboard keys): ONLY that
+	#    regular file (a symlink is not followed or removed by name through root, `user` and the rest of the folder are never touched, the
+	#    folder `dconf` stays).  Homes that are absent or unreachable are skipped in silence; a user the system does not list at purge time
+	#    (a network directory that is down) keeps the file, which is inert without REMOTIX.  Never makes the purge fail.
 	if command -v runuser >/dev/null 2>&1; then
-		getent passwd | while IFS=: read -r u _ uid _ _ home _; do
-			[ -n "$home" ] && [ "$home" != / ] && [ -d "$home/.local/state/remotix" ] || continue
-			runuser -u "$u" -- sh -c 'cd "$1" 2>/dev/null || exit 0; rm -f session.log xfce-chiavi xfce-vecchi-ripristinati lxqt-restored gnome-ripristinato; cd /; rmdir "$1" 2>/dev/null; :' sh "$home/.local/state/remotix" >/dev/null 2>&1 || true
+		getent passwd | while IFS=: read -r u _ _ _ _ home _; do
+			[ -n "$home" ] && [ "$home" != / ] && { [ -d "$home/.local/state/remotix" ] || [ -f "$home/.config/dconf/remotix" ]; } || continue
+			runuser -u "$u" -- sh -c 'if cd "$1/.local/state/remotix" 2>/dev/null; then rm -f session.log xfce-chiavi xfce-vecchi-ripristinati lxqt-restored gnome-ripristinato; cd /; rmdir "$1/.local/state/remotix" 2>/dev/null; fi; if [ -f "$1/.config/dconf/remotix" ] && [ ! -L "$1/.config/dconf/remotix" ]; then rm -f "$1/.config/dconf/remotix"; fi; :' sh "$home" </dev/null >/dev/null 2>&1 || true
 		done
 	fi
 	if [ ! -e /var/lib/remotix/net-user-preexisting ] && entry=$(getent passwd remotix) && [ -n "$entry" ]; then
@@ -49,6 +54,13 @@ remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
 *)
 	echo "postrm called with an unknown argument: $1" >&2
 	exit 1
+	;;
+esac
+
+# ⭐ 19 Nov 2026: the system dconf database of the GNOME remote session (made by postinst, not in the package's file list) leaves with the package.
+case "$1" in
+remove|purge|disappear)
+	rm -f /etc/dconf/db/remotix /etc/dconf/db/remotix.new.*
 	;;
 esac
 

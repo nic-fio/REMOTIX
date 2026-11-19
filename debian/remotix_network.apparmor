@@ -17,7 +17,8 @@
 #    QUIC/TLS, serves the page, keeps the ban and the certificates in /var/lib/remotix/net, talks to
 #    the root side over the inherited channel, to logind and the journal, and to sssd for names.
 #    It has no capability (it is uid remotix with an empty bounding set); the profile adds the
-#    kernel's view of the same: no `capability` line.
+#    kernel's view of the same: no `capability` line of its own.  (⚠ The `nameservice` abstraction
+#    pulls in `abstractions/nis`, which allows `capability net_bind_service`: harmless, the bounding set is empty.)
 
 include <tunables/global>
 
@@ -25,15 +26,26 @@ profile remotix_network flags=(complain,attach_disconnected) {
   include <abstractions/base>
   include <abstractions/nameservice>
 
-  # No capability at all: none is listed, so none is allowed.
+  # No capability of our own: none is listed here (the only one that comes in is net_bind_service, from `nameservice` -> `nis`).
 
   # The program itself (mapped; the exec of it is the root side's business).
   /usr/libexec/remotix/remotix mr,
   /usr/share/remotix/** r,
   # The keyboard: the network side compiles the XKB keymap of the session (libxkbcommon reads rules, keycodes and types
   # here).  Seen by aa-deb-box.sh on 26 Oct 2026: 10 ALLOWED lines in complain, all of them under this folder.
+  # ⭐ Ubuntu 26.04 (xkb-data 2.46): the data are in /usr/share/xkeyboard-config-2 and /usr/share/X11/xkb is a SYMLINK to it;
+  #    AppArmor judges the resolved path, so the real folder is listed.  libxkbcommon 1.13 also reads /etc/xkb and
+  #    /usr/share/xkeyboard-config-2.d (user/admin additions), and /etc/X11/xkb is the legacy name of the admin folder.
   /usr/share/X11/xkb/ r,
   /usr/share/X11/xkb/** r,
+  /usr/share/xkeyboard-config-2/ r,
+  /usr/share/xkeyboard-config-2/** r,
+  /usr/share/xkeyboard-config-2.d/ r,
+  /usr/share/xkeyboard-config-2.d/** r,
+  /etc/xkb/ r,
+  /etc/xkb/** r,
+  /etc/X11/xkb/ r,
+  /etc/X11/xkb/** r,
   # (nothing under /etc/remotix: the configuration is read by the root side and by systemd; remotix.te.split
   #  gives remotix_net_t only the general reads of /etc, which the nameservice abstraction covers)
   /etc/machine-id r,
@@ -93,5 +105,13 @@ profile remotix_network flags=(complain,attach_disconnected) {
   # none of these is listed, and `deny` says so out loud for the abstract ones.
   deny ptrace,
   deny mount,
-  deny unix addr=@*,
+  # ⚠ The two lines name the operations.  A bare `deny unix addr=@*,` also carries `create`, which has no
+  #   address to compare: on a kernel that mediates unix sockets (Ubuntu 26.04) it forbids EVERY unix socket,
+  #   and a `deny` holds in complain mode too — no D-Bus, no logind, every sign-in refused (19 Nov 2026).
+  #   `@**` and not `@*`: one star stops at `/`, and the names to close contain it (`@/tmp/.X11-unix/X0`).
+  deny unix (bind, listen) addr=@**,
+  deny unix (connect, send, receive) peer=(addr=@**),
+
+  # The administrator's additions (dh_apparmor creates the empty file /etc/apparmor.d/local/remotix_network).
+  include if exists <local/remotix_network>
 }

@@ -38,6 +38,22 @@ Comment: ngtcp2 1.25.0 and nghttp3 1.18.0 are linked STATICALLY into the binary
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 
+Files: usr/libexec/remotix/labwc
+Copyright: 2019-2026 the labwc contributors
+           2017-2026 the wlroots contributors
+License: GPL-2 and Expat
+Comment: A SEPARATE program shipped in the package (it is not part of REMOTIX and is not
+ linked with it): labwc 0.9.3 (GPL-2; two of its files, src/img/img-xpm.c and
+ src/common/xcolor-table.h, are LGPL-2.0-or-later), unmodified, with wlroots 0.19.2
+ (Expat) linked statically.  The wlroots in it carries a patch of ours (build/labwc-ospite/,
+ a few lines in types/scene/surface.c, Expat like wlroots).  Corresponding source,
+ published with each release: remotix-<version>-labwc-source.tar.gz.  The full texts
+ are in /usr/share/doc/remotix/THIRD-PARTY-LICENSES.
+
+License: GPL-2
+ On Debian systems the full text of the GNU General Public License version 2 is in
+ /usr/share/common-licenses/GPL-2.
+
 # ⛔ LICENSE.md is the only copy of the licence text: build/build-deb.sh
 #    appends it below, line by line, when it turns debian into debian/.
 License: LicenseRef-REMOTIX

@@ -119,9 +119,10 @@ int input_run(Input *);
 int input_descriptor(Input *);
 
 /* ⭐ 14 Nov 2026 — has the COMPOSITOR closed the `libei` channel (`EI_EVENT_DISCONNECT`,
- * or the drop before the handshake)?  1 or 0; always 0 on wlroots (there the Wayland wire
- * says it) and for NULL.  The child asks it to notice a session that ended without any
- * other sign (the box is in `child.c`, «THE INPUT CHANNEL CLOSED»). */
+ * or the drop before the handshake), or has the wlroots Wayland wire dropped?  1 or 0; 0 for
+ * NULL.  The child asks it to notice a session that ended without any other sign (the box is in
+ * `child.c`, «THE INPUT CHANNEL CLOSED»).  ⚠ A dropped channel is only a hint (the compositor may
+ * be restarting): the caller uses it ONLY together with `session_alive()`. */
 int input_dropped(const Input *);
 
 /*

@@ -2054,6 +2054,10 @@ The specifications (`SPECS.md`, `RCP.md`) stay the original ones; where a passag
   but does not encode H.264 is reported by `postinst`. An upgrade is never refused.
 - **The logind session is kept alive through `--session-fd`, and Log Out ends the child** (the §7.6 road) on every desktop.
   **KDE** has its own logout watch (`session.c`): the Log Out succeeds even if systemd refuses the stop.
+  ⚠ **Note, 18 Nov 2026 (Ubuntu 26.04, systemd 259):** this tree no longer passes `--session-fd`. Since systemd 258 logind keeps the session by
+  the **pidfd of its leader** (`pam_systemd.c:856`, `logind-session.c:97-107`), not by the fifo `/run/systemd/sessions/<id>.ref`; the child
+  is the leader and keeps its pid across the `execve`, so the session lasts as long as the child. The fifo search and the option were
+  removed from `child.c`; the sentence above is kept as the history of the Debian 13 (systemd 257) decision.
 - **No upgrade path from older versions** (no 1.x → 1.0.0 migration).
 
 ### 11.56 ✅ Remote desktops are closed when the service stops; no orphan desktops (owner's decision, 17 Nov 2026 night)

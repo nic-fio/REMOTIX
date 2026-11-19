@@ -3341,6 +3341,7 @@ int rootside_main(const struct rootside_options *o)
 		return 1;
 	}
 	R.o = o;
+	session_dconf_system_db_ensure(); /* ⭐ N5, 19 Nov 2026: the GNOME locks' system database, if missing or stale */
 	if (o->encoding_route)
 		(void)child_encoding_route(o->encoding_route);
 	if (o->render_node && o->render_node[0])

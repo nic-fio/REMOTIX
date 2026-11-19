@@ -6,8 +6,7 @@ those licences, with their full texts, for every third-party component that is
 INCORPORATED into what REMOTIX distributes:
 
   * the remotix package (/usr/libexec/remotix/remotix and /usr/share/remotix/page.html),
-    and, in the Ubuntu 26.04, Fedora 44, RHEL / Alma 10, Tumbleweed and Arch packages only, the
-    separate program /usr/lib/remotix/labwc (labwc with wlroots linked in: labwc has ITS OWN
+    and the separate program /usr/libexec/remotix/labwc (labwc with wlroots linked in: labwc has ITS OWN
     licence, GPL-2.0, which applies to it, not REMOTIX's - see its entry);
   * the remotix-install package and the installation engine inside the .run file.
 
@@ -22,7 +21,7 @@ Contents:
     libopus 1.5.2 (WebAssembly, inside the web page)                BSD-3-Clause
     Emscripten 4.0.15 system libraries (with musl libc)             MIT / NCSA, MIT
     Wayland protocol definitions (10 files)                         MIT, HPND-style, LGPL-2.1-or-later
-  Separate program, Ubuntu 26.04 / Fedora 44 / Alma 10 / Tumbleweed / Arch packages only (/usr/lib/remotix/labwc):
+  Separate program (/usr/libexec/remotix/labwc):
     labwc 0.9.3                                                     GPL-2.0-only (2 files LGPL-2.0-or-later)
     wlroots 0.19.2 (patched, statically linked into that binary)     MIT
   Installation engine (remotix-install):
@@ -1235,24 +1234,22 @@ DEALINGS IN THE SOFTWARE.
 
 ==============================================================================
 == labwc 0.9.3
-   Used for:  Ubuntu 26.04, Fedora 44, RHEL / Alma 10, Tumbleweed and Arch only: the screenless compositor that hosts the nested KWin >= 6.5 (KDE: the desktop takes the window's size at reattach); the separate program /usr/lib/remotix/labwc
+   Used for:  the screenless compositor that hosts the nested KWin >= 6.5 (KDE: the desktop shows its windows and takes the window's size at reattach); the separate program /usr/libexec/remotix/labwc
    Licence:   GPL-2.0-only (two files LGPL-2.0-or-later, see below)
    Text from: LICENSE of labwc at tag 0.9.3 (https://github.com/labwc/labwc)
 ------------------------------------------------------------------------------
 
-ONLY IN THE UBUNTU 26.04, FEDORA 44, RHEL / ALMA 10, TUMBLEWEED AND ARCH PACKAGES (the other
-distributions, and XFCE and LXQt everywhere, use the distribution's own labwc).
-labwc is a SEPARATE PROGRAM shipped there, at /usr/lib/remotix/labwc, unmodified (its wlroots, below,
-carries a small patch of ours); it is the invisible compositor that hosts KWin (DECISIONS.md §10.43,
-PIANO.md «Correzione B»).  It is not linked with REMOTIX: REMOTIX only
-starts it.  REMOTIX's licence (LICENSE.md) does NOT apply to it: you may use, study, modify and
-redistribute labwc under the terms of the GNU General Public License version 2 below.
+labwc is a SEPARATE PROGRAM shipped at /usr/libexec/remotix/labwc, built from the unmodified upstream
+labwc 0.9.3; the wlroots 0.19.2 linked statically into it carries a small patch of ours (below).  It is the
+invisible compositor that hosts KWin (DECISIONS.md §10.43, PIANO.md «Correzione B»); XFCE and LXQt use the
+distribution's own labwc.  It is not linked with REMOTIX: REMOTIX only starts it.  REMOTIX's licence
+(LICENSE.md) does NOT apply to it: you may use, study, modify and redistribute labwc under the terms of the
+GNU General Public License version 2 below.
 
-The exact corresponding source of that binary is published with each release: inside the .run
-file (source/labwc/) and next to it (remotix-<version>-labwc-source.tar.gz): the upstream tarballs
-labwc-0.9.3.tar.gz and wlroots-0.19.2.tar.gz as released, our wlroots patch, and the build recipe
-(packaging/labwc-ospite/ and the packaging files of the REMOTIX repository).  The source rpms
-carry the tarballs too.
+The exact corresponding source of that binary is published with each release, next to the package
+(remotix-<version>-labwc-source.tar.gz): the upstream tarballs labwc-0.9.3.tar.gz and wlroots-0.19.2.tar.gz as
+released, our wlroots patch, and the build recipe (VERSIONS with the sha256 of the tarballs, fetch.sh, build.sh;
+build/labwc-ospite/ of the REMOTIX source tree).
 
 Two files of labwc 0.9.3 (src/img/img-xpm.c, adapted from gdk-pixbuf / GTK, and
 src/common/xcolor-table.h, generated from X11's rgb.txt) are under LGPL-2.0-or-later: "or later" lets the text of the GNU Lesser
@@ -1603,7 +1600,7 @@ Public License instead of this License.
 
 ==============================================================================
 == wlroots 0.19.2
-   Used for:  the library inside our labwc (/usr/lib/remotix/labwc), linked STATICALLY, with a patch of ours (packaging/labwc-ospite/wlroots-0.19.2-remotix-presented-root.patch, a few lines in types/scene/surface.c); the corresponding source is published with labwc's (see the entry «labwc 0.9.3»)
+   Used for:  the library inside our labwc (/usr/libexec/remotix/labwc), linked STATICALLY, MODIFIED by a patch of ours (build/labwc-ospite/wlroots-0.19.2-remotix-presented-root.patch, a few lines in types/scene/surface.c, released under wlroots' own MIT licence); the corresponding source is published with labwc's (see the entry «labwc 0.9.3»)
    Licence:   MIT
    Text from: LICENSE of wlroots at tag 0.19.2 (https://gitlab.freedesktop.org/wlroots/wlroots)
 ------------------------------------------------------------------------------

@@ -1,0 +1,26 @@
+labwc-ospite — OUR labwc, only to host the nested KWin >= 6.5
+=============================================================
+
+Why: KWin >= 6.5 draws a black single pixel as the root of its window and puts the content in subsurfaces;
+wlroots never reports that root as "presented", so KWin gives its clients a clock at 0 and Firefox thinks
+its window is covered and stops painting.  The fix is a few lines in wlroots (types/scene/surface.c,
+frame_done).  So that we do not depend on the distribution's wlroots (which lacks the fix), the package
+carries labwc 0.9.3 with wlroots 0.19.2 + the patch, linked STATICALLY, as /usr/libexec/remotix/labwc.
+src/kwin.c starts it only for KDE (make LABWC=...); XFCE and LXQt use the distribution's labwc.
+
+Files
+  VERSIONS     labwc and wlroots, pinned, with sha256 and URL
+  fetch.sh     fetch.sh DIR            downloads the two tarballs into DIR and verifies them (sha256 of VERSIONS)
+  build.sh     build.sh SRCDIR DESTDIR extracts, patches, builds with meson, installs DESTDIR/usr/libexec/remotix/labwc;
+               fails if the binary links any libwlroots
+  wlroots-0.19.2-remotix-presented-root.patch   our patch (MIT, like wlroots)
+
+Build: the compiler flags come from the environment (dpkg-buildflags in debian/rules: hardening,
+-ffile-prefix-map for a reproducible build).  Build packages (Ubuntu 26.04): build-essential meson patch
+hwdata wayland-protocols libegl-dev libgles-dev libinput-dev libpixman-1-dev libseat-dev libudev-dev
+libdisplay-info-dev libxml2-dev libcairo2-dev libpango1.0-dev libpng-dev libdrm-dev libgbm-dev
+libglib2.0-dev libxkbcommon-dev libwayland-dev pkg-config curl.
+  fetch.sh /some/dir && build.sh /some/dir /some/dest
+
+Only for Ubuntu 26.04 (Kubuntu).  Licences: labwc GPL-2.0 (this archive is its corresponding source,
+published with every release), wlroots MIT (THIRD-PARTY-LICENSES).

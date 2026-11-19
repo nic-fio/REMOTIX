@@ -3,7 +3,7 @@
 (imported, never modified) and log in as `prova`. It touches NO box: the Rig's `box` is replaced by a stub (lib's Box would run
 commands in the test containers).  Usage: vm-login-test.py [--bad] ; prints facts, exit 0 if the login reached a session."""
 import sys, time
-sys.path.insert(0, "/media/REMOTIX-DEBIAN/prove")
+sys.path.insert(0, "/media/REMOTIX-UBUNTU/prove")
 import lib
 
 lib.PORTS["xfce"] = 8901          # the Rig takes its port from this table

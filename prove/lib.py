@@ -34,7 +34,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BOXES = os.path.join(HERE, "boxes") if os.path.isdir(os.path.join(HERE, "boxes")) else os.path.join(HERE, "..", "boxes")
 SHOTS, WORK = os.path.join(HERE, "shots"), os.path.join(HERE, "work")
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
-PORTS = {"xfce": 8811, "lxqt": 8812, "gnome": 8813, "kde": 8814}  # boxes/box.sh header
+PORTS = {"gnome": 8821, "kde": 8822, "xfce": 8823, "lxqt": 8824}  # boxes/box.sh header
+if os.environ.get("RX_BANCO") == "vm":  # the four QEMU VMs of server/vm-radeon.sh instead of the containers: banco-vm/box.sh answers as box.sh
+    BOXES = os.path.join(HERE, "banco-vm")
+    PORTS = {"gnome": 8841, "kde": 8842, "xfce": 8843, "lxqt": 8844}  # gnome=ubuntu kde=kubuntu xfce=xubuntu lxqt=lubuntu
 SOUND = "/run/user/%d/pulse/native" % os.getuid()  # the host's PipeWire-pulse (server/prepara-server.sh), for Firefox audio
 
 
@@ -108,7 +111,10 @@ def guard(seconds):
     signal.signal(signal.SIGALRM, late)
     for s in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(s, lambda *_: sys.exit(143))
-    signal.alarm(seconds)
+    tempo = os.environ.get("RX_TEMPO", "1")  # a slower bench (the VMs): an integer >= 1, anything else is refused (never "no deadline")
+    if not tempo.isdigit() or int(tempo) < 1:
+        raise ToolError("RX_TEMPO must be an integer >= 1 (got %r)" % tempo)
+    signal.alarm(seconds * int(tempo))
 
 
 # ------------------------------------------------------------------------------------------------- the box

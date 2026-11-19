@@ -1170,6 +1170,28 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 			              "⛔ «%s» is ADMITTED while its desktop is closing: %s.  "
 			              "⭐ It gets 0x0E",
 			              user, without_stage);
+		} else if (!resumed && session_missing_component()) {
+			/* ⭐ 18 Nov 2026 — the desktop's compositor is not installed (`labwc` is only a
+			 *    Recommends: `apt install --no-install-recommends`).  Before, the user was
+			 *    ADMITTED and looked at an empty canvas with no word, and the cause sat in
+			 *    `session.log` (`exec: labwc: not found`).  Said BEFORE spawning the child,
+			 *    like the caps: no process, no logind session.  0x0E, which §8.2 already
+			 *    defines as «a compositor that does not start»; the page's sentence for it
+			 *    sends the user to the administrator, and the package is named HERE. */
+			const char *missing = session_missing_component();
+
+			only_this_login = true;
+			snprintf(without_stage, sizeof without_stage,
+			         "the desktop (%s) cannot start: `%s` is not installed on this server",
+			         session_desktop_name(), missing ? missing : "?");
+			registro_dice(LOG_CHILD,
+			              "⛔ «%s» passed PAM but the desktop cannot be born: %s needs `%s` and "
+			              "it is NOT installed on this server — the administrator must install "
+			              "the package `%s` (it is only a Recommends, so "
+			              "`--no-install-recommends` leaves it out).  ⭐ The child is NOT "
+			              "spawned, it gets 0x0E",
+			              user, session_desktop_name(), missing ? missing : "?",
+			              missing ? missing : "?");
 		} else if (!resumed && stage_count(p) >= rcp_cap()) {
 			registro_dice(LOG_CHILD,
 			              "⛔ «%s» passed PAM but will NOT have a stage: the "
@@ -1330,7 +1352,7 @@ static void delivery_verdict(void *ctx, uint64_t ticket, bool admitted,
 	 *    for the slot table.  ⭐ `phases/10-…md` §8.1 D5: the two reasons are
 	 *    ADDED, they do not replace each other, and `0x06` belongs to the
 	 *    budget's round. */
-	/* ⛔ Step 2 (F15, R-LOGIN-011): for `only_this_login` (0x05, and the two 0x0E «cannot verify» and «still closing») the farewell
+	/* ⛔ Step 2 (F15, R-LOGIN-011): for `only_this_login` (0x05, and the three 0x0E «cannot verify», «still closing» and «compositor not installed») the farewell
 	 *    is HANDED OVER here and leaves when the fixed second since CREDENTIALS has passed — `[M]` it left 40 ms after
 	 *    CREDENTIALS.  The count below says to how many it was handed.  The other branches (`wt_dismiss_user()`: the cap, the
 	 *    budget, a child that is not born) send away EVERY session of the user, logged ones too, and are as they were. */
@@ -2121,8 +2143,13 @@ static void session_ended_by_child(void *ctx, const char *user, uid_t uid)
 		              "sent away %zu logged clients with 0x04", user, amount);
 		return;
 	}
-	amount = wt_dismiss_user(user, RCP_SESSION_TERMINATED,
-	                           "the graphical session has ended", NULL);
+	/* ⭐ 18-19 Nov 2026: `wt_dismiss_user_session_over()`, not `wt_dismiss_user()`.  A login of the same name that
+	 *    is still waiting for PAM, or whose «no» is being kept for the fixed second, was never attached to this
+	 *    session: telling it «the session has ended» replaced its true 0x0E with a false 0x10 (`[M]` rejoin
+	 *    8-10.5 s after the logout of a young session).  A login already ADMITTED onto this session but still
+	 *    inside its fixed second gets the 0x10 at the end of that second, in the place of ADMITTED. */
+	amount = wt_dismiss_user_session_over(user, RCP_SESSION_TERMINATED,
+	                                      "the graphical session has ended");
 	registro_dice(REG_WT,
 	              "⭐ §7.6: the session of «%s» was ended from the desktop — sent away "
 	              "%zu clients with 0x10 (⚠ zero is normal: nobody may be "
@@ -2131,8 +2158,8 @@ static void session_ended_by_child(void *ctx, const char *user, uid_t uid)
 }
 
 /* ⭐ 1.5.4, defence 3 (in the child): the child found a LOCAL session by itself,
- *    did the light close and is leaving.  Whoever was watching is sent away with
- *    0x04 («the local one prevails»), not 0x10. */
+ *    is going to do the light close (this message comes BEFORE the close, since 19 Nov 2026) and then leaves.
+ *    Whoever was watching is sent away with 0x04 («the local one prevails»), not 0x10. */
 static void local_found_by_child(void *ctx, const char *user, uid_t uid)
 {
 	size_t amount;
@@ -2142,9 +2169,26 @@ static void local_found_by_child(void *ctx, const char *user, uid_t uid)
 	(void)local_mark_take(user);
 	amount = local_dismiss_logged(user);
 	registro_dice(REG_WT,
-	              "⛔ defence 3 (child guard): «%s» has a LOCAL session, its child left "
-	              "after the light close — sent away %zu clients with 0x04 (⚠ zero is "
+	              "⛔ defence 3 (child guard): «%s» has a LOCAL session, its child is "
+	              "doing the light close — sent away %zu clients with 0x04 (⚠ zero is "
 	              "normal: nobody may be watching)",
+	              user, amount);
+}
+
+/* ⭐ 19 Nov 2026: the child refused the stage for the SCALE (guard 2) and closes the session.  Whoever is in (or
+ *    admitted and waiting) gets the generic 0x0E now, instead of a black page; the same three kinds of connection as
+ *    `session_ended_by_child()`.  The child then ends and its own «session over» finds nobody left to warn. */
+static void stage_refused_by_child(void *ctx, const char *user, uid_t uid)
+{
+	size_t amount;
+
+	(void)ctx;
+	(void)uid;
+	amount = wt_dismiss_user_session_over(user, RCP_SESSION_UNSERVABLE,
+	                                      "the stage of the session was refused");
+	registro_dice(REG_WT,
+	              "⛔ the child of «%s» refused the stage (scale): sent away %zu clients with 0x0E "
+	              "(⚠ zero is normal: nobody may be watching)",
 	              user, amount);
 }
 
@@ -2302,9 +2346,9 @@ static void dismiss_child(void *ctx, const char *user, uid_t uid)
 			              "sent away %zu logged clients with 0x04", user, n);
 		}
 	} else if (!stop_requested) {
-		size_t amount = wt_dismiss_user(user, RCP_SESSION_TERMINATED,
-		                                  "the graphical session has ended",
-		                                  NULL);
+		/* ⭐ 18-19 Nov 2026: as in `session_ended_by_child()` */
+		size_t amount = wt_dismiss_user_session_over(user, RCP_SESSION_TERMINATED,
+		                                             "the graphical session has ended");
 		if (amount)
 			registro_dice(REG_WT,
 			              "⭐ §7.6: the stage of «%s» has gone ⇒ the graphical "
@@ -2815,6 +2859,10 @@ int main(int argc, char **argv)
 	 *    sessions.  The contract is in `child.h`. */
 	if (argc >= 2 && strcmp(argv[1], "--encoding-test") == 0)
 		return child_test_encoding(argc - 2, argv + 2);
+	/* ⭐ 19 Nov 2026 — at BUILD time only (`debian/rules`): the dconf keyfiles of the session's rules, from the one table in
+	 *    `session.c`; the postinst compiles them into `/etc/dconf/db/remotix`.  Nothing else is opened. */
+	if (argc == 3 && strcmp(argv[1], "--dconf-keyfiles") == 0)
+		return session_dconf_keyfiles_write(argv[2]);
 	/* ⭐ R-1 of the page audit: the removal scripts of the packages take the card grants (ACL on /dev/dri/renderD*) back
 	 *    BEFORE they delete the record and the binary.  Root only; nothing else is opened; exit 0 = none left, 1 = some ACL could
 	 *    not be removed (the record keeps its line: the script must not delete it), 2 = not root or the record is unreadable. */
@@ -3871,6 +3919,7 @@ int main(int argc, char **argv)
 	local_f = offspring;
 	/* ⭐ 1.5.4 (defence 3 seen from the parent): the child found a local session by itself and left. */
 	children_hook_local_found(offspring, local_found_by_child, &bridge);
+	children_hook_stage_refused(offspring, stage_refused_by_child, &bridge);
 	children_hook_canvas_wait(offspring, canvas_wait_for_child, &bridge);
 	/* ⭐ PHASE 7: the audio blocks come up this way.  ⚠ AFTER `children_turn_on`,
 	 *    like all the other hooks: before, there is no table to hook them to. */

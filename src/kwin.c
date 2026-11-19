@@ -100,6 +100,9 @@ struct KwinSession
 	struct zwlr_layer_surface_v1 *pixel_layer;
 	struct wl_buffer *pixel_buf;
 	bool pixel_configured;
+	/* The pixel is committed from two threads: the pump (`pixel_configure`) and the
+	 * caller of `kwin_poke()`.  Attach, damage and commit must not interleave. */
+	GMutex pixel_lock;
 };
 
 /* ------------------------------------------------------------------ *
@@ -388,6 +391,7 @@ static void pixel_configure(void *d, struct zwlr_layer_surface_v1 *s, uint32_t s
 {
 	KwinSession *session = d;
 
+	g_mutex_lock(&session->pixel_lock);
 	zwlr_layer_surface_v1_ack_configure(s, serial);
 	if (!session->pixel_configured && session->pixel_buf) {
 		wl_surface_attach(session->pixel_surface, session->pixel_buf, 0, 0);
@@ -395,6 +399,7 @@ static void pixel_configure(void *d, struct zwlr_layer_surface_v1 *s, uint32_t s
 	}
 	wl_surface_commit(session->pixel_surface);
 	session->pixel_configured = true;
+	g_mutex_unlock(&session->pixel_lock);
 }
 static void pixel_closed(void *d, struct zwlr_layer_surface_v1 *s)
 {
@@ -447,6 +452,7 @@ KwinSession *kwin_open(GError **mistake)
 	char socket[64] = "";
 	gint64 expiry;
 
+	g_mutex_init(&session->pixel_lock);
 	session->wake[0] = session->wake[1] = -1;
 	session->eis = -1;
 
@@ -575,6 +581,32 @@ unsigned kwin_output_count(const KwinSession *session)
 bool kwin_closed(const KwinSession *session)
 {
 	return session ? session->closed : true;
+}
+
+/* ⭐ 19 Nov 2026 — see `kwin.h`.  The same three requests the ticker sends to labwc
+ *    (`ticker_alive()`), here to KWin and only when asked: the buffer attached again —
+ *    a damage with no buffer is not a change — the damage, the commit.
+ * ⚠ Called from the caller's thread while the pump reads the same connection: libwayland
+ *   lets any thread send, and the flush is done here because the pump sleeps in `poll()`
+ *   until KWin speaks.  A full socket (EAGAIN) is not a failure: the rest goes out with
+ *   the next flush. */
+bool kwin_poke(KwinSession *session)
+{
+	int sent;
+
+	if (!session || session->closed || !session->pixel_surface || !session->pixel_buf)
+		return false;
+	g_mutex_lock(&session->pixel_lock);
+	if (!session->pixel_configured) {
+		g_mutex_unlock(&session->pixel_lock);
+		return false;
+	}
+	wl_surface_attach(session->pixel_surface, session->pixel_buf, 0, 0);
+	wl_surface_damage_buffer(session->pixel_surface, 0, 0, 1, 1);
+	wl_surface_commit(session->pixel_surface);
+	g_mutex_unlock(&session->pixel_lock);
+	sent = wl_display_flush(session->display);
+	return sent >= 0 || errno == EAGAIN;
 }
 
 /* ------------------------------------------------------------------ *
@@ -718,6 +750,7 @@ void kwin_close(KwinSession *session)
 		wl_display_disconnect(session->display);
 	}
 	g_free(session->refusal_reason);
+	g_mutex_clear(&session->pixel_lock);
 	g_free(session);
 }
 
@@ -1279,6 +1312,179 @@ static void ticker_alive(const char *display)
 	_exit(0);
 }
 
+/*
+ * ⭐ `org.freedesktop.ScreenSaver`, ANSWERED — 18 Nov 2026, Plasma 6.4 and later (`[M]` rx-kde, Plasma 6.6.7).
+ *
+ * ⛔ The defect: Ctrl+Alt+Del did nothing on KDE.  The shortcut is a kded6 module (`plasma-workspace`,
+ *    `startkde/session-shortcuts`) that calls `SessionManagement::requestLogoutPrompt()`, and from 6.4 that function
+ *    first asks `org.freedesktop.ScreenSaver.GetActive` («never show the logout prompt on top of the lock screen»).
+ *    That name is owned by KWin's lock-screen daemon (`kscreenlocker`), and KWin starts with `--no-lockscreen`
+ *    (locking is REMOTIX's, `session.c`): nobody owns it, the call fails with `ServiceUnknown`, and the failure
+ *    is read as «the screen is locked» — the prompt never opens.  Measured: with a stand-in that answered
+ *    `GetActive = false` the prompt came up in 1 s.
+ *
+ * ⭐ The cure is the thing Plasma expects to find: somebody on the name who says «not locked».  It lives HERE, in a
+ *    sidecar of the KWin unit (like the ticker above), because this is the one place that is born with the desktop
+ *    and dies with it: the unit's cgroup is stopped at the end of the session, and with it the sidecar and its
+ *    name — nothing stays on the user's bus, and nothing is written in the user's files.
+ * ⛔ The name is also used by applications (players, browsers) for `Inhibit` / `UnInhibit` / `SimulateUserActivity`
+ *    (before this they got `ServiceUnknown` and went on): so EVERY method of the standard interface is answered, on both paths
+ *    that are in use (`/ScreenSaver` and `/org/freedesktop/ScreenSaver`), and none of them ever locks anything:
+ *    there is no lock screen here.  `GetActive`, the times and `SimulateUserActivity` get the harmless answer; `Lock`,
+ *    `Throttle` and `UnThrottle` get the standard error `NotSupported`.
+ * ⛔⭐ `Inhibit` is the delicate one, and it was MEASURED (`[M]` rx-kde, VLC playing a video): before the sidecar VLC asked the
+ *    power manager (`org.freedesktop.PowerManagement.Inhibit`, owned by powerdevil) and the screen stayed on; with the
+ *    name present VLC asks `org.freedesktop.ScreenSaver.Inhibit` FIRST and, on an error, does not go on — a fake cookie or
+ *    an error would both leave the video without a real inhibition.  ⇒ `Inhibit` is FORWARDED to the same powerdevil call
+ *    the application would have made (same arguments, same cookie back), and given back when the caller leaves the bus or
+ *    calls `UnInhibit`; if powerdevil is not there the error it answers is passed on as it is.
+ * ⚠ Asked with DO_NOT_QUEUE: if one day a real owner is there first, this sidecar ends and says so — never two answers. */
+#define SCREENSAVER_NAME "org.freedesktop.ScreenSaver"
+
+static const char SCREENSAVER_XML[] =
+	"<node><interface name='org.freedesktop.ScreenSaver'>"
+	"<method name='Lock'/>"
+	"<method name='SimulateUserActivity'/>"
+	"<method name='GetActive'><arg type='b' direction='out'/></method>"
+	"<method name='GetActiveTime'><arg type='u' direction='out'/></method>"
+	"<method name='GetSessionIdleTime'><arg type='u' direction='out'/></method>"
+	"<method name='SetActive'><arg type='b' direction='in'/><arg type='b' direction='out'/></method>"
+	"<method name='Throttle'><arg type='s' direction='in'/><arg type='s' direction='in'/>"
+	"<arg type='u' direction='out'/></method>"
+	"<method name='UnThrottle'><arg type='u' direction='in'/></method>"
+	"<method name='Inhibit'><arg type='s' direction='in'/><arg type='s' direction='in'/>"
+	"<arg type='u' direction='out'/></method>"
+	"<method name='UnInhibit'><arg type='u' direction='in'/></method>"
+	"<signal name='ActiveChanged'><arg type='b'/></signal>"
+	"</interface></node>";
+
+static GMainLoop *screensaver_loop;
+
+#define POWER_NAME "org.freedesktop.PowerManagement"
+#define POWER_PATH "/org/freedesktop/PowerManagement/Inhibit"
+#define POWER_IFACE "org.freedesktop.PowerManagement.Inhibit"
+
+/* cookie (powerdevil's) -> watch on the caller's bus name: the inhibition is given back when the caller goes away */
+static GHashTable *screensaver_held;
+
+static gboolean screensaver_unwatch_idle(gpointer watch)
+{
+	g_bus_unwatch_name(GPOINTER_TO_UINT(watch));
+	return G_SOURCE_REMOVE;
+}
+
+/* Forget a cookie and give it back to powerdevil (no answer is waited for). */
+static void screensaver_release(GDBusConnection *c, guint cookie)
+{
+	gpointer watch;
+
+	if (!screensaver_held || !g_hash_table_lookup_extended(screensaver_held, GUINT_TO_POINTER(cookie), NULL, &watch))
+		return;
+	g_hash_table_remove(screensaver_held, GUINT_TO_POINTER(cookie));
+	g_idle_add(screensaver_unwatch_idle, watch); /* not from inside the watch's own callback */
+	g_dbus_connection_call(c, POWER_NAME, POWER_PATH, POWER_IFACE, "UnInhibit", g_variant_new("(u)", cookie), NULL,
+	                       G_DBUS_CALL_FLAGS_NO_AUTO_START, 5000, NULL, NULL, NULL);
+}
+
+static void screensaver_vanished(GDBusConnection *c, const char *name, gpointer cookie)
+{
+	screensaver_release(c, GPOINTER_TO_UINT(cookie));
+}
+
+typedef struct
+{
+	GDBusMethodInvocation *call;
+	char *sender;
+} InhibitAsk;
+
+static void screensaver_inhibited(GObject *source, GAsyncResult *result, gpointer data)
+{
+	InhibitAsk *ask = data;
+	GDBusConnection *c = G_DBUS_CONNECTION(source);
+	g_autoptr(GError) mistake = NULL;
+	g_autoptr(GVariant) answer = g_dbus_connection_call_finish(c, result, &mistake);
+	guint cookie = 0;
+
+	if (!answer) {
+		g_dbus_error_strip_remote_error(mistake);
+		g_dbus_method_invocation_return_gerror(ask->call, mistake);
+	} else {
+		g_variant_get(answer, "(u)", &cookie);
+		if (!screensaver_held)
+			screensaver_held = g_hash_table_new(g_direct_hash, g_direct_equal);
+		g_hash_table_insert(screensaver_held, GUINT_TO_POINTER(cookie),
+		                    GUINT_TO_POINTER(g_bus_watch_name_on_connection(
+		                        c, ask->sender, G_BUS_NAME_WATCHER_FLAGS_NONE, NULL, screensaver_vanished,
+		                        GUINT_TO_POINTER(cookie), NULL)));
+		g_dbus_method_invocation_return_value(ask->call, g_variant_new("(u)", cookie));
+	}
+	g_free(ask->sender);
+	g_free(ask);
+}
+
+static void screensaver_call(GDBusConnection *c, const char *sender, const char *path, const char *iface,
+                             const char *method, GVariant *parameters, GDBusMethodInvocation *call,
+                             gpointer data)
+{
+	/* ⭐ never locked, never idle: the answers are the «nothing is happening» ones */
+	if (strcmp(method, "GetActive") == 0 || strcmp(method, "SetActive") == 0) /* SetActive: «not changed» */
+		g_dbus_method_invocation_return_value(call, g_variant_new("(b)", FALSE));
+	else if (strcmp(method, "GetActiveTime") == 0 || strcmp(method, "GetSessionIdleTime") == 0)
+		g_dbus_method_invocation_return_value(call, g_variant_new("(u)", 0u));
+	else if (strcmp(method, "SimulateUserActivity") == 0)
+		g_dbus_method_invocation_return_value(call, NULL);
+	else if (strcmp(method, "Inhibit") == 0) {
+		InhibitAsk *ask = g_new0(InhibitAsk, 1);
+
+		ask->call = call;
+		ask->sender = g_strdup(sender);
+		g_dbus_connection_call(c, POWER_NAME, POWER_PATH, POWER_IFACE, "Inhibit", parameters, G_VARIANT_TYPE("(u)"),
+		                       G_DBUS_CALL_FLAGS_NO_AUTO_START, 5000, NULL, screensaver_inhibited, ask);
+	} else if (strcmp(method, "UnInhibit") == 0) {
+		guint cookie = 0;
+
+		g_variant_get(parameters, "(u)", &cookie);
+		if (screensaver_held && g_hash_table_contains(screensaver_held, GUINT_TO_POINTER(cookie))) {
+			screensaver_release(c, cookie);
+			g_dbus_method_invocation_return_value(call, NULL);
+		} else
+			g_dbus_method_invocation_return_error_literal(call, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+			                                              "unknown cookie");
+	} else /* Lock, Throttle, UnThrottle */
+		g_dbus_method_invocation_return_error_literal(call, G_DBUS_ERROR, G_DBUS_ERROR_NOT_SUPPORTED,
+		                                              "no lock screen in a remote session");
+}
+
+static const GDBusInterfaceVTable SCREENSAVER_VTABLE = { screensaver_call, NULL, NULL, { 0 } };
+
+static void screensaver_bus(GDBusConnection *c, const char *name, gpointer data)
+{
+	static const char *const paths[] = { "/ScreenSaver", "/org/freedesktop/ScreenSaver" };
+	GDBusNodeInfo *info = g_dbus_node_info_new_for_xml(SCREENSAVER_XML, NULL);
+
+	for (size_t i = 0; info && i < G_N_ELEMENTS(paths); i++)
+		if (!g_dbus_connection_register_object(c, paths[i], info->interfaces[0], &SCREENSAVER_VTABLE,
+		                                       NULL, NULL, NULL))
+			g_printerr("remotix --kwin-nested: ⚠ ScreenSaver: %s not registered\n", paths[i]);
+}
+
+static void screensaver_lost(GDBusConnection *c, const char *name, gpointer data)
+{
+	g_printerr("remotix --kwin-nested: ScreenSaver: the name %s is not ours (bus lost, or someone "
+	           "owns it): ending\n", SCREENSAVER_NAME);
+	g_main_loop_quit(screensaver_loop);
+}
+
+/* Own process like the ticker (double fork, see the caller).  Ends with the unit's cgroup, or when the bus goes. */
+static void screensaver_alive(void)
+{
+	screensaver_loop = g_main_loop_new(NULL, FALSE);
+	g_bus_own_name(G_BUS_TYPE_SESSION, SCREENSAVER_NAME, G_BUS_NAME_OWNER_FLAGS_DO_NOT_QUEUE,
+	               screensaver_bus, NULL, screensaver_lost, NULL, NULL);
+	g_main_loop_run(screensaver_loop);
+	_exit(0);
+}
+
 int kwin_nested_alive(int argc, char **argv)
 {
 	g_autofree char *folder = host_folder();
@@ -1311,18 +1517,23 @@ int kwin_nested_alive(int argc, char **argv)
 		g_printerr("remotix --kwin-nested: XDG_RUNTIME_DIR is not set\n");
 		return 1;
 	}
-	/* ⭐ The labwc is the distribution's, from PATH (DECISIONI §10.43).
-	 * ⛔ Without labwc the session must still be born: KWin `--virtual`, as
+	/* ⭐ The labwc is OUR labwc (labwc 0.9.3 + a wlroots 0.19.2 patched and
+	 *    linked statically, build/labwc-ospite/), at the exact path the package
+	 *    passes here (`make LABWC=/usr/libexec/remotix/labwc`, DECISIONI §10.43).
+	 *    The distribution's labwc leaves KWin >= 6.5 on its first frame: its
+	 *    wlroots never reports KWin's root surface as presented.
+	 * ⛔ Without our labwc the session must still be born: KWin `--virtual`, as
 	 *    before 11 Oct 2026, and SAID — the desktop keeps the size it is born
-	 *    with (the page centres it). */
-	labwc_path = g_find_program_in_path("labwc");
+	 *    with (the page centres it).  Never the distribution's labwc: it would
+	 *    fall into the defect above. */
+	labwc_path = access(REMOTIX_LABWC, X_OK) == 0 ? g_strdup(REMOTIX_LABWC) : NULL;
 	if (!labwc_path) {
 		line = g_ptr_array_new();
 		for (int i = 6; i < argc; i++)
 			g_ptr_array_add(line, argv[i]);
 		g_ptr_array_add(line, (char *)"--virtual");
 		g_ptr_array_add(line, NULL);
-		g_printerr("remotix --kwin-nested: ⛔ labwc is not installed: KWin --virtual, "
+		g_printerr("remotix --kwin-nested: ⛔ our labwc is not installed: KWin --virtual, "
 		           "and the desktop will NOT take the window's size at reattach "
 		           "(DECLARED FALLBACK)\n");
 		execvp(argv[6], (char **)line->pdata);
@@ -1374,7 +1585,7 @@ int kwin_nested_alive(int argc, char **argv)
 			g_setenv("WLR_RENDERER", "pixman", TRUE);
 		else if (strcmp(node, "-") != 0)
 			g_setenv("WLR_RENDER_DRM_DEVICE", node, TRUE);
-		execlp("labwc", "labwc", "-C", config, (char *)NULL);
+		execl(labwc_path, "labwc", "-C", config, (char *)NULL);
 		g_printerr("remotix --kwin-nested: labwc does not start: %s\n", strerror(errno));
 		_exit(127);
 	}
@@ -1428,6 +1639,16 @@ int kwin_nested_alive(int argc, char **argv)
 
 			if (ticker == 0)
 				ticker_alive(display);
+			/* ⭐ and the sidecar that answers `org.freedesktop.ScreenSaver` (box above), the same way */
+			if (ticker >= 0) {
+				pid_t saver = fork();
+
+				if (saver == 0)
+					screensaver_alive();
+				if (saver < 0)
+					g_printerr("remotix --kwin-nested: ⛔ the ScreenSaver sidecar did not start (%s): Ctrl+Alt+Del "
+					           "will not open the logout screen\n", strerror(errno));
+			}
 			_exit(ticker < 0 ? 1 : 0);
 		}
 		if (middle < 0) {

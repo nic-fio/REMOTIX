@@ -19,6 +19,25 @@ if [ "$1" = configure ]; then
 	systemd-tmpfiles --create remotix.conf || echo "remotix: ⚠ systemd-tmpfiles --create remotix.conf failed" >&2
 fi
 
+# ⭐ 19 Nov 2026: the locks of the GNOME remote session are the SYSTEM dconf database /etc/dconf/db/remotix, compiled HERE from the keyfiles
+#    the package ships (generated at build time from the program's own table).  Compiled to a temporary file and RENAMED: programs of a
+#    living session may have the old one open.  Without `dconf` (dconf-cli is only a Recommends) or if it fails: said, never makes apt
+#    fail; the program then runs its declared fallback (three layers compiled at the session's start) and says so in its log.
+if [ "$1" = configure ]; then
+	if command -v dconf >/dev/null 2>&1 && [ -d /usr/share/remotix/dconf/remotix.d ]; then
+		install -d -m 0755 /etc/dconf/db
+		rx_db_tmp=/etc/dconf/db/remotix.new.$$
+		if dconf compile "$rx_db_tmp" /usr/share/remotix/dconf/remotix.d && chmod 0644 "$rx_db_tmp" && mv -f "$rx_db_tmp" /etc/dconf/db/remotix; then
+			:
+		else
+			rm -f "$rx_db_tmp"
+			echo "remotix: ⚠ /etc/dconf/db/remotix could not be compiled: the GNOME remote session will use its fallback (it is said in the log)" >&2
+		fi
+	else
+		echo "remotix: ⚠ dconf (package dconf-cli) not found: /etc/dconf/db/remotix not made; the GNOME remote session will use its fallback" >&2
+	fi
+fi
+
 # ⭐ 1.0.0: the PAM profile (/usr/share/pam-configs/remotix) goes into /etc/pam.d/common-session: a LOCAL graphical login
 #    closes the user's remote desktop first.  A failure is said, never makes apt fail.
 if [ "$1" = configure ]; then
@@ -39,6 +58,17 @@ if [ "$1" = configure ] && [ -z "${2:-}" ] && [ -x /usr/libexec/remotix/remotix 
 		echo "remotix: ⚠ the video card of this machine did not encode a test frame (H.264): REMOTIX will not show any desktop until it can." >&2
 		echo "remotix:   check the card's driver (Intel/AMD: va-driver-all; NVIDIA: its proprietary driver), then: sudo /usr/libexec/remotix/remotix --encoding-test h264" >&2
 	fi
+fi
+
+# ⭐ 18 Nov 2026: labwc is only a Recommends (a GNOME-only machine does not need it), so `apt install --no-install-recommends`
+#    leaves it out; on a machine whose desktop is XFCE or LXQt (and not GNOME or Plasma, so there is no doubt about which desktop
+#    REMOTIX will start) no desktop could then be born.  Said HERE, once per configuration; never makes apt fail.  The server also
+#    tells a user who logs in (and the log names the package).
+if [ "$1" = configure ] && ! command -v labwc >/dev/null 2>&1 &&
+	{ command -v xfce4-session >/dev/null 2>&1 || command -v lxqt-session >/dev/null 2>&1; } &&
+	! command -v gnome-shell >/dev/null 2>&1 && ! command -v startplasma-wayland >/dev/null 2>&1; then
+	echo "remotix: ⚠ the package labwc is not installed (it is only a Recommends): the XFCE/LXQt desktop of this machine cannot start in REMOTIX." >&2
+	echo "remotix:   install it: sudo apt install labwc" >&2
 fi
 
 #DEBHELPER#

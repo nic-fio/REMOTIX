@@ -230,21 +230,28 @@ GDBusConnection *sess_bus(GError **mistake)
  *   exactly what the caller wanted to know, obtained in a millisecond
  *   instead of thirty seconds.
  */
-static gboolean name_has_owner(GDBusConnection *bus, const char *name)
+/* ⭐ 19 Nov 2026: three answers instead of two.  1 = the bus ANSWERED and the name has an owner; 0 = the bus ANSWERED and
+ *    nobody owns the name; -1 = I could not ask (no bus, call failed or timed out): that is NOT «nobody owns it». */
+static int name_owner_three(GDBusConnection *bus, const char *name)
 {
 	g_autoptr(GVariant) response = NULL;
 	gboolean c_e = FALSE;
 
 	if (!bus || !name)
-		return FALSE;
+		return -1;
 	response = g_dbus_connection_call_sync(
 		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
 		"NameHasOwner", g_variant_new("(s)", name), G_VARIANT_TYPE("(b)"),
 		G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_NAME_MS, NULL, NULL);
 	if (!response)
-		return FALSE;
+		return -1;
 	g_variant_get(response, "(b)", &c_e);
-	return c_e;
+	return c_e ? 1 : 0;
+}
+
+static gboolean name_has_owner(GDBusConnection *bus, const char *name)
+{
+	return name_owner_three(bus, name) == 1;
 }
 
 /* A call to Mutter, without declaring the type of the answer. */
@@ -378,18 +385,21 @@ static char *last_conf_value(const char *const *dirs, const char *last_file, con
 	return value;
 }
 
-/* the desktop a session name (`xfce`, `plasma`, `lxqt`, `gnome`…) belongs to */
+/* the desktop a session name (`xubuntu`, `plasma`, `ubuntu`, `lxqt`, `gnome`…) belongs to.
+ * ⚠ «ubuntu» as a substring also catches `ubuntustudio`, `ubuntu-budgie`…: flavours outside the four
+ * supported ones (Ubuntu, Kubuntu, Xubuntu, Lubuntu). */
 static DesktopSession desktop_of_session_name(const char *name)
 {
 	g_autofree char *n = g_ascii_strdown(name, -1);
 
-	if (strstr(n, "xfce"))
+	/* ⚠ xubuntu, lubuntu and kubuntu contain «ubuntu»: they are asked BEFORE it */
+	if (strstr(n, "xfce") || strstr(n, "xubuntu"))
 		return SESSION_DESKTOP_XFCE;
-	if (strstr(n, "lxqt"))
+	if (strstr(n, "lxqt") || strstr(n, "lubuntu"))
 		return SESSION_DESKTOP_LXQT;
-	if (strstr(n, "plasma") || strstr(n, "kde"))
+	if (strstr(n, "plasma") || strstr(n, "kde") || strstr(n, "kubuntu"))
 		return SESSION_DESKTOP_KDE;
-	if (strstr(n, "gnome"))
+	if (strstr(n, "gnome") || strstr(n, "ubuntu"))
 		return SESSION_DESKTOP_GNOME;
 	return SESSION_DESKTOP_NONE;
 }
@@ -498,9 +508,9 @@ static DesktopSession declared_desktop(const gboolean *present, char **which)
 /*
  * ⭐ PHASE 12 — WHICH DESKTOP.  The criterion and the why are in `session.h`.
  *
- * ⚠ The process PATH is looked at: the child has it fixed
- *   (`/usr/local/bin:/usr/bin:/bin`), so parent and child give the same
- *   answer without having to pass it along.
+ * ⚠ The process PATH is looked at.  The parent searches the PATH of the service; the child
+ *   (and the session) get the one of the PAM login (`child.c`): the two give the same answer
+ *   as long as the programs are in `/usr/bin`, which is where the distribution puts them.
  * ⚠ 1.5.2: with two or more desktops the answer ALSO depends on world-readable
  *   configuration files (`declared_desktop()` above).  Parent and child must read the same
  *   files, and they do: both run on the same machine, the files are readable by everyone, and
@@ -741,6 +751,27 @@ const char *session_desktop_name(void)
 	return desktop_name();
 }
 
+/* ⭐ 18 Nov 2026 — the program the chosen desktop NEEDS and the machine does not have, or NULL.
+ *   Only `labwc` for XFCE and LXQt: it is a Recommends of the package (`--no-install-recommends`
+ *   leaves it out) and these desktops bring no compositor of their own.  `wlr-randr` is not
+ *   asked for (a failing one still lets the session be born: `measured_primary()`), nor is
+ *   Xwayland; KDE has the KWin fallback and GNOME its own compositor.
+ *   ⚠ LIMIT: the PARENT looks in the PATH of the service, the session starts with the one of
+ *   the PAM login; they agree for `/usr/bin` (where `labwc` is packaged), not for a labwc
+ *   installed in a folder only one of the two PATHs has.
+ *   ⚠ Looked up at EVERY call, not once like `recognize_desktop()`: an administrator who
+ *   installs the package while the server runs is believed at the next login. */
+const char *session_missing_component(void)
+{
+	DesktopSession d = desktop_session();
+	g_autofree char *found = NULL;
+
+	if (d != SESSION_DESKTOP_XFCE && d != SESSION_DESKTOP_LXQT)
+		return NULL;
+	found = g_find_program_in_path(SESSION_PROCESS_XFCE);
+	return found ? NULL : SESSION_PROCESS_XFCE;
+}
+
 /*
  * ⭐⭐ PHASE 17, D8 (`DECISIONS.md` §10.20) — WHICH GNOME SESSION: the distribution's
  *      DEFAULT one, not always `gnome`.
@@ -867,6 +898,7 @@ static const GnomeSession *gnome_session(void)
 		                                                    g_free, NULL);
 		g_autoptr(GPtrArray) all_items = g_ptr_array_new();
 		g_autoptr(GString) listing = g_string_new(NULL);
+		g_autofree char *os = g_get_os_info(G_OS_INFO_KEY_ID);
 		const char *why = NULL;
 
 		/* ⚠ The first data folder wins for equal file names, as
@@ -911,6 +943,13 @@ static const GnomeSession *gnome_session(void)
 			choice = all_items->pdata[0];
 			why = "the only one the machine offers";
 		}
+		/* ⭐ D8: the one the login screen would offer first on this distribution
+		 *    (Ubuntu: `ubuntu`, even when `gnome` is installed too) */
+		for (guint i = 0; !choice && os && i < all_items->len; i++)
+			if (strcmp(((GnomeSession *) all_items->pdata[i])->name, os) == 0) {
+				choice = all_items->pdata[i];
+				why = "it bears the distribution's name (ID of os-release)";
+			}
 		for (guint i = 0; !choice && i < all_items->len; i++)
 			if (strcmp(((GnomeSession *) all_items->pdata[i])->name,
 			           SESSION_GNOME_FALLBACK) == 0) {
@@ -990,20 +1029,26 @@ static int my_processes(const char *name)
 	return amount;
 }
 
-bool session_alive(void)
+/* ⭐ 19 Nov 2026: the question with THREE answers, for whoever must act on «dead» and not only on «does not answer»
+ *    (`child.c`, the early farewell): ALIVE; DEAD = the bus answered and the compositor's name has no owner;
+ *    UNKNOWN = I could not look (no bus, a call failed or timed out, any other error).  ⚠ Only DEAD is certain. */
+SessionLife session_life(void)
 {
 	g_autoptr(GDBusConnection) bus = NULL;
 	g_autoptr(GVariant) response = NULL;
+	g_autoptr(GError) mistake = NULL;
+	const char *name = NULL;
+	int owner;
 
 	bus = sess_bus(NULL);
 	if (!bus)
-		return false;
+		return SESSION_LIFE_UNKNOWN;
 
 	/* ⭐ On Plasma the weak question is KWin's name: it is not activatable (the
 	 *    compositor takes it when it starts), and the weakness is the same one
 	 *    declared in `session.h` — «alive» does not mean «ready». */
 	if (e_kde())
-		return name_has_owner(bus, "org.kde.KWin");
+		name = "org.kde.KWin";
 
 	/* ⭐ PHASE 13 — on XFCE the weak question is the session manager's name.
 	 *    `[M]` 20 Sep 2026: it appears on the USER bus, because we start `labwc`
@@ -1012,8 +1057,8 @@ bool session_alive(void)
 	 *    the other two, with a wider margin: between the name and the USABLE
 	 *    session there are up to 8 s per priority group, and they are structural
 	 *    (`STARTUP_TIMEOUT_WAYLAND`, `STUDIES.md` §xfce §9.4). */
-	if (e_xfce())
-		return name_has_owner(bus, SESSION_BUS_XFCE);
+	else if (e_xfce())
+		name = SESSION_BUS_XFCE;
 
 	/* ⭐ PHASE 14 — on LXQt, the same weak question: the name of `lxqt-session`
 	 *    on the user bus (labwc starts without `dbus-run-session`, as on XFCE).
@@ -1023,8 +1068,12 @@ bool session_alive(void)
 	 *   has no GLib loop to listen to it.  [?] To be measured on the box:
 	 *   how long passes between the name and the panel, and whether in between capture
 	 *   on labwc fails and retries (as on XFCE) or does something else. */
-	if (e_lxqt())
-		return name_has_owner(bus, SESSION_BUS_LXQT);
+	else if (e_lxqt())
+		name = SESSION_BUS_LXQT;
+	if (name) {
+		owner = name_owner_three(bus, name);
+		return owner > 0 ? SESSION_LIFE_ALIVE : owner == 0 ? SESSION_LIFE_DEAD : SESSION_LIFE_UNKNOWN;
+	}
 
 	/*
 	 * ⛔ IT IS NOT ENOUGH THAT THE NAME IS TAKEN, for two different reasons, both
@@ -1034,10 +1083,23 @@ bool session_alive(void)
 	 *    of readiness.  A real method is called and we check that the answer
 	 *    ARRIVES — without interpreting it: only one thing matters here.
 	 */
-	response = ask_mutter(bus, "org.gnome.Mutter.DisplayConfig",
-	                           "/org/gnome/Mutter/DisplayConfig",
-	                           "org.gnome.Mutter.DisplayConfig", "GetCurrentState", NULL);
-	return response != NULL;
+	owner = name_owner_three(bus, "org.gnome.Mutter.DisplayConfig");
+	if (owner == 0)
+		return SESSION_LIFE_DEAD;
+	if (owner < 0)
+		return SESSION_LIFE_UNKNOWN;
+	/* The name has an owner (the bus ANSWERED): the call goes straight to the owner, the same arguments `ask_mutter()` uses
+	 * but WITHOUT its second question about the name — that one would turn «I could not ask» (timeout, bus gone between
+	 * the two questions) into NAME_HAS_NO_OWNER.  ANY error here is UNKNOWN, never DEAD: the next look will say. */
+	response = g_dbus_connection_call_sync(bus, "org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig",
+	                                       "org.gnome.Mutter.DisplayConfig", "GetCurrentState", NULL, NULL,
+	                                       G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_POLL_MS, NULL, &mistake);
+	return response ? SESSION_LIFE_ALIVE : SESSION_LIFE_UNKNOWN;
+}
+
+bool session_alive(void)
+{
+	return session_life() == SESSION_LIFE_ALIVE;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1554,7 +1616,38 @@ static char *write_kde_menu_rules(const char *runtime)
 
 /* ------------------------------------------------------------------------- */
 /*
- * ⭐⭐ PHASE 15, D-015 (rewritten 13 Nov 2026) — THE SESSION'S DCONF, THREE LAYERS.
+ * ⭐⭐ PHASE 15, D-015 (rewritten 13 Nov 2026) — THE SESSION'S DCONF, THREE LAYERS (since 19 Nov 2026 the fallback; see below).
+ *
+ * ⭐⭐ 19 Nov 2026 — WHAT FOLLOWS IS NOW THE DECLARED FALLBACK; THE MODEL IS THIS (`[M]` Ubuntu 26.04 VM with its snaps,
+ *    dconf 0.49, GNOME 50, records in `log/dconf-misure/`):
+ *    · Flutter programs (Firmware Updater, Security Center, App Center, the live installer) have their own dconf reader that
+ *      knows only `user-db` and `system-db`: at a `file-db`/`service-db` line it drops the whole profile («Unknown DConf
+ *      source»), and a confined snap cannot even open a profile under our `XDG_RUNTIME_DIR` («No DConf source to write
+ *      to»).  Both were visible with the profile in `DCONF_PROFILE`.
+ *    · So: the locks are a SYSTEM database `/etc/dconf/db/remotix` (the package compiles it in the postinst from keyfiles it
+ *      generates at build time out of `DCONF_KEYS`: `remotix --dconf-keyfiles`), and the session profile is the file dconf
+ *      reads when `DCONF_PROFILE` is NOT set, `$XDG_RUNTIME_DIR/dconf/profile`:
+ *          <first line of the base profile>      (user-db:user: writable, stays)
+ *          system-db:remotix                     (value + lock of the keys)
+ *          user-db:remotix                       (what changes mid-session: `~/.config/dconf/remotix`, written by
+ *                                                 the dconf service as `/ca/desrt/dconf/Writer/remotix`)
+ *          <the other lines of the base profile>
+ *      No `DCONF_PROFILE` in the session or in the user manager (a confined snap has another runtime folder, does not see
+ *      the file and uses the plain `user-db:user`).  The user's file `user` is never written; the small file `remotix`
+ *      is declared (emptied at every birth).
+ *    · The belt and the birth work as below, on that file: at the end of the session it is REMOVED if the base is the default
+ *      alone (an absent file is what a local login had before), else rewritten with the base alone; the birth puts it back.
+ *    · If `/etc/dconf/db/remotix` or `dconf` is missing, or a runtime profile that is not ours is already there: the model below, said
+ *      in the log.  The service also compiles the database at its start if it is missing or older than the package's keyfiles.
+ *    · ⭐ N1: the runtime file is written at the BIRTH (or at the child's start only if a live desktop is found again), so a child that
+ *      dies before the birth leaves nothing readable by a LOCAL login; the case of a child that dies AFTER the birth is the
+ *      orphan-desktop road (the root side's light close runs the belt as the user).
+ *    · ⚠ Declared, hot upgrade: a desktop born by an OLD child (model 1.0.0: shm, `DCONF_PROFILE`) keeps reading its `shm` while a NEW
+ *      child for the same session would write `Writer/remotix`: the layout change would not reach that desktop.  The old model was
+ *      never distributed on Ubuntu; the next birth is right.
+ *    · An administrator's own `DCONF_PROFILE` stays the BASE profile; in the session the variable points to our file (else
+ *      dconf would ignore it).
+ *
  *
  * The user's rule: from remote the user customises the desktop and the changes STAY;
  * REMOTIX imposes its rules ONLY in the session and writes nothing permanent in the
@@ -1569,7 +1662,7 @@ static char *write_kde_menu_rules(const char *runtime)
  *
  *   `[R]` dconf 0.40: only the first source is written; a lock in a database hides
  *   the sources ABOVE it, so the keys of `DCONF_KEYS` win over the user's and cannot be
- *   written by the session.  The lock-only keys take their value from `shm` (below).
+ *   written by the session.  The lock-only keys take their value from `shm` (below; in the runtime model, from `user-db:remotix`).
  *   ⚠ A `file-db` recompiled mid-session is NOT seen by programs already open: that is why
  *   what changes lives in `shm`; `locks.db` is compiled to a temporary file and RENAMED,
  *   never deleted while the session lives.
@@ -1589,9 +1682,10 @@ static char *write_kde_menu_rules(const char *runtime)
  *   hold exactly those values (`session_dconf_restore_once()`).
  * ⚠ The MANDATORY profile (`/run/dconf/user/<uid>`) wins over `DCONF_PROFILE`: then it
  *   cannot hold, and it is said.
- * ⚠ `DCONF_PROFILE` stays in the user manager's environment while the session lives (a local
- *   login sharing that manager would inherit the locks); the clean-up removes it after «Exit»
- *   (`session_clear_out_handler()`).
+ * ⚠ (fallback; in the runtime model there is no variable) `DCONF_PROFILE` stays in the user manager's environment while the
+ *   session lives (a local login sharing that manager would inherit the locks); the clean-up removes it after «Exit»
+ *   (`session_clear_out_handler()`; it also removes the one a previous version of the package left in a manager that
+ *   outlives an upgrade).
  * ⭐ 14 Nov 2026, THE BELT for when that clean-up is late or never runs (`[M]` Arch: the
  *   variable stayed 126 s): when the child sees the session over, and when the child
  *   exits with the session over, the profile FILE is rewritten (atomic) with the user's base
@@ -1606,7 +1700,7 @@ static char *write_kde_menu_rules(const char *runtime)
 #define DCONF_USER_OBJECT "/ca/desrt/dconf/Writer/user"
 
 /* The keys of the session: value + lock (`text` = GVariant text), or LOCK ONLY
- * (`text` NULL: the value comes from `shm`).  ⚠ Grouped by `dir`: `dconf_compile_locks()`
+ * (`text` NULL: the value comes from the session's changing database — `user-db:remotix`, `shm` in the fallback).  ⚠ Grouped by `dir`: `dconf_compile_locks()`
  * writes one keyfile section per run of equal `dir`.
  * ⛔ `switch-to-session-N` (Ctrl+Alt+F1…F12): Mutter binds them NON_MASKABLE and in a
  *    headless session there is no console to switch to.  The schema is
@@ -1636,13 +1730,21 @@ static const struct dconf_key DCONF_KEYS[] = {
 	  "sleep-inactive-battery-type", "'nothing'" },
 	{ "org.gnome.desktop.session", "/org/gnome/desktop/session/", "idle-delay", "uint32 0" },
 	{ "org.gnome.desktop.screensaver", "/org/gnome/desktop/screensaver/", "lock-enabled", "false" },
-	/* the layout: lock only, the value is in `shm` (`input.c`) */
+	/* Ubuntu's own key: lock when suspending (the Shell's `lock()` would revoke capture) */
+	{ "org.gnome.desktop.screensaver", "/org/gnome/desktop/screensaver/", "ubuntu-lock-on-suspend", "false" },
+	/* ⭐ 19 Nov 2026 (GNOME 50, Mutter 50): the INTEGER scale of the desktop is 1 in the remote session.  The
+	 *    stage refuses a scale other than 1 (guard 2 of §5.0-sexies: the input's coordinate space would not coincide
+	 *    with the stream's pixels) and the user, with `scaling-factor` = 2 in their own settings, stayed in front of a
+	 *    black page and could not even enter to put it back.  Value + lock here, as the keys above: the user's file is
+	 *    never touched, and at a local login the user finds their 2 again. */
+	{ "org.gnome.desktop.interface", "/org/gnome/desktop/interface/", "scaling-factor", "uint32 1" },
+	/* the layout: lock only, the value is in the session's changing database (`user-db:remotix`; `shm` in the fallback) (`input.c`) */
 	{ "org.gnome.desktop.input-sources", "/org/gnome/desktop/input-sources/", "sources", NULL },
 	{ "org.gnome.desktop.input-sources", "/org/gnome/desktop/input-sources/", "current", NULL },
 	{ "org.gnome.desktop.input-sources", "/org/gnome/desktop/input-sources/", "mru-sources", NULL },
 };
 
-/* Is `dconf compile` there and `locks.db` in the profile?  (else: declared fallback) */
+/* Are the locks in force: `/etc/dconf/db/remotix` (runtime model) or `locks.db` compiled by us (fallback)?  FALSE = no lock at all */
 static gboolean dconf_locked;
 
 /* Runs a `dconf` command, with `DCONF_PROFILE` set to `profile` if not NULL;
@@ -1667,23 +1769,15 @@ static gboolean dconf_spawn(char **argv, const char *profile, char **out)
 	return TRUE;
 }
 
-/* Writes `locks.d/` (keyfile + locks) and compiles it into `<folder>/locks.db`:
- * to a temporary file, then RENAMED (never deleted: programs of a living session
- * have the old one open). */
-static gboolean dconf_compile_locks(const char *folder)
+/* ⭐ 19 Nov 2026 — THE ONE SOURCE of the keys: `DCONF_KEYS` is turned into the two texts of a dconf keyfile folder (the
+ * values, and the list of locks), for both users — `dconf_compile_locks()` here (the declared fallback, compiled at the child's
+ * start) and `session_dconf_keyfiles_write()` (the package: `remotix --dconf-keyfiles DIR` at BUILD time, compiled by the
+ * postinst into `/etc/dconf/db/remotix`).  There is no second list to keep in step. */
+static void dconf_keyfile_texts(GString *values, GString *locks)
 {
-	g_autofree char *keydir = g_build_filename(folder, "locks.d", NULL);
-	g_autofree char *lockdir = g_build_filename(keydir, "locks", NULL);
-	g_autofree char *keyfile = g_build_filename(keydir, "00-remotix", NULL);
-	g_autofree char *lockfile = g_build_filename(lockdir, "00-remotix", NULL);
-	g_autofree char *db = g_build_filename(folder, "locks.db", NULL);
-	g_autofree char *tmp = g_strdup_printf("%s.new.%d", db, (int) getpid());
-	g_autoptr(GString) values = g_string_new("# REMOTIX (D-015): value + lock of the session.\n");
-	g_autoptr(GString) locks = g_string_new(NULL);
-	g_autoptr(GError) mistake = NULL;
 	const char *section = NULL;
-	char *argv[] = { "dconf", "compile", tmp, keydir, NULL };
 
+	g_string_append(values, "# REMOTIX (D-015): value + lock of the session.\n");
 	for (guint i = 0; i < G_N_ELEMENTS(DCONF_KEYS); i++) {
 		const struct dconf_key *k = &DCONF_KEYS[i];
 
@@ -1697,9 +1791,125 @@ static gboolean dconf_compile_locks(const char *folder)
 		}
 		g_string_append_printf(values, "%s=%s\n", k->key, k->text);
 	}
-	if (g_mkdir_with_parents(lockdir, 0700) != 0 ||
-	    !g_file_set_contents(keyfile, values->str, -1, &mistake) ||
-	    !g_file_set_contents(lockfile, locks->str, -1, &mistake)) {
+}
+
+/* Writes `<keydir>/00-remotix` and `<keydir>/locks/00-remotix`; FALSE (and `*mistake`) if it cannot. */
+static gboolean dconf_keyfiles_write(const char *keydir, GError **mistake)
+{
+	g_autofree char *lockdir = g_build_filename(keydir, "locks", NULL);
+	g_autofree char *keyfile = g_build_filename(keydir, "00-remotix", NULL);
+	g_autofree char *lockfile = g_build_filename(lockdir, "00-remotix", NULL);
+	g_autoptr(GString) values = g_string_new(NULL);
+	g_autoptr(GString) locks = g_string_new(NULL);
+
+	dconf_keyfile_texts(values, locks);
+	if (g_mkdir_with_parents(lockdir, 0755) != 0) {
+		g_set_error(mistake, G_FILE_ERROR, g_file_error_from_errno(errno), "%s: %s", lockdir,
+		            g_strerror(errno));
+		return FALSE;
+	}
+	return g_file_set_contents(keyfile, values->str, -1, mistake) &&
+	       g_file_set_contents(lockfile, locks->str, -1, mistake);
+}
+
+int session_dconf_keyfiles_write(const char *keydir)
+{
+	g_autoptr(GError) mistake = NULL;
+
+	if (dconf_keyfiles_write(keydir, &mistake))
+		return 0;
+	fprintf(stderr, "remotix --dconf-keyfiles: %s\n", mistake ? mistake->message : "failed");
+	return 1;
+}
+
+#define DCONF_SYSTEM_DB "/etc/dconf/db/remotix"
+#define LOG_ROOT "rootside" /* the root side's log area, as in rootside.c */
+
+/* ⭐ N5 (19 Nov 2026) — the SERVICE (root side) makes sure `/etc/dconf/db/remotix` is there and EQUAL to what the package's keyfiles
+ * compile to: the postinst may have run before `dconf-cli` was configured (it is only a Recommends), or failed in an upgrade
+ * and left the old database believed good.  How: compile to a temporary file at every start and replace the database only if the
+ * bytes DIFFER (the compiler is deterministic) — chosen over comparing dates, which would not see an old database compiled AFTER the
+ * package was built.  Same technique as the postinst (temporary file + rename, mode 0644).  Root runs `/usr/bin/dconf` by absolute
+ * path (never a PATH search).  A line says what was done; if it cannot be done, the sessions run the declared fallback. */
+void session_dconf_system_db_ensure(void)
+{
+	static const char *const KEYDIR = "/usr/share/remotix/dconf/remotix.d";
+	static const char *const DCONF = "/usr/bin/dconf";
+	g_autofree char *keyfile = g_build_filename(KEYDIR, "00-remotix", NULL);
+	g_autofree char *lockfile = g_build_filename(KEYDIR, "locks", "00-remotix", NULL);
+	g_autofree char *tmp = g_strdup_printf("%s.new.%d", DCONF_SYSTEM_DB, (int) getpid());
+	g_autofree char *old = NULL;
+	g_autofree char *fresh = NULL;
+	gsize old_len = 0, fresh_len = 0;
+	gboolean had = FALSE;
+	const char *why = NULL, *failed = "";
+	char *argv[] = { (char *) DCONF, "compile", tmp, (char *) KEYDIR, NULL };
+
+	if (access(keyfile, R_OK) != 0 || access(lockfile, R_OK) != 0)
+		return; /* a package without the keyfiles: nothing to compile from */
+	/* the temporary files a fall left behind (only those, by name, in this folder) */
+	{
+		g_autoptr(GDir) d = g_dir_open("/etc/dconf/db", 0, NULL);
+		const char *n;
+
+		while (d && (n = g_dir_read_name(d))) {
+			g_autofree char *leftover = NULL;
+
+			if (!g_str_has_prefix(n, "remotix.new."))
+				continue;
+			leftover = g_build_filename("/etc/dconf/db", n, NULL);
+			(void)unlink(leftover);
+		}
+	}
+	had = g_file_get_contents(DCONF_SYSTEM_DB, &old, &old_len, NULL);
+	if (access(DCONF, X_OK) != 0) {
+		if (!had)
+			registro_dice(LOG_ROOT, "⚠ D-015: %s is missing and %s (package dconf-cli) is missing: the GNOME remote sessions use "
+			              "the declared fallback", DCONF_SYSTEM_DB, DCONF);
+		return;
+	}
+	if (g_mkdir_with_parents("/etc/dconf/db", 0755) != 0) {
+		failed = "cannot make /etc/dconf/db";
+		goto bad;
+	}
+	if (!dconf_spawn(argv, NULL, NULL)) {
+		failed = "`dconf compile` failed";
+		goto bad;
+	}
+	if (!g_file_get_contents(tmp, &fresh, &fresh_len, NULL)) {
+		failed = "the compiled file cannot be read";
+		goto bad;
+	}
+	if (had && old_len == fresh_len && memcmp(old, fresh, old_len) == 0) {
+		unlink(tmp); /* as it should be: nothing to say */
+		return;
+	}
+	why = had ? "DIFFERENT from what the package's keyfiles compile to" : "missing";
+	if (chmod(tmp, 0644) != 0 || rename(tmp, DCONF_SYSTEM_DB) != 0) {
+		failed = g_strerror(errno);
+		goto bad;
+	}
+	registro_dice(LOG_ROOT, "⭐ D-015: %s was %s: compiled now from %s", DCONF_SYSTEM_DB, why, KEYDIR);
+	return;
+bad:
+	unlink(tmp);
+	registro_dice(LOG_ROOT, had ? "⚠ D-015: %s may be stale and could NOT be put right (%s): the GNOME remote sessions use the "
+	              "database that is there" : "⚠ D-015: %s is missing and could NOT be made (%s): the GNOME remote sessions use the "
+	              "declared fallback", DCONF_SYSTEM_DB, failed);
+}
+
+/* Writes `locks.d/` (keyfile + locks) and compiles it into `<folder>/locks.db`:
+ * to a temporary file, then RENAMED (never deleted: programs of a living session
+ * have the old one open).  ⚠ Since 19 Nov 2026 this is the DECLARED FALLBACK (no `/etc/dconf/db/remotix`). */
+static gboolean dconf_compile_locks(const char *folder)
+{
+	g_autofree char *keydir = g_build_filename(folder, "locks.d", NULL);
+	g_autofree char *db = g_build_filename(folder, "locks.db", NULL);
+	g_autofree char *tmp = g_strdup_printf("%s.new.%d", db, (int) getpid());
+	g_autoptr(GError) mistake = NULL;
+	char *argv[] = { "dconf", "compile", tmp, keydir, NULL };
+
+	if (g_mkdir_with_parents(keydir, 0700) != 0 || !dconf_keyfiles_write(keydir, &mistake)) {
 		registro_dice(LOG_SESSION, "⚠ D-015: locks.d not written in %s: %s", keydir,
 		              mistake ? mistake->message : g_strerror(errno));
 		return FALSE;
@@ -1716,7 +1926,6 @@ static gboolean dconf_compile_locks(const char *folder)
 	return TRUE;
 }
 
-
 static char *dconf_profile_path(void)
 {
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
@@ -1726,22 +1935,60 @@ static char *dconf_profile_path(void)
 	return g_build_filename(runtime, "remotix", "dconf", "profile", NULL);
 }
 
+/* ⭐ 19 Nov 2026 — the RUNTIME profile: `$XDG_RUNTIME_DIR/dconf/profile`, the file dconf reads when `DCONF_PROFILE` is not set.
+ * Its first line is the mark that says it is ours (the end of the session touches no other). */
+#define DCONF_RT_MARK "# REMOTIX-RUNTIME-PROFILE"
+/* The head carries, when the administrator's own DCONF_PROFILE points to this file, the sign DCONF_RT_REF: the belt (stateless) then
+ * REWRITES the file and never removes it (a variable pointing at a missing profile would mean no settings at all). */
+#define DCONF_RT_REF "[referenced by DCONF_PROFILE: rewrite, never remove]"
+static char *dconf_rt_head(gboolean full, gboolean referenced)
+{
+	return g_strdup_printf(DCONF_RT_MARK " (D-015, 19 Nov 2026)%s%s: %s\n", referenced ? " " : "", referenced ? DCONF_RT_REF : "",
+	                       full ? "remote session — the locks are in system-db:remotix, the values that change in user-db:remotix."
+	                            : "the remote session is over — the base profile alone.");
+}
+
+static char *dconf_runtime_profile_path(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	if (!runtime || !*runtime)
+		return NULL;
+	return g_build_filename(runtime, "dconf", "profile", NULL);
+}
+
+/* is `env` (a value of DCONF_PROFILE) one of OUR two files: the runtime one, or the fallback's */
+static gboolean dconf_env_is_ours(const char *env)
+{
+	g_autofree char *old = dconf_profile_path();
+	g_autofree char *rt = dconf_runtime_profile_path();
+
+	return env && ((old && strcmp(env, old) == 0) || (rt && strcmp(env, rt) == 0));
+}
+
 static gboolean dconf_in_effect;
-/* the two texts of the profile file, as `session_dconf_prepare()` composed them */
-static char *dconf_profile_full;    /* the session's: three layers (or the fallback) */
-static char *dconf_profile_neutral; /* the user's base alone */
+static gboolean dconf_runtime_mode;  /* the new model (system-db + user-db:remotix); FALSE = the declared fallback */
+static gboolean dconf_admin_profile; /* the administrator's own DCONF_PROFILE was there: it stays the base, and we point it to our file */
+static char *dconf_profile_file;     /* where `dconf_profile_full` lives: the runtime file, or the fallback's */
+/* the texts of the profile file, as `session_dconf_prepare()` composed them */
+static char *dconf_profile_full;    /* the session's: the layers */
+static char *dconf_profile_neutral; /* the user's base alone (the fallback's file only: the runtime file's is computed) */
+
+const char *session_dconf_object(void)
+{
+	return dconf_runtime_mode ? "/ca/desrt/dconf/Writer/remotix" : "/ca/desrt/dconf/shm/remotix";
+}
 
 /* The profile dconf would use WITHOUT us, in the order of
  * `dconf_engine_profile_open()`: `DCONF_PROFILE` (if it is not ours), the
  * runtime one, `user` in `/etc` and in the `XDG_DATA_DIRS`.  NULL = none, that is
  * dconf's default, «user-db:user». */
-static char *dconf_base_profile(const char *our)
+static char *dconf_base_profile(const char *env)
 {
-	const char *env = g_getenv("DCONF_PROFILE");
 	g_autoptr(GPtrArray) candidates = g_ptr_array_new_with_free_func(g_free);
 	const char *const *data = g_get_system_data_dirs();
 
-	if (env && *env && g_strcmp0(env, our) != 0) {
+	if (env && *env && !dconf_env_is_ours(env)) {
 		if (env[0] == '/')
 			g_ptr_array_add(candidates, g_strdup(env));
 		else {
@@ -1751,8 +1998,10 @@ static char *dconf_base_profile(const char *our)
 				                g_build_filename(data[i], "dconf", "profile", env, NULL));
 		}
 	} else {
-		g_ptr_array_add(candidates, g_build_filename(g_get_user_runtime_dir(), "dconf",
-		                                            "profile", NULL));
+		char *rt = dconf_runtime_profile_path(); /* B3: from the env, never glib's cached value (the root side's fork) */
+
+		if (rt)
+			g_ptr_array_add(candidates, rt);
 		g_ptr_array_add(candidates, g_strdup("/etc/dconf/profile/user"));
 		for (int i = 0; data[i]; i++)
 			g_ptr_array_add(candidates,
@@ -1768,7 +2017,7 @@ static char *dconf_base_profile(const char *our)
 }
 
 /* The sources of the base profile `base` (the text of `dconf_base_profile()`), without our
- * in-memory one: the first in `*first` (the writable one; «user-db:user» if there is none),
+ * own lines (the in-memory one, `system-db:remotix`, `user-db:remotix`, our `locks.db`): the first in `*first` (the writable one; «user-db:user» if there is none),
  * the others in `rest`, one per line.  Returns how many there were. */
 static int dconf_base_sources(const char *base, char **first, GString *rest)
 {
@@ -1778,7 +2027,10 @@ static int dconf_base_sources(const char *base, char **first, GString *rest)
 	for (int i = 0; lines[i]; i++) {
 		const char *r = g_strstrip(lines[i]);
 
-		if (!*r || r[0] == '#' || g_strcmp0(r, DCONF_SESSION_SOURCE) == 0)
+		/* ⭐ 19 Nov 2026: our own lines, if the file we read is ours (the runtime file) or a fallback's */
+		if (!*r || r[0] == '#' || g_strcmp0(r, DCONF_SESSION_SOURCE) == 0 ||
+		    g_strcmp0(r, "system-db:remotix") == 0 || g_strcmp0(r, "user-db:remotix") == 0 ||
+		    (g_str_has_prefix(r, "file-db:") && g_str_has_suffix(r, "/remotix/dconf/locks.db")))
 			continue;
 		if (g_str_has_prefix(r, "user-db:") || g_str_has_prefix(r, "system-db:") ||
 		    g_str_has_prefix(r, "service-db:") || g_str_has_prefix(r, "file-db:")) {
@@ -1794,6 +2046,127 @@ static int dconf_base_sources(const char *base, char **first, GString *rest)
 	return sources;
 }
 
+/* ⭐ 19 Nov 2026 — THE `lock-warning-shown` FILE: where it is, and the SIGN that we made it.
+ *    The birth (`session_gnome_lock_warning()`, below) makes an empty `~/.local/share/gnome-shell/lock-warning-shown` so
+ *    that the Shell does not warn «Screen Lock disabled».  A principle of the product: at the END of the session REMOTIX
+ *    leaves nothing of its own in the user's home.  ⇒ The sign «we made it» lives in the session's state folder
+ *    (`$XDG_RUNTIME_DIR/remotix/lock-warning-made`), like the manager's photo, and not in memory: the end of the session
+ *    may be done by ANOTHER process (the child that exits, the root side's fork after a local login).  The sign holds
+ *    the inode and the ctime of the file, whether the folder `gnome-shell` was made by us too, and THE PATH of that
+ *    folder: the end does not recompute it (the root side's fork has no `XDG_DATA_HOME`, and a user who sets it with
+ *    pam_env would be looked for in the wrong place).  The path at birth comes from `HOME`/`XDG_DATA_HOME`, not from
+ *    `g_get_user_data_dir()`, which glib caches. */
+static char *lock_warning_folder(void)
+{
+	const char *data = g_getenv("XDG_DATA_HOME");
+	const char *home = g_getenv("HOME");
+
+	if (data && data[0] == '/')
+		return g_build_filename(data, "gnome-shell", NULL);
+	if (!home || !*home)
+		home = g_get_home_dir();
+	return home && *home ? g_build_filename(home, ".local", "share", "gnome-shell", NULL) : NULL;
+}
+
+static char *lock_warning_mark_path(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	return runtime && *runtime ? g_build_filename(runtime, "remotix", "lock-warning-made", NULL) : NULL;
+}
+
+struct lock_mark {
+	unsigned long long ino;
+	long long ctime_s, ctime_ns;
+	int made_dir;
+	char *folder;
+};
+
+static bool lock_mark_read(const char *mark, struct lock_mark *m)
+{
+	g_autofree char *text = NULL;
+	const char *f;
+
+	memset(m, 0, sizeof *m);
+	if (!mark || !g_file_get_contents(mark, &text, NULL, NULL))
+		return false;
+	if (sscanf(text, "ino=%llu ctime=%lld.%lld dir=%d", &m->ino, &m->ctime_s, &m->ctime_ns, &m->made_dir) != 4 || !m->ino)
+		return false;
+	f = strstr(text, "folder=");
+	if (!f || f[7] != '/')
+		return false;
+	m->folder = g_strdup(f + 7);
+	g_strchomp(m->folder);
+	return true;
+}
+
+/* is this stat the very file we made: regular, empty, same inode, same ctime */
+static bool lock_mark_matches(const struct lock_mark *m, const struct stat *st)
+{
+	return S_ISREG(st->st_mode) && st->st_size == 0 && (unsigned long long)st->st_ino == m->ino &&
+	       (long long)st->st_ctim.tv_sec == m->ctime_s && (long long)st->st_ctim.tv_nsec == m->ctime_ns;
+}
+
+/* The end of the session: the file goes away if (and only if) WE made it, it is still that same empty regular file, and
+ * no symlink is involved.  Called from `session_dconf_neutralise()`, that every road of closing already calls (normal
+ * end, SIGTERM, light close, the child's exit, the root side's fork).  Idempotent; with no sign it does nothing. */
+static void session_gnome_lock_warning_undo(const char *why)
+{
+	g_autofree char *mark = lock_warning_mark_path();
+	g_autofree char *parent = NULL;
+	g_autofree char *leaf = NULL;
+	struct lock_mark m;
+	struct stat st;
+	bool gone = false;
+	int dir, up;
+
+	if (!lock_mark_read(mark, &m)) {
+		if (mark && g_file_test(mark, G_FILE_TEST_EXISTS))
+			g_unlink(mark); /* unreadable sign: not a license to touch anything */
+		return;
+	}
+	dir = open(m.folder, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (dir < 0) {
+		registro_dice(LOG_SESSION,
+		              "⚠ GNOME (%s): %s cannot be opened as a folder (%s): lock-warning-shown left alone",
+		              why, m.folder, g_strerror(errno));
+		g_unlink(mark);
+		g_free(m.folder);
+		return;
+	}
+	if (fstatat(dir, "lock-warning-shown", &st, AT_SYMLINK_NOFOLLOW) != 0) {
+		gone = errno == ENOENT; /* the Shell with GDM deletes it itself: nothing to do, no error */
+	} else if (lock_mark_matches(&m, &st)) {
+		if (unlinkat(dir, "lock-warning-shown", 0) == 0) {
+			gone = true;
+			registro_dice(LOG_SESSION,
+			              "⭐ GNOME (%s): %s/lock-warning-shown, made by REMOTIX at birth, removed: nothing of ours is left "
+			              "in the user's home", why, m.folder);
+		} else
+			registro_dice(LOG_SESSION, "⚠ GNOME (%s): %s/lock-warning-shown NOT removed (%s)", why, m.folder,
+			              g_strerror(errno));
+	} else
+		registro_dice(LOG_SESSION,
+		              "⭐ GNOME (%s): %s/lock-warning-shown is no longer the empty file we made (changed, replaced, other "
+		              "inode or not a regular file): left alone", why, m.folder);
+	close(dir);
+	/* the folder we made, now empty: only that one, relative to its parent (`unlinkat(AT_REMOVEDIR)` fails by itself
+	 * if anything is inside, or if a symlink took its place) */
+	if (m.made_dir && gone) {
+		parent = g_path_get_dirname(m.folder);
+		leaf = g_path_get_basename(m.folder);
+		up = open(parent, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+		if (up >= 0) {
+			if (unlinkat(up, leaf, AT_REMOVEDIR) == 0)
+				registro_dice(LOG_SESSION,
+				              "⭐ GNOME (%s): the folder %s, made by REMOTIX, was empty and is removed", why, m.folder);
+			close(up);
+		}
+	}
+	g_unlink(mark);
+	g_free(m.folder);
+}
+
 #define DCONF_NEUTRAL_HEAD \
 	"# REMOTIX (D-015): the remote session is over — the user's base profile alone.\n"
 
@@ -1803,7 +2176,9 @@ static int dconf_base_sources(const char *base, char **first, GString *rest)
  * (`g_file_set_contents`).  Only if the file is there (GNOME, a session that was prepared);
  * `locks.db` stays.  Programs already open keep the profile they read when they were born.
  */
-void session_dconf_neutralise(const char *why)
+static GHashTable *handler_environment(GDBusConnection *bus);
+
+static void dconf_neutralise_old(const char *why)
 {
 	g_autofree char *fpath = dconf_profile_path();
 	g_autofree char *now = NULL;
@@ -1816,7 +2191,7 @@ void session_dconf_neutralise(const char *why)
 	if (!text) {
 		/* a child that did not prepare the session's dconf (close-only): its
 		 * `DCONF_PROFILE` is not ours, so the base is read as dconf would */
-		g_autofree char *base = dconf_base_profile(fpath);
+		g_autofree char *base = dconf_base_profile(g_getenv("DCONF_PROFILE"));
 		g_autofree char *first = NULL;
 		g_autoptr(GString) rest = g_string_new(NULL);
 
@@ -1840,19 +2215,95 @@ void session_dconf_neutralise(const char *why)
 		              why, fpath, mistake->message);
 }
 
+/*
+ * ⭐ 19 Nov 2026 — THE BELT, on the RUNTIME file.  Stateless (it runs also in the root side's fork and in a close-only child): the
+ * file is touched ONLY if its first line is our mark; the base profile is read from it (without our lines) as `dconf_base_profile()`
+ * does.  If the base is the default alone («user-db:user»), the file is REMOVED: an absent file is exactly what a local login
+ * had before we came (dconf's own default), and nothing stays that could change a later LOCAL session.  Otherwise it is rewritten
+ * (temporary file + rename) with the base alone, under a head that still carries the mark.  ⚠ Exception: if the head carries
+ * `DCONF_RT_REF` (an administrator's DCONF_PROFILE points to this file) it is always rewritten, never removed.
+ * ⛔ Never under a live desktop (the callers).
+ */
+static void dconf_neutralise_runtime(const char *why)
+{
+	g_autofree char *rt = dconf_runtime_profile_path();
+	g_autofree char *now = NULL;
+	g_autofree char *base = NULL;
+	g_autofree char *first = NULL;
+	g_autofree char *text = NULL;
+	g_autofree char *head = NULL;
+	g_autoptr(GString) rest = g_string_new(NULL);
+	g_autoptr(GError) mistake = NULL;
+	gboolean referenced;
+
+	if (!rt || !g_file_get_contents(rt, &now, NULL, NULL) || !g_str_has_prefix(now, DCONF_RT_MARK))
+		return;
+	{
+		g_autofree char *line1 = g_strndup(now, strcspn(now, "\n"));
+
+		referenced = strstr(line1, DCONF_RT_REF) != NULL;
+	}
+	base = dconf_base_profile(g_getenv("DCONF_PROFILE"));
+	dconf_base_sources(base, &first, rest);
+	if (!referenced && !rest->len && strcmp(first, "user-db:user") == 0) {
+		if (unlink(rt) == 0)
+			registro_dice(LOG_SESSION,
+			              "⭐ D-015 (%s): the runtime dconf profile %s is REMOVED — the base was the default alone, "
+			              "so a program born now reads the normal settings (what a local login finds)", why, rt);
+		else
+			registro_dice(LOG_SESSION,
+			              "⛔ D-015 (%s): the runtime dconf profile %s is NOT removed (%s) — whoever is born now "
+			              "would still read our locks", why, rt, g_strerror(errno));
+		return;
+	}
+	head = dconf_rt_head(FALSE, referenced);
+	text = g_strdup_printf("%s%s\n%s", head, first, rest->str);
+	if (strcmp(now, text) == 0)
+		return;
+	if (g_file_set_contents(rt, text, -1, &mistake))
+		registro_dice(LOG_SESSION,
+		              "⭐ D-015 (%s): the runtime dconf profile %s is NEUTRALISED — the base alone, without our "
+		              "database and our locks (the next startup or birth puts the layers back)", why, rt);
+	else
+		registro_dice(LOG_SESSION,
+		              "⛔ D-015 (%s): the runtime dconf profile %s is NOT neutralised (%s) — whoever is born now "
+		              "would still read our locks", why, rt, mistake->message);
+}
+
+void session_dconf_neutralise(const char *why)
+{
+	/* ⭐ 19 Nov 2026: every road that ends a session passes here: the file we made at birth goes too (see above) */
+	session_gnome_lock_warning_undo(why);
+	dconf_neutralise_old(why);
+	dconf_neutralise_runtime(why);
+}
+
 /* ⭐ At every BIRTH: the session's profile back in the file, if the end of the session
- *    before had neutralised it.  ⛔ No `g_setenv` here (threads alive): `DCONF_PROFILE`
- *    is already the file's path since `session_dconf_prepare()`. */
+ *    before had neutralised it.  ⛔ No `g_setenv` here (threads alive): the environment is already as
+ *    `session_dconf_prepare()` left it (19 Nov 2026: no DCONF_PROFILE at all, except the fallback and the
+ *    administrator's own profile). */
 static void dconf_profile_reinstate(void)
 {
-	g_autofree char *fpath = dconf_profile_path();
+	const char *fpath = dconf_profile_file;
 	g_autofree char *now = NULL;
+	g_autofree char *folder = NULL;
 	g_autoptr(GError) mistake = NULL;
 
 	if (!dconf_in_effect || !dconf_profile_full || !fpath)
 		return;
-	if (g_file_get_contents(fpath, &now, NULL, NULL) && strcmp(now, dconf_profile_full) == 0)
-		return;
+	if (g_file_get_contents(fpath, &now, NULL, NULL)) {
+		if (strcmp(now, dconf_profile_full) == 0)
+			return;
+		/* B1: a runtime file that is not ours (put there since the child's start) is never overwritten */
+		if (dconf_runtime_mode && !g_str_has_prefix(now, DCONF_RT_MARK)) {
+			registro_dice(LOG_SESSION,
+			              "⛔ D-015: birth — %s exists and is NOT ours (no mark): left alone, so the session is born WITHOUT "
+			              "our locks and our database", fpath);
+			return;
+		}
+	}
+	folder = g_path_get_dirname(fpath);
+	g_mkdir_with_parents(folder, 0700); /* the runtime file may have been removed with nothing else in its folder */
 	if (g_file_set_contents(fpath, dconf_profile_full, -1, &mistake))
 		registro_dice(LOG_SESSION,
 		              "⭐ D-015: birth — the session's dconf profile %s is back to the "
@@ -1877,6 +2328,9 @@ bool session_dconf_prepare(void)
 	g_autofree char *locks_db = NULL;
 	g_autofree char *user_profile = NULL;
 	g_autoptr(GError) mistake = NULL;
+	g_autofree char *env0 = g_strdup(g_getenv("DCONF_PROFILE")); /* what we were born with, before we touch the environment */
+	g_autofree char *env_base = NULL;                              /* the DCONF_PROFILE that gives the BASE profile, if any */
+	SessionLife life;
 	int sources = 0;
 
 	/* ⚠ GNOME only: the other desktops do not read their settings from
@@ -1900,9 +2354,9 @@ bool session_dconf_prepare(void)
 		return false;
 	}
 
-	base = dconf_base_profile(fpath);
-	sources = dconf_base_sources(base, &first, rest);
-
+	/* ⭐ ORDER (19 Nov 2026, review): everything up to the changes to the ENVIRONMENT (`g_setenv`/`g_unsetenv`) needs no bus; the
+	 *    user's bus is opened only AFTER them (GDBus starts a worker thread, and `g_setenv` must not be done with other threads
+	 *    alive).  What comes after is read-only: the thread just waits. */
 	folder = g_path_get_dirname(fpath);
 	if (g_mkdir_with_parents(folder, 0700) != 0) {
 		registro_dice(LOG_SESSION,
@@ -1911,8 +2365,98 @@ bool session_dconf_prepare(void)
 		              folder, g_strerror(errno));
 		return false;
 	}
-	dconf_locked = dconf_compile_locks(folder);
-	if (dconf_locked) {
+	/* ⭐ 19 Nov 2026: the locks are the SYSTEM database `/etc/dconf/db/remotix` (the package compiled it) and the runtime
+	 *    profile is the file dconf reads without `DCONF_PROFILE`.  Without the database, or without `dconf` (the dconf engine's
+	 *    own readers do not need it, but the birth reads the user's values with it), the old model: DECLARED FALLBACK. */
+	{
+		g_autofree char *found = g_find_program_in_path("dconf");
+		g_autofree char *rt = dconf_runtime_profile_path();
+		g_autofree char *rt_now = NULL;
+		gboolean foreign = FALSE;
+
+		/* B1: a runtime profile that is not ours (an administrator's, another program's) is never overwritten, nor
+		 *     rewritten or removed at the end: the old model, which already takes it as the BASE profile */
+		if (rt && g_file_get_contents(rt, &rt_now, NULL, NULL) && !g_str_has_prefix(rt_now, DCONF_RT_MARK))
+			foreign = TRUE;
+		dconf_runtime_mode = found && !foreign && access(DCONF_SYSTEM_DB, R_OK) == 0;
+		if (!dconf_runtime_mode)
+			registro_dice(LOG_SESSION,
+			              "⚠ DECLARED FALLBACK, D-015 (19 Nov 2026): %s — the session dconf goes back to the "
+			              "model of 1.0.0: three layers compiled now, `DCONF_PROFILE` in the session (Flutter and snap "
+			              "programs may complain about it)",
+			              !found ? "`dconf` is missing"
+			              : foreign ? "the runtime dconf profile already there is not ours (no mark): left untouched, taken as the base"
+			                        : DCONF_SYSTEM_DB " is missing or not readable");
+		if (dconf_runtime_mode && rt) {
+			g_autofree char *rtfolder = g_path_get_dirname(rt);
+
+			if (g_mkdir_with_parents(rtfolder, 0700) != 0) {
+				registro_dice(LOG_SESSION,
+				              "⛔ D-015: %s cannot be created: %s — and so the negotiated layout is NOT written",
+				              rtfolder, g_strerror(errno));
+				return false;
+			}
+		}
+	}
+	/* an administrator's DCONF_PROFILE in OUR environment is the BASE profile and must not shadow our file */
+	dconf_admin_profile = env0 && *env0 && !dconf_env_is_ours(env0);
+	if (dconf_admin_profile)
+		env_base = g_strdup(env0);
+	/* ⛔ Before any `GSettings` of the child (the dconf engine reads the profile only once, when it is born) and BEFORE the bus:
+	 *    ⭐ 19 Nov 2026: in the new model the variable is NOT set (dconf reads the runtime file) and one inherited from the
+	 *    administrator is replaced by our file's path (`compose_environment()` tells the session the same).  The fallback sets
+	 *    the old file's path, as 1.0.0 did. */
+	if (!dconf_runtime_mode)
+		g_setenv("DCONF_PROFILE", fpath, TRUE);
+	else if (dconf_admin_profile) {
+		g_autofree char *rt = dconf_runtime_profile_path();
+
+		g_setenv("DCONF_PROFILE", rt, TRUE);
+	} else
+		g_unsetenv("DCONF_PROFILE");
+	/* ── from here on: the bus (reads only) ── */
+	/* ⭐ N3b: an administrator's DCONF_PROFILE may live ONLY in the user manager (`environment.d`), not in our environment: the
+	 *    Shell would inherit it and ignore our file.  Looked for there too (no change to our own environment: the child's
+	 *    engine, with no variable, already reads our file); a value that is ours (left by an earlier version of the package)
+	 *    does not count — the clear-out removes it. */
+	if (!dconf_admin_profile) {
+		g_autoptr(GDBusConnection) mbus = sess_bus(NULL);
+		g_autoptr(GHashTable) menv = mbus ? handler_environment(mbus) : NULL;
+		const char *v = menv ? g_hash_table_lookup(menv, "DCONF_PROFILE") : NULL;
+
+		if (v && *v && !dconf_env_is_ours(v)) {
+			env_base = g_strdup(v);
+			dconf_admin_profile = TRUE;
+			registro_dice(LOG_SESSION, "⭐ D-015: a DCONF_PROFILE «%s» is in the user manager's environment (not ours): it is "
+			              "the BASE profile, and the session is told our file instead", v);
+		}
+	}
+	base = dconf_base_profile(env_base);
+	sources = dconf_base_sources(base, &first, rest);
+	/* alive / dead / UNKNOWN (never «unknown = dead»: the rule of `session_life()`) decides what is done to the runtime file */
+	life = session_life();
+	if (dconf_runtime_mode) {
+		g_free(fpath);
+		fpath = dconf_runtime_profile_path();
+		dconf_locked = TRUE;
+		{
+			g_autofree char *head = dconf_rt_head(TRUE, dconf_admin_profile);
+
+			g_string_append_printf(profile, "%s%s\nsystem-db:remotix\nuser-db:remotix\n%s", head, first, rest->str);
+		}
+	} else {
+		/* a runtime file of ours left by a run that had the database must not outlive the choice made now — N6: but never
+		 * under a live desktop */
+		if (life == SESSION_LIFE_DEAD)
+			dconf_neutralise_runtime("fallback: no system database");
+		else if (life == SESSION_LIFE_UNKNOWN)
+			registro_dice(LOG_SESSION, "⚠ D-015: the desktop's life is UNKNOWN (no answer yet): a runtime profile of ours, if "
+			              "there is one, is left as it is (never removed under a desktop that may be alive)");
+		dconf_locked = dconf_compile_locks(folder);
+	}
+	if (dconf_runtime_mode) {
+		/* the profile text is already composed; written below */
+	} else if (dconf_locked) {
 		locks_db = g_build_filename(folder, "locks.db", NULL);
 		g_string_append_printf(profile,
 		                       "# REMOTIX (D-015): the dconf of the remote session, three layers:\n"
@@ -1939,11 +2483,28 @@ bool session_dconf_prepare(void)
 		              user_profile, mistake->message);
 		g_clear_error(&mistake);
 	}
-	if (!g_file_set_contents(fpath, profile->str, -1, &mistake)) {
+	/* ⭐ N1 (19 Nov 2026): the RUNTIME file is a window onto every program of the user, a LOCAL login included: it is written
+	 *    now ONLY if there is a live remote desktop to serve (a child that found one again); otherwise the BIRTH writes it
+	 *    (`dconf_profile_reinstate()`), so a child that dies between its start and the birth leaves nothing.  (A stale file of
+	 *    ours left by an earlier fall is neutralised.)  Nothing before the birth reads it: the user's real values are read
+	 *    with `profile-user`, and the first GSettings of the child is after the birth. */
+	if (dconf_runtime_mode && life == SESSION_LIFE_DEAD) {
+		dconf_neutralise_runtime("child startup: no live desktop");
+		registro_dice(LOG_SESSION, "⭐ D-015: no live remote desktop at the child's start: the runtime profile %s is written at "
+		              "the birth, not now", fpath);
+	} else if (dconf_runtime_mode && life == SESSION_LIFE_UNKNOWN) {
+		registro_dice(LOG_SESSION, "⚠ D-015: the desktop's life is UNKNOWN at the child's start (no answer yet): the runtime "
+		              "profile %s is NOT touched — neither written nor removed; the birth writes it if it is not there", fpath);
+	} else if (!g_file_set_contents(fpath, profile->str, -1, &mistake)) {
 		registro_dice(LOG_SESSION,
 		              "⛔ D-015: the session's dconf profile cannot be written (%s): %s — "
 		              "and so the negotiated layout is NOT written",
 		              fpath, mistake->message);
+		/* the environment goes back to what we were born with (the file it names is not there) */
+		if (env0)
+			g_setenv("DCONF_PROFILE", env0, TRUE);
+		else
+			g_unsetenv("DCONF_PROFILE");
 		return false;
 	}
 	/* ⭐ 14 Nov 2026: the two texts are kept — the end of the session writes the neutral
@@ -1952,30 +2513,37 @@ bool session_dconf_prepare(void)
 	dconf_profile_full = g_strdup(profile->str);
 	g_free(dconf_profile_neutral);
 	dconf_profile_neutral = g_strdup_printf(DCONF_NEUTRAL_HEAD "%s\n%s", first, rest->str);
-	/* ⛔ Before any `GSettings` of the child: the dconf engine reads
-	 *    `DCONF_PROFILE` only once, when it is born. */
-	g_setenv("DCONF_PROFILE", fpath, TRUE);
+	g_free(dconf_profile_file);
+	dconf_profile_file = g_strdup(fpath);
 	dconf_in_effect = TRUE;
 	registro_dice(LOG_SESSION,
 	              "⭐ D-015: SESSION dconf in %s (%s; base profile: %s): the user's "
 	              "settings stay the user's, the session's rules live in the session only",
-	              fpath, dconf_locked ? "three layers, locks.db compiled" : "FALLBACK",
+	              fpath,
+	              dconf_runtime_mode ? (dconf_admin_profile ? "RUNTIME profile (an administrator's DCONF_PROFILE points to it): system-db:remotix (locks) + user-db:remotix (values)"
+	                                                         : "RUNTIME profile, no DCONF_PROFILE: system-db:remotix (locks) + user-db:remotix (values)")
+	              : dconf_locked ? "FALLBACK: three layers, locks.db compiled" : "FALLBACK",
 	              sources ? "the system's" : "user-db:user");
 	return true;
 }
 
 bool session_dconf_of_session(void)
 {
-	g_autofree char *fpath = dconf_profile_path();
+	const char *env = g_getenv("DCONF_PROFILE");
 
-	return dconf_in_effect && fpath &&
-	       g_strcmp0(g_getenv("DCONF_PROFILE"), fpath) == 0 &&
-	       g_file_test(fpath, G_FILE_TEST_EXISTS);
+	if (!dconf_in_effect || !dconf_profile_file)
+		return FALSE;
+	/* the runtime model: no variable (dconf reads the runtime file) or, with an administrator's profile, our file's path.
+	 * ⭐ N1: the file itself may not be there yet (it is written at the birth) — the state is the child's, not the file's */
+	if (dconf_runtime_mode)
+		return !env || !*env || strcmp(env, dconf_profile_file) == 0;
+	return g_strcmp0(env, dconf_profile_file) == 0 && g_file_test(dconf_profile_file, G_FILE_TEST_EXISTS);
 }
 
 /*
  * A direct write to a `dconf-service` writer — `object` is
- * `/ca/desrt/dconf/shm/remotix` (the session) or `/ca/desrt/dconf/Writer/user`
+ * `/ca/desrt/dconf/Writer/remotix` (the session: user-db `remotix`, 19 Nov 2026), `/ca/desrt/dconf/shm/remotix` (the session, in the
+ * declared fallback) or `/ca/desrt/dconf/Writer/user`
  * (the USER) — without going through the process's engine, which has the
  * session profile.  `value` NULL = remove (`fpath` ending with `/`: the whole
  * folder).
@@ -2107,7 +2675,7 @@ static void session_dconf_restore_once(void)
 		              removed);
 }
 
-/* ⭐ The birth of the session's dconf: `shm` emptied; the user's real layout copied
+/* ⭐ The birth of the session's dconf: the session's database (`user-db:remotix`, or `shm` in the fallback) emptied; the user's real layout copied
  * into it (locked mode) or the session's keys written into it (fallback); once, the
  * old values of the user's file restored. */
 static void session_dconf_birth(void)
@@ -2151,6 +2719,100 @@ static void session_dconf_birth(void)
 	}
 }
 
+/* ⭐ 18 Nov 2026 (Ubuntu 26.04, GNOME 50): the Shell warns «Screen Lock disabled — Screen Locking
+ *    requires the GNOME display manager» the FIRST time a user ever has a session without GDM
+ *    (`_handleLockScreenWarning()`, `js/ui/main.js`): it touches `lock-warning-shown` in its data
+ *    folder and, only if it has just created the file, shows the notice.  Our session never has
+ *    GDM (and never a lock screen, by design), so the notice would be a banner on the first
+ *    desktop of every user for something that is not a fault.
+ * ⭐ The cure is the file itself, made empty BEFORE the Shell starts: exactly what the Shell
+ *    would leave behind, so it finds it and says nothing.  And only that:
+ *    · an existing file (or a symlink, even a dangling one) is NEVER touched (`O_EXCL`
+ *      + `O_NOFOLLOW`): it means the Shell, or the user, already did;
+ *    · the LAST folder (`gnome-shell`) is opened with `O_NOFOLLOW`: a symlink in its place is not
+ *      followed; the levels above it (`~/.local`, `~/.local/share`) ARE followed, we are the user in
+ *      their own home;
+ *    · we are the user here (the child), so the owner is right by construction.
+ * ⚠ A later LOCAL login of the same user, which has GDM, makes the Shell DELETE this file
+ *   (same function, «hasLockScreen» branch) and shows nothing: the file is not left behind
+ *   to hide anything there.
+ * ⭐ 19 Nov 2026: and it does not stay in the home at the END of the session (principle of the product, check
+ *   `settings-intact`): when WE made it (`O_EXCL` succeeded) a sign goes into the session's state folder
+ *   (`lock_warning_mark_path()`) and `session_gnome_lock_warning_undo()` removes the file — and the folder, if we made
+ *   that too and it is empty — from every road that ends a session.  The next birth makes it again; if a session ended
+ *   badly (child killed) and the sign still matches the very same file, the birth only CONFIRMS it is still ours. */
+static void session_gnome_lock_warning(void)
+{
+	g_autofree char *folder = lock_warning_folder();
+	g_autofree char *mark = lock_warning_mark_path();
+	bool had_dir;
+	int dir, fd;
+
+	if (!folder)
+		return;
+	had_dir = g_file_test(folder, G_FILE_TEST_IS_DIR);
+	if (g_mkdir_with_parents(folder, 0700) != 0) {
+		registro_dice(LOG_SESSION,
+		              "⚠ GNOME: %s cannot be created (%s): the «Screen Lock disabled» notice may show once",
+		              folder, g_strerror(errno));
+		return;
+	}
+	dir = open(folder, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (dir < 0) {
+		registro_dice(LOG_SESSION,
+		              "⚠ GNOME: %s cannot be opened as a folder (%s): left alone, the «Screen Lock "
+		              "disabled» notice may show once",
+		              folder, g_strerror(errno));
+		return;
+	}
+	fd = openat(dir, "lock-warning-shown", O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+	if (fd >= 0) {
+		struct stat st;
+		g_autofree char *run_folder = mark ? g_path_get_dirname(mark) : NULL;
+		g_autofree char *text = NULL;
+		bool signed_ok = false;
+
+		/* ⭐ 19 Nov 2026: the sign that WE made it (and the folder too, and where), for the end of the session */
+		if (mark && run_folder && fstat(fd, &st) == 0 && g_mkdir_with_parents(run_folder, 0700) == 0) {
+			text = g_strdup_printf("ino=%llu ctime=%lld.%lld dir=%d folder=%s\n", (unsigned long long)st.st_ino,
+			                       (long long)st.st_ctim.tv_sec, (long long)st.st_ctim.tv_nsec, had_dir ? 0 : 1, folder);
+			signed_ok = g_file_set_contents(mark, text, -1, NULL);
+		}
+		close(fd);
+		if (signed_ok)
+			registro_dice(LOG_SESSION,
+			              "⭐ GNOME: %s/lock-warning-shown made (empty): the Shell will not warn that "
+			              "Screen Lock needs the display manager — this session has none by design; it goes away "
+			              "at the end of the session (we made it)",
+			              folder);
+		else {
+			if (mark)
+				g_unlink(mark); /* an old sign must not vouch for this file */
+			registro_dice(LOG_SESSION,
+			              "⚠ GNOME: %s/lock-warning-shown made (empty) but the sign %s could NOT be written: the file "
+			              "will STAY in the home at the end of the session", folder, mark ? mark : "(no runtime folder)");
+		}
+	} else if (errno == EEXIST) {
+		/* ours still, from a session that did not end cleanly (child killed)?  The sign says; the very same file
+		 * and the same folder → it stays ours (the next END removes it); anything else → not ours, the stale sign is
+		 * dropped. */
+		struct stat st;
+		struct lock_mark m;
+
+		if (mark && g_file_test(mark, G_FILE_TEST_EXISTS)) {
+			if (!lock_mark_read(mark, &m) || g_strcmp0(m.folder, folder) != 0 ||
+			    fstatat(dir, "lock-warning-shown", &st, AT_SYMLINK_NOFOLLOW) != 0 || !lock_mark_matches(&m, &st))
+				g_unlink(mark);
+			g_free(m.folder);
+		}
+	} else {
+		registro_dice(LOG_SESSION,
+		              "⚠ GNOME: %s/lock-warning-shown not made (%s): the notice may show once",
+		              folder, g_strerror(errno));
+	}
+	close(dir);
+}
+
 /*
  * ⭐ PHASE 15, D-018 — the two folders of the LXQt SESSION, at the head of
  *    `XDG_CONFIG_DIRS` and `XDG_DATA_DIRS` (`compose_environment()`): what
@@ -2165,7 +2827,8 @@ static char *lxqt_session_config_folder(void)
 	return runtime && *runtime ? g_build_filename(runtime, "remotix", "xdg-lxqt", NULL) : NULL;
 }
 
-/* the session's commands (`lxqt-leave`, `lxqt-powermanagement`), at the head of the PATH */
+/* the session's commands (`lxqt-leave`, `lxqt-powermanagement`, the X11 composition managers), at
+ * the head of the PATH */
 static char *lxqt_session_bin_folder(void)
 {
 	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
@@ -2262,11 +2925,98 @@ typedef struct {
 	char *name;   /* DESKTOP_SESSION, or NULL: no session known */
 	char *config; /* `/etc/xdg/xdg-<name>` if it exists, or NULL */
 	char *data;   /* `/usr/share/<name>` if it exists (never for `gnome`), or NULL */
+	char *common; /* `/usr/share/gnome` where the profile snippet that adds it is installed, or NULL */
 } LocalSession;
 
-/* ⚠ Debian 13: `x11-common` has no `Xsession.d/60x11-common_xdg_path` (it is Ubuntu's patch; checked on the four
- *   boxes), so no local login adds a session folder and this is always empty: name, config and data NULL.  The
- *   discovery of the session name and of the folders was removed (docs/PULIZIA-tranche1.md); the log line is kept. */
+static gboolean session_folder_there(const char *name)
+{
+	g_autofree char *cfg = g_strdup_printf("/etc/xdg/xdg-%s", name);
+	g_autofree char *data = g_strdup_printf("/usr/share/%s", name);
+
+	return g_file_test(cfg, G_FILE_TEST_IS_DIR) || g_file_test(data, G_FILE_TEST_IS_DIR);
+}
+
+static gint by_name(gconstpointer a, gconstpointer b)
+{
+	return strcmp(*(char *const *) a, *(char *const *) b);
+}
+
+/* The session name as the login would have it: the EXACT name of the session file (`Lubuntu`,
+ * not `lubuntu`: it ends up in `/etc/xdg/xdg-Lubuntu`). */
+static char *local_session_name_find(DesktopSession d, const char **how)
+{
+	static const char *const dirs[] = {"/usr/share/xsessions", "/usr/share/wayland-sessions",
+	                                   NULL};
+	char *found[2];
+	g_autoptr(GPtrArray) ids = g_ptr_array_new_with_free_func(g_free);
+	char *result = NULL;
+
+	if (d == SESSION_DESKTOP_GNOME) {
+		*how = "the GNOME session REMOTIX starts";
+		return clean_session_name(gnome_session()->id);
+	}
+	if (declared_sessions(found)) {
+		for (int i = 0; i < 2 && !result; i++)
+			if (found[i] && desktop_of_session_name(found[i]) == d)
+				result = g_strdup(found[i]);
+		g_free(found[0]);
+		g_free(found[1]);
+		if (result) {
+			*how = "declared by the display manager";
+			return result;
+		}
+	}
+	for (int k = 0; dirs[k]; k++) {
+		g_autoptr(GDir) dir = g_dir_open(dirs[k], 0, NULL);
+		const char *f;
+
+		while (dir && (f = g_dir_read_name(dir)))
+			if (g_str_has_suffix(f, ".desktop")) {
+				char *id = clean_session_name(f);
+
+				if (id && desktop_of_session_name(id) == d && session_folder_there(id))
+					g_ptr_array_add(ids, id);
+				else
+					g_free(id);
+			}
+	}
+	g_ptr_array_sort(ids, by_name);
+	*how = "a session file with its own folders";
+	return ids->len ? g_strdup(g_ptr_array_index(ids, 0)) : NULL;
+}
+
+/* Would the local login of this session put the session's folders in front of the lists?  The
+ * system does it in one of two ways, and the rule is: whatever the system itself would apply.
+ *   - `Xsession.d/60x11-common_xdg_path`, where the login runs `Xsession.d` at all: an X11
+ *     session file (`xsessions/<name>.desktop`, whatever the display manager), or any session
+ *     under lightdm (its `session-wrapper` runs `Xsession` for Wayland sessions too).  `[M]`
+ *     neither sddm's nor GDM's Wayland launcher runs it (sddm's only reads the profile, GDM's
+ *     starts the session directly);
+ *   - `/etc/profile.d/xdg_dirs_desktop_session.sh`, the same logic in profile form, which any
+ *     login that reads `/etc/profile` runs: sddm's Wayland launcher, and `gnome-session`, which
+ *     (Wayland) re-executes itself in a login shell (study 3 §2.1).  REMOTIX sets `SHELL=`
+ *     empty, so nothing would run it here: we do.
+ * Harmless differences from the real scripts: the config folder is added only if it exists (the
+ * script adds it always); «already there» is tested per exact element (the scripts: substring);
+ * the default list has no trailing `/`; `GDMSESSION` is not set.
+ * ⚠ Known difference from a local login: when neither mechanism applies the name is dropped and
+ * `DESKTOP_SESSION` is not set (a local Kubuntu login under sddm gives `plasma`); same as before
+ * and nested KDE must not change. */
+static gboolean local_login_adds_folders(const char *name)
+{
+	g_autofree char *x11 = g_strdup_printf("/usr/share/xsessions/%s.desktop", name);
+	g_autofree char *dm = NULL;
+
+	if (g_file_test("/etc/profile.d/xdg_dirs_desktop_session.sh", G_FILE_TEST_IS_REGULAR))
+		return TRUE;
+	if (!g_file_test("/etc/X11/Xsession.d/60x11-common_xdg_path", G_FILE_TEST_IS_REGULAR))
+		return FALSE;
+	if (g_file_test(x11, G_FILE_TEST_EXISTS))
+		return TRUE;
+	dm = active_display_manager();
+	return dm && strcmp(dm, "lightdm") == 0;
+}
+
 static const LocalSession *local_session(void)
 {
 	static LocalSession s;
@@ -2274,18 +3024,80 @@ static const LocalSession *local_session(void)
 
 	if (g_once_init_enter(&done)) {
 		DesktopSession d = desktop_session();
+		const char *how = "";
+		gboolean mechanism = FALSE;
 
+		if (d != SESSION_DESKTOP_NONE && (s.name = local_session_name_find(d, &how))) {
+			/* `profile.d/gnome-session_gnomerc.sh` (`gnome-session-common`) puts `/usr/share/gnome` in
+			 * front of `XDG_DATA_DIRS`, but a Wayland login to a desktop other than GNOME leaves
+			 * the script BEFORE that line (`XDG_SESSION_TYPE=wayland` and no GNOME in
+			 * `XDG_CURRENT_DESKTOP`); an X11 login does not.  So: the desktop is GNOME, or the
+			 * session's local login is X11 (`xsessions/<name>.desktop`).  The test is on the name
+			 * found here, before the branch below may drop it.  It runs before the other snippet
+			 * (alphabetical), so the session's folder ends up in front of it.  The script's other
+			 * part, sourcing the user's `~/.gnomerc` (GNOME only), is NOT reproduced: not run,
+			 * a decision left to the owner, like `~/.profile`. */
+			{
+				g_autofree char *x11 = g_strdup_printf("/usr/share/xsessions/%s.desktop", s.name);
+
+				if ((d == SESSION_DESKTOP_GNOME || g_file_test(x11, G_FILE_TEST_EXISTS)) &&
+				    g_file_test("/etc/profile.d/gnome-session_gnomerc.sh",
+				                G_FILE_TEST_IS_REGULAR) &&
+				    g_file_test("/usr/share/gnome", G_FILE_TEST_IS_DIR))
+					s.common = g_strdup("/usr/share/gnome");
+			}
+			mechanism = local_login_adds_folders(s.name);
+			if (mechanism) {
+				g_autofree char *cfg = g_strdup_printf("/etc/xdg/xdg-%s", s.name);
+				g_autofree char *data = g_strdup_printf("/usr/share/%s", s.name);
+
+				if (g_file_test(cfg, G_FILE_TEST_IS_DIR))
+					s.config = g_steal_pointer(&cfg);
+				if (strcmp(s.name, "gnome") != 0 &&
+				    g_file_test(data, G_FILE_TEST_IS_DIR))
+					s.data = g_steal_pointer(&data);
+			} else
+				g_clear_pointer(&s.name, g_free);
+		}
 		registro_dice(LOG_SESSION,
 		              "⭐ D-153: the session as a local login gives it — session «%s» (%s): "
-		              "config folder %s, data folder %s",
-		              "(none)",
-		              d != SESSION_DESKTOP_NONE
-		                      ? "its local login has no Xsession.d mechanism, or no session is known"
-		                      : "no session known",
-		              "none", "none");
+		              "config folder %s, data folder %s, common folder %s",
+		              s.name ? s.name : "(none)",
+		              s.name ? how : (d != SESSION_DESKTOP_NONE && !mechanism
+		                                      ? "its local login adds no session folders, "
+		                                        "or no session is known"
+		                                      : "no session known"),
+		              s.config ? s.config : "none", s.data ? s.data : "none",
+		              s.common ? s.common : "none");
 		g_once_init_leave(&done, 1);
 	}
 	return &s;
+}
+
+/* What `XDG_SESSION_DESKTOP` is at the login screen of the active display manager: sddm gives
+ * the session file's `DesktopNames` (`LXQt` for the session `Lubuntu`), every other one (lightdm,
+ * gdm) the session name.  The names of the session file `name`, joined with `:`, when the active
+ * manager is sddm and the file has them; NULL otherwise (to free). */
+static char *login_session_desktop(const char *name)
+{
+	static const char *const dirs[] = {"/usr/share/xsessions", "/usr/share/wayland-sessions",
+	                                   NULL};
+	g_autofree char *dm = active_display_manager();
+
+	if (!dm || strcmp(dm, "sddm") != 0)
+		return NULL;
+	for (int k = 0; dirs[k]; k++) {
+		g_autofree char *file = g_strdup_printf("%s/%s.desktop", dirs[k], name);
+		g_autoptr(GKeyFile) kf = g_key_file_new();
+		g_auto(GStrv) names = NULL;
+
+		if (g_key_file_load_from_file(kf, file, G_KEY_FILE_NONE, NULL) &&
+		    (names = g_key_file_get_string_list(kf, G_KEY_FILE_DESKTOP_GROUP, "DesktopNames",
+		                                       NULL, NULL)) &&
+		    names[0])
+			return g_strjoinv(":", names);
+	}
+	return NULL;
 }
 
 static GHashTable *handler_environment(GDBusConnection *bus);
@@ -2394,10 +3206,12 @@ static gboolean session_config_given(void)
 static char *session_data_dirs(gboolean *given)
 {
 	g_autofree char *base = list_base("XDG_DATA_DIRS");
+	g_autofree char *with_common = dir_in_front(local_session()->common, base,
+	                                            "/usr/local/share:/usr/share");
 
 	if (given)
-		*given = base || local_session()->data;
-	return dir_in_front(local_session()->data, base, "/usr/local/share:/usr/share");
+		*given = base || local_session()->data || local_session()->common;
+	return dir_in_front(local_session()->data, with_common, "/usr/local/share:/usr/share");
 }
 
 /* the system configuration folders as the session sees them (to free with g_strfreev) */
@@ -2408,9 +3222,93 @@ static char **session_config_dirs_strv(void)
 	return g_strsplit(list, ":", -1);
 }
 
+/* (shared by LXQt and XFCE) a system autostart entry of that file name exists in the config
+ * folders the session will have (`session_config_dirs()`: the manager's and the session's own, e.g. `/etc/xdg/xdg-Lubuntu`) */
+static gboolean system_autostart_exists(const char *file)
+{
+	g_auto(GStrv) dirs = session_config_dirs_strv();
+
+	for (int i = 0; dirs && dirs[i]; i++) {
+		g_autofree char *path = g_build_filename(dirs[i], "autostart", file, NULL);
+
+		if (g_file_test(path, G_FILE_TEST_EXISTS))
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/* ⭐ 19 Nov 2026 — XFCE and LXQt: the programs of the SYSTEM's autostart that a remote session
+ *   must not start.  `blueman-applet` (`blueman.desktop`, Xubuntu and Lubuntu): Bluetooth is a
+ *   device of the machine, not of the remote user, and the applet crashes now and then (a race
+ *   with `obexd`, 5 sessions in 90) and covers the screen with apport's «internal error»
+ *   window.  An entry of the same file name with `Hidden=true` in the session's autostart
+ *   folder, which is first in `XDG_CONFIG_DIRS`.
+ * ⭐ NOT the recipe of LXQt's `LXQT_SHARED_SERVER_PROGRAMS` (a script that checks where it
+ *   runs): `Hidden=true` WITHOUT a check is fine here — there is no program to replace, the
+ *   folder is under `/run/user` and only the remote session reads it; in the worst case
+ *   the Bluetooth icon is missing.
+ * ⚠ DECLARED: the code does not remove the file at the end of the session: it goes when logind
+ *   removes `/run/user/<uid>`; with another session of the same user alive (ssh, linger) it
+ *   stays (harmless: no non-remote session reads that folder).
+ * ⚠ [M] XFCE (`xfce4-session`, Xubuntu 26.04): a `Hidden=true` entry hides the file name
+ *   whichever folder it is in, so the user's own VISIBLE `~/.config/autostart/<same name>`
+ *   is not started either (a differently named user entry is).  LXQt: not measured; the
+ *   user's folder comes first, so the user's own entry should win. */
+static const char *const SESSION_NOT_IN_REMOTE_AUTOSTART[] = { "blueman.desktop", NULL };
+
+/* `dir` is the `autostart` folder of the session folder that is first in `XDG_CONFIG_DIRS`
+ * (XFCE: `labwc-xfce`, LXQt: `xdg-lxqt`); `desktop` is only for the log.  Returns FALSE if a
+ * cover could not be written. */
+static gboolean session_autostart_cover(const char *dir, const char *desktop)
+{
+	g_autoptr(GString) done = g_string_new(NULL);
+	g_autoptr(GError) mistake = NULL;
+	int covered = 0;
+	gboolean ok = TRUE;
+
+	for (int i = 0; SESSION_NOT_IN_REMOTE_AUTOSTART[i]; i++) {
+		const char *file = SESSION_NOT_IN_REMOTE_AUTOSTART[i];
+		g_autofree char *entry = g_build_filename(dir, file, NULL);
+		g_autofree char *old = NULL;
+
+		if (!system_autostart_exists(file)) {
+			/* not (or no longer) installed: only OURS of an earlier birth goes */
+			if (g_file_get_contents(entry, &old, NULL, NULL) && strstr(old, "X-REMOTIX"))
+				g_unlink(entry);
+			continue;
+		}
+		g_clear_error(&mistake);
+		if (g_mkdir_with_parents(dir, 0700) == 0 &&
+		    g_file_set_contents(entry,
+		                        "[Desktop Entry]\nType=Application\nName=REMOTIX cover\n"
+		                        "Hidden=true\n"
+		                        "# X-REMOTIX: covers the system's entry of the same name\n",
+		                        -1, &mistake)) {
+			covered++;
+			g_string_append_printf(done, "%s%s", done->len ? " " : "", file);
+		} else {
+			ok = FALSE;
+			registro_dice(LOG_SESSION, "⛔ %s: the cover for %s is NOT in place (%s)", desktop, file,
+			              mistake ? mistake->message : g_strerror(errno));
+		}
+	}
+	if (covered && ok)
+		registro_dice(LOG_SESSION,
+		              "⭐ %s: %d system autostart entr%s not started in the remote session "
+		              "(%s: Hidden=true in %s, first in XDG_CONFIG_DIRS) — shared server, the "
+		              "machine's Bluetooth is not the remote user's; %s; "
+		              "the user's files are not touched",
+		              desktop, covered, covered == 1 ? "y is" : "ies are", done->str, dir,
+		              strcmp(desktop, "XFCE") == 0
+		                      ? "a user's own ~/.config/autostart entry of the same name "
+		                        "is hidden too (measured)"
+		                      : "the user's own entry of the same name wins (not measured)");
+	return ok;
+}
+
 /* The session names and the data folder, for the desktops that do not compose them in their
  * own way: `DESKTOP_SESSION` (what `60x11-common_xdg_path` keys on, and what the session's
- * programs read), `XDG_SESSION_DESKTOP` (the session name, as the display managers set it;
+ * programs read), `XDG_SESSION_DESKTOP` (as the active display manager sets it: the session name, or sddm's `DesktopNames`;
  * `fallback` when none is known, NULL = not set here: KDE leaves it to `startplasma`) and, with `with_data`, `XDG_DATA_DIRS`
  * when the manager has one or the session has a data folder. */
 static void add_session_names(GPtrArray *environment, const char *fallback, gboolean with_data)
@@ -2419,9 +3317,13 @@ static void add_session_names(GPtrArray *environment, const char *fallback, gboo
 
 	if (s->name)
 		g_ptr_array_add(environment, g_strdup_printf("DESKTOP_SESSION=%s", s->name));
-	if (fallback)
+	if (fallback) {
+		g_autofree char *login = s->name ? login_session_desktop(s->name) : NULL;
+
 		g_ptr_array_add(environment, g_strdup_printf("XDG_SESSION_DESKTOP=%s",
-		                                             s->name ? s->name : fallback));
+		                                             login ? login
+		                                                   : s->name ? s->name : fallback));
+	}
 	if (with_data) {
 		gboolean given;
 		g_autofree char *dirs = session_data_dirs(&given);
@@ -2544,6 +3446,11 @@ static char **compose_environment(void)
 				g_autofree char *labwc_cfg = write_config_labwc_xfce(runtime);
 				g_autofree char *system_dirs = session_config_dirs();
 
+				if (labwc_cfg) {
+					g_autofree char *dir = g_build_filename(labwc_cfg, "autostart", NULL);
+
+					session_autostart_cover(dir, "XFCE");
+				}
 				if (labwc_cfg || session_config_given())
 					g_ptr_array_add(environment,
 					                g_strdup_printf("XDG_CONFIG_DIRS=%s%s%s",
@@ -2722,14 +3629,12 @@ static char **compose_environment(void)
 	}
 	/*
 	 * ⛔ `XDG_SESSION_TYPE=wayland` IS NEEDED, and it is not a lie: the Shell's
-	 *    unit carries `ConditionEnvironment=XDG_SESSION_TYPE=wayland` (checked
-	 *    in the file installed on NIC-OS on 12 Aug 2026), and without it the compositor
-	 *    is not started AT ALL — a maimed session, and no line saying
-	 *    why.
+	 *    unit carries `AssertEnvironment=XDG_SESSION_TYPE=wayland` (GNOME 50), and without it the
+	 *    job FAILS: `OnFailure=gnome-session-shutdown.target` tears the session down at once.
 	 */
 	g_ptr_array_add(environment, g_strdup("XDG_SESSION_TYPE=wayland"));
 	/*
-	 * ⛔ `SHELL` EMPTY, and it is the trap of `STUDIES.md` §gnome §3.1: `gnome-session.in:3-14`
+	 * ⛔ `SHELL` EMPTY, and it is the trap of `STUDIES.md` §gnome §3.1: gnome-session 50 (`leader-main.c`)
 	 *    re-executes itself inside a LOGIN shell if `$SHELL` is not empty and is in
 	 *    `/etc/shells` — that is it drags `~/.profile` back in, which is `CODER.md`
 	 *    §4.5 lying in wait after the environment has been carefully composed.
@@ -2738,17 +3643,21 @@ static char **compose_environment(void)
 	 *   both fine — and v1 left it absent, by construction, without
 	 *   knowing it.  Here it is set EMPTY on purpose: absent and empty are the
 	 *   same thing for `gnome-session` and **two different things for whoever measures**,
-	 *   because empty shows in `/proc/<gnome-session-binary>/environ` while absent
+	 *   because empty shows in `/proc/<gnome-session-init-worker>/environ` while absent
 	 *   is confused with «I did not read the environment».
 	 */
 	g_ptr_array_add(environment, g_strdup("SHELL="));
-	/* ⭐ PHASE 15, D-015 — the session dconf: `gnome-session` exports it
-	 *    to the user manager, and the Shell and the `gsd-*` inherit it (the box
-	 *    above `session_dconf_prepare()`). */
+	/* ⭐ PHASE 15, D-015 — the session dconf.  ⚠ Since 19 Nov 2026 this holds ONLY in the fallback and with an administrator's own
+	 *    DCONF_PROFILE: `gnome-session` exports the variable to the user manager, and the Shell and the `gsd-*` inherit it.  In the
+	 *    runtime model there is no variable: they read `$XDG_RUNTIME_DIR/dconf/profile` (the box above `session_dconf_prepare()`). */
 	if (session_dconf_of_session()) {
-		g_autofree char *profile = dconf_profile_path();
+		/* ⭐ 19 Nov 2026: NO `DCONF_PROFILE` in the runtime model (dconf reads `$XDG_RUNTIME_DIR/dconf/profile` by itself, and
+		 *    snap/Flutter programs digest it); only the fallback's, or the case of an administrator's own variable that
+		 *    would shadow our file, tells the session where the profile is. */
+		const char *env = dconf_runtime_mode ? (dconf_admin_profile ? dconf_profile_file : NULL) : g_getenv("DCONF_PROFILE");
 
-		g_ptr_array_add(environment, g_strdup_printf("DCONF_PROFILE=%s", profile));
+		if (env && *env)
+			g_ptr_array_add(environment, g_strdup_printf("DCONF_PROFILE=%s", env));
 	} else
 		registro_dice(LOG_SESSION,
 		              "⛔ D-015: the GNOME session is born WITHOUT the session dconf "
@@ -2848,36 +3757,40 @@ static char *ask(char **argv)
 
 /*
  * ⭐ PHASE 17 — WHICH SHELL UNIT gnome-session starts on THIS machine
- *    (`session.h`, `SESSIONE_UNITA_SHELL_*`; `phases/17-the-installer.md` §5.1).
+ *    (`session.h`, `SESSION_UNIT_SHELL_MODEL`; `phases/17-the-installer.md` §5.1).
  *
- * The user manager is asked from which FILE it would load
- * `org.gnome.Shell@wayland.service` (`FragmentPath`): the file `…/org.gnome.Shell@wayland.service`
- * is GNOME ≤ 49, and it is that one.  Anything else (GNOME 50's template) is not
- * handled here.  The caller frees the string.
+ * GNOME 50: the Shell is the template `org.gnome.Shell@.service` and the instance is asked for by
+ * the SESSION (`gnome` ⇒ `@user`, `ubuntu` ⇒ `@ubuntu`): it is read from the `Requires` of
+ * `gnome-session@<session>.target`, drop-ins included.  The caller frees the string.
  *
  * ⚠ The manager and not a list of folders written here: the user unit
  *   folders are many (also from `XDG_DATA_DIRS`) and it knows them.
  * ⛔ NULL if I recognise nothing: «I don't know» does not become a bet on
- *   one of the two names, and the caller stops saying so.
+ *   a name, and the caller stops saying so.
  */
 static char *unit_shell(void)
 {
-	char *argv[] = { "systemctl", "--user", "show", "-p", "FragmentPath", "--value",
-		         SESSION_UNIT_SHELL_48, NULL };
-	g_autofree char *fragment = ask(argv);
+	g_autofree char *target = g_strdup_printf("gnome-session@%s.target", gnome_session()->name);
+	char *argv[] = { "systemctl", "--user", "show", "-p", "Requires", "--value", target, NULL };
+	g_autofree char *requests = ask(argv);
+	g_auto(GStrv) entries = NULL;
 
-	if (!fragment) {
+	if (!requests) {
 		registro_dice(LOG_SESSION, "⛔ I could not ask the user manager "
 		                            "which Shell unit there is");
 		return NULL;
 	}
-	g_strstrip(fragment);
-	if (g_str_has_suffix(fragment, "/" SESSION_UNIT_SHELL_48))
-		return g_strdup(SESSION_UNIT_SHELL_48);
+	entries = g_strsplit_set(g_strstrip(requests), " \t\n", -1);
+	for (int i = 0; entries[i]; i++)
+		if (g_str_has_prefix(entries[i], "org.gnome.Shell@") &&
+		    g_str_has_suffix(entries[i], ".service") &&
+		    strcmp(entries[i], SESSION_UNIT_SHELL_MODEL) != 0)
+			return g_strdup(entries[i]);
 	registro_dice(LOG_SESSION,
-	              "⛔ I do not recognise the Shell unit: the manager loads «%s» from «%s», "
-	              "and I only know " SESSION_UNIT_SHELL_48,
-	              SESSION_UNIT_SHELL_48, *fragment ? fragment : "(nothing)");
+	              "⛔ I do not recognise the Shell unit: %s does not ask for any instance of "
+	              SESSION_UNIT_SHELL_MODEL " (Requires: «%s»): I do not know which Shell the "
+	              "session will start, and I do not bet",
+	              target, requests);
 	return NULL;
 }
 
@@ -3097,7 +4010,7 @@ static gboolean write_dropin(uint32_t width, uint32_t height)
 	 */
 	content = g_strdup_printf("[Service]\n"
 	                            "ExecStart=\n"
-	                            "ExecStart=%s --headless --no-x11\n",
+	                            "ExecStart=%s --headless --no-x11 --mode=%%i\n",
 	                            shell);
 	(void) width;
 	(void) height;
@@ -3129,7 +4042,7 @@ write:
 	 *
 	 *     `[M]` 14 August 2026: on this machine `--virtual-monitor` was not asked
 	 *     for by the product — it was asked for by
-	 *     `/etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf`,
+	 *     `/etc/systemd/user/org.gnome.Shell@<instance>.service.d/remotix-headless.conf`,
 	 *     that is a **system** drop-in valid for ANY user.  ⇒ That
 	 *     is precisely «a configuration line that can be lost»
 	 *     of invariant **I7**, and here it holds in reverse: it is not enough that
@@ -3541,8 +4454,14 @@ static gboolean unit_stopped(const char *unit)
 	       g_strcmp0(state, "unknown") == 0;
 }
 
-static gboolean inactive_unit(void)
+/* `*busy`, if not NULL, says what answered «not stopped» (unit name or description) */
+static gboolean inactive_unit(const char **busy)
 {
+	const char *dummy;
+
+	if (!busy)
+		busy = &dummy;
+	*busy = NULL;
 	/*
 	 * ⛔⭐⭐ TWO UNITS, NOT ONE — 16 August 2026, and the second was named by the
 	 *      user's journal after half a day of hypotheses:
@@ -3564,8 +4483,17 @@ static gboolean inactive_unit(void)
 	 *    target.  ⛔ And it is already needed at BIRTH, not only at exit: it is the
 	 *    guard against a second Plasma when KWin takes longer than the child's
 	 *    leash to show up on the bus. */
-	if (e_kde())
-		return unit_stopped(SESSION_UNIT_KWIN) && unit_stopped(SESSION_UNIT_PLASMA);
+	if (e_kde()) {
+		if (!unit_stopped(SESSION_UNIT_KWIN)) {
+			*busy = SESSION_UNIT_KWIN;
+			return FALSE;
+		}
+		if (!unit_stopped(SESSION_UNIT_PLASMA)) {
+			*busy = SESSION_UNIT_PLASMA;
+			return FALSE;
+		}
+		return TRUE;
+	}
 
 	/*
 	 * ⛔⛔ PHASE 13 — ON XFCE THIS GUARD WOULD NOT FAIL: IT WOULD VANISH.
@@ -3596,6 +4524,7 @@ static gboolean inactive_unit(void)
 			              "there is still a " SESSION_PROCESS_XFCE " of mine — and «I don't "
 			              "know» here counts as «no»",
 			              desktop_name());
+			*busy = "the process " SESSION_PROCESS_XFCE;
 			return FALSE;
 		}
 		if (amount > 0) {
@@ -3603,19 +4532,30 @@ static gboolean inactive_unit(void)
 			              "%s: there are still %d " SESSION_PROCESS_XFCE
 			              " of mine: the previous session has not ended",
 			              desktop_name(), amount);
+			*busy = "the process " SESSION_PROCESS_XFCE;
 			return FALSE;
 		}
 		return TRUE;
 	}
 
-	/* ⭐ PHASE 17 — on GNOME 50 these two units still have these names
-	 *    (`[R]` gnome-session 50.0: `data/gnome-session-manager@.service.in`,
-	 *    `data/gnome-session-restart-dbus.service.in`); only the Shell's
-	 *    changed name (`unit_shell()`), which is not looked at here.
-	 * ⚠ If one day they changed, `is-active` would answer «inactive» for a
+	/* ⭐ PHASE 17 — on GNOME 50 these units have these names
+	 *    (`[V]` gnome-session 50.1: `gnome-session-manager@.service`,
+	 *    `gnome-session-restart-dbus.service`).
+	 * ⛔ AND A THIRD one, new in GNOME 50: `graphical-session.target`.  `gnome-session-init-worker`
+	 *    (`leader-systemd.c`) ABORTS with «A graphical session is already running!» if it is still
+	 *    active, and `start()` would answer TRUE all the same: a birth too close to the end of the
+	 *    previous session would be a session that dies at once.  Here it means «wait» (or, for
+	 *    the caller, «refuse»), cleanly.
+	 * ⚠ If one day these names changed, `is-active` would answer «inactive» for a
 	 *   name that does not exist, and the guard would vanish as on XFCE: to be
 	 *   re-checked at every new GNOME (`phases/17-the-installer.md` §5.1). */
-	return unit_stopped(gnome_session()->handler) && unit_stopped(SESSION_UNIT_DBUS);
+	if (!unit_stopped(gnome_session()->handler))
+		*busy = gnome_session()->handler;
+	else if (!unit_stopped(SESSION_UNIT_DBUS))
+		*busy = SESSION_UNIT_DBUS;
+	else if (!unit_stopped(SESSION_UNIT_GRAPHICAL))
+		*busy = SESSION_UNIT_GRAPHICAL;
+	return !*busy;
 }
 
 static gboolean wait_until_done(void)
@@ -3624,7 +4564,7 @@ static gboolean wait_until_done(void)
 
 	while (g_get_monotonic_time() < expiry) {
 		g_usleep(CHECK_INTERVAL_MS * 1000);
-		if (!session_alive() && inactive_unit()) {
+		if (!session_alive() && inactive_unit(NULL)) {
 			char *clean[] = { "systemctl", "--user", "reset-failed", NULL };
 
 			run(clean);
@@ -3849,12 +4789,20 @@ static const char *const OUR_VARIABLES[] = {
 	"LABWC_UPDATE_ACTIVATION_ENV", "WAYLAND_DISPLAY", "DISPLAY",
 	/* ⭐ D8: it is set by a session's `Exec` (`env GNOME_SHELL_SESSION_MODE=…`),
 	 *    and gnome-session exports it to the manager like its whole environment. */
-	"GNOME_SHELL_SESSION_MODE", NULL
+	"GNOME_SHELL_SESSION_MODE",
+	/* ⭐ 18 Nov 2026 (Ubuntu 26.04, GNOME 50): the four that appear in the environment of `gnome-session`
+	 *    and of everything it starts, and that it then exports to the manager like the rest.  `[M]` from
+	 *    `/proc/<pid>/environ` of a live session: our child has none of them, the first process that
+	 *    has them is `gnome-session-init-worker` (`GNOME_DESKTOP_SESSION_ID` is also a literal of
+	 *    `/usr/bin/gnome-session`).  With linger on they stayed in the manager after the Log Out.  Like
+	 *    the others, they are put back as they were (or removed if they were not there): a local
+	 *    login that already has them is not touched. */
+	"GNOME_DESKTOP_SESSION_ID", "QT_IM_MODULE", "QT_IM_MODULES", "XMODIFIERS", NULL
 };
 
 /* { drop-in folder, name } — all of ours and only ours */
 static const char *const OUR_DROPINS[][2] = {
-	/* ⭐ PHASE 17: the Shell instances (`@wayland`, `@user`, `@ubuntu`…)
+	/* ⭐ PHASE 17: the Shell instances (`@user`, `@ubuntu`…)
 	 *    are not here: `session_clear_out_handler()` looks for them in the folder,
 	 *    because with D8 the name depends on the session (§5.1). */
 	{ SESSION_UNIT_KWIN ".d", "zz-remotix-monitor.conf" },
@@ -3985,7 +4933,7 @@ static gboolean clear_out_handler_run(const char *why, gboolean quiet)
 			g_rmdir(folder); /* only if empty */
 		}
 	}
-	/* ⭐ D8: the Shell instances, whatever their name (`@wayland`, `@user`,
+	/* ⭐ D8: the Shell instances, whatever their name (`@user`,
 	 *    `@ubuntu`…) — ⛔ never the template's folder, `org.gnome.Shell@.service.d`,
 	 *    where we do not write and which also applies to GDM. */
 	{
@@ -3999,7 +4947,8 @@ static gboolean clear_out_handler_run(const char *why, gboolean quiet)
 			g_autofree char *file = NULL;
 
 			if (!g_str_has_prefix(f, "org.gnome.Shell@") ||
-			    !g_str_has_suffix(f, ".service.d"))
+			    !g_str_has_suffix(f, ".service.d") ||
+			    strcmp(f, SESSION_UNIT_SHELL_MODEL ".d") == 0)
 				continue;
 			folder = g_build_filename(check, f, NULL);
 			file = g_build_filename(folder, "zz-remotix-monitor.conf", NULL);
@@ -4051,6 +5000,7 @@ static gboolean clear_out_handler_run(const char *why, gboolean quiet)
 			else if (was_absent && now)
 				g_ptr_array_add(remove, g_strdup(name));
 		} else if (now && (strstr(now, "remotix") ||
+		                   (strcmp(name, "DCONF_PROFILE") == 0 && dconf_env_is_ours(now)) ||
 		                   (!clear_out_local && strcmp(name, "DESKTOP_SESSION") == 0))) {
 			g_ptr_array_add(remove, g_strdup(name));
 		}
@@ -4188,14 +5138,39 @@ void session_clear_out_retry(void)
  *    (or an administrator) stops that target; a detach, a resize, a reattach, a service restart (the child
  *    dies with it) or a crash of plasmashell alone never touch it.  ⚠ «Seen active first» keeps it silent
  *    at birth, before the target is reached.
+ * ⭐⭐ 18 Nov 2026 — THE SAME SIGNAL IS NOT THERE ON PLASMA 6.6 (`[M]` rx-kde, Log Out asked in the first
+ *    seconds of the desktop): `plasma-shutdown` calls `ksmserver.closeSession`, `KWin.closeWaylandWindows`,
+ *    asks the stop of `graphical-session.target` (`StopUnit ... "fail"`, the answer is not looked at) and
+ *    exits — and `plasma-workspace.target` is NEVER stopped by it (`startplasma` does that only after the
+ *    target stop is accepted), so the signal above never fires and the logout is lost.
+ * ⭐ What exists in the lost case AND in the good one: `plasma-shutdown` owns the bus name `org.kde.Shutdown`
+ *    for the whole of its run and RELEASES it when it exits (`NameOwnerChanged`, subscribed on a private
+ *    main context turned at each round of this watch; a poll would miss a short run).  ⛔ But the name
+ *    alone is not a logout: `plasma-shutdown` is also started by `saveSession`, it holds the name for as
+ *    long as an application asks «save changes?» (KWin waits, then «Cancel Logout / Log Out Anyway»), and if
+ *    the user cancels it calls `resetLogout` and exits without stopping anything.  ⇒ The trigger is the
+ *    RELEASE of the name and, right after, the answer of `ksmserver.isShuttingDown()`: `true` = the logout
+ *    was done by plasma-shutdown and not undone (measured: `true` in the lost case, it stays so until
+ *    `resetLogout`) ⇒ same grace and same retry as below; `false` = cancelled or never a logout ⇒ nothing
+ *    is forced, one line.  ⚠ ksmserver not answering (seen once: `NoReply`) ⇒ CHOICE: nothing is forced,
+ *    one line — a logout that cannot be confirmed is not worth the user's unsaved work.
+ *    The older fact (the target seen active and then not) stays as a second road and is not asked.
+ * ⚠ KNOWN LIMITS, accepted: (1) `logoutAndShutdown` / `logoutAndReboot`: in 6.6.7 `plasma-shutdown` does not exit after asking
+ *    the power-off, so the name is not released and, if the stop is refused in the first seconds, that exit stays lost; it
+ *    is reachable only without the menu entries (which REMOTIX removes).  (2) A restart of KWin by its wrapper during the
+ *    wait resets the request (KWin leaves the bus): rare.
  * ⭐ After a grace (`KDE_LOGOUT_GRACE_MS`) in which the normal road wins when it works (KWin leaves, §7.6),
  *    the stop of `graphical-session.target` is asked again — mode `fail`, as plasma-shutdown does, so a
- *    refusal is just retried every `KDE_LOGOUT_RETRY_MS`, at most `KDE_LOGOUT_TRIES` times.  One line each.
+ *    refusal is just retried every `KDE_LOGOUT_RETRY_MS`; after `KDE_LOGOUT_TRIES` refusals the mode is
+ *    `replace`, and after as many more the watch returns TRUE: the child closes the session by the product's own
+ *    road (`session_terminate()`), which forces and, KWin gone, §7.6 warns the client.  One line each.
  *    The normal §7.6 road follows (KWin leaves the bus).
  * Called at every round of the child's loop; it limits its own frequency (one comparison when idle).
  */
 #define KDE_LOGOUT_GRACE_MS 4000
 #define KDE_LOGOUT_RETRY_MS 3000
+/* `KDE_LOGOUT_TRIES` attempts in mode `fail`, then as many in mode `replace` (about a minute with the retry above);
+ * if the stop is still refused the watch gives up and says «to be closed» (see the return value). */
 #define KDE_LOGOUT_TRIES 10
 
 static const char *unit_active_state(GDBusConnection *bus, const char *unit, char *out, size_t size)
@@ -4223,7 +5198,93 @@ static const char *unit_active_state(GDBusConnection *bus, const char *unit, cha
 	return out;
 }
 
-void session_kde_logout_watch(void)
+/* `plasma-shutdown` released the name `org.kde.Shutdown`: to be asked of ksmserver at the next round */
+static gboolean shutdown_released;
+/* ksmserver confirmed that a logout is under way (`isShuttingDown`): the watch is armed */
+static gboolean logout_asked;
+
+static void on_shutdown_name(GDBusConnection *bus, const char *sender, const char *path,
+                             const char *interface, const char *signal, GVariant *parameters,
+                             gpointer data)
+{
+	const char *name = NULL, *before = NULL, *after = NULL;
+
+	(void)bus; (void)sender; (void)path; (void)interface; (void)signal; (void)data;
+	g_variant_get(parameters, "(&s&s&s)", &name, &before, &after);
+	(void)name;
+	if (*before && !*after)
+		shutdown_released = TRUE;
+}
+
+/* The subscription follows the connection: a new bus (the old one closed) is subscribed again. */
+static void shutdown_name_listen(GDBusConnection *bus)
+{
+	static GMainContext *context;
+	static GDBusConnection *listening;
+	static guint subscription;
+
+	if (!context)
+		context = g_main_context_new();
+	if (listening != bus) {
+		if (listening) {
+			g_dbus_connection_signal_unsubscribe(listening, subscription);
+			g_clear_object(&listening);
+		}
+		g_main_context_push_thread_default(context);
+		subscription = g_dbus_connection_signal_subscribe(
+			bus, "org.freedesktop.DBus", "org.freedesktop.DBus", "NameOwnerChanged",
+			"/org/freedesktop/DBus", "org.kde.Shutdown", G_DBUS_SIGNAL_FLAGS_NONE,
+			on_shutdown_name, NULL, NULL);
+		g_main_context_pop_thread_default(context);
+		listening = g_object_ref(bus);
+	}
+	while (g_main_context_iteration(context, FALSE))
+		;
+}
+
+/* 1 = the name has an owner, 0 = it has none, -1 = the bus did not answer (NOT the same as 0) */
+static int name_owner_state(GDBusConnection *bus, const char *name)
+{
+	g_autoptr(GVariant) response = g_dbus_connection_call_sync(
+		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+		"NameHasOwner", g_variant_new("(s)", name), G_VARIANT_TYPE("(b)"),
+		G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_NAME_MS, NULL, NULL);
+	gboolean has = FALSE;
+
+	if (!response)
+		return -1;
+	g_variant_get(response, "(b)", &has);
+	return has ? 1 : 0;
+}
+
+/* plasma-shutdown is gone: did it leave a logout under way?  Arms the watch only on a `true`. */
+static void shutdown_released_judge(GDBusConnection *bus)
+{
+	g_autoptr(GError) mistake = NULL;
+	g_autoptr(GVariant) answer = g_dbus_connection_call_sync(
+		bus, "org.kde.ksmserver", "/KSMServer", "org.kde.KSMServerInterface", "isShuttingDown", NULL,
+		G_VARIANT_TYPE("(b)"), G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_RESPONSE_MS, NULL, &mistake);
+	gboolean shutting = FALSE;
+
+	shutdown_released = FALSE;
+	if (!answer) {
+		registro_dice(LOG_SESSION,
+		              "⚠ Plasma: plasma-shutdown ended and ksmserver does not say whether a logout is "
+		              "under way (%s) — nothing is forced",
+		              mistake ? mistake->message : "no reason given");
+		return;
+	}
+	g_variant_get(answer, "(b)", &shutting);
+	if (!shutting) {
+		registro_dice(LOG_SESSION,
+		              "Plasma: plasma-shutdown ended and ksmserver is not shutting down (logout "
+		              "cancelled, or not a logout) — nothing is forced");
+		return;
+	}
+	logout_asked = TRUE;
+}
+
+bool session_kde_logout_watch(void)
 {
 	static gint64 last_look, inactive_since, last_try;
 	static gboolean seen_active, finished;
@@ -4233,64 +5294,84 @@ void session_kde_logout_watch(void)
 	gint64 now = g_get_monotonic_time();
 
 	if (finished || !e_kde() || now - last_look < 1000 * 1000)
-		return;
+		return FALSE;
 	last_look = now;
 	bus = sess_bus(NULL);
 	if (!bus)
-		return;
-	if (!name_has_owner(bus, "org.kde.KWin")) {
+		return FALSE;
+	shutdown_name_listen(bus);
+	switch (name_owner_state(bus, "org.kde.KWin")) {
+	case -1: /* the bus did not answer: nothing is learned, nothing is forgotten */
+		return FALSE;
+	case 0:
 		/* the normal road (or no desktop yet): nothing to help; a new desktop starts the watch again */
 		seen_active = FALSE;
+		shutdown_released = FALSE;
+		logout_asked = FALSE;
 		inactive_since = 0;
 		tries = 0;
-		return;
+		return FALSE;
 	}
+	if (shutdown_released)
+		shutdown_released_judge(bus);
 	unit_active_state(bus, SESSION_UNIT_PLASMA, state, sizeof state);
-	if (g_strcmp0(state, "active") == 0) {
+	if (g_strcmp0(state, "active") == 0)
 		seen_active = TRUE;
-		inactive_since = 0;
-		tries = 0;
-		return;
+	if (!logout_asked) {
+		if (g_strcmp0(state, "active") == 0) {
+			inactive_since = 0;
+			tries = 0;
+			return FALSE;
+		}
+		if (!seen_active || g_strcmp0(state, "activating") == 0)
+			return FALSE;
 	}
-	if (!seen_active || g_strcmp0(state, "activating") == 0)
-		return;
 	if (!inactive_since) {
 		inactive_since = now;
 		registro_dice(LOG_SESSION,
-		              "⭐ Plasma: %s is %s while KWin is still up — the user logged out; waiting %d s for "
-		              "plasma-shutdown to finish by itself",
+		              "⭐ Plasma: a logout is under way and KWin is still up (%s) — %s is %s; giving it "
+		              "%d s to finish by itself, then it is completed",
+		              logout_asked ? "plasma-shutdown ended, ksmserver is shutting down"
+		                           : "the workspace target stopped",
 		              SESSION_UNIT_PLASMA, state, KDE_LOGOUT_GRACE_MS / 1000);
-		return;
+		return FALSE;
 	}
 	if (now - inactive_since < (gint64)KDE_LOGOUT_GRACE_MS * 1000 ||
 	    (last_try && now - last_try < (gint64)KDE_LOGOUT_RETRY_MS * 1000))
-		return;
+		return FALSE;
 	last_try = now;
 	{
+		/* ⭐ After the «fail» attempts the mode is `replace`: a queued start job (a slow unit can
+		 *    hold one for 90 s) replaces nothing of the user's work, and `fail` would be refused as
+		 *    long as it lasts.  `finished` only once the stop is accepted. */
+		const char *mode = tries < KDE_LOGOUT_TRIES ? "fail" : "replace";
 		g_autoptr(GError) mistake = NULL;
 		g_autoptr(GVariant) response = g_dbus_connection_call_sync(
 			bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
 			"org.freedesktop.systemd1.Manager", "StopUnit",
-			g_variant_new("(ss)", "graphical-session.target", "fail"), NULL,
+			g_variant_new("(ss)", "graphical-session.target", mode), NULL,
 			G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, &mistake);
 
 		tries++;
 		if (response) {
 			registro_dice(LOG_SESSION,
 			              "⭐ Plasma logout stopped halfway: stop of graphical-session.target accepted "
-			              "(attempt %d) — the normal end follows", tries);
+			              "(attempt %d, mode %s) — the normal end follows", tries, mode);
 			finished = TRUE;
-		} else if (tries >= KDE_LOGOUT_TRIES) {
+		} else if (tries >= 2 * KDE_LOGOUT_TRIES) {
 			registro_dice(LOG_SESSION,
 			              "⛔ Plasma logout stopped halfway: stop of graphical-session.target refused "
-			              "%d times, giving up (last: %s)", tries, mistake ? mistake->message : "no reason");
+			              "%d times (last: %s) — giving up on it: the session is to be closed by the "
+			              "product's own road", tries, mistake ? mistake->message : "no reason");
 			finished = TRUE;
+			return TRUE;
 		} else
 			registro_dice(LOG_SESSION,
 			              "⚠ Plasma logout stopped halfway: stop of graphical-session.target refused "
-			              "(attempt %d of %d): %s — retrying in %d s", tries, KDE_LOGOUT_TRIES,
+			              "(attempt %d, mode %s): %s — retrying in %d s", tries, mode,
 			              mistake ? mistake->message : "no reason", KDE_LOGOUT_RETRY_MS / 1000);
 	}
+	return FALSE;
 }
 
 /* ⭐ When the child exits: the last moment someone can do it.  If the clear-out was still
@@ -4474,8 +5555,22 @@ static bool force_refused(void)
 static bool really_terminate(void)
 {
 	if (!session_alive()) {
-		registro_dice(LOG_SESSION, "there was no session to stop");
-		return false;
+		/* ⭐ The desktop may be gone already (it logged out by itself, or died): then the close is
+		 *    DONE, not failed, and the caller must exit and clear out.  ⛔ But «the name is not
+		 *    on the bus» is the WEAK question (it also answers no for a bus that did not reply, a
+		 *    desktop that has not taken its name yet, or a manager that died with the compositor
+		 *    alive): «gone» needs the same double proof as `wait_until_done()` — the name AND the
+		 *    units/process of the desktop.  If the units or the process are still there, nothing
+		 *    is claimed: the normal road below goes on (orderly exit, then the forced step). */
+		if (inactive_unit(NULL)) {
+			registro_dice(LOG_SESSION,
+			              "there was no session to stop: no session name on the bus and no unit or "
+			              "process of the desktop left — the desktop is already gone, the close is done");
+			return true;
+		}
+		registro_dice(LOG_SESSION,
+		              "⚠ the session name is not on the bus but the desktop's units or processes are "
+		              "still there: not claimed as closed, closing it the normal way");
 	}
 
 	if (e_xfce()) {
@@ -4653,7 +5748,7 @@ static gboolean schema_has_key(const struct schema_open *a, const char *key,
 
 /*
  * ⭐ PHASE 15, D-015 — THE VERIFY: nothing is written here any more (the keys are in
- *    `locks.db`, or in `shm` in the fallback); every key of `DCONF_KEYS` is RE-READ through
+ *    `/etc/dconf/db/remotix`, or `locks.db`/`shm` in the fallback); every key of `DCONF_KEYS` is RE-READ through
  *    the session profile — as the Shell and the `gsd-*` read it — and said whether in force.
  *    Written is not in force until it is re-read.
  */
@@ -5077,6 +6172,11 @@ static char **actions_without_power(const char *const *from)
 	return (char **) g_ptr_array_free(g_steal_pointer(&out), FALSE);
 }
 
+/* The plugin types REMOTIX puts in the panel lock file (`xfce_panel_xml()`): the only
+ * ones its lock can have damaged, hence the only ones the integrity check repairs. */
+#define PLUGIN_ACTIONS "actions"
+#define PLUGIN_WHISKER "whiskermenu"
+
 /* The `actions` plugins of the USER's panel channel: `/plugins/plugin-<N>`.
  * `*any_plugin` is TRUE if the channel has at least one plugin of any kind (a
  * user who never opened XFCE has none: the channel is empty until the panel is
@@ -5108,53 +6208,82 @@ static GPtrArray *panel_plugins(const char *type, gboolean *any_plugin)
 
 static GPtrArray *panel_action_plugins(gboolean *any_plugin)
 {
-	return panel_plugins("actions", any_plugin);
+	return panel_plugins(PLUGIN_ACTIONS, any_plugin);
 }
 
-/* The `actions` plugins of the STANDARD layout, for the user whose panel
- * channel is still empty: `xfce4/panel/default.xml` looked up along
- * `XDG_CONFIG_DIRS` (`STUDIES.md` §xfce §9; the first file found is the
- * one the panel migrates).  `/plugins/plugin-<N>` as above. */
-static GPtrArray *default_plugins(const char *type)
+/* The text of the STANDARD layout, `xfce4/panel/default.xml` looked up along
+ * `XDG_CONFIG_DIRS` (`STUDIES.md` §xfce §9; the first file found is the one the
+ * panel migrates).  NULL if there is none. */
+static char *default_panel_text(void)
 {
-	GPtrArray *found = g_ptr_array_new_with_free_func(g_free);
 	g_auto(GStrv) dirs = session_config_dirs_strv();
-	g_autofree char *wanted_value = g_strdup_printf("value=\"%s\"", type);
 
 	for (int i = 0; dirs && dirs[i]; i++) {
 		g_autofree char *file = g_build_filename(dirs[i], "xfce4", "panel", "default.xml",
 		                                           NULL);
-		g_autofree char *text = NULL;
-		const char *p;
+		char *text = NULL;
 
-		if (!g_file_get_contents(file, &text, NULL, NULL))
+		if (g_file_get_contents(file, &text, NULL, NULL))
+			return text;
+	}
+	return NULL;
+}
+
+/* The plugins of `type` in the STANDARD layout, for the user whose panel channel is
+ * still empty: `/plugins/plugin-<N>` as above. */
+static GPtrArray *default_plugins(const char *type)
+{
+	GPtrArray *found = g_ptr_array_new_with_free_func(g_free);
+	g_autofree char *wanted_value = g_strdup_printf("value=\"%s\"", type);
+	g_autofree char *text = default_panel_text();
+
+	/* every `<property …>` tag with value="actions" and name="plugin-N" */
+	for (const char *p = text; p && (p = strstr(p, "<property ")); p++) {
+		const char *end = strchr(p, '>');
+		g_autofree char *tag = end ? g_strndup(p, end - p) : NULL;
+		const char *name;
+
+		if (!tag)
+			break;
+		name = strstr(tag, "name=\"plugin-");
+
+		if (!name || !strstr(tag, wanted_value))
 			continue;
-		/* every `<property …>` tag with value="actions" and name="plugin-N" */
-		for (p = text; (p = strstr(p, "<property ")); p++) {
-			const char *end = strchr(p, '>');
-			g_autofree char *tag = end ? g_strndup(p, end - p) : NULL;
-			const char *name;
-
-			if (!tag)
-				break;
-			name = strstr(tag, "name=\"plugin-");
-
-			if (!name || !strstr(tag, wanted_value))
-				continue;
-			name += strlen("name=\"plugin-");
-			if (strspn(name, "0123456789") > 0)
-				g_ptr_array_add(found,
-				                g_strdup_printf("/plugins/plugin-%.*s",
-				                                (int) strspn(name, "0123456789"), name));
-		}
-		break;
+		name += strlen("name=\"plugin-");
+		if (strspn(name, "0123456789") > 0)
+			g_ptr_array_add(found,
+			                g_strdup_printf("/plugins/plugin-%.*s",
+			                                (int) strspn(name, "0123456789"), name));
 	}
 	return found;
 }
 
+/* The type the STANDARD layout gives to `key` (`/plugins/plugin-<N>`), or NULL. */
+static char *default_plugin_type(const char *key)
+{
+	g_autofree char *text = default_panel_text();
+	g_autofree char *wanted_name = g_strdup_printf("name=\"plugin-%s\"",
+	                                                 key + strlen("/plugins/plugin-"));
+
+	for (const char *p = text; p && (p = strstr(p, "<property ")); p++) {
+		const char *end = strchr(p, '>');
+		g_autofree char *tag = end ? g_strndup(p, end - p) : NULL;
+		const char *value;
+
+		if (!tag)
+			break;
+		value = strstr(tag, "value=\"");
+		if (strstr(tag, wanted_name) && value) {
+			value += strlen("value=\"");
+			return g_strndup(value, strcspn(value, "\""));
+		}
+	}
+	return NULL;
+}
+
 static GPtrArray *default_action_plugins(void)
 {
-	return default_plugins("actions");
+	return default_plugins(PLUGIN_ACTIONS);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -5343,6 +6472,17 @@ static int xfce_copy_keep_pending(GKeyFile *copy, int *count)
 	return kept;
 }
 
+/* The plugin type a `kind=plugin` group of a copy stands for: the user's own value, else the
+ * plugin noted (whisker), else `actions` (the only other one REMOTIX locks). */
+static char *xfce_copy_group_type(GKeyFile *copy, const char *group)
+{
+	char *type = g_key_file_get_string(copy, group, "value", NULL);
+
+	if (!type)
+		type = g_key_file_get_string(copy, group, "plugin", NULL);
+	return type ? type : g_strdup(PLUGIN_ACTIONS);
+}
+
 /* Puts back the user's values from ONE copy, if it is there and not yet restored.
  * TRUE if nothing is left to restore in it. */
 static gboolean xfce_restore_copy(const char *fpath)
@@ -5375,11 +6515,12 @@ static gboolean xfce_restore_copy(const char *fpath)
 		total++;
 		absent = g_key_file_get_boolean(copy, groups[i], "absent", NULL);
 		if (g_strcmp0(kind, "plugin") == 0) {
-			/* ⭐ The `actions` plugin's own value (`/plugins/plugin-N` = actions): while
-			 *   the lock lived, the standard layout was in the SESSION folder and the
-			 *   panel never wrote it in the user's file, which kept `type="empty"` —
-			 *   and an `actions` button that is not typed is a button that disappears
-			 *   from the user's panel in local.  ⇒ If the user had it, it goes back;
+			/* ⭐ The plugin's own value (`/plugins/plugin-N` = actions or whiskermenu).
+			 *   The lock files no longer define it (D-X3), so the panel writes it in the
+			 *   user's file; the copies made before that change may still have been
+			 *   taken with the old lock, whose type the panel never wrote — and a plugin
+			 *   that is not typed disappears from the user's panel in local.
+			 *   ⇒ If the user had it, it goes back;
 			 *   if not, and the panel has since filled the channel with its layout, it is
 			 *   written as the panel would have — unless the system files already say
 			 *   it (then taking the key away is enough); if the channel is still empty,
@@ -5388,11 +6529,9 @@ static gboolean xfce_restore_copy(const char *fpath)
 			g_autoptr(GPtrArray) plugins = panel_action_plugins(&any);
 
 			if (!absent || (any && !xfce_system_value(channel, key, FALSE, NULL, NULL))) {
-				g_autofree char *value = g_key_file_get_string(copy, groups[i], "value", NULL);
-				g_autofree char *type = g_key_file_get_string(copy, groups[i], "plugin", NULL);
+				g_autofree char *type = xfce_copy_group_type(copy, groups[i]);
 
-				ok = xfconf_set(channel, key, "string",
-				                value ? value : (type ? type : "actions"));
+				ok = xfconf_set(channel, key, "string", type);
 			} else {
 				ok = xfconf_unset(channel, key);
 			}
@@ -5464,6 +6603,131 @@ static gboolean xfce_restore_keys(void)
 	gboolean disk_done = xfce_restore_copy(disk);
 
 	return ram_done && disk_done;
+}
+
+/* TRUE if the `xfconfd` that runs still has OUR lock files in memory: it read them when
+ * it opened the channel, and a light close removes the drop-in without restarting it.
+ * ⛔ Also TRUE when it cannot be told: never write on a guess. */
+static gboolean xfconfd_holds_lock(void)
+{
+	char *show[] = { "systemctl", "--user", "show", "-p", "MainPID", "--value",
+		           "xfconfd.service", NULL };
+	g_autofree char *answer = ask(show);
+	int pid;
+	g_autofree char *path = NULL;
+	g_autofree char *environ_text = NULL;
+	gsize len = 0;
+
+	if (!answer || !*g_strstrip(answer))
+		return TRUE;
+	if (strcmp(answer, "0") == 0)
+		return FALSE; /* not running: the next one starts with the drop-in as it is */
+	pid = atoi(answer);
+	if (pid <= 0)
+		return TRUE;
+	path = g_strdup_printf("/proc/%d/environ", pid);
+	if (!g_file_get_contents(path, &environ_text, &len, NULL))
+		return TRUE;
+	for (const char *e = environ_text; e < environ_text + len; e += strlen(e) + 1)
+		if (strstr(e, "/remotix/xdg-xfce"))
+			return TRUE;
+	return FALSE;
+}
+
+/* The type of `key` (`/plugins/plugin-<N>`) from a copy not yet restored, or NULL. */
+static char *xfce_copy_plugin_type(const char *key)
+{
+	for (int ram = 0; ram < 2; ram++) {
+		g_autofree char *fpath = xfce_copy_path(ram);
+		g_autoptr(GKeyFile) copy = g_key_file_new();
+		g_auto(GStrv) groups = NULL;
+
+		if (!fpath || !g_key_file_load_from_file(copy, fpath, G_KEY_FILE_NONE, NULL) ||
+		    g_key_file_get_boolean(copy, "stato", "ripristinato", NULL))
+			continue;
+		groups = g_key_file_get_groups(copy, NULL);
+		for (int i = 0; groups[i]; i++) {
+			g_autofree char *path = g_key_file_get_string(copy, groups[i], "path", NULL);
+			g_autofree char *kind = g_key_file_get_string(copy, groups[i], "kind", NULL);
+
+			if (g_strcmp0(path, key) == 0 && g_strcmp0(kind, "plugin") == 0)
+				return xfce_copy_group_type(copy, groups[i]);
+		}
+	}
+	return NULL;
+}
+
+/* ⭐ D-X3 — every id in a panel's `plugin-ids` must have its `/plugins/plugin-<id>`
+ * type: without it the panel asks to remove the plugin and the plugin is gone.  Only what
+ * OUR lock can have damaged is repaired: a missing type is written back from a pending
+ * copy, else from the standard layout but ONLY if it is a type REMOTIX locks
+ * (PLUGIN_ACTIONS, PLUGIN_WHISKER: the number may be another plugin by now); for any other
+ * it is NOT guessed.  Never while the lock is in `xfconfd`'s memory (the value would be
+ * «equal to the system's» and not written): it waits for the next birth.  Silent when all
+ * is well.  One read of the channel (`-l -v`: a plugin with a type has a line, an array
+ * is `[1,2,3]`). */
+static void xfce_panel_integrity(void)
+{
+	char *list_cmd[] = { "xfconf-query", "-c", "xfce4-panel", "-l", "-v", NULL };
+	g_autofree char *listing = ask(list_cmd);
+	g_auto(GStrv) lines = g_strsplit(listing ? listing : "", "\n", -1);
+	g_autoptr(GHashTable) typed = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GPtrArray) ids = g_ptr_array_new_with_free_func(g_free);
+	int held = -1;
+
+	for (int i = 0; lines[i]; i++) {
+		g_auto(GStrv) parts = g_strsplit_set(g_strstrip(lines[i]), " \t", 2);
+		const char *value = parts[0] && parts[1] ? g_strstrip(parts[1]) : "";
+
+		if (!parts[0])
+			continue;
+		if (g_str_has_prefix(parts[0], "/plugins/plugin-") && *value)
+			g_hash_table_add(typed, g_strdup(parts[0]));
+		else if (g_str_has_prefix(parts[0], "/panels/panel-") &&
+		         g_str_has_suffix(parts[0], "/plugin-ids") && value[0] == '[') {
+			g_auto(GStrv) items = g_strsplit_set(value, "[,]", -1);
+
+			for (int j = 0; items[j]; j++)
+				if (*items[j])
+					g_ptr_array_add(ids, g_strdup(items[j]));
+		}
+	}
+	for (guint i = 0; i < ids->len; i++) {
+		g_autofree char *key = g_strdup_printf("/plugins/plugin-%s",
+		                                        (char *) g_ptr_array_index(ids, i));
+		g_autofree char *type = NULL;
+
+		if (strspn(key + strlen("/plugins/plugin-"), "0123456789") !=
+		        strlen(key + strlen("/plugins/plugin-")) ||
+		    g_hash_table_contains(typed, key))
+			continue;
+		if (held < 0)
+			held = xfconfd_holds_lock();
+		if (held) {
+			registro_dice(LOG_SESSION,
+			              "⚠ XFCE: %s has no type but the lock is still in xfconfd's "
+			              "memory — not repaired now, at the next birth without it", key);
+			continue;
+		}
+		type = xfce_copy_plugin_type(key);
+		if (!type) {
+			type = default_plugin_type(key);
+			if (type && strcmp(type, PLUGIN_ACTIONS) != 0 && strcmp(type, PLUGIN_WHISKER) != 0)
+				g_clear_pointer(&type, g_free);
+		}
+		if (!type)
+			registro_dice(LOG_SESSION,
+			              "⛔ XFCE: %s has no type and neither the copy nor the standard "
+			              "layout (for the types we lock) knows it — NOT repaired (not "
+			              "guessed)", key);
+		else if (xfconf_set("xfce4-panel", key, "string", type))
+			registro_dice(LOG_SESSION, "⭐ XFCE: %s had no type: put back as «%s»",
+			              key, type);
+		else
+			registro_dice(LOG_SESSION, "⛔ XFCE: %s had no type and «%s» could NOT "
+			              "be written back", key, type);
+		g_hash_table_add(typed, g_strdup(key));
+	}
 }
 
 /*
@@ -5564,6 +6828,12 @@ static void xfce_migrate_old(void)
  *     every request (even the dialog, even `--lockscreen`) into `--logout`;
  *   · `lxqt-powermanagement` does not run: the autostart entries launch it by NAME, and
  *     the same folder holds a `lxqt-powermanagement` that does nothing;
+ *   · an X11 composition manager (`LXQT_X11_COMPOSITORS`) does not run either: Lubuntu's
+ *     `picom.desktop` is a MODULE (`X-LXQt-Module=true`) with no `X-LXQt-X11-Only`, and the
+ *     remote session has no X server it can compose (labwc is the compositor): `picom` dies, `lxqt-session` restarts it until the limit
+ *     (`lxqtmodman.cpp`, `MAX_CRASHES_PER_APP`) and then shows «X Compositor crashed too
+ *     many times».  The same folder holds a `picom` that exits 0 (a module that exits 0 is
+ *     NOT restarted), and the compositor the session has — labwc — is already there;
  *   · the six «Leave» menu entries stay hidden, in the session data folder
  *     (`settings_lxqt()`), because a «Suspend» that logs out would be a lie.
  *   [M] tried on the lxqt-panel 2.1.4 box: the button and the entries go through
@@ -5582,6 +6852,13 @@ static void xfce_migrate_old(void)
  *   power management off with no check possible.  Nothing replaces it: the system's entry
  *   is `Exec=lxqt-powermanagement`, by name (`[M]` Debian 13 and Arch), so it already ends
  *   in our command; and a session entry never wins over one of the user's.
+ * ⭐ 18 Nov 2026 — ONE session autostart entry is back, for another reason: `lubuntu-update`
+ *   (`LXQT_SHARED_SERVER_PROGRAMS`).  The system's entries name it by ABSOLUTE path, so the
+ *   PATH cannot catch it; our entry of the same file name covers them, and it is NOT
+ *   `Hidden=true`: it starts the program by NAME, i.e. our self-checking script, which in a
+ *   local session `exec`s the real one.
+ * ⭐ 19 Nov 2026 — and ONE MORE, with `Hidden=true` and no check: `blueman.desktop`
+ *   (`SESSION_NOT_IN_REMOTE_AUTOSTART`, `session_autostart_cover()`), see there.
  * ⚠ DECLARED: a user's autostart entry with the ABSOLUTE path of the real program starts
  *   it in the remote session too (it was so with `Hidden=true` as well: the user's folder
  *   comes first).  We do not write into the user's files; the real ban on suspending lives
@@ -5623,7 +6900,9 @@ static gboolean read_ini_qt(GKeyFile *keys, const char *file, GError **mistake)
  * by name: it would call itself.
  * `lxqt-powermanagement`: exits 0 and writes a line in the system log, if
  * `logger` is there.
- * ⭐ 14 Nov 2026: both do so ONLY inside the remote session (`LXQT_SCRIPT_HEAD`); anywhere
+ * The X11 composition managers (`LXQT_X11_COMPOSITORS`): same as `lxqt-powermanagement`, and
+ * a line on stderr for whoever starts one by hand.
+ * ⭐ 14 Nov 2026: all of them do so ONLY inside the remote session (`LXQT_SCRIPT_HEAD`); anywhere
  * else they `exec` the real program with the arguments they were given.
  * The scripts are rewritten at every birth (atomic), mode 0755, in a folder 0700 of
  * `XDG_RUNTIME_DIR`: nothing of the user's is touched.
@@ -5646,7 +6925,7 @@ static gboolean write_session_script(const char *folder, const char *name, const
 }
 
 /*
- * The head of the two scripts: `%s` = what the script is for (a comment), the real program
+ * The head of the session's scripts: `%s` = what the script is for (a comment), the real program
  * (shell-quoted), the `loginctl` command (shell-quoted, with `timeout 3` in front if there
  * is one: a logind that does not answer must not hang «Leave»; a timeout = not remote = the
  * real program).  After it, the script is INSIDE the remote session.
@@ -5716,6 +6995,30 @@ static void lxqt_user_autostart_warn(void)
 	}
 }
 
+/* ⭐ The ONE place that names programs: the X11 composition managers.  Neither the desktop's
+ *   keys nor the program can tell us «this needs X»: `lxqt-session` skips only entries marked
+ *   `X-LXQt-X11-Only`, and Lubuntu's picom is not marked.  A composition manager has one
+ *   role, which cannot exist in the remote session (there is no X server it can compose:
+ *   labwc is the compositor): a short list of that ROLE, kept here and nowhere else. */
+static const char *const LXQT_X11_COMPOSITORS[] = { "picom", "compton", "xcompmgr", NULL };
+
+/* ⭐ 18 Nov 2026 — the programs that do not belong in a SHARED server: they decide «am I
+ *   already running?» by looking at the processes of ALL users, so while one user has the
+ *   program alive every other user's copy exits 1, `lxqt-session` restarts it five times and
+ *   shows «… crashed too many times».  Lubuntu's `lubuntu-update` does it (`ps axo comm |
+ *   grep lubuntu-update`); its purpose, installing updates, also asks for a password window,
+ *   which a remote session must not show.  Same recipe as the composition managers (a script
+ *   of the same name in the session's PATH) PLUS the system's autostart entry that names the
+ *   program by ABSOLUTE path, which the PATH cannot catch: an entry of the same file name in
+ *   the session's autostart folder (first in `XDG_CONFIG_DIRS`) covers the system's. */
+static const struct {
+	const char *program;
+	const char *autostart; /* the system's autostart file name, which ours covers */
+} LXQT_SHARED_SERVER_PROGRAMS[] = {
+	{ "lubuntu-update", "lubuntu-update-autostart.desktop" },
+	{ NULL, NULL },
+};
+
 static void lxqt_session_commands(void)
 {
 	g_autofree char *bin = lxqt_session_bin_folder();
@@ -5735,7 +7038,9 @@ static void lxqt_session_commands(void)
 	g_autofree char *quoted_loginctl = NULL;
 	g_autofree char *timeout = g_find_program_in_path("timeout");
 	g_autoptr(GError) mistake = NULL;
-	gboolean ok_leave, ok_power, ok_startup;
+	gboolean ok_leave, ok_power, ok_startup, ok_compositors = TRUE, ok_shared = TRUE;
+	gboolean ok_cover;
+	int compositors = 0, shared = 0;
 
 	if (!bin || !autostart_dir) {
 		registro_dice(LOG_SESSION,
@@ -5779,6 +7084,90 @@ static void lxqt_session_commands(void)
 	}
 	ok_leave = write_session_script(bin, "lxqt-leave", leave);
 	ok_power = write_session_script(bin, "lxqt-powermanagement", power);
+	/* ⭐ 18 Nov 2026: the X11 composition managers that are installed — same recipe */
+	for (int i = 0; LXQT_X11_COMPOSITORS[i]; i++) {
+		g_autofree char *its = lxqt_real_program(LXQT_X11_COMPOSITORS[i], bin);
+		g_autofree char *quoted_its = NULL;
+		g_autofree char *shim = NULL;
+
+		if (!g_file_test(its, G_FILE_TEST_IS_EXECUTABLE)) {
+			/* not (or no longer) installed: OUR script of an earlier birth must not
+			 * stay, or outside the remote session the name would be «not found» */
+			g_autofree char *ours = g_build_filename(bin, LXQT_X11_COMPOSITORS[i], NULL);
+
+			if (g_file_test(ours, G_FILE_TEST_EXISTS))
+				g_unlink(ours);
+			continue;
+		}
+		quoted_its = g_shell_quote(its);
+		shim = g_strdup_printf(LXQT_SCRIPT_HEAD
+		                       "command -v logger >/dev/null 2>&1 &&\n"
+		                       "\tlogger -t remotix \"%s: an X11 composition manager, not "
+		                       "started in the remote session (labwc composes)\"\n"
+		                       "echo \"%s: not started in the remote session (REMOTIX: labwc "
+		                       "is the compositor)\" >&2\n"
+		                       "exit 0\n",
+		                       "no X11 composition manager in the remote session", quoted_its,
+		                       quoted_loginctl, LXQT_X11_COMPOSITORS[i],
+		                       LXQT_X11_COMPOSITORS[i]);
+		if (write_session_script(bin, LXQT_X11_COMPOSITORS[i], shim))
+			compositors++;
+		else
+			ok_compositors = FALSE;
+	}
+	/* ⭐ 18 Nov 2026: the programs that count the processes of every user — same script, and
+	 *   the autostart entry that covers the system's (only if the program and the system's
+	 *   entry are there: otherwise nothing is written, and what an earlier birth left goes) */
+	for (int i = 0; LXQT_SHARED_SERVER_PROGRAMS[i].program; i++) {
+		const char *name = LXQT_SHARED_SERVER_PROGRAMS[i].program;
+		g_autofree char *its = lxqt_real_program(name, bin);
+		g_autofree char *ours = g_build_filename(bin, name, NULL);
+		g_autofree char *entry = g_build_filename(autostart_dir,
+		                                          LXQT_SHARED_SERVER_PROGRAMS[i].autostart,
+		                                          NULL);
+		g_autofree char *quoted_its = NULL;
+		g_autofree char *shim = NULL;
+		g_autofree char *text = NULL;
+		g_autofree char *old_entry = NULL;
+		gboolean ours_ok;
+
+		if (!g_file_test(its, G_FILE_TEST_IS_EXECUTABLE) ||
+		    !system_autostart_exists(LXQT_SHARED_SERVER_PROGRAMS[i].autostart)) {
+			/* not (or no longer) installed: nothing of ours stays — and only OURS goes */
+			if (g_file_test(ours, G_FILE_TEST_EXISTS))
+				g_unlink(ours);
+			if (g_file_get_contents(entry, &old_entry, NULL, NULL) &&
+			    strstr(old_entry, "X-REMOTIX"))
+				g_unlink(entry);
+			continue;
+		}
+		quoted_its = g_shell_quote(its);
+		shim = g_strdup_printf(LXQT_SCRIPT_HEAD
+		                       "command -v logger >/dev/null 2>&1 &&\n"
+		                       "\tlogger -t remotix \"%s: not started in the remote session "
+		                       "(it counts the processes of ALL users)\"\n"
+		                       "exit 0\n",
+		                       "no program that counts every user's processes in the remote "
+		                       "session",
+		                       quoted_its, quoted_loginctl, name);
+		/* by NAME, through the PATH: our script; a module that exits 0 is not restarted */
+		text = g_strdup_printf("[Desktop Entry]\nType=Application\nName=%s\nExec=%s\n"
+		                       "X-LXQt-Module=true\n"
+		                       "# X-REMOTIX: covers the system's entry of the same name\n",
+		                       name, name);
+		ours_ok = write_session_script(bin, name, shim) &&
+		          g_file_set_contents(entry, text, -1, &mistake);
+		if (ours_ok)
+			shared++;
+		else {
+			ok_shared = FALSE;
+			registro_dice(LOG_SESSION, "⛔ LXQt: the cover for %s is NOT in place (%s)", name,
+			              mistake ? mistake->message : g_strerror(errno));
+		}
+		g_clear_error(&mistake);
+	}
+	/* ⭐ 19 Nov 2026: the system's autostart entries a remote session must not start (blueman) */
+	ok_cover = session_autostart_cover(autostart_dir, "LXQt");
 	/* ⭐ 13 Nov 2026: the 1.5.0 leftover — `xdg-lxqt/autostart/lxqt-panel.desktop` with our
 	 *   `--configfile` — would start the OLD session panel: it is overwritten with the normal
 	 *   start (the system's own file, or the plain command if there is none) */
@@ -5834,20 +7223,25 @@ static void lxqt_session_commands(void)
 		              "real programs: «Leave» offers everything (suspend, reboot and power "
 		              "off stay forbidden by polkit)");
 	lxqt_user_autostart_warn();
-	if (ok_leave && ok_power && ok_startup)
+	if (ok_leave && ok_power && ok_startup && ok_compositors && ok_shared && ok_cover)
 		registro_dice(LOG_SESSION,
-		              "⭐ LXQt: %s: lxqt-leave (→ %s --logout) and lxqt-powermanagement "
-		              "(does nothing; the real one is %s) at the head of the session's PATH — "
+		              "⭐ LXQt: %s: lxqt-leave (→ %s --logout), lxqt-powermanagement "
+		              "(does nothing; the real one is %s), %d X11 composition manager(s) "
+		              "and %d program(s) that count every user's processes (do nothing; "
+		              "their autostart entry is covered by one of the session's) "
+		              "at the head of the session's PATH — "
 		              "ONLY inside a logind session of the PAM service «" LXQT_PAM_SERVICE
-		              "», anywhere else they are the real programs; no session autostart; "
-		              "the user's files are not touched",
-		              bin, real, real_power);
+		              "», anywhere else they are the real programs; the user's files are "
+		              "not touched",
+		              bin, real, real_power, compositors, shared);
 	else
 		registro_dice(LOG_SESSION,
 		              "⛔ LXQt: session commands NOT all in place (lxqt-leave %s, "
-		              "lxqt-powermanagement %s, old autostart %s)",
+		              "lxqt-powermanagement %s, old autostart %s, composition managers %s, "
+		              "shared-server programs %s)",
 		              ok_leave ? "ok" : "KO", ok_power ? "ok" : "KO",
-		              ok_startup ? "removed" : "NOT removed");
+		              ok_startup ? "removed" : "NOT removed", ok_compositors ? "ok" : "KO",
+		              ok_shared ? "ok" : "KO");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -6428,7 +7822,13 @@ static const char *WHISKER_HIDE[] = { "show-command-lockscreen", "show-command-s
 /* The panel's XML: `items` of the `actions` plugins and the exit buttons of the
  * `whiskermenu` plugins, locked; the user's values noted in the copy.  NULL if there is
  * no plugin to lock.  `wanted` gets {key, entries} pairs for the final re-read, `flags`
- * the keys of the whisker menu (all expected `false`). */
+ * the keys of the whisker menu (all expected `false`).
+ * ⛔ RULE of the lock files: only the LEAF keys we lock are defined there; a node that
+ *    is only the parent of a lock (`plugin-N`, `plugins`) is `type="empty"`, never a
+ *    value the user must own.  `xfconfd` does not write in the user's file a value
+ *    equal to the system's: with `plugin-N = whiskermenu` in the lock the user's file
+ *    kept `type="empty"` and, once the lock was gone, the plugin had no type and was
+ *    lost (D-X3). */
 static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrArray *wanted,
                               GPtrArray *flags)
 {
@@ -6439,11 +7839,11 @@ static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrAr
 	gboolean any = FALSE;
 
 	plugins = panel_action_plugins(&any);
-	whiskers = panel_plugins("whiskermenu", &any);
+	whiskers = panel_plugins(PLUGIN_WHISKER, &any);
 	if (!any) {
 		/* a user who never opened XFCE: the panel will migrate `default.xml` */
 		g_ptr_array_extend_and_steal(plugins, default_action_plugins());
-		g_ptr_array_extend_and_steal(whiskers, default_plugins("whiskermenu"));
+		g_ptr_array_extend_and_steal(whiskers, default_plugins(PLUGIN_WHISKER));
 	}
 	if (!plugins->len && !whiskers->len)
 		return NULL;
@@ -6466,7 +7866,7 @@ static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrAr
 		want = actions_without_power(user_items ? (const char *const *) user_items
 		                                        : (const char *const *) DEFAULT_ACTIONS);
 		g_string_append_printf(xml,
-		                       "    <property name=\"%s\" type=\"string\" value=\"actions\">\n"
+		                       "    <property name=\"%s\" type=\"empty\">\n"
 		                       "      <property name=\"items\" type=\"array\" locked=\"%s\">\n",
 		                       base + strlen("/plugins/"), who);
 		for (int j = 0; want[j]; j++) {
@@ -6485,9 +7885,8 @@ static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrAr
 		/* the plugin's own value too, as for `actions`; and WHICH plugin it is (restore) */
 		xfce_copy_note(copy, count, "xfce4-panel", base, "plugin");
 		group = g_strdup_printf("k%d", *count - 1);
-		g_key_file_set_string(copy, group, "plugin", "whiskermenu");
-		g_string_append_printf(xml, "    <property name=\"%s\" type=\"string\" "
-		                            "value=\"whiskermenu\">\n",
+		g_key_file_set_string(copy, group, "plugin", PLUGIN_WHISKER);
+		g_string_append_printf(xml, "    <property name=\"%s\" type=\"empty\">\n",
 		                       base + strlen("/plugins/"));
 		for (int j = 0; WHISKER_HIDE[j]; j++) {
 			char *key = g_strdup_printf("%s/%s", base, WHISKER_HIDE[j]);
@@ -6540,6 +7939,12 @@ static void xfce_session_xfconf(void)
 	 *    old 1.5.0 values are taken away ONCE, BEFORE the new copy.  ⚠ The keys that
 	 *    do not go back even now stay PENDING: step 2 keeps their originals. */
 	no_pending = xfce_restore_keys();
+	/* ⭐ D-X3: the repair is here, at the BIRTH of the session, not at the end of a
+	 *   restore: at the birth the lock of the last session is already gone from
+	 *   xfconfd (or the check says it is not and waits), and with the plugin's type no
+	 *   longer in the lock files (`xfce_panel_xml()`) nothing creates the damage anew —
+	 *   this only heals a user damaged before, once. */
+	xfce_panel_integrity();
 	xfce_migrate_old();
 
 	/* 2. THE COPY, before any lock: the user's value of each key we lock */
@@ -6785,7 +8190,7 @@ void session_settings(void)
 	/*
 	 * ⭐⭐ PHASE 15, D-015 (13 Nov 2026) — GNOME writes NOTHING here any more: the session's
 	 *     keys (Ctrl+Alt+F1…F12, «Log Out…», «Switch User», lock, suspend, standby)
-	 *     are value + lock in `locks.db` (`session_dconf_prepare()`).  Only the verify remains.
+	 *     are value + lock in `/etc/dconf/db/remotix` (`locks.db` in the fallback, `session_dconf_prepare()`).  Only the verify remains.
 	 */
 	session_dconf_verify();
 }
@@ -7037,6 +8442,22 @@ bool session_spawn(uint32_t width, uint32_t height)
 		return false;
 	}
 
+	/* ⭐ 18 Nov 2026: and neither if the desktop's compositor is not installed — the parent
+	 *    refuses before the birth (`main.c`), this is the same fact seen from here (an
+	 *    old child, a rebirth), said where this tenant's slice of the log is read */
+	{
+		const char *missing = session_missing_component();
+
+		if (missing) {
+			registro_dice(LOG_SESSION,
+			              "⛔ I am not making anything be born: %s needs `%s` and it is NOT "
+			              "installed on this server — the administrator must install the "
+			              "package `%s`",
+			              desktop_name(), missing, missing);
+			return false;
+		}
+	}
+
 	state = session_state(width, height, NULL);
 
 	if (state != SESSION_DEAD) {
@@ -7124,16 +8545,18 @@ bool session_spawn(uint32_t width, uint32_t height)
 	 *   function would be a child that stops answering (`LESSONS.md`
 	 *   §6.2-bis).
 	 */
-	if (!inactive_unit()) {
-		registro_dice(LOG_SESSION,
-		              "⛔ the PREVIOUS graphical session has not ended yet "
-		              "(«%s» is not inactive): I do not make a second one be born "
-		              "now — it would be born inside the one that is dying.  ⭐ Retrying "
-		              "shortly",
-		              e_kde()                   ? SESSION_UNIT_KWIN
-		              : (e_xfce() || e_lxqt()) ? "the process " SESSION_PROCESS_XFCE
-		                                        : gnome_session()->handler);
-		return false;
+	{
+		const char *busy_unit = NULL;
+
+		if (!inactive_unit(&busy_unit)) {
+			registro_dice(LOG_SESSION,
+			              "⛔ the PREVIOUS graphical session has not ended yet "
+			              "(«%s» is not inactive): I do not make a second one be born "
+			              "now — it would be born inside the one that is dying.  ⭐ Retrying "
+			              "shortly",
+			              busy_unit);
+			return false;
+		}
 	}
 
 	/*
@@ -7199,8 +8622,10 @@ bool session_spawn(uint32_t width, uint32_t height)
 	 *    `gnome-session` starts the Shell as the first thing, and a key
 	 *    written afterwards holds for the NEXT session — that is it is right tomorrow. */
 	/* ⭐ D-015: first the session dconf is emptied, then it is written to. */
-	if (desktop_session() == SESSION_DESKTOP_GNOME)
+	if (desktop_session() == SESSION_DESKTOP_GNOME) {
 		session_dconf_birth();
+		session_gnome_lock_warning();
+	}
 	session_settings();
 
 	return start(width, height) ? true : false;

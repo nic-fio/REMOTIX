@@ -1,10 +1,16 @@
 #!/bin/bash
-# prepara-server.sh - re-create the REMOTIX-DEBIAN dev tools after a reboot (rootfs is RAM).
+# prepara-server.sh - re-create the REMOTIX-UBUNTU dev tools after a reboot (rootfs is RAM).
 # Run as the normal user (nicfio); root steps go through `echo | sudo -S`. Idempotent.
 set -euo pipefail
 export LC_ALL=C DEBIAN_FRONTEND=noninteractive
 
-BASE=/media/REMOTIX-DEBIAN
+BASE=/media/REMOTIX-UBUNTU
+# podman storage: SHARED with the Debian work. The server's podman (user and root) already keeps all images
+# (Debian and Ubuntu: build image and boxes) under /media/REMOTIX-DEBIAN/podman. This script must not move it or
+# create another one (the existing images would become invisible), and must not need the Debian script to run first.
+# So the podman config files below are only written if absent, with that same path; if present they are left alone.
+# The Debian script writes the same content, so running both, in any order, they do not clash.
+PODMAN_BASE=/media/REMOTIX-DEBIAN
 ME=$(id -un); MYUID=$(id -u)
 HOME_DIR=$(getent passwd "$ME" | cut -d: -f6)
 RT=/run/user/$MYUID
@@ -28,10 +34,13 @@ step "hostname in /etc/hosts" fix_hosts
 
 # 2. work folders on the persistent disk
 mk_dirs() {
-    S mkdir -p "$BASE"/{podman/root,podman/user,lavoro,pacchetti,prove,tmp}
-    S chown "$ME:$ME" "$BASE" "$BASE"/{lavoro,pacchetti,prove,tmp,podman/user}
+    S mkdir -p "$BASE"/{albero,pacchetti,prove,vm,log,lavoro}
+    S chown "$ME:$ME" "$BASE" "$BASE"/{albero,pacchetti,prove,vm,log,lavoro}
+    # shared podman storage and temp folder (same as the Debian work; mkdir -p, never removes anything)
+    S mkdir -p "$PODMAN_BASE"/{podman/root,podman/user,tmp}
+    S chown "$ME:$ME" "$PODMAN_BASE" "$PODMAN_BASE"/{tmp,podman/user}
 }
-step "folders under $BASE" mk_dirs
+step "folders under $BASE (and shared podman storage under $PODMAN_BASE)" mk_dirs
 
 # 3. host packages (minimal: builds happen in containers)
 PKGS=(podman uidmap passt slirp4netns fuse-overlayfs crun git rsync curl ca-certificates)
@@ -48,10 +57,11 @@ step "apt packages: ${PKGS[*]}" inst_pkgs
 mk_rt() { S install -d -m 700 -o "$ME" -g "$ME" "$RT"; }
 step "$RT (mode 700)" mk_rt
 
-# 5. podman config: storage on disk (root and user), cgroupfs for the user
+# 5. podman config: storage on disk (root and user, shared with Debian, see PODMAN_BASE), cgroupfs for the user
 write_file() { # $1=dest $2=content $3=root|user
     local dest=$1 content=$2
-    if [ -f "$dest" ] && [ "$(cat "$dest")" = "$content" ]; then return 0; fi
+    # write only if absent: an existing file (the Debian script's, or the owner's) is never replaced
+    if [ -f "$dest" ]; then return 0; fi
     if [ "$3" = root ]; then
         S mkdir -p "$(dirname "$dest")"
         local t; t=$(mktemp); printf '%s\n' "$content" > "$t"   # sudo's stdin is taken by the password
@@ -62,12 +72,12 @@ write_file() { # $1=dest $2=content $3=root|user
     fi
 }
 cfg() {
-    write_file /etc/containers/storage.conf "$(printf '[storage]\ndriver = "overlay"\nrunroot = "/run/containers/storage"\ngraphroot = "%s/podman/root"' "$BASE")" root
-    write_file "$HOME_DIR/.config/containers/storage.conf" "$(printf '[storage]\ndriver = "overlay"\nrunroot = "%s/containers"\ngraphroot = "%s/podman/user"' "$RT" "$BASE")" user
-    write_file "$HOME_DIR/.config/containers/containers.conf" "$(printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\nimage_copy_tmp_dir = "%s/tmp"' "$BASE")" user
-    write_file /etc/containers/containers.conf.d/99-remotix.conf "$(printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\nimage_copy_tmp_dir = "%s/tmp"' "$BASE")" root
+    write_file /etc/containers/storage.conf "$(printf '[storage]\ndriver = "overlay"\nrunroot = "/run/containers/storage"\ngraphroot = "%s/podman/root"' "$PODMAN_BASE")" root
+    write_file "$HOME_DIR/.config/containers/storage.conf" "$(printf '[storage]\ndriver = "overlay"\nrunroot = "%s/containers"\ngraphroot = "%s/podman/user"' "$RT" "$PODMAN_BASE")" user
+    write_file "$HOME_DIR/.config/containers/containers.conf" "$(printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\nimage_copy_tmp_dir = "%s/tmp"' "$PODMAN_BASE")" user
+    write_file /etc/containers/containers.conf.d/99-remotix.conf "$(printf '[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\nimage_copy_tmp_dir = "%s/tmp"' "$PODMAN_BASE")" root
 }
-step "podman config (storage on $BASE/podman, cgroupfs)" cfg
+step "podman config (storage on $PODMAN_BASE/podman, cgroupfs; only if absent)" cfg
 
 # 6. user groups and subuid check
 chk_ids() {
@@ -126,9 +136,10 @@ sound_up() {
 }
 step "sound server (PipeWire-pulse, null sink) on $RT/pulse/native" sound_up
 
-# 9b. packages for the real-system VM (vm/, server/vm.sh): QEMU/KVM, qcow2 tools, cloud-init seed builder.
-#     No firmware package: the VM boots the cloud image with the default SeaBIOS.
-VM_PKGS=(qemu-system-x86 qemu-utils genisoimage acl)
+# 9b. packages for the real-system VMs (server/vm.sh, server/vm-radeon.sh): QEMU/KVM, qcow2 tools (qemu-img), seed ISO builder (genisoimage),
+#     UEFI firmware for vm-radeon.sh (ovmf), kernel/initrd extraction from the desktop ISOs (xorriso), /dev/kvm ACL (acl); disks built from ISO squashfs
+#     layers (gdisk, dosfstools, rsync; the kernel mounts squashfs itself).  vm.sh boots with SeaBIOS.
+VM_PKGS=(qemu-system-x86 qemu-utils genisoimage acl ovmf xorriso gdisk dosfstools rsync)
 inst_vm_pkgs() {
     local missing=() p
     for p in "${VM_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
@@ -143,12 +154,12 @@ step "/dev/kvm usable by $ME" kvm_acl
 
 # 10. self-check
 PU() { env XDG_RUNTIME_DIR="$RT" podman "$@"; }
-selfcheck_user() { [ "$(PU run --rm docker.io/library/debian:trixie cat /etc/debian_version)" ]; }
-selfcheck_root() { [ "$(S podman run --rm docker.io/library/debian:trixie cat /etc/debian_version)" ]; }
-step "self-check rootless: podman run debian:trixie" selfcheck_user
-step "self-check root (sudo): podman run debian:trixie" selfcheck_root
+selfcheck_user() { [ "$(PU run --rm docker.io/library/ubuntu:26.04 cat /etc/os-release)" ]; }
+selfcheck_root() { [ "$(S podman run --rm docker.io/library/ubuntu:26.04 cat /etc/os-release)" ]; }
+step "self-check rootless: podman run ubuntu:26.04" selfcheck_user
+step "self-check root (sudo): podman run ubuntu:26.04" selfcheck_root
 echo "graphroot user: $(PU info --format '{{.Store.GraphRoot}}' 2>&1 | tail -1)"
 echo "graphroot root: $(S podman info --format '{{.Store.GraphRoot}}' 2>&1 | tail -1)"
-echo "debian version (user): $(PU run --rm docker.io/library/debian:trixie cat /etc/debian_version 2>&1 | tail -1)"
+echo "ubuntu version (user): $(PU run --rm docker.io/library/ubuntu:26.04 grep ^VERSION= /etc/os-release 2>&1 | tail -1)"
 
 if [ "$FAILS" -eq 0 ]; then echo "ALL OK"; else echo "$FAILS step(s) FAILED"; exit 1; fi

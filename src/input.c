@@ -1504,7 +1504,13 @@ Input *input_open_kwin(KwinSession *kwin, uint32_t canvas_w, uint32_t canvas_h, 
 
 int input_dropped(const Input *in)
 {
-	return in && !in->wlr && in->dropped;
+	if (!in)
+		return 0;
+	/* ⭐ wlroots (XFCE, LXQt): the flag lives in the `WlrInput`, which stays in `in->wlr` after
+	 *    the drop until a reattach replaces it; `in->dropped` is the libei/GNOME flag. */
+	if (in->wlr)
+		return wlr_input_dropped(in->wlr);
+	return in->dropped;
 }
 
 int input_descriptor(Input *in)
@@ -2224,9 +2230,12 @@ int input_layout(Input *in, const char *name)
 	 * Until today this write ended up in the USER's dconf
 	 * (`~/.config/dconf/user`) and stayed there: whoever then logged in at the monitor
 	 * found the keyboard changed.  ⭐ Now the child reads and writes
-	 * through the SESSION's dconf (`session_dconf_prepare()`: an
-	 * in-memory database on top, the user's below read-only),
+	 * through the SESSION's dconf (`session_dconf_prepare()`: a
+	 * database of ours on top, the user's below read-only),
 	 * and so does the Shell.
+	 * ⭐ 19 Nov 2026: that database is the user-db `remotix` (`~/.config/dconf/remotix`, written by the dconf
+	 *    service, locks in `system-db:remotix` above it); only in the declared fallback is it still the
+	 *    in-memory `shm/remotix`.  `DCONF_SESSION_OBJECT` names the right writer; nothing else changed here.
 	 * ⛔ And if that dconf is not there, we do NOT write: better a layout not
 	 *    applied, and said, than one written where the user does not want it.
 	 */
@@ -2275,7 +2284,7 @@ int input_layout(Input *in, const char *name)
 	value = g_strdup_printf("[('xkb','%s')]", xkb);
 
 	/* ⛔ `current` first: with a shorter list an old index outside it means "none".
-	 * D-015: written in the session's `shm` by the dconf writer (the `input-sources` keys
+	 * D-015: written in the session's database (`remotix`, 19 Nov 2026; `shm` in the fallback) by the dconf writer (the `input-sources` keys
 	 * are locked above it: the user's file is not touched, and GSettings would be refused). */
 	if (!dconf_change(DCONF_SESSION_OBJECT, "/org/gnome/desktop/input-sources/current",
 	                  g_variant_new_uint32(0), &wmistake) ||

@@ -430,6 +430,11 @@ size_t wt_dismiss_ticket(uint64_t ticket, uint8_t reason, const char *detail);
 /* ⛔ 1.5.4: like `wt_dismiss_user()`, only the sessions that LOGGED IN (never a connection still waiting for PAM). */
 size_t wt_dismiss_user_logged(const char *user, uint8_t reason, const char *detail);
 
+/* ⭐ The graphical session of `user` is over: the farewell at once to the LOGGED sessions, KEPT until the fixed second
+ *    for a login already admitted but not yet told (`rcp_dismiss_login()`), nothing to a connection still waiting for
+ *    PAM or already refused.  Returns how many were sent away. */
+size_t wt_dismiss_user_session_over(const char *user, uint8_t reason, const char *detail);
+
 /* ⭐ The canvas cap that the sessions of that user can decode —
  *    `video.max_size` of §4.3, the widest if there is more than one.
  * ⛔ It serves the BUDGET (phase 10): at `delivery_verdict()` the canvas is

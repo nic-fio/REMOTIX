@@ -346,6 +346,13 @@ void children_hook_session_finished(children *f, ChildSessionFinished fn, void *
 typedef void (*ChildLocalFound)(void *ctx, const char *user, uid_t uid);
 void children_hook_local_found(children *f, ChildLocalFound fn, void *ctx);
 
+/* ⭐ 19 Nov 2026 — "THE STAGE WAS REFUSED FOR THE SCALE" (guard 2, §5.0-sexies): a fault no retry cures, and the child
+ *     is going to close the session.  The parent sends the user's clients away with 0x0E (the generic «could not open
+ *     your session») instead of leaving them in front of a black page.  Called ONLY for that refusal, never for the
+ *     transient faults of the birth. */
+typedef void (*ChildStageRefused)(void *ctx, const char *user, uid_t uid);
+void children_hook_stage_refused(children *f, ChildStageRefused fn, void *ctx);
+
 children *children_turn_on(uint32_t canvas_w, uint32_t canvas_h, const char *dir_survey,
                      ChildRepository deposit, ChildFarewell dismiss,
                      ChildCursor cursor, ChildCanvas canvas, void *ctx);

@@ -117,6 +117,8 @@ session    optional     pam_motd.so  motd=/run/motd.dynamic
 session    optional     pam_motd.so noupdate
 session    optional     pam_mail.so standard noenv
 session    required     pam_limits.so
+# ⛔ The session's PATH comes from this `pam_env` line (/etc/environment): child.c takes it as a local login gets it.  Do NOT add
+#    `user_readenv=1`: the user would choose the PATH of their own session from ~/.pam_environment.
 session    required     pam_env.so
 session    required     pam_env.so envfile=/etc/default/locale
 session [success=ok ignore=ignore module_unknown=ignore default=bad]        pam_selinux.so open

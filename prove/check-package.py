@@ -106,7 +106,7 @@ class Ctx:
         self.save("reset.txt", r.stdout + r.stderr)
         if r.returncode:
             raise ToolError("box reset failed: %s" % (r.stdout + r.stderr)[-200:])
-        # the image (like the Docker debian one) has /usr/sbin/policy-rc.d answering 101 «no»: dpkg then never stops or starts a
+        # the image (like the Docker Ubuntu one) has /usr/sbin/policy-rc.d answering 101 «no»: dpkg then never stops or starts a
         # service. A real machine has none, so the box would not show what the package's scripts do. Box only, before the snapshot.
         self.sh("test -e /usr/sbin/policy-rc.d && rm -f /usr/sbin/policy-rc.d; true")
         c, t = self.sh("apt-get update -qq >/dev/null 2>&1; echo $?", timeout=200)

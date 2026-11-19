@@ -51,7 +51,7 @@ from lib import PASS, FAIL, BLOCKED, Fail, ToolError  # noqa: E402
 PW = "dkpass2026"
 NAMES = ("power-entries-absent", "no-password-windows", "users-shell-and-environment", "settings-intact", "canvas-limits",
          "reattach-windows-inside", "session-cap")
-TERMINAL = {"xfce": "xfce4-terminal", "lxqt": "qterminal", "gnome": "gnome-terminal", "kde": "konsole"}
+TERMINAL = {"xfce": "xfce4-terminal", "lxqt": "qterminal", "gnome": "ptyxis", "kde": "konsole"}
 FILEMGR = {"xfce": "thunar", "lxqt": "pcmanfm-qt", "gnome": "nautilus", "kde": "dolphin"}
 SHELLS = ("bash", "sh", "dash", "zsh", "fish")
 POWER_ACTION = re.compile(r"^org\.freedesktop\.login1\.(power-off|reboot|halt|suspend|hibernate)(-multiple-sessions|-ignore-inhibit)?$")
@@ -298,7 +298,9 @@ def check_shell(rig, de):
     # sudo
     c, t = K.run_in(box, de, user, "sudo -n true 2>&1; echo rc=$?", timeout=30)
     sudo = t.replace("\n", " ")[:100]
-    if "rc=0" in t or "password" not in t and "not in the sudoers" not in t:
+    # GNU sudo says «a password is required» / «not in the sudoers file»; sudo-rs (Ubuntu 26.04) says «I'm sorry <user>. I'm afraid I
+    # can't do that» (not in sudoers) or «interactive authentication is required» (in group sudo, no tty); all of them rc=1
+    if "rc=0" in t or "rc=1" not in t or not any(s in t for s in ("password", "not in the sudoers", "I'm afraid I can't do that", "interactive authentication is required")):
         bad.append("sudo -n by the plain user: %s (expected: refused / password required)" % sudo)
     # pkexec: the agent must ask (BeginAuthentication) - never answered, killed after 8 s
     have_pkexec = box.run("command -v pkexec >/dev/null && echo yes")[1].strip() == "yes"
@@ -354,7 +356,7 @@ DCONF_SEED = [("org/gnome/desktop/interface", "gtk-theme", "'Adwaita-dark'"), ("
               ("org/gnome/settings-daemon/plugins/power", "sleep-inactive-ac-type", "'suspend'"),
               ("org/gnome/desktop/screensaver", "lock-enabled", "true"), ("org/gnome/shell", "always-show-log-out", "false")]
 VOLATILE = re.compile(r"^\./(\.cache/(?!sessions)|\.local/state/|\.local/share/(Trash|recently-used|gvfs-metadata|xorg|gnome-shell/session)|\.config/pulse|\.dbus|"
-                      r"\.ICEauthority|\.Xauthority|\.xsession-errors|\.config/dconf/user|\.local/share/applications/mimeinfo|\.config/session/|\.config/Trolltech)")
+                      r"\.ICEauthority|\.Xauthority|\.xsession-errors|\.config/dconf/user|\.config/dconf/remotix$|\.local/share/applications/mimeinfo|\.config/session/|\.config/Trolltech)")
 SNAP = "cd /home/%s 2>/dev/null && find . -xdev -type f -print0 | xargs -0 -r sha256sum | sed 's/^\\([0-9a-f]*\\) *\\(.*\\)$/\\2\\t\\1/'"
 
 
@@ -654,6 +656,19 @@ def settle_view(rig, cap=40):
     raise Fail("no decoded frame / no canvas rectangle in %d s (painted=%s)" % (cap, s.get("painted")))
 
 
+def still_png(rig, cap=30, gap=1.5):
+    """The canvas picture once it stands still: two shots `gap` s apart that `lib.settled` calls equal, within `cap` s.
+    Returns (png, stood_still). A window still animating its opening, or Plasma's start screen, is not measured."""
+    end, prev = time.time() + cap, rig.canvas_png()
+    while time.time() < end:
+        time.sleep(gap)
+        cur = rig.canvas_png()
+        if lib.settled(prev, cur):
+            return cur, True
+        prev = cur
+    return prev, False
+
+
 def check_canvas(rig, de):
     box = rig.box
     sizes = [(1280, 720), (200, 150), (320, 240), (1001, 701), (3000, 300), (400, 2000), (3840, 2160), (4096, 2304), (5120, 2880), (5120, 1440)]
@@ -668,7 +683,14 @@ def check_canvas(rig, de):
     box.run("pkill -u dk5 -f geom-window; true")
     K.put(box, "geom-window.py", "/tmp/rx-geom-window.py")
     box.in_session("dk5", "python3 /tmp/rx-geom-window.py frame /tmp/rx-geom.log 2>/tmp/rx-geom.err")
-    time.sleep(6)
+    # the window says when it is up (`ev:"ready"`): in a desktop that is still starting it can take over a minute (measured: up to ~78 s
+    # in the boxes, the toolkit waits for services that are not up yet), so a fixed wait photographs a window that is not there or half open
+    for _ in range(150):
+        time.sleep(1)
+        if '"ready"' in box.run("cat /tmp/rx-geom.log 2>/dev/null; true")[1]:
+            break
+    else:
+        raise lib.ToolError("the test window did not report ready in 150 s: nothing to measure")
     rows, bad, caps = [], [], []
     for i, (vw, vh) in enumerate(sizes):
         try:
@@ -694,10 +716,19 @@ def check_canvas(rig, de):
         inbox = (sz[-1]["w"], sz[-1]["h"]) if sz else None
         rect = s["rect"]
         scale = min(1.0, vcw / ex[0], vch / ex[1])
-        png = rig.canvas_png()
+        png, still = still_png(rig)
         ok_q, ok_e, pic = look_frame(png)
-        line = "view %dx%d (page client area %dx%d) -> canvas expected %dx%d, page says %s, desktop inside the box %s, viewer %.0fx%.0f (expected %.0fx%.0f at scale %.2f), picture %dx%d quadrants %s edges %s" % (
-            vw, vh, vcw, vch, ex[0], ex[1], page_c, inbox, rect[2], rect[3], ex[0] * scale, ex[1] * scale, scale, pic[0], pic[1], "ok" if ok_q else "WRONG", "ok" if ok_e else "WRONG")
+        retried = ""
+        if not (ok_q and ok_e) and not still:  # ONE new attempt, declared, and ONLY for a picture that never stood still: a window still opening
+            first_pn = shot("canvas-%dx%d-%s-first" % (vw, vh, de), png)  # the first picture is always kept
+            first = "quadrants %s edges %s, picture never stood still, kept as shots/%s" % ("ok" if ok_q else "WRONG", "ok" if ok_e else "WRONG", first_pn)
+            time.sleep(5)
+            png, still = still_png(rig)
+            ok_q, ok_e, pic = look_frame(png)
+            retried = " [RETRIED once: first picture was %s]" % first
+        line = "view %dx%d (page client area %dx%d) -> canvas expected %dx%d, page says %s, desktop inside the box %s, viewer %.0fx%.0f (expected %.0fx%.0f at scale %.2f), picture %dx%d quadrants %s edges %s%s%s" % (
+            vw, vh, vcw, vch, ex[0], ex[1], page_c, inbox, rect[2], rect[3], ex[0] * scale, ex[1] * scale, scale, pic[0], pic[1], "ok" if ok_q else "WRONG", "ok" if ok_e else "WRONG",
+            retried, "" if still else " [picture never stood still]")
         pn = shot("canvas-%dx%d-%s" % (vw, vh, de), png) if (not ok_q or not ok_e or i in (0, 1, 7, 8)) else ""
         problems = []
         if page_c != ex:
@@ -707,10 +738,12 @@ def check_canvas(rig, de):
         if abs(rect[2] - ex[0] * scale) > max(3, ex[0] * scale * 0.02) or abs(rect[3] - ex[1] * scale) > max(3, ex[1] * scale * 0.02):
             problems.append("viewer rectangle %.0fx%.0f is not the canvas at scale %.2f (%.0fx%.0f): bands or stretch the spec does not promise" % (
                 rect[2], rect[3], scale, ex[0] * scale, ex[1] * scale))
+        # ⛔ a picture that STANDS STILL and is wrong is not «a window still opening»: it is a frame that stays wrong, said apart
+        wrong = "still frame, wrong: " if still and (not ok_q or not ok_e) else ""
         if not ok_q:
-            problems.append("the four quadrant colours are not where they must be (half picture / shifted)")
+            problems.append(wrong + "the four quadrant colours are not where they must be (half picture / shifted)")
         if not ok_e:
-            problems.append("the white frame is not on all four edges (a cut picture)")
+            problems.append(wrong + "the white frame is not on all four edges (a cut picture)")
         print("NOTE canvas-limits " + line[:300], flush=True)
         rows.append(line + (" -- " + "; ".join(problems) + (" [shots/%s]" % pn if pn else "") if problems else ""))
         if problems:
@@ -727,16 +760,20 @@ def bbox(png, rgb=(0, 255, 255), tol=90):
     im = Image.open(io.BytesIO(png)).convert("RGB")
     w, h = im.size
     small = im.resize((w // 2, h // 2))
-    xs, ys = [], []
+    cols, rows = [0] * small.width, [0] * small.height
     data = small.load()
     for y in range(small.height):
         for x in range(small.width):
             p = data[x, y]
             if sum(abs(p[i] - rgb[i]) for i in range(3)) < tol:
-                xs.append(x)
-                ys.append(y)
-    if len(xs) < 50:
+                cols[x] += 1
+                rows[y] += 1
+    if sum(cols) < 50:
         return None
+    # A few stray pixels of the desktop that are near the colour (KDE's sky-blue launcher icon in the panel) must not stretch the box:
+    # only columns and rows holding at least a tenth of the densest column/row belong to the window.
+    xs = [x for x, n in enumerate(cols) if n >= max(cols) / 10]
+    ys = [y for y, n in enumerate(rows) if n >= max(rows) / 10]
     return (min(xs) * 2, min(ys) * 2, max(xs) * 2 + 1, max(ys) * 2 + 1)
 
 

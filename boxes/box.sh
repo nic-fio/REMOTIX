@@ -1,18 +1,18 @@
 #!/bin/bash
 #
-# box.sh — Debian 13 test boxes, one systemd container per desktop (xfce, lxqt, gnome, kde).
+# box.sh — Ubuntu 26.04 test boxes, one systemd container per desktop (gnome=Ubuntu, kde=Kubuntu, xfce=Xubuntu, lxqt=Lubuntu).
 # Run on the dev server (root podman, cgroupfs; sudo with empty password is handled).
 #
-#   build <de>              image rx/<de> from Containerfile (no REMOTIX inside)
-#   boot <de>               start rx-<de> (systemd, /dev/dri, sshd), check it, wait for ssh
+#   build <de>              image rxu/<de> from Containerfile (no REMOTIX inside)
+#   boot <de>               start rxu-<de> (systemd, /dev/dri, sshd), check it, wait for ssh
 #   shutdown <de>           stop it (the container stays, stopped)
 #   status                  the four boxes: state and ports
 #   ssh <de> [cmd...]       a command (or a shell) inside, as root, via ssh on 127.0.0.1
-#   install <de> <x.deb>    copy the .deb in and run `apt install -y ./file.deb`, print apt's result
+#   install <de> <x.deb>    copy the .deb in and run `apt install -y --reinstall ./file.deb` (a same-version package replaces the files too), print apt's result
 #   reset <de>              throw the container away and boot a fresh one from the image
 #
 # Ports (the boxes share the host network, so every box has its own):
-#   ssh 2211..2214; REMOTIX 8811..8814 (TCP page + UDP QUIC, same number). `install` writes
+#   ssh 2221..2224; REMOTIX 8821..8824 (gnome 1, kde 2, xfce 3, lxqt 4) (TCP page + UDP QUIC, same number). `install` writes
 #   REMOTIX_PORT=<port> into /etc/remotix/remotix.conf.d/10-box-port.conf, because the default 7447
 #   would clash between boxes.
 set -euo pipefail
@@ -31,9 +31,9 @@ fi
 
 choose() {  # sets DE, NAME, IMAGE, PSSH, PRX
 	DE=${1:-}
-	case $DE in xfce) k=1 ;; lxqt) k=2 ;; gnome) k=3 ;; kde) k=4 ;; *) die "desktop \"$DE\": xfce|lxqt|gnome|kde" ;; esac
-	NAME=rx-$DE; IMAGE=rx/$DE:latest
-	PSSH=$((2210 + k)); PRX=$((8810 + k))
+	case $DE in gnome) k=1 ;; kde) k=2 ;; xfce) k=3 ;; lxqt) k=4 ;; *) die "desktop \"$DE\": xfce|lxqt|gnome|kde" ;; esac
+	NAME=rxu-$DE; IMAGE=rxu/$DE:latest
+	PSSH=$((2220 + k)); PRX=$((8820 + k))
 }
 running() { [ "$(P inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null || true)" = true ]; }
 ssh_box() {
@@ -44,7 +44,7 @@ ssh_box() {
 verb=${1:-}; [ -n "$verb" ] || die "usage: box.sh build|boot|shutdown|status|ssh|install|reset ..."; shift
 
 if [ "$verb" = status ]; then
-	for d in xfce lxqt gnome kde; do
+	for d in gnome kde xfce lxqt; do
 		choose "$d"
 		s=$(P ps -a --filter "name=^$NAME\$" --format '{{.Status}}' 2>/dev/null || true)
 		printf '%-9s %-28s ssh %s  REMOTIX %s  image %s\n' "$NAME" "${s:-no container}" "$PSSH" "$PRX" \
@@ -87,7 +87,7 @@ boot() {
 
 case $verb in
 build)
-	[ -f "$KEY" ] || ssh-keygen -q -t ed25519 -N "" -C rx-box -f "$KEY"
+	[ -f "$KEY" ] || ssh-keygen -q -t ed25519 -N "" -C rxu-box -f "$KEY"
 	cd "$HERE"
 	P build --network=host --build-arg "DESKTOP=$DE" --build-arg "SSH_PORT=$PSSH" -t "$IMAGE" -f Containerfile . \
 		|| die "build of $DE failed"
@@ -107,7 +107,7 @@ install)
 	P cp "$deb" "$NAME:$f" || die "cannot copy $deb into $NAME"
 	# the image carries no package lists: refresh them first, as on a real machine (else Depends/Recommends are «not installable»)
 	P exec "$NAME" apt-get update -qq >/dev/null 2>&1 || die "apt-get update failed in $NAME"
-	if P exec -e DEBIAN_FRONTEND=noninteractive "$NAME" apt-get install -y "$f" 2>&1 | tail -n 25 | sed 's/^/     /' \
+	if P exec -e DEBIAN_FRONTEND=noninteractive "$NAME" apt-get install -y --reinstall "$f" 2>&1 | tail -n 25 | sed 's/^/     /' \
 		&& [ "${PIPESTATUS[0]}" -eq 0 ]; then
 		P exec "$NAME" sh -c "mkdir -p /etc/remotix/remotix.conf.d && echo REMOTIX_PORT=$PRX > /etc/remotix/remotix.conf.d/10-box-port.conf"
 		ok "$(basename "$deb") installed in $NAME (REMOTIX_PORT=$PRX; the service is as the package leaves it)"
