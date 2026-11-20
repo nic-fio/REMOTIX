@@ -2,7 +2,7 @@
 
 BOZZA del 20 nov 2026. Vale per la cartella `ubuntu26.04/` del ramo `main` del repo pubblico `https://github.com/nic-fio/REMOTIX`.
 
-Il 20 nov 2026 il repo è stato riordinato: un solo ramo `main` con una cartella per distribuzione (`debian13/`, `ubuntu26.04/`). **Dopo il riordino i comandi qui sotto sono aggiornati ma la costruzione NON è stata riprovata** (verrà riprovata a parte): le marche PROVATO sotto valgono per la forma precedente del repo (un ramo per distribuzione, clone nella cartella `ubuntu`).
+Il 20 nov 2026 il repo è stato riordinato: un solo ramo `main` con una cartella per distribuzione (`debian13/`, `ubuntu26.04/`). **Dopo il riordino la costruzione del pacchetto è stata riprovata lo stesso giorno** dalla forma nuova, con i comandi scritti qui sotto: impronta identica a quella attesa. Le altre marche PROVATO (preparazione del server, manuali) valgono per la prova fatta poche ore prima sulla forma precedente a due rami. Nota pratica: via ssh la costruzione va lanciata in modo che sopravviva alla chiusura del collegamento (`setsid nohup … &`), con il registro fuori dall'albero del repo.
 
 Ogni passo è marcato:
 
