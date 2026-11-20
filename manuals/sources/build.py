@@ -3,9 +3,7 @@ nic-fio's projects (AMS, EFI_PARTITION_MANAGER, HOSTER, MTERM, NESH, PHONESTRA,
 SCRAPER): the canon was taken from PHONESTRA on 10 Oct 2026.
 
 It produces self-contained HTML files (no external files), in English:
-  manuals/Technical Manual — Debian 13.html   from the chapters in technical-debian13/chNN_*.py
   manuals/Technical Manual — Ubuntu 26.04.html  from the chapters in technical-ubuntu26.04/chNN_*.py  (key "tecnico-ubuntu")
-  manuals/User Manual.html                     from the chapters in user/chNN_*.py
   manuals/User Manual — Ubuntu 26.04.html      from the chapters in user-ubuntu26.04/chNN_*.py  (key "utente-ubuntu")
 A chapter directory that is still empty is skipped: what exists is built.
 
@@ -18,8 +16,8 @@ common canon, identical byte for byte in all the manuals, and are not modified
 here; REMOTIX's only additions live in EXTRA_CSS, below.
 The file map and the numbers table are counted from the sources at every generation.
 
-    python3 manuals/sources/build.py [tecnico|tecnico-ubuntu|utente|utente-ubuntu]          regenerates the manuals (default: all)
-    python3 manuals/sources/build.py --check [tecnico|tecnico-ubuntu|utente|utente-ubuntu]  checks that they are aligned with the code
+    python3 manuals/sources/build.py [tecnico-ubuntu|utente-ubuntu]          regenerates the manuals (default: all)
+    python3 manuals/sources/build.py --check [tecnico-ubuntu|utente-ubuntu]  checks that they are aligned with the code
 
 It needs the pygments and Pillow libraries (packages python3-pygments and python3-pil).
 """
@@ -38,11 +36,8 @@ DATE = "November 2026"
 VERSION = re.search(r"RX_VERSION:-([0-9.]+)", (ROOT / "build" / "build-deb.sh").read_text()).group(1)
 
 MANUALS = {
-    "tecnico": dict(dir="technical-debian13", file="Technical Manual — Debian 13.html",
-                    title="Technical Manual — REMOTIX for Debian 13", h1="Technical Manual — Debian 13"),
     "tecnico-ubuntu": dict(dir="technical-ubuntu26.04", file="Technical Manual — Ubuntu 26.04.html",
                            title="Technical Manual — REMOTIX for Ubuntu 26.04", h1="Technical Manual — Ubuntu 26.04"),
-    "utente": dict(dir="user", file="User Manual.html", title="User Manual — REMOTIX", h1="User Manual"),
     "utente-ubuntu": dict(dir="user-ubuntu26.04", file="User Manual — Ubuntu 26.04.html",
                           title="User Manual — REMOTIX for Ubuntu 26.04", h1="User Manual — Ubuntu 26.04"),
 }

@@ -235,8 +235,6 @@ def _manual_rows():
                 role = "common script: search, copy button (canon, not modified)"
             elif "technical-ubuntu26.04" in rel:
                 role = "chapter of this manual"
-            elif "technical-debian13" in rel:
-                role = "chapter of the Debian 13 manual (kept in this tree as it was written for the main branch; not updated to this branch)"
             else:
                 role = "chapter of the User Manual"
             rows.append((rel, role))
@@ -245,6 +243,6 @@ def _manual_rows():
 MAP[-1] = (MAP[-1][0], _manual_rows())
 
 CHAPTER = ("Appendix B — File map", [
-    ("Every file of the tree", p("Every file tracked by git under the directories below, with its line count, counted when the manual is generated. The generator fails if a file is missing from this map or if the map cites a file that no longer exists, so the map cannot drift from the tree. The folders docs/, studio/ and licenses/ and the files of the top level are not in the map. The sources of the Debian 13 manual are listed as they are: they are the manual of the branch main and are not updated to this branch. For what each part does, follow the chapter that describes it (" + "the chapter list at the start of this manual" + ")."
+    ("Every file of the tree", p("Every file tracked by git under the directories below, with its line count, counted when the manual is generated. The generator fails if a file is missing from this map or if the map cites a file that no longer exists, so the map cannot drift from the tree. The folders docs/, studio/ and licenses/ and the files of the top level are not in the map. For what each part does, follow the chapter that describes it (" + "the chapter list at the start of this manual" + ")."
         ) + file_map(MAP, "«TAB» — The files of REMOTIX, by part.")),
 ])

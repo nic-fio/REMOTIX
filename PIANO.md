@@ -31,7 +31,8 @@ indicano dove stavano le prove: non esistono più.
   installata?). Niente si pubblica finché non lo dice lui.
 - `docs/STORIA-ubuntu-26.04.md` contiene l'indirizzo di rete di casa e la password di prova (testo già pubblico dal
   commit `50d997b`): lasciare o togliere.
-- Riordino del repo (una cartella per distribuzione); su questo ramo restano anche i manuali di Debian.
+- Riordino del repo (una cartella per distribuzione). Deciso il 20 nov: entrambi i manuali sono per distribuzione; da
+  questo ramo sono stati tolti i manuali di Debian. Sito: preparato in locale (piano nel `PIANO.md` di `main`).
 - Poi Fedora, poi Arch.
 
 ## Piccole cose del prodotto, non bloccanti, nessuna fatta
