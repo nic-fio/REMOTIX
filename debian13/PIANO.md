@@ -2,6 +2,8 @@
 
 Deciso dal proprietario il 17 nov 2026. Stato: **in corso** (vedi «Stato» in fondo).
 
+- **20 nov 2026, riordino del repo:** un solo ramo `main`, una cartella per distribuzione (`debian13/`, `ubuntu26.04/`), ciascuna autonoma. Il ramo `ubuntu-26.04` è stato unito dentro `ubuntu26.04/` con la storia. Nei testi più sotto, «ramo `main`» e «ramo `ubuntu-26.04`» (voci datate prima del riordino) vanno letti come le cartelle `debian13/` e `ubuntu26.04/`. Costruzione non riprovata dopo lo spostamento.
+
 ## Obiettivo
 REMOTIX funzionante su Debian 13, con i 4 desktop (XFCE, LXQt, GNOME, KDE), con le specifiche originali
 (`SPECS.md`, `RCP.md`, `DECISIONS.md` del vecchio repo). Il codice è solo per Debian: nessun riconoscimento

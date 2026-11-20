@@ -4,6 +4,7 @@ Remote desktop server: browser client over WebTransport/QUIC, PAM login, per-use
 This repo is the **Debian 13 (trixie) only** rewrite of REMOTIX; installed with `apt install ./remotix_*.deb`, no installer.
 Plan and steps: `PIANO.md`. Specs: `docs/SPECS.md`, `docs/RCP.md`, `docs/DECISIONS.md`, `docs/DECISIONS-11.md`, `docs/LESSONS.md`.
 ## Layout
+- Since 20 Nov 2026 this directory is `ubuntu26.04/` inside the single `main` branch of the repo (one self-contained directory per distribution: `debian13/`, `ubuntu26.04/`). Work inside it; paths below are relative to it.
 - `src/` product (C, Makefile, page.html, PAM file, polkit rules); `debian/` packaging (control, rules, maintainer scripts);
   `build/` container build (`build-deb.sh`, `Containerfile`, `quic-static.sh`); `docs/` specs and the non-Debian inventory
   (`docs/INVENTARIO-non-debian.md`: code still to remove, later and reviewed); `server/` the dev-server set-up scripts.
