@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>User Manual — REMOTIX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>User Manual — REMOTIX for Debian 13</title>
 <style>/* Stile comune dei manuali dei 7 progetti (nic-fio). Uguale byte per byte in tutti i manuali: non modificare in un solo progetto. */
 /* Base: style.css di AMS */
 *{box-sizing:border-box} html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -167,7 +167,7 @@ pre{tab-size:4;-moz-tab-size:4}
 <div class="doc">
   <section class="cover cover-w">
     
-    <h1 class="cover-title">User Manual</h1>
+    <h1 class="cover-title">User Manual — Debian 13</h1>
     <div class="cover-meta">
       <div><span>Version</span><b>1.0.0</b></div>
       <div><span>Date</span><b>November 2026</b></div>
@@ -218,7 +218,7 @@ REMOTIX_OPTIONS=--name 192.168.1.10 --session-cap 6</code></pre><p>Then restart 
 └── render-grants<span class="m">  # permissions given on the card</span>
 <span class="d">~/.local/state/remotix/</span><span class="m">  # in each user's home: the session log and a few records</span></pre><figcaption class="cap">Figure 5.1 — Folders and files</figcaption></figure><p><b>Certificates.</b> They live in <code class="sys">/var/lib/remotix/net/certificates/</code> (see <a href="#ch2s5">2.5 “Debian 13: the first visit and the certificate”</a>). The page's certificate lasts a year and is made again when it expires; the short-lived one used by the video connection is renewed by the service well before it runs out. <b>The ban list</b> is <code class="sys">/var/lib/remotix/net/ban</code>. It does not hold any user name (they are stored in a scrambled form), is rewritten by REMOTIX, and survives restarts; do not edit it.</p></section></section><section class="chapter" id="ch6"><div class="ch-head"><span class="ch-kick">Chapter 6</span><h2 class="h-ch">Glossary</h2></div><section class="sec" id="ch6s1"><h3 class="h-sec">6.1 · Words used in this manual</h3><dl class="deflist"><dt>Abandonment</dt><dd>The 60-minute clock: after an hour without any input from the user, the desktop and its programs are closed.</dd><dt>Ban</dt><dd>The temporary refusal of sign-ins from an address, or of one user name from an address, after too many wrong passwords. It lasts 15 minutes, then 1 hour, then 12 hours, and only time ends it.</dd><dt>Canvas</dt><dd>The desktop's size in pixels, decided when you sign in from the size of your browser window.</dd><dt>Desktop</dt><dd>GNOME, KDE Plasma, XFCE or LXQt: the windows, panels and programs you work with.</dd><dt>Detach</dt><dd>To leave without ending: the connection goes, the desktop and its programs stay.</dd><dt>Encoding</dt><dd>Turning the desktop picture into video. REMOTIX does it only on the video card.</dd><dt>H.264, HEVC</dt><dd>The two video formats REMOTIX can use. Your browser decodes them.</dd><dt>Inactivity</dt><dd>The 30-minute clock: after half an hour without input, the page is disconnected and asks for the password again; the programs stay.</dd><dt>Log Out</dt><dd>The entry in the desktop's own menu that ends the session and closes all its programs.</dd><dt>PAM</dt><dd>The machine's own system for checking passwords. REMOTIX uses it, through a service called <code>remotix</code>, so the password is the one you use at the machine.</dd><dt>Port 7447</dt><dd>The one network port REMOTIX uses, over TCP for the page and over UDP for video and keys.</dd><dt>QUIC, WebTransport</dt><dd>The way the video, the sound and the keys travel between the browser and the machine, over UDP. Your browser must support WebTransport.</dd><dt>Session</dt><dd>Your desktop on the machine, with its programs. It belongs to you, not to the browser tab.</dd><dt>Slot</dt><dd>A user's single place among the connected ones. Taken by the first connected browser.</dd><dt>Touch layout</dt><dd>How the page behaves when you use a finger and no mouse: trackpad-like gestures and a keyboard button.</dd><dt>Wayland</dt><dd>The kind of graphical session REMOTIX uses. Programs written for the older X11 still run in it.</dd></dl></section></section></main>
   </div>
-  <footer class="doc-foot">REMOTIX · User Manual · Version 1.0.0 · November 2026 · © 2026 Nicola Fiorillo · Free for personal and non-profit use</footer>
+  <footer class="doc-foot">REMOTIX · User Manual — Debian 13 · Version 1.0.0 · November 2026 · © 2026 Nicola Fiorillo · Free for personal and non-profit use</footer>
 </div>
 <script>window.MANUAL_CODE_TERMS=[];</script>
 <script>

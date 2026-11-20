@@ -181,3 +181,30 @@ Passi 0–2: circa 1–2 settimane.
   quando si passa a forky, dove dovrebbe sparire da solo.
 - **Resta comunque vero:** XFCE tiene uno sfondo per ogni schermo; lo sfondo scelto in locale non passa da solo allo
   schermo remoto (la prima volta si vede quello di base).
+
+## PIANO — Sito: manuali per distribuzione e pagina di Ubuntu 26.04 (20 nov 2026, OK del proprietario: «Sì, comincia a lavorare sul sito»)
+
+**Obiettivo.** Ogni distribuzione ha i suoi due manuali (utente e tecnico): deciso dal proprietario il 20 nov. Il sito
+va adeguato e riceve la pagina di Ubuntu 26.04. Tutto in locale: niente va online finché non lo dice lui.
+
+**Passi.**
+1. Ramo `main`: il manuale utente di Debian diventa «User Manual — Debian 13» (file, titolo, generatore).
+2. Ramo `ubuntu-26.04`: via i due manuali di Debian (copie); ogni ramo tiene i suoi.
+3. `site/distributions.json`: per ogni distribuzione i due manuali; nuova voce Ubuntu 26.04 (i suoi manuali si leggono
+   dall'albero di Ubuntu).
+4. `site/docs.html`: testo nuovo, una coppia utente + tecnico per distribuzione; il vecchio indirizzo
+   `docs/user-manual.html` resta e rimanda alla pagina dei manuali.
+5. `site/ubuntu2604.html`: pagina nuova sul modello di `debian13.html`, con solo affermazioni vere per Ubuntu.
+6. `site/standalone.py` adeguato; generazione in `site/out/`; controllo dei collegamenti.
+
+**Rischi.** Frasi di Debian copiate nella pagina di Ubuntu e false lì; schermate di Debian spacciate per Ubuntu (non
+si usano: servono schermate vere dal proprietario); l'impronta del pacchetto sulla pagina deve essere quella del
+pacchetto che verrà pubblicato.
+
+**Fatto quando.** Il sito si genera senza errori, il revisore dà APPROVATO, il proprietario l'ha visto in locale.
+
+**Stato (20 nov).** Passi 1-6 fatti in locale, revisore APPROVATO al secondo giro; per decisione del proprietario le
+pagine delle distribuzioni non hanno schermate. Manca: che il proprietario lo veda (`site/out/index.html`) e dica
+quando pubblicare. Alla pubblicazione: copiare il .deb di Ubuntu (`unione11`) in `site/out/download/`; se si pubblica
+anche il pacchetto Debian corretto, cambiare insieme file e impronta nella pagina di Debian. Da decidere: le schermate
+di Debian usate nella home come immagini generiche.

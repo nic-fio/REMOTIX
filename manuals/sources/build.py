@@ -4,7 +4,7 @@ SCRAPER): the canon was taken from PHONESTRA on 10 Oct 2026.
 
 It produces self-contained HTML files (no external files), in English:
   manuals/Technical Manual — Debian 13.html   from the chapters in technical-debian13/chNN_*.py
-  manuals/User Manual.html                     from the chapters in user/chNN_*.py
+  manuals/User Manual — Debian 13.html         from the chapters in user/chNN_*.py
 A chapter directory that is still empty is skipped: what exists is built.
 
 Each chapter exposes CHAPTER = (title, [(section_title, html), ...]).
@@ -38,7 +38,8 @@ VERSION = re.search(r"RX_VERSION:-([0-9.]+)", (ROOT / "build" / "build-deb.sh").
 MANUALS = {
     "tecnico": dict(dir="technical-debian13", file="Technical Manual — Debian 13.html",
                     title="Technical Manual — REMOTIX for Debian 13", h1="Technical Manual — Debian 13"),
-    "utente": dict(dir="user", file="User Manual.html", title="User Manual — REMOTIX", h1="User Manual"),
+    "utente": dict(dir="user", file="User Manual — Debian 13.html",
+                  title="User Manual — REMOTIX for Debian 13", h1="User Manual — Debian 13"),
 }
 
 # After the canon (style.css), only the rules for elements that exist only in REMOTIX's manual
