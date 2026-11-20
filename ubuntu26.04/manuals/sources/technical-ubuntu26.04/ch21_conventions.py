@@ -22,7 +22,6 @@ S1 = p("The rules that are written are in " + c("CLAUDE.md") + ", about a dozen 
         ["licences ship in the package", c("LICENSE.md") + " is appended to " + c("debian/copyright") + " by " + c("build/build-deb.sh") + "; "
          + c("THIRD-PARTY-LICENSES") + " is installed under " + sysf("/usr/share/doc/remotix") + ". In this tree both name our labwc (GPL-2, with two LGPL-2+ files) and wlroots (MIT), and "
          "the corresponding source " + sysf("remotix-<version>-labwc-source.tar.gz") + " is published with each release; " + c("licenses/") + " does not ship"],
-        ["never compile or run heavy work on the CHUWI tablet; build and test on the dev server", "all the scripts assume the dev server's paths, " + sysf("/media/REMOTIX-UBUNTU") + " in this tree (" + rif("Testing") + ")"],
     ], "«TAB» — The written rules and what the tree does with them")
 
 # ── 21.2 ─────────────────────────────────────────────────────────────────────

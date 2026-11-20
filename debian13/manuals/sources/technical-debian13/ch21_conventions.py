@@ -17,7 +17,6 @@ S1 = p("The rules that are written are in " + c("CLAUDE.md") + ", seven lines of
         ["the owner decides how and when tests run", "the checks of " + c("prove/") + " are started by hand; nothing in the package or the build runs them"],
         ["licences ship in the package", c("LICENSE.md") + " is appended to " + c("debian/copyright") + " by " + c("build/build-deb.sh") + "; "
          + c("THIRD-PARTY-LICENSES") + " is installed under " + c("/usr/share/doc/remotix")],
-        ["never compile or run heavy work on the CHUWI tablet; build and test on the dev server", "all the scripts assume the dev server's paths (" + rif("Testing") + ")"],
     ], "«TAB» — The written rules and what the tree does with them")
 
 # ── 21.2 ─────────────────────────────────────────────────────────────────────
