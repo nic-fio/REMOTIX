@@ -208,3 +208,8 @@ pagine delle distribuzioni non hanno schermate. Manca: che il proprietario lo ve
 quando pubblicare. Alla pubblicazione: copiare il .deb di Ubuntu (`unione11`) in `site/out/download/`; se si pubblica
 anche il pacchetto Debian corretto, cambiare insieme file e impronta nella pagina di Debian. Da decidere: le schermate
 di Debian usate nella home come immagini generiche.
+
+**Pubblicato (20 nov, ordine del proprietario «pubblica il sito»).** Sito online con la pagina di Ubuntu 26.04, i
+manuali per distribuzione e il pacchetto Ubuntu `unione11` (sha256 `08772d85…36ab`); file online identici a `site/out/`.
+NON pubblicati: il rilascio di Ubuntu su GitHub e il pacchetto Debian corretto (online resta `d2ec4771…`, regola a 15
+azioni, mentre il manuale tecnico di Debian online descrive già la regola a 19): da decidere.
