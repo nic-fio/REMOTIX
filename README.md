@@ -13,5 +13,5 @@ tests, docs, manuals and licences, and builds its own `.deb`.
 
 - Manuals (technical and user): `manuals/` inside each distribution directory.
 - Rebuilding the package and the test bench from this repository alone: `docs/RIPRISTINO.md` inside each distribution directory.
-- Licence: `LICENSE.md` inside each distribution directory (the two texts differ, so there is no copy at the top level);
+- Licence: `LICENSE.md` inside each distribution directory (the two texts differ only in the paragraph about labwc, which is specific to each package, so there is no copy at the top level);
   third-party licences in `THIRD-PARTY-LICENSES`.

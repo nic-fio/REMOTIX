@@ -224,7 +224,7 @@ S6 = p(c("vadirect.c") + " talks to libva (MIT) directly and does the four thing
     note("the comments record that on Mesa radeonsi the driver reads REMOTIX's packed headers and regenerates them, and that the cropping window Mesa "
          "does not write is fixed afterwards on the bytes (" + rif("Bytes, levels and the confession") + "). The comment dates from Mesa 25.0.7; "
          "whether it still holds with Mesa 26.0.8 is not verified, and on the Radeon of the virtual machines the encoder takes the Vulkan route, "
-         "so this tree was not exercised there.", "The AMD driver rewrites the headers.") + \
+         "so this code path was not exercised there.", "The AMD driver rewrites the headers.") + \
     p("<b>The padding past the canvas.</b> The card encodes a picture a little larger than the screen (the sides are rounded up, H.264 to 16, HEVC "
       "to the coding block; a 1080-row screen goes out as 1088 rows) and the decoder is told to hide the extra strip. The hidden strip still takes part "
       "in the compression, so what is in it can leak into the last visible row or column. " + c("convert_on_gpu()") + " adds, in the same GPU step that "
@@ -267,7 +267,7 @@ S7 = p(c("vulkanvideo.c") + " uses " + c("VK_KHR_video_encode_queue") + " with t
          "described in " + rif("Codecs and their negotiation") + " closes it by itself.", "Which route the card takes.") + \
     p("<b>Cards that refuse linear buffers.</b> " + c("vulkanvideo_card_rejects_linear()") + " asks whether the card's GBM can create a LINEAR|RENDERING buffer; "
       "if not, " + c("vulkanvideo_modifiers()") + " lists the non-linear modifiers the card can import and sample, and the capture offers them (" + rif("Screen capture")
-      + "). Intel and Radeon never take this tree.") + \
+      + "). Intel and Radeon never take this branch.") + \
     p("<b>The bench switch.</b> " + c("REMOTIX_VULKAN_CONVERSION") + " set to " + c("copy") + " forces the shader to write into an intermediate image that is then "
       "copied, even where it could write the encoder's input directly. It exists to measure that branch; the product's choice is the one read from the driver. "
       "The shader's SPIR-V is a generated header, and the script that regenerates it (cited in the Makefile and in the shader's comment as "
