@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REMOTIX for Ubuntu 26.04</title>
+<meta name="description" content="REMOTIX 1.0.0 for Ubuntu 26.04 LTS: your desktop in a web browser, installed with apt from a single .deb. Ubuntu (GNOME), Kubuntu (KDE Plasma), Xubuntu (XFCE) and Lubuntu (LXQt).">
+<link rel="stylesheet" href="style.css">
+<style>
+  .largo { width: 100%; max-width: 1480px; margin: 0 auto; padding: 0 20px; }
+  @media (min-width: 720px) { .largo { padding: 0 40px; } }
+  .blu { color: #fff; background: radial-gradient(90% 70% at 70% 30%, #1546b8 0%, transparent 60%), linear-gradient(180deg, #071233, #0a1f5c 60%, #0b2a7a); }
+  .testata .riga { display: flex; align-items: center; gap: 2rem; padding-top: 1.3rem; padding-bottom: 1.3rem; }
+  .testata nav { display: none; gap: 2.2rem; margin: 0 auto; font-size: .95rem; }
+  .testata nav a { color: var(--chiaro-fondo); text-decoration: none; }
+  .testata nav a:hover, .testata nav a[aria-current] { color: #fff; }
+  .testata .azioni { margin-left: auto; }
+  @media (min-width: 900px) { .testata nav { display: flex; } .testata .azioni { margin-left: 0; } }
+  .occhiello { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accento); margin: 0 0 .8em; }
+  .blu .occhiello { color: var(--ciano); }
+  .apertura { padding: 2.5rem 0 3.5rem; }
+  .apertura h1 { margin: 0 0 .4em; font-size: clamp(2.2rem, 4.6vw, 3.8rem); line-height: 1.06; letter-spacing: -.03em; max-width: 15em; }
+  .apertura .sotto { margin: 0; max-width: 46em; font-size: 1.12rem; color: var(--chiaro-fondo); }
+
+  .sezione { padding: 4.5rem 0; }
+  .manuali { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) { .manuali { grid-template-columns: 1fr 1fr; } }
+  .manuale { background: #fff; border-radius: 1.2rem; padding: 2rem 2.2rem; box-shadow: var(--ombra); display: flex; flex-direction: column; min-width: 0; }
+  @media (max-width: 600px) { .manuale { padding: 1.4rem 1.2rem; } }
+  .manuale h2 { margin: 0 0 .5rem; font-size: clamp(1.5rem, 2.4vw, 2rem); letter-spacing: -.02em; }
+  .manuale p { margin: 0 0 1.4rem; color: var(--tenue); }
+  .manuale .dati { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: .9rem 1.4rem; }
+  .manuale .dati span { font-size: .9rem; color: var(--tenue); }
+  .manuale .pulsante { white-space: normal; text-align: center; }
+  .nota { margin: 1.6rem 0 0; font-size: .9rem; color: var(--tenue); max-width: 60em; }
+
+  .piede-chiaro { background: #fff; border-top: 1px solid var(--bordo); padding: 1.6rem 0; }
+  .piede-chiaro .riga { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem 2.5rem; font-size: .9rem; }
+  .piede-chiaro .marchio { color: var(--inchiostro); }
+  .piede-chiaro .marchio svg { height: 1.6rem; }
+  .piede-chiaro nav { display: flex; gap: 1.8rem; flex-wrap: wrap; }
+  .piede-chiaro nav a { color: var(--tenue); text-decoration: none; }
+  .piede-chiaro .destra { margin-left: auto; color: var(--tenue); font-size: .82rem; }
+
+  .interna { display: flex; flex-wrap: wrap; gap: .5rem 1.6rem; margin-top: 1.8rem; font-size: .95rem; }
+  .interna a { color: var(--chiaro-fondo); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.3); }
+  .interna a:hover { color: #fff; }
+  .bottoni-d { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 1.6rem; }
+  .sezione.b { background: #fff; }
+  .sezione h2 { margin: 0 0 .5em; font-size: clamp(1.6rem, 2.8vw, 2.4rem); letter-spacing: -.025em; }
+  .guida { margin: 0 0 1.6rem; color: var(--tenue); max-width: 46em; }
+  .blocco { max-width: 60em; }
+  .blocco p, .blocco li { color: var(--tenue); }
+  .blocco li { margin: 0 0 .6rem; line-height: 1.5; }
+  .blocco b { color: var(--inchiostro); }
+  .blocco code, .guida code { background: #eef1f6; padding: .1em .35em; border-radius: .3rem; }
+  pre.cmd { background: #0b1430; color: #eaf0ff; border-radius: .8rem; padding: 1rem 1.2rem; overflow-x: auto; font-size: .92rem; line-height: 1.6; margin: .6rem 0 1.2rem; }
+  .sha { word-break: break-all; font-family: ui-monospace, "DejaVu Sans Mono", monospace; font-size: .85rem; background: #eef1f6; padding: .5rem .7rem; border-radius: .5rem; color: var(--inchiostro); }
+  .due-c { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 900px) { .due-c { grid-template-columns: 1fr 1fr; } }
+  .scheda-d { background: #fff; border-radius: 1.2rem; padding: 1.8rem 2rem; box-shadow: var(--ombra); min-width: 0; }
+  .sezione.b .scheda-d { background: #f6f8fc; box-shadow: inset 0 0 0 1px var(--bordo); }
+  .scheda-d h3 { margin: 0 0 .6rem; font-size: 1.25rem; letter-spacing: -.01em; }
+  .scheda-d p { color: var(--tenue); margin: 0 0 .8rem; }
+  table.t { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  table.t th { text-align: left; font-size: .76rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tenue); padding: .6rem .8rem; border-bottom: 1px solid var(--bordo); }
+  table.t td { padding: .75rem .8rem; border-bottom: 1px solid #e9edf4; }
+  table.t tr:last-child td { border-bottom: 0; }
+  table.t td.n, table.t th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .nota-p { font-size: .9rem; color: var(--tenue); max-width: 60em; margin: 1.2rem 0 0; }
+  .versione { background: #fff; border-radius: 1.2rem; padding: 2rem 2.2rem; box-shadow: var(--ombra); max-width: 60em; }
+  .versione h3 { margin: 0 0 .3rem; font-size: clamp(1.4rem, 2.2vw, 1.8rem); letter-spacing: -.02em; }
+  .versione ul { margin: .8rem 0 0; padding-left: 1.3rem; }
+  .versione li { margin: 0 0 .5rem; line-height: 1.5; color: var(--tenue); }
+  .versione li b { color: var(--inchiostro); }
+  @media (max-width: 600px) { .scheda-d, .versione { padding: 1.4rem 1.2rem; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="rx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00d8ff"/><stop offset=".45" stop-color="#1a7cff"/><stop offset="1" stop-color="#0646c8"/></linearGradient>
+    <linearGradient id="rx-t" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#1a6dff"/><stop offset="1" stop-color="#00d8ff"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 1640 360">
+      <g fill="url(#rx-g)"><path d="M0 0H288A116 116 0 0 1 288 232H196L170 180H252A38 38 0 0 0 252 104H86Z"/><path d="M26 138L214 356H26Z"/><path d="M150 180H232L442 356H296Z"/></g>
+      <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="blu">
+  <header class="testata">
+    <div class="largo riga">
+      <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+      <nav aria-label="Main"><a href="index.html#features">Features</a><a href="index.html#requirements">Requirements</a><a href="index.html#distributions">Distributions</a><a href="docs.html">Docs</a></nav>
+      <div class="azioni"><a class="pulsante primario" href="index.html#distributions">Get REMOTIX</a></div>
+    </div>
+  </header>
+  <section class="apertura">
+    <div class="largo">
+      <p class="occhiello">Ubuntu 26.04 LTS · REMOTIX 1.0.0</p>
+      <h1>REMOTIX for Ubuntu 26.04</h1>
+      <p class="sotto">Your Ubuntu 26.04 desktop in a web browser, for several users at once, on Ubuntu (GNOME), Kubuntu (KDE Plasma), Xubuntu (XFCE) or Lubuntu (LXQt). One .deb package, installed with <code>apt</code>. This page has everything that is specific to Ubuntu 26.04: the installer, the requirements, what was verified, the manuals and the history.</p>
+      <div class="bottoni-d">
+        <a class="pulsante primario" href="#install">Install on Ubuntu 26.04</a>
+        <a class="pulsante vetro" href="#manuals">Manuals</a>
+      </div>
+      <nav class="interna" aria-label="This page"><a href="#install">Install</a><a href="#requirements">Requirements</a><a href="#verified">What was verified</a><a href="#manuals">Manuals</a><a href="#history">History</a></nav>
+    </div>
+  </section>
+</div>
+
+<main>
+  <section class="sezione b" id="install">
+    <div class="largo">
+      <p class="occhiello">Installer</p>
+      <h2>Install REMOTIX 1.0.0 on Ubuntu 26.04</h2>
+      <p class="guida">The installer is a single Debian package, <code>remotix_1.0.0-1+ubuntu26.04_amd64.deb</code>. There is no other installer program. The same package serves Ubuntu, Kubuntu, Xubuntu and Lubuntu 26.04.</p>
+      <div class="due-c">
+        <div class="scheda-d">
+          <h3>1. Download the package</h3>
+          <p><a class="pulsante primario" href="download/remotix_1.0.0-1+ubuntu26.04_amd64.deb" download>Download remotix_1.0.0-1+ubuntu26.04_amd64.deb</a></p>
+          <p>SHA-256 of the package:</p>
+          <p class="sha">08772d85d0b13298ee211e43b61ecf7295a3cce1713bef933dcadee4f46736ab</p>
+          <p>Check it before installing:</p>
+<pre class="cmd">sha256sum remotix_1.0.0-1+ubuntu26.04_amd64.deb</pre>
+        </div>
+        <div class="scheda-d">
+          <h3>2. Install and start</h3>
+<pre class="cmd">sudo apt install ./remotix_1.0.0-1+ubuntu26.04_amd64.deb
+sudo systemctl enable --now remotix</pre>
+          <p>Use <code>apt install</code> as written: apt reads what REMOTIX needs from the package and installs it from Ubuntu's archive. <code>dpkg -i</code> does not fetch anything and leaves the installation incomplete. Do not add <code>--no-install-recommends</code>: the recommended packages include the video card's drivers and, on Xubuntu and Lubuntu, the compositor.</p>
+          <p>The package installs the service switched off; the second command is what turns it on. Then, from any device on your network, open <code>https://machine:7447</code> (the name or the address of the machine) in the browser and sign in with the user name and password of a user of that machine.</p>
+          <p>The first time on each device the browser warns about the certificate: the machine makes its own. Accept it after checking the address. If the machine's firewall is on (on Ubuntu it is installed but off), open port 7447 for TCP and UDP; the package adds a <code>ufw</code> profile called REMOTIX for that.</p>
+        </div>
+      </div>
+      <div class="due-c" style="margin-top:1.5rem">
+        <div class="scheda-d">
+          <h3>If the installation stops</h3>
+          <p>The package is written to refuse to install on a machine without a video card, and to tell you why. It also refuses if an account named «remotix» already exists and belongs to a person: rename or remove that account, then install again. If the card is there but cannot encode video, the installation completes and prints a warning: REMOTIX would not work on that machine. The two refusals were read from the package's script; they were not tried on Ubuntu 26.04, because every machine used for this release had a video card.</p>
+        </div>
+        <div class="scheda-d">
+          <h3>Remove it</h3>
+<pre class="cmd">sudo apt remove remotix
+sudo apt purge remotix</pre>
+          <p><code>remove</code> takes REMOTIX off the machine and keeps its settings; <code>purge</code> removes the settings as well. Both close the remote desktops of anyone connected: warn them first. The packages apt installed with REMOTIX stay; <code>sudo apt autoremove</code> lists them. Removal and purge were not run on an Ubuntu 26.04 machine for this release: the User Manual describes them from the package's scripts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione" id="requirements">
+    <div class="largo blocco">
+      <p class="occhiello">Requirements</p>
+      <h2>What Ubuntu 26.04 needs</h2>
+      <ul>
+        <li><b>Ubuntu 26.04, 64-bit PC (amd64),</b> or one of its flavours: Ubuntu (GNOME), Kubuntu (KDE Plasma), Xubuntu (XFCE), Lubuntu (LXQt). Other versions of Ubuntu are not covered.</li>
+        <li><b>One of the four desktops</b> installed, and only one: machines with several desktops installed together are not supported. REMOTIX does not install a desktop.</li>
+        <li><b>The <code>universe</code> part of Ubuntu's archive</b> switched on, as it is on a normal installation: some of the packages REMOTIX asks for are there.</li>
+        <li><b>A video card that encodes video.</b> Intel and AMD cards do it, with the drivers in Ubuntu's own archive. For this version only an AMD Radeon was used on Ubuntu 26.04; Intel was not tried. <b>NVIDIA:</b> the route for it (Vulkan Video) is written, but nobody has seen it work on Ubuntu, so do not rely on it. In a virtual machine REMOTIX works only if the real video card is passed through to the machine.</li>
+        <li><b>A browser</b> on the device you connect from: Chrome or Edge, or Firefox on a computer.</li>
+        <li><b>Port 7447, TCP and UDP,</b> open between the device and the machine.</li>
+        <li><b>Supported limits:</b> up to 3K resolution (the size you get depends on the device and browser you connect from) and up to 8 users at the same time. No more than three users were tried together on Ubuntu 26.04.</li>
+      </ul>
+      <p><b>What it deliberately does not do:</b> no encoding on the processor; no power off, restart, suspend or hibernate from a desktop, not even at the machine; local sign-in comes first (a user signed in at the machine is refused remotely, and a local sign-in closes that user's remote desktop, with its programs); no unblock command for the administrator (a blocked address is freed by the wait: 15 minutes, then 1 hour, then 12 hours); meant for your own network or a VPN. The <a href="index.html#limits">home page</a> explains each one.</p>
+    </div>
+  </section>
+
+  <section class="sezione b" id="verified">
+    <div class="largo">
+      <p class="occhiello">What was verified</p>
+      <h2>What was tried on Ubuntu 26.04, and what was not</h2>
+      <p class="guida">Everything below was done on 18 and 19 November 2026, with an AMD Radeon video card, on the package of that time. The package offered here differs from the one of the full round in one rule (restart is refused also to a user at the machine), added on 20 November and checked on the GNOME virtual machine only; the full round was not repeated.</p>
+      <div class="due-c">
+        <div class="scheda-d">
+          <h3>Automatic tests</h3>
+          <ul class="blocco" style="margin:0;padding-left:1.2rem">
+            <li>rounds of the test suite in containers, one per desktop (Ubuntu, Kubuntu, Xubuntu, Lubuntu), with Chrome and Firefox on Linux</li>
+            <li>a full round on a virtual machine with the real video card passed through, on GNOME (Ubuntu): sign-in, desktop, mouse, keyboard, clipboard, sound, video, session life cycle, several users, sign-in defences. It had two failures, explained in the Technical Manual: one is by design, the other a false alarm of the test bench; one check was blocked (the sound of Firefox, repeated and passed) and three were skipped</li>
+            <li>on the virtual machines of the other three desktops only a short run: start with the card, a sign-in that reaches the desktop with video, exit</li>
+          </ul>
+        </div>
+        <div class="scheda-d">
+          <h3>By hand and on real systems</h3>
+          <ul class="blocco" style="margin:0;padding-left:1.2rem">
+            <li>the four desktops in virtual machines, from Linux and from Android (phone and tablet): sign-in, work, leaving and coming back to the session, at different window sizes</li>
+            <li>the four live systems (Ubuntu 26.04.1, Kubuntu 26.04.1, Xubuntu 26.04, Lubuntu 26.04) on real hardware: the sign-in worked; at the first attempt on Ubuntu and Kubuntu, while for Xubuntu and Lubuntu there is only the author's report</li>
+            <li>signing in at the machine's own login screen while a remote desktop is open: tried on the live Ubuntu and Kubuntu, where the remote desktop is closed</li>
+            <li>on GNOME, in the first test environment (a container): Chrome from Windows, Linux and Android (tablet, Samsung DeX), with leaving and coming back, sound, video, clipboard and different window sizes</li>
+            <li>programs of snap and some of Ubuntu's own (the live installer, Firmware Updater, Security Center, App Center) open in the remote GNOME desktop without error</li>
+          </ul>
+        </div>
+      </div>
+      <div class="scheda-d" style="margin-top:1.5rem">
+        <h3>Known limits of this version</h3>
+        <ul class="blocco" style="margin:0;padding-left:1.2rem">
+          <li>The full round of tests was run on GNOME only. Kubuntu, Xubuntu and Lubuntu were checked by a short run and by hand.</li>
+          <li>The package offered here differs from the one of the full round in one rule (restart is refused also to a user at the machine), added on 20 November and checked on the GNOME virtual machine only; the full round was not repeated.</li>
+          <li>Removal and purge, and the package's two refusals, were not run on an Ubuntu 26.04 machine: they are described from the package's scripts.</li>
+          <li>The AppArmor profile is in observation mode (it reports, it does not block); enforce mode was not tried.</li>
+          <li>The sign-in at the machine's own screen was not tried on Xubuntu and Lubuntu. On Kubuntu, a remote desktop takes about eleven seconds to close when somebody signs in at the machine.</li>
+          <li>Intel video cards and NVIDIA cards have not been tried on Ubuntu 26.04. Safari has not been tried; Firefox on Windows has not been tried and Firefox on Android is not supported; the clipboard with Firefox is not verified.</li>
+          <li>On GNOME, programs that ask for the administrator's password in a window (pkexec) do not start in a remote session: use sudo in a terminal.</li>
+          <li>On XFCE, a Log Out chosen while the desktop is still starting is ignored, a window corner hidden under the panel cannot be dragged, and the wallpaper chosen at the machine does not pass to the remote screen.</li>
+          <li>From Chrome on an Android phone, small jerks in the video were seen on GNOME; the cause is not found.</li>
+          <li>No measurements of picture quality, frame rate or delay exist yet for Kubuntu, Xubuntu and Lubuntu, and no figure for how many users a machine can serve.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione" id="manuals">
+    <div class="largo">
+      <p class="occhiello">Manuals</p>
+      <h2>Read more</h2>
+      <div class="due-c">
+        <div class="scheda-d"><h3>User Manual — Ubuntu 26.04</h3><p>What REMOTIX is and how to install and use it on Ubuntu 26.04.</p><a class="pulsante primario" href="docs/user-manual-ubuntu2604.html">Read the User Manual</a></div>
+        <div class="scheda-d"><h3>Technical Manual — Ubuntu 26.04</h3><p>How REMOTIX works inside on Ubuntu 26.04.</p><a class="pulsante secondario" href="docs/technical-manual-ubuntu2604.html">Read the Technical Manual</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione b" id="history">
+    <div class="largo">
+      <p class="occhiello">History</p>
+      <h2>Changes in REMOTIX for Ubuntu 26.04</h2>
+      <article class="versione" id="v1-0-0">
+        <h3>1.0.0 — the first version for Ubuntu 26.04</h3>
+        <p>What it contains:</p>
+        <ul>
+          <li><b>Four desktops:</b> Ubuntu (GNOME), Kubuntu (KDE Plasma), Xubuntu (XFCE) and Lubuntu (LXQt), each on Wayland.</li>
+          <li><b>Several users at once,</b> each with their own desktop; the session survives closing the browser or a dropped network; Log Out, a restart of the service, or a sign-in at the machine itself closes it.</li>
+          <li><b>Video encoded by the video card</b> (Intel and AMD, through VA-API; Vulkan Video on AMD), sound, text clipboard, keyboard with accents, mouse.</li>
+          <li><b>Sign-in defences:</b> the address is blocked for a while after too many wrong passwords.</li>
+          <li><b>One .deb package,</b> installed with <code>apt</code>; the service is installed switched off. It is written to refuse to install on a machine without a video card.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer class="piede-chiaro">
+  <div class="largo riga">
+    <a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
+    <nav><a href="index.html#features">Features</a><a href="index.html#distributions">Distributions</a>{{FOOTER_LINKS}}<a href="docs.html">Docs</a><a href="docs.html#licence">Licence</a></nav>
+    <span class="destra">© 2026 REMOTIX · <a href="mailto:remotix@nicfio.it">remotix@nicfio.it</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
