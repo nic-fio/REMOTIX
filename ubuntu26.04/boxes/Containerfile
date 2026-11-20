@@ -1,0 +1,52 @@
+# Containerfile — Ubuntu 26.04 test box with ONE desktop, built as a user would set the machine up:
+#   podman build --build-arg DESKTOP=xfce|lxqt|gnome|kde ... (gnome=Ubuntu, kde=Kubuntu, xfce=Xubuntu, lxqt=Lubuntu)
+# systemd is the init, sshd is on, two ordinary test users exist, and there is NOTHING of REMOTIX inside:
+# the .deb is installed later with apt (box.sh install).
+# snapd does not run in a box and the snap-wrapper packages (firefox, thunderbird, chromium-browser) are kept OUT with an
+# apt preference at -1: the browser of the tests lives on the server, not in the box. A flavour that is not GNOME has NO
+# GNOME (as from its ISO): gnome-shell, gdm3 and ubuntu-session are pinned at -1 before the install (BOX-01).
+FROM docker.io/library/ubuntu:26.04
+ARG DESKTOP
+ARG SSH_PORT=2221
+ENV DEBIAN_FRONTEND=noninteractive
+RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=\"$DESKTOP\": gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
+RUN printf 'Package: firefox thunderbird chromium-browser\nPin: release *\nPin-Priority: -1\n' > /etc/apt/preferences.d/box-no-snap-browsers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        systemd systemd-sysv dbus dbus-user-session libpam-systemd \
+        sudo procps iproute2 ca-certificates curl openssh-server \
+    && rm -rf /var/lib/apt/lists/*
+# The desktop as an Ubuntu user installs it (the flavour's metapackage, with recommends; for GNOME the one the ISO
+# installs, ubuntu-desktop-minimal). The display manager is stated first, and registered after (a container build has
+# no postinst effect on systemd).
+RUN if [ "$DESKTOP" != gnome ]; then printf 'Package: gnome-shell gdm3 ubuntu-session\nPin: release *\nPin-Priority: -1\n' > /etc/apt/preferences.d/box-no-gnome; fi
+COPY set-dm.sh /usr/local/sbin/box-set-dm
+RUN case "$DESKTOP" in gnome) P=ubuntu-desktop-minimal; DM=gdm3 ;; kde) P=kubuntu-desktop; DM=sddm ;; xfce) P=xubuntu-desktop; DM=lightdm ;; lxqt) P=lubuntu-desktop; DM=sddm ;; esac \
+    && echo "$DM shared/default-x-display-manager select $DM" | debconf-set-selections \
+    && apt-get update && apt-get install -y -q "$P" \
+    && sh /usr/local/sbin/box-set-dm "$DM" \
+    && rm -rf /var/lib/apt/lists/*
+# Small tools for tests (python3-gi + gir1.2-gtk-4.0: GTK4 test window; libglib2.0-bin: gdbus/gsettings);
+# pcmanfm-qt is LXQt's file manager (wallpaper and icons).
+RUN apt-get update && apt-get install -y -q openssh-client python3 python3-gi gir1.2-gtk-4.0 libglib2.0-bin gawk openssl wl-clipboard \
+    && { [ "$DESKTOP" != lxqt ] || apt-get install -y -q pcmanfm-qt; } \
+    && rm -rf /var/lib/apt/lists/*
+# KDE: hide the Plasma "Welcome Center" over a new user's first login. For every /etc/xdg/autostart file that says
+# "welcome", an entry of the same name with Hidden=true (XDG autostart spec) in /etc/skel, plus plasma-welcomerc with
+# a far-ahead "last seen" version. The test users are created below with `useradd -m`, so they get it.
+RUN if [ "$DESKTOP" = kde ]; then mkdir -p /etc/skel/.config/autostart \
+    && for f in $(grep -il welcome /etc/xdg/autostart/*.desktop 2>/dev/null); do echo "box: welcome autostart hidden for new users: $f"; \
+        printf '[Desktop Entry]\nType=Application\nName=Welcome\nHidden=true\n' > "/etc/skel/.config/autostart/$(basename "$f")"; done \
+    && printf '[General]\nLastSeenVersion=99.0.0\n' > /etc/skel/.config/plasma-welcomerc; fi
+COPY common.sh /usr/local/sbin/box-common
+RUN sh /usr/local/sbin/box-common "$SSH_PORT" ssh.service
+# Two ordinary test users (no sudo), same password. Created after the skeleton above. The base image's own user
+# "ubuntu" (uid 1000) is removed so that the test users get uid 1000/1001 as on a fresh install.
+RUN if id ubuntu >/dev/null 2>&1; then userdel -r ubuntu; fi; for u in prova prova2; do useradd -m -s /bin/bash "$u" && echo "$u:prova2026" | chpasswd || exit 1; done; \
+    [ "$(id -u prova)" = 1000 ] && [ "$(id -u prova2)" = 1001 ]
+COPY box-key.pub /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+# Identity check at build time: an image that is not Ubuntu 26.04 with this desktop is not built.
+COPY box-identity.sh /usr/local/sbin/box-identity
+RUN sh /usr/local/sbin/box-identity ubuntu 26.04 "$DESKTOP" -
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]

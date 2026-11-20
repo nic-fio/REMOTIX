@@ -1,0 +1,7 @@
+Name: REMOTIX: close the user's remote desktop before a local graphical login
+Default: yes
+Priority: -1
+Session-Interactive-Only: yes
+Session-Type: Additional
+Session:
+	optional	pam_exec.so quiet /usr/libexec/remotix/remotix-local-login

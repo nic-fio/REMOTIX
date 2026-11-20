@@ -1,0 +1,38 @@
+# Containerfile — REMOTIX build image: Ubuntu 26.04 (resolute), the only target (universe is enabled in the base image).
+#
+# The development dependencies come from apt; ngtcp2 and nghttp3 are built inside,
+# static (quic-static.sh).  Used by build-deb.sh, which builds the context from this folder.
+# ⭐ Vulkan Video (`src/vulkanvideo.c`): `libvulkan-dev` (loader and headers, 1.4.341 on Ubuntu 26.04).
+FROM docker.io/library/ubuntu:26.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential pkg-config git ca-certificates cmake ninja-build \
+        libssl-dev libpam0g-dev \
+        libglib2.0-dev libpipewire-0.3-dev libdrm-dev \
+        libva-dev libopus-dev zlib1g-dev \
+        libei-dev libxkbcommon-dev libgbm-dev libwayland-dev libvulkan-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- nghttp3 1.18.0 and ngtcp2 1.25.0, static (needs network: it clones them from GitHub)
+COPY quic-static.sh /usr/local/bin/quic-static.sh
+RUN sh /usr/local/bin/quic-static.sh
+ENV LIBRARY_PATH=/usr/local/lib \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+WORKDIR /albero
+
+# --- OUR labwc (hosts the nested KWin): the build tools of labwc 0.9.3 + wlroots 0.19.2 (the Build-Depends of
+#     debian/control) and its two upstream tarballs, fetched HERE and sha256-checked (fetch.sh, VERSIONS), so that
+#     dpkg-buildpackage needs no network.  debian/rules reads them from LABWC_SOURCES.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl meson patch hwdata wayland-protocols libegl-dev libgles-dev libinput-dev \
+        libpixman-1-dev libseat-dev libudev-dev libdisplay-info-dev libxml2-dev \
+        libcairo2-dev libpango1.0-dev libpng-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY labwc-ospite/VERSIONS labwc-ospite/fetch.sh /usr/local/src/labwc-ospite/
+RUN bash /usr/local/src/labwc-ospite/fetch.sh /usr/local/src/labwc-sources
+
+# --- the tools for the .deb package (debian/).  A layer AT THE END, so that the layers
+#     above (and the static libraries) stay cached.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        debhelper dh-apparmor dpkg-dev fakeroot lintian binutils \
+    && rm -rf /var/lib/apt/lists/*

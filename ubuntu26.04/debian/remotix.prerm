@@ -1,0 +1,123 @@
+#!/bin/sh
+# remotix.prerm — before the files go away.
+#
+set -e
+
+# ⭐ On removal: close the REMOTIX sessions (the old installer's «close-sessions» and «remove-membership» steps).  Only on `remove` (a purge runs `prerm remove` first).
+#  · close-sessions: logind's sessions of the PAM service «remotix» are ended — ONLY those, never the whole user.
+#    ⛔⭐ 17 Nov 2026, `[M]` check-package, XFCE/LXQt with the user's `systemd --user` already running (linger): the desktop stayed up
+#    for minutes after `apt remove`.  WHY: the server's child is the leader of the logind session; stopping the
+#    service ends the child, logind then closes the session and ABANDONS its scope (the desktop stays inside it, by design: §5.2,
+#    the desktops outlive the service) — and from then on `terminate-session` has no scope left to stop.  Without linger the user
+#    manager dies with the last session and takes the leftovers along; with linger it stays, and so do they.
+#    ⇒ The sessions are ended FIRST, with the service still running (the child alive, the session's scope still in place: logind
+#    stops it, the child sees the order and cleans up as it does at any logout); then the service is stopped; then the sweep is
+#    repeated for whatever the service's stop left in an abandoned scope.  ⚠ What survives SIGTERM is killed (SIGKILL on the scope
+#    unit, as the old installer escalated), after a bounded wait — never a process outside a REMOTIX session's scope.
+remotix_sessions() {
+	for id in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}'); do
+		[ "$(loginctl show-session "$id" -p Service --value 2>/dev/null || true)" = remotix ] || continue
+		# a REMOTIX session is seatless; a seated one is never ours, whatever its Service says
+		[ -z "$(loginctl show-session "$id" -p Seat --value 2>/dev/null || true)" ] || continue
+		echo "$id"
+	done
+}
+remotix_scope_alive() { systemctl is-active --quiet "session-$1.scope" 2>/dev/null; }
+remotix_close_sessions() {
+	ids=$(remotix_sessions)
+	[ -n "$ids" ] || return 0
+	for id in $ids; do
+		rx_users="$rx_users $(loginctl show-session "$id" -p Name --value 2>/dev/null || true)"
+		remotix_scope_alive "$id" && loginctl terminate-session "$id" >/dev/null 2>&1 || true
+	done
+	# SIGTERM first (logind did it): up to 15 s for the desktop to go by itself
+	n=0
+	while [ "$n" -lt 15 ]; do
+		alive=
+		for id in $ids; do remotix_scope_alive "$id" && alive=1; done
+		[ -n "$alive" ] || break
+		sleep 1
+		n=$((n + 1))
+	done
+	# what ignored it: SIGKILL to the scope of THAT session (and to nothing else), then up to 5 s
+	for id in $ids; do
+		remotix_scope_alive "$id" || continue
+		echo "remotix: ⚠ the desktop of session $id did not end within 15 s: killed" >&2
+		systemctl kill --kill-whom=all --signal=SIGKILL "session-$id.scope" >/dev/null 2>&1 || true
+	done
+	n=0
+	while [ "$n" -lt 5 ]; do
+		alive=
+		for id in $ids; do remotix_scope_alive "$id" && alive=1; done
+		[ -n "$alive" ] || break
+		sleep 1
+		n=$((n + 1))
+	done
+}
+# ⭐ 1.0.0: first of all, the PAM line of the local-login hook goes out of /etc/pam.d/common-session (only on `remove`, not on
+#    upgrade; the profile file is still in place here).  A failure is said, never makes dpkg fail.
+if [ "$1" = remove ]; then
+	if command -v pam-auth-update >/dev/null 2>&1; then
+		pam-auth-update --package --remove remotix || echo "remotix: ⚠ pam-auth-update --remove remotix failed: check /etc/pam.d/common-session" >&2
+	fi
+fi
+
+rx_users=
+if [ "$1" = remove ] && [ -d /run/systemd/system ] && command -v loginctl >/dev/null 2>&1; then
+	remotix_close_sessions
+fi
+
+# With --no-start debhelper does not stop the service on remove: if the administrator had
+# switched it on, the server would stay alive on a deleted binary.  ⇒ Only on
+# `remove` is it stopped (if running).  Not on upgrade: the postinst restarts it.
+if [ "$1" = remove ] && [ -d /run/systemd/system ]; then
+	deb-systemd-invoke stop remotix.service >/dev/null || true
+fi
+
+if [ "$1" = remove ] && [ -d /run/systemd/system ] && command -v loginctl >/dev/null 2>&1; then
+	# the service is down: a session whose child went with it left its scope abandoned — the second sweep
+	remotix_close_sessions
+	#    then, if the person has no OTHER graphical session (a desktop at the machine), the desktop that lives in their
+	#    user manager is stopped (graphical-session.target).
+	for u in $(printf '%s\n' $rx_users | sort -u); do
+		[ -n "$u" ] || continue
+		other=
+		for id in $(loginctl list-sessions --no-legend 2>/dev/null | awk '{print $1}'); do
+			[ "$(loginctl show-session "$id" -p Name --value 2>/dev/null || true)" = "$u" ] || continue
+			[ "$(loginctl show-session "$id" -p Service --value 2>/dev/null || true)" = remotix ] && continue
+			case "$(loginctl show-session "$id" -p Type --value 2>/dev/null || true)" in
+			x11|wayland|mir) other=1 ;;
+			esac
+		done
+		[ -n "$other" ] || systemctl --user -M "$u@" stop graphical-session.target >/dev/null 2>&1 || true
+	done
+fi
+#  · remove-membership: the card-group enrolments the product made at a user's first connection
+#    (/var/lib/remotix/group-enrollments.jsonl, one JSON line per user and group) are undone with gpasswd -d.
+#    The record must be a regular file owned by root; names are checked before they reach gpasswd.
+if [ "$1" = remove ] && [ -f /var/lib/remotix/group-enrollments.jsonl ] && [ ! -L /var/lib/remotix/group-enrollments.jsonl ] \
+   && [ "$(stat -c %u /var/lib/remotix/group-enrollments.jsonl)" = 0 ]; then
+	sed -n 's/.*"user":"\([^"]*\)".*"group":"\([^"]*\)".*/\1 \2/p' /var/lib/remotix/group-enrollments.jsonl | sort -u |
+	while read -r u g; do
+		case "$u$g" in *[!A-Za-z0-9._-]*|"") continue ;; esac
+		gpasswd -d "$u" "$g" >/dev/null 2>&1 || true
+	done
+fi
+
+# ⭐ R-1 of the page audit (25 Oct 2026): the ACL the server puts on /dev/dri/renderD* for a user's private group (card grants,
+#    DECISIONS-11 §11.4) are taken back HERE, with the service already stopped and BEFORE the record (/var/lib/remotix/render-grants,
+#    deleted by postrm at purge) and the binary go: nobody else would — a desktop that survives the stop keeps its ACL, and the
+#    sweep of the next start-up never comes.  `purge` of an installed package runs `prerm remove` first, so one place covers both.
+#    Not on upgrade (the new version's start-up sweeps).  A failure is said, leaves the marker postrm reads (the record is then
+#    kept), and never makes dpkg fail.
+if [ "$1" = remove ] && [ -x /usr/libexec/remotix/remotix ]; then
+	rm -f /run/remotix/render-grants-kept
+	if ! /usr/libexec/remotix/remotix --drop-render-grants; then
+		echo "remotix: ⚠ the card grants (ACL on /dev/dri/renderD*) could not all be taken back: they vanish at the next boot" >&2
+		install -d -m 0755 /run/remotix 2>/dev/null && : > /run/remotix/render-grants-kept
+	fi
+fi
+
+#DEBHELPER#
+
+exit 0

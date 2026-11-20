@@ -1,0 +1,114 @@
+/*
+ * remotix-no-poweroff.rules — the first of the three belts of
+ * `DECISIONS.md` §4.7: "nobody switches the server off".
+ *
+ * Installed ACTIVE by the package, as
+ * /usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules (polkit's vendor
+ * folder; the package owns it and removing the package removes it) —
+ * `DECISIONS.md` §10.50, the exception to §10.36: this change to the system is
+ * needed so that ordinary users cannot take the machine down for everyone.
+ * polkit reads /etc/polkit-1/rules.d/ AND this folder, in one list sorted by file
+ * name; a same-name file in /etc does not replace this one (measured, Debian 13,
+ * polkit 126).  An administrator who wants another behaviour writes their own
+ * rule in /etc/polkit-1/rules.d/ with a LOWER number (e.g. 30-…) that returns its
+ * own decision for these actions: polkit stops at the first rule that decides.
+ * Removing this file is undone by the next package update.
+ * Number 50 and not 49: it must win over v1's
+ * (`49-remotix-niente-spegnimento.rules`), which covered three actions out
+ * of twelve — see below.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔⛔ WHY `power-off`, `reboot` AND `halt` ARE NOT ENOUGH — [M] 15 August 2026
+ *
+ * v1's rule listed those three.  ⛔ But logind, when the machine has
+ * sessions of SEVERAL USERS, does not ask for `power-off`: it asks for
+ * `power-off-multiple-sessions`.  ⇒ v1's rule failed **exactly in the
+ * case it had been written for** — the machine with others connected — and nobody
+ * would have seen it, because with a single user it works.
+ *
+ * ⚠ And `*-ignore-inhibit` is the third form: it is what is asked of whoever
+ *   switches off OVERRIDING an inhibition — that is overriding ours, the one that
+ *   keeps the session up (`SessionManager.Inhibit`, §2.2 of phase 5).
+ *
+ * `[M]` The twelve actions were read from
+ * `/usr/share/polkit-1/actions/org.freedesktop.login1.policy` on the test
+ * machine.  ⛔ On that systemd `org.freedesktop.login1.halt` did NOT exist, and
+ * v1's rule had a dead line.
+ *
+ * ⛔ CORRECTED, 17 November 2026 — Debian 13 (systemd 257, `pkaction | grep
+ * login1`): `halt`, `halt-multiple-sessions` and `halt-ignore-inhibit` DO
+ * exist, and logind's `CanHalt` answered "challenge" to a session user
+ * (`prove/check-desktop.py`, `power-entries-absent`).  ⇒ Fifteen actions now.
+ * The other login1 actions of trixie are not about stopping the machine and
+ * are left alone (attach-device, chvt, flush-devices, inhibit-*, lock-sessions,
+ * manage, set-self-linger, set-user-linger, set-wall-message).  Hybrid-sleep
+ * and suspend-then-hibernate have no action of their own: logind asks for
+ * `suspend*` / `hibernate*`.
+ *
+ * ⛔ CORRECTED, 20 November 2026 — the four `set-reboot-*` actions are NOT
+ * harmless, and they are forbidden too (nineteen actions now).  In logind's
+ * policy each of them carries `org.freedesktop.policykit.imply` =
+ * `org.freedesktop.login1.reboot`: whoever is authorised for one of them is
+ * authorised for `reboot` DESPITE this rule's explicit NO on `reboot` (an explicit NO
+ * is not enough against an implication from an authorised action).  Their
+ * default is "yes" for the user sitting at the machine ⇒ `[M]` on Debian 13
+ * with 1.0.0 the local user got CanPowerOff "no" and CanReboot "yes" (found by
+ * the owner on his own machine; `pkcheck` said the same).  ⚠ An action that
+ * only "prepares" a boot is a way in if the policy says it IMPLIES one of
+ * ours: `prove/check-desktop.py` (`power-implied`) reads the policy files and
+ * fails if an action left alone implies a forbidden one.
+ *
+ * ---------------------------------------------------------------------------
+ * ⭐ ROOT NEEDS NO EXCEPTION, and it was MEASURED
+ *
+ * `[M]` 15 August 2026, from the test machine with this rule in force:
+ *
+ *     from nicfio (ssh)   CanPowerOff = "no"
+ *     from root           CanPowerOff = "yes"
+ *
+ * ⛔ Because logind, before asking polkit, looks at the **capabilities** of whoever
+ *    asks: whoever has `CAP_SYS_BOOT` — that is root — is authorised and polkit is
+ *    not consulted at all.  ⇒ `sudo systemctl poweroff` keeps
+ *    working **without this rule providing for anything**, and the maintenance
+ *    of the machine stays as it always was.
+ *
+ * ⚠ And the consequence that really bites lies elsewhere: **checking this
+ *   rule CANNOT be done from the server**, which runs as root and would always be
+ *   answered "yes".  It must be done from the CHILD, after it has become
+ *   the user.  A check made from the wrong place is a check that always
+ *   says yes.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠ `polkit.Result.NO`, NEVER `AUTH_ADMIN`
+ *
+ * `"challenge"` **shows** the entry in the menu instead of removing it — it holds on GNOME
+ * (`gnome.md` §5.1) and on KDE (`kde.md` §1579).  An entry that appears and asks for
+ * a password is worse than an entry that is not there: it promises something.
+ */
+polkit.addRule(function (action, subject) {
+    var vietate = [
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.power-off-multiple-sessions",
+        "org.freedesktop.login1.power-off-ignore-inhibit",
+        "org.freedesktop.login1.reboot",
+        "org.freedesktop.login1.reboot-multiple-sessions",
+        "org.freedesktop.login1.reboot-ignore-inhibit",
+        "org.freedesktop.login1.set-reboot-parameter",
+        "org.freedesktop.login1.set-reboot-to-firmware-setup",
+        "org.freedesktop.login1.set-reboot-to-boot-loader-menu",
+        "org.freedesktop.login1.set-reboot-to-boot-loader-entry",
+        "org.freedesktop.login1.halt",
+        "org.freedesktop.login1.halt-multiple-sessions",
+        "org.freedesktop.login1.halt-ignore-inhibit",
+        "org.freedesktop.login1.suspend",
+        "org.freedesktop.login1.suspend-multiple-sessions",
+        "org.freedesktop.login1.suspend-ignore-inhibit",
+        "org.freedesktop.login1.hibernate",
+        "org.freedesktop.login1.hibernate-multiple-sessions",
+        "org.freedesktop.login1.hibernate-ignore-inhibit"
+    ];
+
+    for (var i = 0; i < vietate.length; i++)
+        if (action.id == vietate[i])
+            return polkit.Result.NO;
+});

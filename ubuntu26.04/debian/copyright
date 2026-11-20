@@ -1,0 +1,59 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: remotix
+Upstream-Contact: Nicola Fiorillo <remotix@nicfio.it>
+Source: https://remotix.nicfio.it
+Comment: The licences of all the third-party components incorporated in this
+ package, with their full texts: /usr/share/doc/remotix/THIRD-PARTY-LICENSES.
+
+Files: *
+Copyright: 2026 Nicola Fiorillo
+License: LicenseRef-REMOTIX
+Comment: Free for personal use and for non-profit organisations; the source
+ code may be read and built unmodified, not modified or redistributed
+ (DECISIONS.md §10.39).  Not an open-source licence.  Its full text is the
+ stand-alone License paragraph at the end of this file.
+
+Files: src/remotix
+Copyright: 2016-2026 ngtcp2 contributors
+           2019-2026 nghttp3 contributors
+License: Expat
+Comment: ngtcp2 1.25.0 and nghttp3 1.18.0 are linked STATICALLY into the binary
+ /usr/libexec/remotix/remotix (phases/17-the-installer.md §6.3, decision D2).
+ .
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+
+Files: usr/libexec/remotix/labwc
+Copyright: 2019-2026 the labwc contributors
+           2017-2026 the wlroots contributors
+License: GPL-2 and Expat
+Comment: A SEPARATE program shipped in the package (it is not part of REMOTIX and is not
+ linked with it): labwc 0.9.3 (GPL-2; two of its files, src/img/img-xpm.c and
+ src/common/xcolor-table.h, are LGPL-2.0-or-later), unmodified, with wlroots 0.19.2
+ (Expat) linked statically.  The wlroots in it carries a patch of ours (build/labwc-ospite/,
+ a few lines in types/scene/surface.c, Expat like wlroots).  Corresponding source,
+ published with each release: remotix-<version>-labwc-source.tar.gz.  The full texts
+ are in /usr/share/doc/remotix/THIRD-PARTY-LICENSES.
+
+License: GPL-2
+ On Debian systems the full text of the GNU General Public License version 2 is in
+ /usr/share/common-licenses/GPL-2.
+
+# ⛔ LICENSE.md is the only copy of the licence text: build/build-deb.sh
+#    appends it below, line by line, when it turns debian into debian/.
+License: LicenseRef-REMOTIX

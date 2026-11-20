@@ -1,0 +1,79 @@
+#!/bin/sh
+# remotix.postrm — after the files have been removed.
+#
+# ⛔ DECISIONI §10.12: switch-on and groups (if any) are the administrator's.
+#    The package does not touch them, neither at installation nor here.  The firewall and the two belts left OFF in
+#    /usr/share/remotix/belts/ are the administrator's; the two polkit rules
+#    (§10.50, §10.55) belong to the package and leave with it.
+#   remove   the configuration (/etc/remotix, /etc/pam.d/remotix) and
+#            /var/lib/remotix stay;
+#   purge    removes what the PROGRAM created by itself (certificates, ban), /run/remotix,
+#            the users' session logs, the system user remotix (unless it pre-existed) and, if it
+#            is left empty, /var/lib/remotix.
+set -e
+
+case "$1" in
+purge)
+	# ⭐ R-1: the record of the card grants is deleted only if prerm took the grants back (else it still says which are left)
+	keep=
+	if [ -e /run/remotix/render-grants-kept ]; then
+		keep=1
+		echo "remotix: /var/lib/remotix/render-grants kept: the card grants could not all be taken back" >&2
+	fi
+	rm -rf /var/lib/remotix/net /var/lib/remotix/certificates /var/lib/remotix/ban /var/lib/remotix/ban.new /run/remotix
+	[ -n "$keep" ] || rm -f /var/lib/remotix/render-grants /var/lib/remotix/render-grants.new
+	# ⭐ Purge only (not a plain remove): the users' product files and the system user.
+	#  · each person's product files in ~/.local/state/remotix/ — the session log and the state files the product writes there
+	#    (session.c: `xfce-chiavi` the copy of the user's XFCE keys, `xfce-vecchi-ripristinati`, `lxqt-restored` and `gnome-ripristinato`
+	#    the one-time migration marks) — removed BY NAME, and the folder if it is left empty, AS THAT USER (runuser), so a symlink
+	#    planted in a home cannot make root delete something else.  ⛔ Never `rm -rf` of a folder in a home.  If the product writes
+	#    another file there, its name goes into this list.
+	#  · ⭐ 19 Nov 2026 (the owner: «uninstalling must leave the system clean»): the same walk, the same way of acting as the user, also
+	#    removes the small dconf database of the remote session's changing values, ~/.config/dconf/remotix (three keyboard keys): ONLY that
+	#    regular file (a symlink is not followed or removed by name through root, `user` and the rest of the folder are never touched, the
+	#    folder `dconf` stays).  Homes that are absent or unreachable are skipped in silence; a user the system does not list at purge time
+	#    (a network directory that is down) keeps the file, which is inert without REMOTIX.  Never makes the purge fail.
+	if command -v runuser >/dev/null 2>&1; then
+		getent passwd | while IFS=: read -r u _ _ _ _ home _; do
+			[ -n "$home" ] && [ "$home" != / ] && { [ -d "$home/.local/state/remotix" ] || [ -f "$home/.config/dconf/remotix" ]; } || continue
+			runuser -u "$u" -- sh -c 'if cd "$1/.local/state/remotix" 2>/dev/null; then rm -f session.log xfce-chiavi xfce-vecchi-ripristinati lxqt-restored gnome-ripristinato; cd /; rmdir "$1/.local/state/remotix" 2>/dev/null; fi; if [ -f "$1/.config/dconf/remotix" ] && [ ! -L "$1/.config/dconf/remotix" ]; then rm -f "$1/.config/dconf/remotix"; fi; :' sh "$home" </dev/null >/dev/null 2>&1 || true
+		done
+	fi
+	if [ ! -e /var/lib/remotix/net-user-preexisting ] && entry=$(getent passwd remotix) && [ -n "$entry" ]; then
+		uid=$(echo "$entry" | cut -d: -f3)
+		if [ "$uid" -gt 0 ] && [ "$uid" -lt 1000 ]; then
+			userdel remotix >/dev/null 2>&1 || echo "remotix: ⚠ the system user remotix could not be removed" >&2
+			getent group remotix >/dev/null 2>&1 && groupdel remotix >/dev/null 2>&1 || true
+		fi
+	fi
+	rm -f /var/lib/remotix/net-user-preexisting /var/lib/remotix/group-enrollments.jsonl
+	rmdir /var/lib/remotix 2>/dev/null || true
+	;;
+remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+	;;
+*)
+	echo "postrm called with an unknown argument: $1" >&2
+	exit 1
+	;;
+esac
+
+# ⭐ 19 Nov 2026: the system dconf database of the GNOME remote session (made by postinst, not in the package's file list) leaves with the package.
+case "$1" in
+remove|purge|disappear)
+	rm -f /etc/dconf/db/remotix /etc/dconf/db/remotix.new.*
+	;;
+esac
+
+# ⭐ 1.5 (AppArmor, profile in complain mode): the profile leaves the kernel when the package leaves.  Written to the kernel's own
+#    remove file: the profile file may already be gone.  Never fails; inert when the package never carried it.
+case "$1" in
+remove|purge|disappear)
+	if [ -w /sys/kernel/security/apparmor/.remove ]; then
+		printf '%s' remotix_network > /sys/kernel/security/apparmor/.remove 2>/dev/null || true
+	fi
+	;;
+esac
+
+#DEBHELPER#
+
+exit 0

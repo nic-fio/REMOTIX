@@ -1,0 +1,117 @@
+# remotix_network — AppArmor profile of REMOTIX's NETWORK SIDE (1.5, split audit).
+#
+# ⭐ STATE (17 Nov 2026): installed by the package in /etc/apparmor.d and LOADED, in COMPLAIN mode
+#    (verified on a Debian 13 VM: 0 denials up to the connection; a session was not tried there
+#    for lack of a video card).  It stays in COMPLAIN mode on purpose: it logs what it
+#    would refuse and refuses nothing.  Collect the audit lines (`journalctl -k | grep -i
+#    'apparmor="ALLOWED"'`), add what the real network side needs, and only with zero unexpected
+#    lines through the functional suite and B10 change `complain` into enforce.
+#
+# HOW IT IS ENTERED: not by the path of the program.  The profile has NO attachment path, so
+#    exec'ing /usr/libexec/remotix/remotix never puts anything in it — the root side (PAM, the
+#    desktops' birth, same program) stays unconfined.  The root side's fork writes
+#    «exec remotix_network» into /proc/thread-self/attr/apparmor/exec right before it execs the
+#    network side (src/walls.c, apparmor_exec_net) — what aa_change_onexec() does.
+#
+# WHAT THE NETWORK SIDE IS: it holds the UDP and TCP sockets it was GIVEN (fds 3, 4, 5), talks
+#    QUIC/TLS, serves the page, keeps the ban and the certificates in /var/lib/remotix/net, talks to
+#    the root side over the inherited channel, to logind and the journal, and to sssd for names.
+#    It has no capability (it is uid remotix with an empty bounding set); the profile adds the
+#    kernel's view of the same: no `capability` line of its own.  (⚠ The `nameservice` abstraction
+#    pulls in `abstractions/nis`, which allows `capability net_bind_service`: harmless, the bounding set is empty.)
+
+include <tunables/global>
+
+profile remotix_network flags=(complain,attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+
+  # No capability of our own: none is listed here (the only one that comes in is net_bind_service, from `nameservice` -> `nis`).
+
+  # The program itself (mapped; the exec of it is the root side's business).
+  /usr/libexec/remotix/remotix mr,
+  /usr/share/remotix/** r,
+  # The keyboard: the network side compiles the XKB keymap of the session (libxkbcommon reads rules, keycodes and types
+  # here).  Seen by aa-deb-box.sh on 26 Oct 2026: 10 ALLOWED lines in complain, all of them under this folder.
+  # ⭐ Ubuntu 26.04 (xkb-data 2.46): the data are in /usr/share/xkeyboard-config-2 and /usr/share/X11/xkb is a SYMLINK to it;
+  #    AppArmor judges the resolved path, so the real folder is listed.  libxkbcommon 1.13 also reads /etc/xkb and
+  #    /usr/share/xkeyboard-config-2.d (user/admin additions), and /etc/X11/xkb is the legacy name of the admin folder.
+  /usr/share/X11/xkb/ r,
+  /usr/share/X11/xkb/** r,
+  /usr/share/xkeyboard-config-2/ r,
+  /usr/share/xkeyboard-config-2/** r,
+  /usr/share/xkeyboard-config-2.d/ r,
+  /usr/share/xkeyboard-config-2.d/** r,
+  /etc/xkb/ r,
+  /etc/xkb/** r,
+  /etc/X11/xkb/ r,
+  /etc/X11/xkb/** r,
+  # (nothing under /etc/remotix: the configuration is read by the root side and by systemd; remotix.te.split
+  #  gives remotix_net_t only the general reads of /etc, which the nameservice abstraction covers)
+  /etc/machine-id r,
+
+  # Its two writable places (src/walls.c: --network-state-dir, --network-run-dir).
+  /var/lib/remotix/ r,
+  /var/lib/remotix/net/ rw,
+  /var/lib/remotix/net/** rwk,
+  /run/remotix/ r,
+  /run/remotix/net/ rw,
+  /run/remotix/net/** rwk,
+
+  # Sockets: UDP and TCP over IPv4/IPv6 (QUIC, the page); unix for the root channel, D-Bus, the journal and sssd.
+  # Raw and packet sockets are not listed: refused.
+  network inet dgram,
+  network inet stream,
+  network inet6 dgram,
+  network inet6 stream,
+  network unix stream,
+  network unix dgram,
+  network netlink raw,       # route/addresses of the machine (getifaddrs); remove when proven unused
+
+  # logind, system D-Bus, journal.
+  /run/dbus/system_bus_socket rw,
+  /run/systemd/journal/socket w,
+  /run/systemd/journal/dev-log w,
+  /run/systemd/journal/stdout rw,
+  /run/systemd/sessions/ r,
+  /run/systemd/sessions/* r,
+
+  # ⭐ 1.6 (R8 B) [D, not tried]: the network side is PID 1 of a PID namespace of its own with a /proc of its own (walls.c): it lists only
+  # itself.  The root side — not this profile — looks for the desktops found again, so no other process's /proc is read here.  What it reads:
+  # itself (self, or its number in the namespace), and the system's entries.
+  @{PROC}/ r,
+  @{PROC}/self/ r,
+  @{PROC}/self/** r,
+  @{PROC}/@{pid}/ r,
+  @{PROC}/@{pid}/** r,
+  @{PROC}/sys/** r,
+  @{PROC}/net/** r,
+  @{PROC}/cpuinfo r,
+  @{PROC}/meminfo r,
+  @{PROC}/stat r,
+  /sys/devices/system/cpu/** r,
+  /sys/class/net/** r,
+  /sys/kernel/mm/transparent_hugepage/* r,
+
+  /dev/null rw,
+  /dev/urandom r,
+  /dev/random r,
+
+  # The root side signals it (TERM, KILL), it never signals anyone else.
+  signal (receive) peer=unconfined,
+  signal (send, receive) peer=remotix_network,
+
+  # No ptrace, no mount, no module, no abstract unix sockets of the machine (the audit's R6):
+  # none of these is listed, and `deny` says so out loud for the abstract ones.
+  deny ptrace,
+  deny mount,
+  # ⚠ The two lines name the operations.  A bare `deny unix addr=@*,` also carries `create`, which has no
+  #   address to compare: on a kernel that mediates unix sockets (Ubuntu 26.04) it forbids EVERY unix socket,
+  #   and a `deny` holds in complain mode too — no D-Bus, no logind, every sign-in refused (19 Nov 2026).
+  #   `@**` and not `@*`: one star stops at `/`, and the names to close contain it (`@/tmp/.X11-unix/X0`).
+  deny unix (bind, listen) addr=@**,
+  deny unix (connect, send, receive) peer=(addr=@**),
+
+  # The administrator's additions (dh_apparmor creates the empty file /etc/apparmor.d/local/remotix_network).
+  include if exists <local/remotix_network>
+}

@@ -1,0 +1,4289 @@
+/*
+ * rootside.c — ⭐ 1.5 (DECISIONS.md §11.11, §11.50): the root side, and the
+ *              network side's client of it.
+ *
+ * The why, the process tree and the closed list are in `rootside.h` and
+ * `rootside_proto.h`.  Here are the choices that can only be seen in the code.
+ *
+ * ⛔ THE ROOT SIDE IS BUILT AGAINST A HIJACKED NETWORK SIDE.  Everything that
+ *    arrives on the channel is the attacker's until proven otherwise: the
+ *    kernel's credentials on EVERY packet, the exact length of its kind, the
+ *    strings terminated inside their arrays — and any packet that fails is
+ *    not «skipped»: the channel is closed, the network side killed and started
+ *    again.  A name reaches PAM only inside the bounds (16 in flight, 10/s
+ *    burst 20), never for uid 0, a denied or an unknown name; a child is born
+ *    only with a grant PAM's «yes» minted here (single use, 30 s, bound to
+ *    the user and the address of the AUTH), or — CLOSE_ORPHAN — for a desktop
+ *    logind itself shows alive.  Every option of the child is the root side's.
+ *
+ * ⛔ SINGLE-THREADED, NO GDBus: it forks the children (`child_birth()`), and a
+ *    fork of a multi-threaded process runs PAM and NSS in a copy whose locks
+ *    may be held by a thread that is not there.  The signals come in through a
+ *    self-pipe; the reaping is by pid, never `waitpid(-1)` (the PAM helper and
+ *    `usermod` reap their own).
+ */
+#include "rootside.h"
+
+#include "child.h"
+#include "helper.h"
+#include "log.h"
+#include "render_grant.h"
+#include "rediscover.h"
+#include "kdehost.h"
+#include "sentinel.h" /* 1.0.0: «local excludes remote» — the sentinel's verdict, asked in a fork (localx_sweep) */
+#include "session.h"  /* 1.0.0: … and the light close's own clean-up of the user manager, run as the user in a fork (lx_clean_begin) */
+
+#include <arpa/inet.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <grp.h>
+#include <poll.h>
+#include <pwd.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/file.h>
+#include <sys/inotify.h>
+#include <sys/prctl.h>
+#include <sys/random.h>
+#include <sys/socket.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+
+extern char **environ;
+
+/* ⚠ ONE word: the log line is «time area [who] body» and the benches read the area as the
+ *   first token (11-c9: «root side» was read as «root», 16 Oct 2026). */
+#define LOG_ROOT "rootside"
+#define DENIED_USERS_DEFAULT "/etc/remotix/denied-users"
+
+/* The network side's restart pause: 1 s, 2 s, 4 s … 30 s (§11.50). */
+#define NET_RESTART_FIRST_MS 1000
+#define NET_RESTART_CAP_MS 30000
+#define NET_STABLE_MS 60000
+/* SIGTERM → the network side's farewell AND, since 1.0.0 (owner's decision, 17 Nov 2026 night: remote desktops are closed
+ * when the service stops), the full close it asks of every child — 4 s of farewell + 15 s of closes at most on its side.
+ * Then `lx_stop_begin()` ends what is left (LX_TERM_MS + LX_CLEAN_MS at most): well inside systemd's 90 s. */
+#define STOP_WAIT_MS 25000
+/* ⛔ Review of the split, findings 2 and 10: what is asked to die is made to.
+ *    The network side closed its channel ⇒ SIGTERM, SIGKILL after
+ *    NET_TERM_GRACE_MS.  The network side is dead ⇒ its children have
+ *    KIDS_EOF_GRACE_MS to leave on the EOF (dismantling their stage), then
+ *    SIGTERM, then SIGKILL after KIDS_TERM_GRACE_MS — a hung child would
+ *    otherwise refuse every new birth of its user (`own_by_uid()`).  ⚠ Only
+ *    the children: the desktops are not them, and stay (§11.50). */
+#define NET_TERM_GRACE_MS 3000
+#define KIDS_EOF_GRACE_MS 5000
+#define KIDS_TERM_GRACE_MS 3000
+
+/* ⭐ The weak stubs: `walls.c` is linked into the server (src/Makefile, SORGENTI) and its strong definitions
+ *    replace these.  They remain for the binaries that link `rootside.c` WITHOUT `walls.c` (the validator desk test
+ *    `make test-rootside`, the fuzz harnesses): there the network side is NOT started — no silent fallback to a
+ *    network side without walls (§11.50). */
+__attribute__((weak)) int walls_apply(const struct rootside_options *o, char *why,
+                                      size_t why_len)
+{
+	(void)o;
+	snprintf(why, why_len, "walls.c is not linked into this binary");
+	return -1;
+}
+/* ⭐ 1.6 (R8 B): without walls.c the fork is refused too (the stub above refuses the walls anyway) */
+__attribute__((weak)) pid_t walls_fork_pidns(void)
+{
+	errno = ENOSYS;
+	return -1;
+}
+__attribute__((weak)) const char *walls_in_force(void)
+{
+	return "";
+}
+
+/* ======================================================================= */
+/* THE PURE HALF — the validator, the bounds, the grants, the names          */
+
+static size_t size_of_request(int kind)
+{
+	switch (kind) {
+	case RXR_AUTH:         return sizeof(struct rxr_auth);
+	case RXR_SPAWN:        return sizeof(struct rxr_spawn);
+	case RXR_CLOSE_ORPHAN: return sizeof(struct rxr_close_orphan);
+	case RXR_SIGNAL:       return sizeof(struct rxr_signal_msg);
+	default:               return 0;
+	}
+}
+
+static bool terminated(const char *s, size_t cap)
+{
+	return memchr(s, 0, cap) != NULL;
+}
+
+int rootside_check_packet(const struct rootside_peer *p, const void *buf,
+                          size_t len, bool has_cred, pid_t cred_pid,
+                          uid_t cred_uid, char *why, size_t why_len)
+{
+	struct rxr_head h;
+	size_t want;
+
+	if (!has_cred) {
+		snprintf(why, why_len, "no kernel credentials on the packet");
+		return 0;
+	}
+	if (cred_uid != p->remotix_uid) {
+		snprintf(why, why_len, "sent by uid %ld, not remotix (%ld)", (long)cred_uid,
+		         (long)p->remotix_uid);
+		return 0;
+	}
+	if (cred_pid != p->net_pid) {
+		snprintf(why, why_len, "sent by pid %ld, not the network side (%ld)",
+		         (long)cred_pid, (long)p->net_pid);
+		return 0;
+	}
+	if (len < sizeof h) {
+		snprintf(why, why_len, "%zu bytes, shorter than a header", len);
+		return 0;
+	}
+	memcpy(&h, buf, sizeof h);
+	if (h.magic != RXR_MAGIC || h.version != RXR_VERSION) {
+		snprintf(why, why_len, "wrong magic or version (%08x v%u)", h.magic, h.version);
+		return 0;
+	}
+	want = size_of_request(h.kind);
+	if (!want) {
+		snprintf(why, why_len, "kind %u is not a request of the closed list", h.kind);
+		return 0;
+	}
+	if (len != want) {
+		snprintf(why, why_len, "kind %u of %zu bytes instead of %zu", h.kind, len, want);
+		return 0;
+	}
+	if (h.request == 0) {
+		snprintf(why, why_len, "kind %u with request number 0", h.kind);
+		return 0;
+	}
+	if (h.kind == RXR_AUTH) {
+		const struct rxr_auth *a = (const struct rxr_auth *)buf;
+		if (!terminated(a->user, sizeof a->user) || !terminated(a->password, sizeof a->password)
+		    || !terminated(a->rhost, sizeof a->rhost)) {
+			snprintf(why, why_len, "AUTH with a string not terminated in its array");
+			return 0;
+		}
+	} else if (h.kind == RXR_CLOSE_ORPHAN) {
+		const struct rxr_close_orphan *c = (const struct rxr_close_orphan *)buf;
+		if (!terminated(c->user, sizeof c->user)) {
+			snprintf(why, why_len, "CLOSE_ORPHAN with a name not terminated in its array");
+			return 0;
+		}
+	} else if (h.kind == RXR_SIGNAL) {
+		const struct rxr_signal_msg *s = (const struct rxr_signal_msg *)buf;
+		if (s->sig != RXR_SIG_TERM && s->sig != RXR_SIG_KILL) {
+			snprintf(why, why_len, "SIGNAL %u is neither TERM nor KILL", s->sig);
+			return 0;
+		}
+	}
+	return h.kind;
+}
+
+int rootside_found_step(struct rootside_found_seq *s, int kind, uint32_t end_count, uint8_t end_outcome, char *why,
+                        size_t why_len)
+{
+	switch (kind) {
+	case RXR_READY:
+		if (s->phase != RXR_SEQ_BEFORE_READY) {
+			snprintf(why, why_len, "a second READY");
+			return -1;
+		}
+		s->phase = RXR_SEQ_LISTING;
+		s->seen = 0;
+		return 0;
+	case RXR_FOUND_AGAIN:
+		if (s->phase != RXR_SEQ_LISTING) {
+			snprintf(why, why_len, "FOUND_AGAIN %s", s->phase == RXR_SEQ_LISTED ? "after FOUND_END" : "before READY");
+			return -1;
+		}
+		if (s->seen >= RXR_FOUND_MAX) {
+			snprintf(why, why_len, "more than %d FOUND_AGAIN", RXR_FOUND_MAX);
+			return -1;
+		}
+		s->seen++;
+		return 0;
+	case RXR_FOUND_END:
+		if (s->phase != RXR_SEQ_LISTING) {
+			snprintf(why, why_len, "FOUND_END %s", s->phase == RXR_SEQ_LISTED ? "twice" : "before READY");
+			return -1;
+		}
+		if (end_outcome != RXR_FOUND_OK && end_outcome != RXR_FOUND_UNKNOWN) {
+			snprintf(why, why_len, "FOUND_END with outcome %u", end_outcome);
+			return -1;
+		}
+		if (end_count != s->seen || (end_outcome == RXR_FOUND_UNKNOWN && s->seen != 0)) {
+			snprintf(why, why_len, "FOUND_END says %u (outcome %u) after %u FOUND_AGAIN", end_count, end_outcome, s->seen);
+			return -1;
+		}
+		s->phase = RXR_SEQ_LISTED;
+		return 0;
+	case RXR_FOUND_GONE:
+		if (s->phase != RXR_SEQ_LISTED) {
+			snprintf(why, why_len, "FOUND_GONE before FOUND_END");
+			return -1;
+		}
+		return 0;
+	default:
+		snprintf(why, why_len, "kind %d is not about desktops found again", kind);
+		return -1;
+	}
+}
+
+void rootside_bounds_init(struct rootside_bounds *b, uint64_t now_ms)
+{
+	memset(b, 0, sizeof *b);
+	b->tokens = RXR_AUTH_BURST;
+	b->tokens_ms = now_ms;
+	b->orphan_tokens = ROOTSIDE_ORPHAN_BURST;
+	b->orphan_tokens_ms = now_ms;
+	b->started_ms = now_ms;
+}
+
+bool rootside_auth_admit(struct rootside_bounds *b, uint64_t now_ms)
+{
+	if (now_ms > b->tokens_ms) {
+		b->tokens += (double)(now_ms - b->tokens_ms) * RXR_AUTH_PER_S / 1000.0;
+		if (b->tokens > RXR_AUTH_BURST)
+			b->tokens = RXR_AUTH_BURST;
+		b->tokens_ms = now_ms;
+	}
+	if (b->in_flight >= RXR_AUTH_IN_FLIGHT_MAX || b->tokens < 1.0)
+		return false;
+	b->tokens -= 1.0;
+	b->in_flight++;
+	return true;
+}
+
+bool rootside_orphan_admit(struct rootside_bounds *b, uint64_t now_ms)
+{
+	if (now_ms > b->orphan_tokens_ms) {
+		b->orphan_tokens += (double)(now_ms - b->orphan_tokens_ms) * ROOTSIDE_ORPHAN_PER_S
+		                    / 1000.0;
+		if (b->orphan_tokens > ROOTSIDE_ORPHAN_BURST)
+			b->orphan_tokens = ROOTSIDE_ORPHAN_BURST;
+		b->orphan_tokens_ms = now_ms;
+	}
+	if (b->orphan_tokens < 1.0)
+		return false;
+	b->orphan_tokens -= 1.0;
+	return true;
+}
+
+bool rootside_orphan_uid_admit(struct rootside_bounds *b, uid_t uid, uint64_t now_ms)
+{
+	int k = -1;
+
+	for (int i = 0; i < ROOTSIDE_ORPHAN_UIDS; i++) {
+		bool live = b->orphan_uid[i].at_ms
+		            && now_ms < b->orphan_uid[i].at_ms + ROOTSIDE_ORPHAN_UID_MS;
+
+		if (live && b->orphan_uid[i].uid == uid)
+			return false;
+		if (!live && k < 0)
+			k = i;
+	}
+	/* ⛔ All the holds live: REFUSED, never one evicted (lane 1's pre-release
+	 *    review, 16 Oct 2026).  Before, the OLDEST was replaced — a run of
+	 *    CLOSE_ORPHANs for 32 other uids, inside the bucket, freed a user's hold
+	 *    within ~16 s and gave that user a second close-only child, as the
+	 *    grants' finding 4 of review 4. */
+	if (k < 0)
+		return false;
+	b->orphan_uid[k].uid = uid;
+	b->orphan_uid[k].at_ms = now_ms ? now_ms : 1;
+	return true;
+}
+
+void rootside_exit_note(struct rootside_bounds *b, uid_t uid, uint64_t now_ms)
+{
+	int k = -1, oldest = 0;
+
+	if (!now_ms)
+		now_ms = 1;
+	for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++) {
+		if (b->exits[i].at_ms && b->exits[i].uid == uid) {
+			if (now_ms > b->exits[i].at_ms) /* the clock never goes back */
+				b->exits[i].at_ms = now_ms;
+			return;
+		}
+		if (!b->exits[i].at_ms) {
+			if (k < 0)
+				k = i;
+		} else if (b->exits[i].at_ms < b->exits[oldest].at_ms || !b->exits[oldest].at_ms) {
+			oldest = i;
+		}
+	}
+	if (k < 0) {
+		/* full: the OLDEST goes, and its time is kept as a floor for every uid that has no
+		 * entry — a forgotten uid then waits at least as long as it really should */
+		k = oldest;
+		if (b->exits[k].at_ms > b->exits_forgot_ms)
+			b->exits_forgot_ms = b->exits[k].at_ms;
+	}
+	b->exits[k].uid = uid;
+	b->exits[k].at_ms = now_ms;
+}
+
+bool rootside_orphan_abandoned(const struct rootside_bounds *b, uid_t uid, uint64_t now_ms,
+                               uint64_t *left_ms)
+{
+	uint64_t since = b->started_ms, due;
+
+	if (left_ms)
+		*left_ms = UINT64_MAX;
+	if (!b->abandon_ms)
+		return false;
+	if (b->exits_forgot_ms > since)
+		since = b->exits_forgot_ms;
+	for (int i = 0; i < ROOTSIDE_EXIT_UIDS; i++)
+		if (b->exits[i].at_ms && b->exits[i].uid == uid) {
+			if (b->exits[i].at_ms > since)
+				since = b->exits[i].at_ms;
+			break;
+		}
+	due = since > UINT64_MAX - b->abandon_ms ? UINT64_MAX : since + b->abandon_ms; /* saturates */
+	if (now_ms >= due)
+		return true;
+	if (left_ms)
+		*left_ms = due - now_ms;
+	return false;
+}
+
+/* ⭐ 1.5 (split audit R2) — the ban of the root side; see the box in rootside.h. */
+static const uint64_t LOGIN_LADDER_MS[3] = {900000u, 3600000u, 43200000u};
+
+static int fail_inside(const struct rootside_fail *e, uint64_t now_ms)
+{
+	int in = 0;
+
+	for (int i = 0; i < e->n; i++)
+		if (e->times[i] >= now_ms || now_ms - e->times[i] <= ROOTSIDE_LOGIN_WINDOW_MS)
+			in++;
+	return in;
+}
+
+static void fail_forget(struct rootside_fail *e, uint64_t now_ms)
+{
+	if (e->last_ban_ms && e->until_ms <= now_ms
+	    && now_ms - e->last_ban_ms >= ROOTSIDE_LOGIN_FORGET_MS) {
+		e->level = 0;
+		e->last_ban_ms = 0;
+	}
+}
+
+/* The entry of `key`; one is given (taking back, in this order, a never-used one, an
+ * idle one with no recidivism, the idle one touched longest ago) when `create`.  Never an
+ * entry with an attempt in flight or a pause in force: NULL then. */
+static struct rootside_fail *fail_get(struct rootside_fail *t, int n, const char *key,
+                                      uint64_t now_ms, bool create)
+{
+	struct rootside_fail *free_e = NULL, *victim = NULL;
+
+	for (int i = 0; i < n; i++) {
+		if (t[i].used && strcmp(t[i].key, key) == 0)
+			return &t[i];
+		if (!t[i].used) {
+			if (!free_e)
+				free_e = &t[i];
+			continue;
+		}
+		if (t[i].pending > 0 || t[i].until_ms > now_ms)
+			continue;
+		if (!victim || (t[i].level == 0) > (victim->level == 0)
+		    || ((t[i].level == 0) == (victim->level == 0)
+		        && t[i].touched_ms < victim->touched_ms))
+			victim = &t[i];
+	}
+	if (!create)
+		return NULL;
+	if (!free_e)
+		free_e = victim;
+	if (!free_e)
+		return NULL;
+	memset(free_e, 0, sizeof *free_e);
+	free_e->used = true;
+	snprintf(free_e->key, sizeof free_e->key, "%s", key);
+	free_e->touched_ms = now_ms;
+	return free_e;
+}
+
+int rootside_login_admit(struct rootside_bounds *b, const char *ukey, const char *rhost,
+                         uint64_t now_ms, uint64_t *left_ms, unsigned *taken)
+{
+	struct rootside_fail *u, *p = NULL, *h = NULL;
+	char pkey[ROOTSIDE_LOGIN_KEY_MAX];
+	bool with_host = rhost && rhost[0];
+
+	*taken = 0;
+	if (left_ms)
+		*left_ms = 0;
+	/* the uid table is the ground floor: no place there = refused.  The other two are
+	 * extra levels: no place there = that level is skipped and the uid level decides */
+	u = fail_get(b->users, ROOTSIDE_LOGIN_USERS, ukey, now_ms, true);
+	if (!u)
+		return RXR_LOGIN_FULL;
+	snprintf(pkey, sizeof pkey, "%s|%s", ukey, with_host ? rhost : "");
+	p = fail_get(b->pairs, ROOTSIDE_LOGIN_PAIRS, pkey, now_ms, true);
+	if (with_host)
+		h = fail_get(b->hosts, ROOTSIDE_LOGIN_HOSTS, rhost, now_ms, true);
+	fail_forget(u, now_ms);
+	if (p)
+		fail_forget(p, now_ms);
+	if (h)
+		fail_forget(h, now_ms);
+#define PAUSED(e, code) \
+	if ((e) && (e)->until_ms > now_ms) { \
+		if (left_ms) \
+			*left_ms = (e)->until_ms - now_ms; \
+		return code; \
+	}
+	PAUSED(p, RXR_LOGIN_PAIR_PAUSED)
+	PAUSED(u, RXR_LOGIN_USER_PAUSED)
+	PAUSED(h, RXR_LOGIN_HOST_PAUSED)
+#undef PAUSED
+	if (p && fail_inside(p, now_ms) + p->pending >= ROOTSIDE_LOGIN_PAIR_LIMIT)
+		return RXR_LOGIN_PAIR_BUSY;
+	if (fail_inside(u, now_ms) + u->pending >= ROOTSIDE_LOGIN_USER_LIMIT)
+		return RXR_LOGIN_USER_BUSY;
+	/* ⭐ 1.5: the ADDRESS level counts only the failures, not the AUTH in flight (the pair and the uid keep counting theirs): eight people behind one
+	 *    NAT who log in together must not be refused by their own number.  The in-flight AUTH are bounded anyway (RXR_AUTH_IN_FLIGHT_MAX, the bucket). */
+	if (h && fail_inside(h, now_ms) >= ROOTSIDE_LOGIN_HOST_LIMIT)
+		return RXR_LOGIN_HOST_BUSY;
+	u->pending++;
+	u->touched_ms = now_ms;
+	*taken = RXR_LOGIN_L_USER;
+	if (p) {
+		p->pending++;
+		p->touched_ms = now_ms;
+		*taken |= RXR_LOGIN_L_PAIR;
+	}
+	if (h) {
+		h->pending++;
+		h->touched_ms = now_ms;
+		*taken |= RXR_LOGIN_L_HOST;
+	}
+	return RXR_LOGIN_OK;
+}
+
+/* one failure on `e`, whose limit is `limit`; true when it started a pause.  `ladder` false:
+ * a fixed pause of `fixed_ms`, no level, no memory of it */
+static bool fail_record(struct rootside_fail *e, int limit, uint64_t now_ms, bool ladder,
+                        uint64_t fixed_ms, int *level, uint64_t *ms)
+{
+	if (e->n < limit) {
+		e->times[e->n++] = now_ms;
+	} else {
+		memmove(e->times, e->times + 1, (size_t)(limit - 1) * sizeof e->times[0]);
+		e->times[limit - 1] = now_ms;
+	}
+	if (e->n < limit || now_ms - e->times[0] > ROOTSIDE_LOGIN_WINDOW_MS)
+		return false;
+	if (ladder) {
+		if (e->level < 3)
+			e->level++;
+		*level = e->level;
+		*ms = LOGIN_LADDER_MS[e->level - 1];
+		e->last_ban_ms = now_ms;
+	} else {
+		*level = 0;
+		*ms = fixed_ms;
+	}
+	e->until_ms = now_ms + *ms;
+	e->n = 0; /* the pause took them */
+	return true;
+}
+
+void rootside_login_done(struct rootside_bounds *b, const char *ukey, const char *rhost,
+                         uint64_t now_ms, unsigned taken, int verdict,
+                         struct rootside_login_event *ev)
+{
+	char pkey[ROOTSIDE_LOGIN_KEY_MAX];
+	struct rootside_login_event local;
+	struct rootside_fail *u = fail_get(b->users, ROOTSIDE_LOGIN_USERS, ukey, now_ms, false);
+	struct rootside_fail *p, *h;
+	int dummy;
+
+	snprintf(pkey, sizeof pkey, "%s|%s", ukey, rhost ? rhost : "");
+	p = fail_get(b->pairs, ROOTSIDE_LOGIN_PAIRS, pkey, now_ms, false);
+	h = rhost && rhost[0] ? fail_get(b->hosts, ROOTSIDE_LOGIN_HOSTS, rhost, now_ms, false) : NULL;
+	if (!ev)
+		ev = &local;
+	memset(ev, 0, sizeof *ev);
+	/* the places are given back where they were taken, and only there */
+	if (u && (taken & RXR_LOGIN_L_USER) && u->pending > 0)
+		u->pending--;
+	if (p && (taken & RXR_LOGIN_L_PAIR) && p->pending > 0)
+		p->pending--;
+	if (h && (taken & RXR_LOGIN_L_HOST) && h->pending > 0)
+		h->pending--;
+	if (verdict == RXR_LOGIN_REFUSED) {
+		if (u)
+			ev->user_ban = fail_record(u, ROOTSIDE_LOGIN_USER_LIMIT, now_ms, false,
+			                           ROOTSIDE_LOGIN_USER_PAUSE_MS, &dummy, &ev->user_ms);
+		if (p)
+			ev->pair_ban = fail_record(p, ROOTSIDE_LOGIN_PAIR_LIMIT, now_ms, true, 0,
+			                           &ev->pair_level, &ev->pair_ms);
+		if (h)
+			ev->host_ban = fail_record(h, ROOTSIDE_LOGIN_HOST_LIMIT, now_ms, true, 0,
+			                           &ev->host_level, &ev->host_ms);
+	} else if (verdict == RXR_LOGIN_ACCEPTED) {
+		if (u)
+			u->n = 0; /* only this user's failures: not the recidivism, not the address's */
+		if (p)
+			p->n = 0;
+	}
+}
+
+void rootside_auth_done(struct rootside_bounds *b)
+{
+	if (b->in_flight > 0)
+		b->in_flight--;
+}
+
+bool rootside_grant_mint(struct rootside_bounds *b, const char *user,
+                         const char *rhost, uint64_t now_ms,
+                         uint8_t out[RXR_GRANT_BYTES])
+{
+	int k = -1;
+
+	for (int i = 0; i < ROOTSIDE_GRANTS_MAX; i++)
+		if (!b->grants[i].used || b->grants[i].expires_ms <= now_ms) {
+			k = i;
+			break;
+		}
+	/* ⛔ all live: REFUSED, never another login's live grant overwritten
+	 *    (review 4, finding 4 — before, the one closest to expiry went, and
+	 *    that user's SPAWN was refused after a right password) */
+	if (k < 0) {
+		errno = ENOSPC;
+		return false;
+	}
+	if (getrandom(out, RXR_GRANT_BYTES, 0) != RXR_GRANT_BYTES)
+		return false;
+	memset(&b->grants[k], 0, sizeof b->grants[k]);
+	b->grants[k].used = true;
+	memcpy(b->grants[k].bytes, out, RXR_GRANT_BYTES);
+	snprintf(b->grants[k].user, sizeof b->grants[k].user, "%s", user);
+	snprintf(b->grants[k].rhost, sizeof b->grants[k].rhost, "%s", rhost ? rhost : "");
+	b->grants[k].expires_ms = now_ms + RXR_GRANT_LIFE_MS;
+	return true;
+}
+
+bool rootside_grant_take(struct rootside_bounds *b,
+                         const uint8_t bytes[RXR_GRANT_BYTES], uint64_t now_ms,
+                         char user[RXR_USER_MAX], char rhost[RXR_RHOST_MAX])
+{
+	int hit = -1;
+
+	for (int i = 0; i < ROOTSIDE_GRANTS_MAX; i++) {
+		uint8_t diff = 0;
+
+		if (!b->grants[i].used)
+			continue;
+		if (b->grants[i].expires_ms <= now_ms) {
+			explicit_bzero(&b->grants[i], sizeof b->grants[i]);
+			continue;
+		}
+		/* ⚠ Every byte compared, whatever the first says. */
+		for (int j = 0; j < RXR_GRANT_BYTES; j++)
+			diff |= (uint8_t)(b->grants[i].bytes[j] ^ bytes[j]);
+		if (diff == 0)
+			hit = i;
+	}
+	if (hit < 0)
+		return false;
+	snprintf(user, RXR_USER_MAX, "%s", b->grants[hit].user);
+	snprintf(rhost, RXR_RHOST_MAX, "%s", b->grants[hit].rhost);
+	/* ⛔ Single use: gone before the birth even starts. */
+	explicit_bzero(&b->grants[hit], sizeof b->grants[hit]);
+	return true;
+}
+
+/* 1 the name is listed · 0 it is not (or there is no file) · -1 the file
+ * exists and cannot be read — and then nobody is let through (review 4 B,
+ * finding 2: a deny list that could not be read let EVERY name pass, silently). */
+static int listed_in(const char *path, const char *user)
+{
+	FILE *f = fopen(path, "re");
+	char line[512];
+	int hit = 0;
+
+	if (!f)
+		return errno == ENOENT ? 0 : -1;
+	while (!hit && fgets(line, sizeof line, f)) {
+		char *s = line, *e;
+
+		while (*s == ' ' || *s == '\t')
+			s++;
+		if (*s == '#')
+			continue;
+		e = s + strcspn(s, " \t\r\n#");
+		*e = 0;
+		if (*s && strcmp(s, user) == 0)
+			hit = 1;
+	}
+	if (!hit && ferror(f))
+		hit = -1;
+	fclose(f);
+	return hit;
+}
+
+/* ⛔ A deny list that cannot be read FAILS CLOSED: every name is refused before
+ *    PAM, with the reason.  ⚠ The line is the caller's own «refused» line, once
+ *    per login asked — not a second one here. */
+static int denied_check(const char *denied, const char *user, char *why, size_t why_len)
+{
+	int r = listed_in(denied, user);
+
+	if (r < 0)
+		snprintf(why, why_len, "the deny list %s cannot be read (%s): EVERY login is "
+		         "refused until it can be", denied, strerror(errno ? errno : EIO));
+	return r;
+}
+
+/* ⭐ As `child.c`'s `user_lookup()` (review of the split, finding 7): the
+ *    buffer GROWS on `ERANGE` (1 → 4 → 16 → 64 KiB) — an entry that does not
+ *    fit is neither «not found» nor «could not look».  ⚠ `*pw`'s strings live
+ *    in this module's buffer until the next call (single-threaded). */
+static int root_user_lookup(const char *name, struct passwd *pw, struct passwd **res)
+{
+	static char *buf;
+	static size_t cap;
+	int e;
+
+	if (!buf) {
+		buf = malloc(1024);
+		if (!buf)
+			return ENOMEM;
+		cap = 1024;
+	}
+	for (;;) {
+		char *bigger;
+
+		*res = NULL;
+		e = getpwnam_r(name, pw, buf, cap, res);
+		if (e != ERANGE || cap >= 65536)
+			return e;
+		bigger = realloc(buf, cap * 4);
+		if (!bigger)
+			return e;
+		buf = bigger;
+		cap *= 4;
+	}
+}
+
+/* ⛔ Step 2 (F1, 17 Nov 2026): `named` false = `why` NEVER carries the name, neither the typed one nor the one NSS gives back.  It is
+ *    the form for AUTH, where the password is not verified yet: whoever types the password in the user field must not leave it in
+ *    the journal, and a real name is not written either before PAM's yes.  The reason stays the true one. */
+static int user_refused_as(const char *user, const char *denied_path, uid_t *uid,
+                           char *why, size_t why_len, bool named)
+{
+	const char *denied = denied_path ? denied_path : DENIED_USERS_DEFAULT;
+	struct passwd pw, *res = NULL;
+	int e;
+
+	if (!user || !user[0]) {
+		snprintf(why, why_len, "an empty name");
+		return 1;
+	}
+	switch (denied_check(denied, user, why, why_len)) {
+	case 1:
+		if (named)
+			snprintf(why, why_len, "«%s» is in %s", user, denied);
+		else
+			snprintf(why, why_len, "the name is in %s", denied);
+		return 1;
+	case -1:
+		return 1;
+	default:
+		break;
+	}
+	e = root_user_lookup(user, &pw, &res);
+	if (e != 0) {
+		if (named)
+			snprintf(why, why_len, "the name «%s» could not be looked up now (%s)", user,
+			         strerror(e));
+		else
+			snprintf(why, why_len, "not verified: lookup error (%s)", strerror(e));
+		return 2;
+	}
+	if (!res) {
+		if (named)
+			snprintf(why, why_len, "«%s» is not a user of this system", user);
+		else
+			snprintf(why, why_len, "the name is not a user of this system");
+		return 1;
+	}
+	if (pw.pw_uid == 0) {
+		if (named)
+			snprintf(why, why_len, "«%s» is uid 0", user);
+		else
+			snprintf(why, why_len, "the name is uid 0");
+		return 1;
+	}
+	/* ⛔ The name NSS gives back is checked too (review of the split,
+	 *    finding 8): with sssd/LDAP case-insensitive, or an alias, «BRUNO»
+	 *    resolves to «bruno» — and «bruno» is the name in the file. */
+	if (strcmp(pw.pw_name, user) != 0 && denied_check(denied, pw.pw_name, why, why_len) < 0)
+		return 1;
+	if (strcmp(pw.pw_name, user) != 0 && listed_in(denied, pw.pw_name) == 1) {
+		if (named)
+			snprintf(why, why_len, "«%s» is «%s» for NSS, and «%s» is in %s", user,
+			         pw.pw_name, pw.pw_name, denied);
+		else
+			snprintf(why, why_len, "the name is another spelling for NSS of one that is in %s", denied);
+		return 1;
+	}
+	if (uid)
+		*uid = pw.pw_uid;
+	why[0] = 0;
+	return 0;
+}
+
+int rootside_user_refused(const char *user, const char *denied_path, uid_t *uid,
+                          char *why, size_t why_len)
+{
+	return user_refused_as(user, denied_path, uid, why, why_len, true);
+}
+
+/* «» or a bare IPv4/IPv6 literal (an IPv6 zone after `%` allowed). */
+static bool rhost_ok(const char *r)
+{
+	char v6[RXR_RHOST_MAX];
+	unsigned char bin[16];
+	const char *pct;
+
+	if (!r[0])
+		return true;
+	if (inet_pton(AF_INET, r, bin) == 1)
+		return true;
+	snprintf(v6, sizeof v6, "%s", r);
+	pct = strchr(v6, '%');
+	if (pct) {
+		for (const char *z = pct + 1; *z; z++)
+			if (!((*z >= 'a' && *z <= 'z') || (*z >= 'A' && *z <= 'Z')
+			      || (*z >= '0' && *z <= '9') || *z == '_' || *z == '-' || *z == '.'))
+				return false;
+		v6[pct - v6] = 0;
+	}
+	return inet_pton(AF_INET6, v6, bin) == 1;
+}
+
+/* ======================================================================= */
+/* THE ROOT SIDE                                                             */
+
+struct own_child {
+	bool used;
+	uint64_t serial;
+	pid_t pid;
+	uid_t uid;
+	gid_t gid;
+	bool render_grant;
+	char user[64];
+	uint32_t generation;  /* of the network side it was born for */
+	uint64_t term_at;     /* ≠ 0: that network side is dead — SIGTERM then */
+	uint64_t kill_at;     /* ≠ 0: SIGTERM sent — SIGKILL then */
+	/* ⭐ 1.5 (R1): ≠ 0: the moment its network side died — the user was left without a client
+	 * THEN, not when this (slow) child is finally reaped */
+	uint64_t orphaned_ms;
+};
+
+struct pending_auth {
+	bool used;
+	uint64_t ticket;      /* the helper's */
+	uint64_t request;     /* the network side's */
+	uint32_t generation;  /* of the network side that asked */
+	unsigned taken;                    /* ⭐ 1.5 (R2): the levels it took a place in, */
+	char ukey[ROOTSIDE_LOGIN_KEY_MAX]; /*   the uid, in decimal, and the address, */
+	char rhost[RXR_RHOST_MAX];         /*   to give the attempt back to the counters */
+};
+
+/* ⭐ 1.6 (R8): a desktop found again, as the ROOT side keeps it.  `pidfd` watches the stage (-1 = the kernel gave none: the
+ *    start time is read again every FOUND_POLL_MS); `pending` = not yet announced to the current network side. */
+#define FOUND_POLL_MS 10000
+struct found_slot {
+	bool used, pending;
+	int pidfd;
+	pid_t stage;
+	unsigned long long starttime;
+	uid_t uid;
+	unsigned sessions;
+	char user[RXR_USER_MAX];
+	char session[RXR_SESSION_MAX];
+	char comm[RXR_COMM_MAX];
+};
+struct found_gone_note {
+	uid_t uid;
+	char user[RXR_USER_MAX];
+};
+enum { FOUND_IDLE = 0, FOUND_SENDING = 1, FOUND_LISTED = 2 };
+
+static struct {
+	const struct rootside_options *o;
+	struct birth_opts birth;
+	struct found_slot *found;        /* RXR_FOUND_MAX */
+	struct found_gone_note *gone;    /* RXR_FOUND_MAX: deaths to announce after FOUND_END */
+	int ngone, found_phase, found_promised;
+	uint8_t found_outcome;
+	uint64_t found_poll_ms;
+	char my_path[512];
+	int chan;
+	pid_t net_pid;
+	uint32_t generation;
+	uint64_t net_born_ms;
+	uint64_t restart_at;
+	int deaths_in_row;
+	helper *pam;
+	struct rootside_bounds bounds;
+	struct own_child *kids;
+	int cap;
+	uint64_t next_serial;
+	struct pending_auth pending[RXR_AUTH_IN_FLIGHT_MAX * 2];
+	int pipe_r, pipe_w;
+	bool stopping;
+	uint64_t stop_deadline;
+	bool codecs_ok;
+	char offered[RXR_CODEC_MAX];
+	char explanation[RXR_EXPLAIN_MAX];
+	uint64_t refused_logged_ms;
+	uint32_t refused_hidden;
+	uint64_t net_kill_at;   /* ≠ 0: SIGTERM sent on its EOF — SIGKILL then */
+	uint64_t prepam_logged_ms;
+	uint32_t prepam_hidden;
+	struct rxr_child_exited *outbox; /* R.cap * 4 */
+	int nout;
+	uint64_t tables_ms;     /* the last «root side tables» line */
+	/* ⭐ 1.6 (avvio): no codec at startup (card node not yet created at boot) ⇒ measure again, 2 s then doubling up to 60 s */
+	uint64_t codec_t0_ms, codec_next_ms, codec_every_ms;
+	bool codec_watch;       /* measuring again: the card's node was missing at startup */
+	bool codec_to_send;     /* CODEC found and not yet out on the channel: sent again every round (never lost, as CHILD_EXITED) */
+	int codec_opens;        /* tries after the node opened with nothing to encode */
+	video_probe *codec_probe;
+} R = { .chan = -1, .pipe_r = -1, .pipe_w = -1 };
+
+static void on_signal(int s)
+{
+	unsigned char b = (unsigned char)s;
+	int saved = errno;
+
+	(void)!write(R.pipe_w, &b, 1);
+	errno = saved;
+}
+
+static void head_fill(struct rxr_head *h, int kind, uint64_t request)
+{
+	h->magic = RXR_MAGIC;
+	h->version = RXR_VERSION;
+	h->kind = (uint16_t)kind;
+	h->request = request;
+}
+
+/* ⛔ Never waits: a network side that does not read loses the packet, and
+ *    the line says so — except CHILD_EXITED, kept in `R.outbox` and sent
+ *    again (`outbox_flush()`). */
+static void net_kill(const char *why);
+
+/* ⭐ `fd2` (a pidfd of the child, only with SPAWNED, after the socket) travels in the same SCM_RIGHTS; -1 = none. */
+static bool chan_try2(const void *p, size_t len, int fd, int fd2)
+{
+	struct msghdr m;
+	struct iovec io = { (void *)p, len };
+	union {
+		struct cmsghdr c;
+		char b[CMSG_SPACE(2 * sizeof(int))];
+	} ctl;
+	ssize_t n;
+
+	if (R.chan < 0)
+		return false;
+	memset(&m, 0, sizeof m);
+	m.msg_iov = &io;
+	m.msg_iovlen = 1;
+	if (fd >= 0) {
+		int fds[2] = { fd, fd2 };
+		int count = fd2 >= 0 ? 2 : 1;
+
+		memset(&ctl, 0, sizeof ctl);
+		m.msg_control = ctl.b;
+		m.msg_controllen = CMSG_SPACE(count * sizeof(int));
+		struct cmsghdr *c = CMSG_FIRSTHDR(&m);
+		c->cmsg_level = SOL_SOCKET;
+		c->cmsg_type = SCM_RIGHTS;
+		c->cmsg_len = CMSG_LEN(count * sizeof(int));
+		memcpy(CMSG_DATA(c), fds, count * sizeof(int));
+	}
+	n = sendmsg(R.chan, &m, MSG_NOSIGNAL | MSG_DONTWAIT);
+	if (n != (ssize_t)len) {
+		/* ⛔ Review 2, M2: a network side that shut its READING end
+		 *    (`shutdown(SHUT_RD)`) leaves POLLOUT on for ever while every
+		 *    send says EPIPE — with a CHILD_EXITED in the outbox that was a
+		 *    silent 100 % CPU spin.  It will never read again: killed. */
+		if (n < 0 && (errno == EPIPE || errno == ECONNRESET)) {
+			int e = errno;
+			net_kill("it shut the reading end of its channel (a send says EPIPE)");
+			errno = e;
+			return false;
+		}
+		if (n >= 0)
+			errno = EMSGSIZE;
+		return false;
+	}
+	return true;
+}
+
+static bool chan_try(const void *p, size_t len, int fd)
+{
+	return chan_try2(p, len, fd, -1);
+}
+
+static bool chan_send(const void *p, size_t len, int fd)
+{
+	static uint64_t logged_ms;
+	static uint32_t hidden;
+	uint64_t now;
+
+	if (chan_try(p, len, fd))
+		return true;
+	if (R.chan < 0)
+		return false;
+	/* ⚠ One line per second at most, with the count (review 2, M2). */
+	now = log_now_ms();
+	hidden++;
+	if (now >= logged_ms + 1000) {
+		if (hidden > 1)
+			registro_dice(LOG_ROOT, "⛔ a packet of kind %u to the network side did not "
+			              "leave (%s) — and %u others in the last second, not written",
+			              ((const struct rxr_head *)p)->kind, strerror(errno), hidden - 1);
+		else
+			registro_dice(LOG_ROOT, "⛔ a packet of kind %u to the network side did not "
+			              "leave (%s)", ((const struct rxr_head *)p)->kind, strerror(errno));
+		logged_ms = now;
+		hidden = 0;
+	}
+	return false;
+}
+
+/* ⛔ CHILD_EXITED is never lost (review of the split, finding 4): a slot the
+ *    network side never sees freed stays «exiting» for ever there.  What did
+ *    not leave waits here, in order, and is sent again every round (and on
+ *    POLLOUT); the network side it was for dead, the list is emptied — the
+ *    next one does not know those serials.  At most 4 × the children cap. */
+static void outbox_flush(void)
+{
+	int sent = 0;
+
+	while (sent < R.nout && chan_try(&R.outbox[sent], sizeof R.outbox[sent], -1))
+		sent++;
+	if (sent > 0) {
+		memmove(R.outbox, R.outbox + sent, (size_t)(R.nout - sent) * sizeof R.outbox[0]);
+		R.nout -= sent;
+	}
+}
+
+static void send_exited(const struct rxr_child_exited *e)
+{
+	if (R.chan < 0)
+		return;
+	outbox_flush();
+	if (R.nout == 0 && chan_try(e, sizeof *e, -1))
+		return;
+	if (R.nout >= R.cap * 4) {
+		/* ⛔ Review 4, finding 5: no longer LOST — a network side that does
+		 *    not read its channel for 4 × the cap of deaths is treated like
+		 *    one that broke the closed list: killed and started again, and
+		 *    the new one knows none of those serials (its children see EOF,
+		 *    the desktops are found again).  A lost CHILD_EXITED left that
+		 *    slot «exiting» there for ever. */
+		registro_dice(LOG_ROOT, "⛔⛔ CHILD_EXITED for serial %llu could not leave and %d "
+		              "are already waiting: the network side does not read its channel",
+		              (unsigned long long)e->serial, R.nout);
+		net_kill("it left 4 × the cap of CHILD_EXITED unread");
+		return;
+	}
+	if (R.nout == 0)
+		registro_dice(LOG_ROOT, "⚠ CHILD_EXITED for serial %llu did not leave now (%s): "
+		              "kept, and sent again", (unsigned long long)e->serial, strerror(errno));
+	R.outbox[R.nout++] = *e;
+}
+
+static void send_refused_wait(uint64_t request, int reason, uint64_t wait_ms)
+{
+	struct rxr_spawn_refused r;
+
+	memset(&r, 0, sizeof r);
+	head_fill(&r.h, RXR_SPAWN_REFUSED, request);
+	r.reason = (uint8_t)reason;
+	r.wait_ms = wait_ms > UINT32_MAX ? UINT32_MAX : (uint32_t)wait_ms;
+	(void)chan_send(&r, sizeof r, -1);
+}
+
+static void send_refused(uint64_t request, int reason)
+{
+	send_refused_wait(request, reason, 0);
+}
+
+bool rootside_verdict_outcome_ok(unsigned outcome)
+{
+	return outcome <= RXR_OUTCOME_MAX;
+}
+
+static void send_verdict(uint64_t request, int outcome, const uint8_t *grant, const char *canon)
+{
+	struct rxr_verdict v;
+
+	/* the root side's own list: a value outside it is a defect of ours, and the safe thing to say is «not checked» (never counted) */
+	if (outcome < 0 || !rootside_verdict_outcome_ok((unsigned)outcome))
+		outcome = RXR_NOT_CHECKED;
+	memset(&v, 0, sizeof v);
+	head_fill(&v.h, RXR_VERDICT, request);
+	v.outcome = (uint8_t)outcome;
+	if (outcome == RXR_YES && grant)
+		memcpy(v.grant, grant, RXR_GRANT_BYTES);
+	if (outcome == RXR_YES && canon && canon[0] && strlen(canon) < sizeof v.canon)
+		memcpy(v.canon, canon, strlen(canon));   /* (the field was zeroed: the NUL and the rest are there) */
+	(void)chan_send(&v, sizeof v, -1);
+	explicit_bzero(&v, sizeof v);
+}
+
+/* ⛔ The network side broke the closed list: the channel closes and it dies;
+ *    `reap_net()` starts it again with the pause. */
+static void net_kill(const char *why)
+{
+	registro_dice(LOG_ROOT,
+	              "⛔⛔ the network side (pid %ld) broke the closed list: %s.  The "
+	              "channel is closed and the network side is KILLED; it is started "
+	              "again with the pause (DECISIONS.md §11.50)",
+	              (long)R.net_pid, why);
+	if (R.chan >= 0) {
+		close(R.chan);
+		R.chan = -1;
+	}
+	if (R.net_pid > 0)
+		kill(R.net_pid, SIGKILL);
+}
+
+static void on_pam_outcome(void *ctx, uint64_t ticket, int outcome, const char *user,
+                           const char *rhost)
+{
+	struct pending_auth *pa = NULL;
+	uint8_t grant[RXR_GRANT_BYTES];
+	int out;
+
+	(void)ctx;
+	for (size_t i = 0; i < sizeof R.pending / sizeof R.pending[0]; i++)
+		if (R.pending[i].used && R.pending[i].ticket == ticket)
+			pa = &R.pending[i];
+	if (!pa) {
+		log_detail(LOG_ROOT, "PAM's answer for ticket %llu finds no pending AUTH (its "
+		           "place was never given, or the network side that asked is gone): dropped",
+		           (unsigned long long)ticket);
+		return;
+	}
+	pa->used = false;
+	rootside_auth_done(&R.bounds);
+	/* ⭐ 1.5 (R2): what PAM REALLY answered goes to the counters — refused (0) or expired (4)
+	 *    count, a yes clears the user, everything else (locked, not checked) is not counted.
+	 *    Before the next test: an AUTH of a network side that is gone has failed all the same. */
+	/* ⛔ Step 2 (F1): these three lines are written after a REFUSAL, so they name the account by its uid (already resolved by this side
+	 *    before PAM was asked) and never by the typed name: the name returns in the lines of PAM's yes, below. */
+	{
+		struct rootside_login_event ev;
+		uint64_t now = log_now_ms();
+
+		rootside_login_done(&R.bounds, pa->ukey, pa->rhost, now, pa->taken,
+		                    (outcome == 0 || outcome == 4) ? RXR_LOGIN_REFUSED
+		                    : outcome == 1                 ? RXR_LOGIN_ACCEPTED
+		                                                   : RXR_LOGIN_UNCHECKED, &ev);
+		if (ev.pair_ban)
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of uid %s from «%s» refused by PAM in %d "
+			              "min: no AUTH for that user from that address for %llu min (pause %d of 3) "
+			              "— answered PAUSED meanwhile", ROOTSIDE_LOGIN_PAIR_LIMIT, pa->ukey,
+			              pa->rhost, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.pair_ms / 60000), ev.pair_level);
+		if (ev.user_ban)
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords of uid %s refused by PAM in %d min "
+			              "from any addresses: no AUTH for that user from anywhere for %llu min "
+			              "(fixed) — answered PAUSED meanwhile", ROOTSIDE_LOGIN_USER_LIMIT,
+			              pa->ukey, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.user_ms / 60000));
+		if (ev.host_ban)
+			registro_dice(LOG_ROOT, "⛔ R2: %d passwords from «%s» refused by PAM in %d min: no "
+			              "AUTH from it for %llu min (pause %d of 3) — answered PAUSED meanwhile",
+			              ROOTSIDE_LOGIN_HOST_LIMIT, pa->rhost, ROOTSIDE_LOGIN_WINDOW_MS / 60000,
+			              (unsigned long long)(ev.host_ms / 60000), ev.host_level);
+	}
+	if (pa->generation != R.generation || R.chan < 0)
+		return; /* asked by a network side that is gone */
+	/* ⭐ D3 (7645beb7): outcome 4 is the root-form EXPIRY — an attempt without a verdict is not a free one, so it
+	 *    travels as a plain NO (counted by the network side); 3 stays «not checked» (cap, death, helper down). */
+	out = outcome == 1 ? RXR_YES : outcome == 2 ? RXR_NO_LOCKED
+	                             : (outcome == 0 || outcome == 4) ? RXR_NO : RXR_NOT_CHECKED;
+	if (out == RXR_YES
+	    && !rootside_grant_mint(&R.bounds, user, rhost, log_now_ms(), grant)) {
+		registro_dice(LOG_ROOT, "⛔ PAM said yes to «%s» but no grant could be minted "
+		              "(%s): «not checked»", user,
+		              errno == ENOSPC ? "the grant table is full of live grants"
+		                              : strerror(errno));
+		out = RXR_NOT_CHECKED;
+	}
+	if (out == RXR_YES)
+		registro_dice(LOG_ROOT,
+		              "⭐ PAM said YES to «%s»: a grant is minted — single use, %d s, "
+		              "bound to «%s» from «%s»",
+		              user, RXR_GRANT_LIFE_MS / 1000, user, rhost[0] ? rhost : "?");
+	/* ⭐ rilettura-fix M1: the name of the SYSTEM for the typed one goes WITH the yes, resolved here (this side resolves names anyway, at the birth): the network side must not ask
+	 *    NSS in the loop that serves everybody.  Only when it differs from the typed one and is a plausible user name; otherwise the field stays zero. */
+	{
+		char canon[RXR_USER_MAX] = "";
+
+		if (out == RXR_YES) {
+			struct passwd pw, *res = NULL;
+			char spare[2048];
+
+			if (getpwnam_r(user, &pw, spare, sizeof spare, &res) == 0 && res && res->pw_name && res->pw_name[0] &&
+			    strlen(res->pw_name) < sizeof canon && strcmp(res->pw_name, user) != 0) {
+				snprintf(canon, sizeof canon, "%s", res->pw_name);
+				if (!rxr_canon_valid(canon))
+					canon[0] = 0;
+			}
+		}
+		send_verdict(pa->request, out, out == RXR_YES ? grant : NULL, canon);
+	}
+	explicit_bzero(grant, sizeof grant);
+}
+
+static void handle_auth(struct rxr_auth *a)
+{
+	char why[256];
+	uint64_t ticket = 0, now = log_now_ms();
+	int r = -1;
+	int out = -1;
+	uid_t uid = 0;
+	char ukey[ROOTSIDE_LOGIN_KEY_MAX];
+	uint64_t left = 0;
+	int lg = RXR_LOGIN_OK;
+	unsigned taken = 0;
+
+	/* ⛔ The bounds FIRST (review of the split, finding 6): the denied file,
+	 *    the NSS lookup (sssd/LDAP: the network) and a log line are work the
+	 *    root side does for the asker, and a flood of «root» must cost what a
+	 *    flood of passwords costs — refused without looking. */
+	if (!rootside_auth_admit(&R.bounds, now)) {
+		/* ⚠ A flood writes one line per second, with the count. */
+		R.refused_hidden++;
+		if (now >= R.refused_logged_ms + 1000) {
+			registro_dice(LOG_ROOT,
+			              "⛔ AUTH over the root side's bounds (%d in flight max, %d/s "
+			              "burst %d): %u refused without asking PAM — «not checked», "
+			              "NOT counted towards the ban",
+			              RXR_AUTH_IN_FLIGHT_MAX, RXR_AUTH_PER_S, RXR_AUTH_BURST,
+			              R.refused_hidden);
+			R.refused_logged_ms = now;
+			R.refused_hidden = 0;
+		}
+		out = RXR_NOT_CHECKED;
+	} else if ((r = user_refused_as(a->user, R.o->denied_users_path, &uid, why,
+	                                sizeof why, false)) != 0
+	           || !rhost_ok(a->rhost)) {
+		rootside_auth_done(&R.bounds);
+		if (r == 0)
+			snprintf(why, sizeof why, "not verified: the address given with the name is not an IP literal");
+		/* ⛔⭐ Step 2 (F2, decision 2 of 16 Nov 2026): EVERYTHING this branch decides is a plain NO.  The branch is reached, or not,
+		 *     according to the NAME (denied, unknown, uid 0, a lookup that failed now, an address refused only once the name
+		 *     resolved), so a different outcome here is a different byte and a different time on the page for some names only.
+		 *     Until the 1.5.6 a lookup that FAILED (Ubuntu Desktop: `sss` in nsswitch.conf and no sssd running, for every name
+		 *     that is not in the local files) went out as «not checked»: 0x0E after one second, against 0x07 after 2.5 s for a
+		 *     wrong password — the names that exist could be listed with a stopwatch.  Now it is `RXR_NO`: 0x07 at the same
+		 *     floor, counted by the network side like a wrong password.  The LOG keeps the true reason, without the name.
+		 *     ⚠ «Not checked» stays what it was for the facts about the SERVER, which are decided without looking at the name
+		 *     (the bounds above) or are our own faults (the helper that does not take the question, below). */
+		out = RXR_NO;
+		/* ⚠ One line per second at most, with the count (as the bounds'). */
+		R.prepam_hidden++;
+		if (now >= R.prepam_logged_ms + 1000) {
+			if (R.prepam_hidden > 1)
+				registro_dice(LOG_ROOT, "⚠ AUTH refused BEFORE PAM: %s (and %u more in the "
+				              "last second, not written)", why, R.prepam_hidden - 1);
+			else
+				registro_dice(LOG_ROOT, "⚠ AUTH refused BEFORE PAM: %s", why);
+			R.prepam_logged_ms = now;
+			R.prepam_hidden = 0;
+		}
+	} else if ((snprintf(ukey, sizeof ukey, "%lu", (unsigned long)uid),
+	            lg = rootside_login_admit(&R.bounds, ukey, a->rhost, now, &left, &taken)) != RXR_LOGIN_OK) {
+		/* ⭐ 1.5 (R2): paused (or about to be) by the root side's own count of what PAM
+		 *    refused: not asked, answered PAUSED (see below).  ⚠ One
+		 *    line a second, with the count. */
+		static uint64_t paused_logged_ms;
+		static uint32_t paused_hidden;
+
+		rootside_auth_done(&R.bounds);
+		/* ⛔⭐ A1 of the reading of rcp.c: NOT `RXR_NOT_CHECKED`.  «Not checked» is 0x0E after one second on the page; a name that does not exist
+		 *    is refused 0x07 after 2.5 s; a pause that answered differently would tell whoever can start it (four addresses are enough to
+		 *    refuse five for one name) that the name exists.  PAUSED is a plain refusal for the page, at the same floor, that the network side
+		 *    counts by the rule of 11.47 B (not for a key that logged in lately, as any refusal otherwise). */
+		out = RXR_PAUSED;
+		paused_hidden++;
+		if (now >= paused_logged_ms + 1000) {
+			/* ⛔ Step 2 (F1): the uid, not the typed name — the password is not verified */
+			registro_dice(LOG_ROOT, "⛔ AUTH of uid %s from «%.64s» not asked of PAM: %s (%llu s "
+			              "to go; %u in the last second) — answered PAUSED: a refusal like any other for the page (0x07 at the "
+			              "same floor), counted by the network side by the rule of 11.47 B", ukey, a->rhost,
+			              lg == RXR_LOGIN_PAIR_PAUSED  ? "this user from this address is paused"
+			              : lg == RXR_LOGIN_USER_PAUSED ? "the user is paused (too many refused from anywhere)"
+			              : lg == RXR_LOGIN_HOST_PAUSED ? "the address is paused"
+			              : lg == RXR_LOGIN_FULL        ? "the failures table is full"
+			                                            : "attempts in flight plus refused reach the limit",
+			              (unsigned long long)((left + 999) / 1000), paused_hidden);
+			paused_logged_ms = now;
+			paused_hidden = 0;
+		}
+	} else if (!helper_ask_bare(R.pam, a->user, a->password, a->rhost, now, &ticket)) {
+		rootside_auth_done(&R.bounds);
+		rootside_login_done(&R.bounds, ukey, a->rhost, now, taken, RXR_LOGIN_UNCHECKED, NULL);
+		out = RXR_NOT_CHECKED;
+	} else {
+		struct pending_auth *pa = NULL;
+		for (size_t i = 0; i < sizeof R.pending / sizeof R.pending[0]; i++)
+			if (!R.pending[i].used) {
+				pa = &R.pending[i];
+				break;
+			}
+		if (pa) {
+			pa->used = true;
+			pa->ticket = ticket;
+			pa->request = a->h.request;
+			pa->generation = R.generation;
+			pa->taken = taken;
+			snprintf(pa->ukey, sizeof pa->ukey, "%s", ukey);
+			snprintf(pa->rhost, sizeof pa->rhost, "%s", a->rhost);
+		} else {
+			/* ⚠ Cannot happen (32 places, 16 in flight); the helper's answer
+			 *   then finds nothing and is dropped.  Said (review 4 B, 11). */
+			registro_dice(LOG_ROOT, "⛔ no free place for the AUTH of request %llu (all %zu "
+			              "in use, which the in-flight bound should prevent): «not checked»",
+			              (unsigned long long)a->h.request,
+			              sizeof R.pending / sizeof R.pending[0]);
+			rootside_auth_done(&R.bounds);
+			rootside_login_done(&R.bounds, ukey, a->rhost, now, taken, RXR_LOGIN_UNCHECKED, NULL);
+			out = RXR_NOT_CHECKED;
+		}
+	}
+	explicit_bzero(a->password, sizeof a->password);
+	if (out >= 0)
+		send_verdict(a->h.request, out, NULL, NULL);
+}
+
+static struct own_child *own_by_uid(uid_t uid)
+{
+	for (int i = 0; i < R.cap; i++)
+		if (R.kids[i].used && R.kids[i].uid == uid)
+			return &R.kids[i];
+	return NULL;
+}
+
+static bool lx_uid_ending(uid_t uid); /* defined with the LX table, further down */
+static bool pl_uid_pending(uid_t uid, uint64_t now); /* defined with the PL table, further down */
+
+/* The birth for SPAWN (`rhost` the grant's) and CLOSE_ORPHAN (`rhost` NULL). */
+static void birth(uint64_t request, const char *user, const char *rhost, uint32_t w,
+                  uint32_t h, bool orphan)
+{
+	char why[256];
+	uid_t uid = 0;
+	struct own_child *k = NULL;
+	struct birth_opts b = R.birth;
+	struct child_born c;
+	struct rxr_spawned s;
+	child_outcome o;
+	int r = rootside_user_refused(user, R.o->denied_users_path, &uid, why, sizeof why);
+
+	if (r != 0) {
+		registro_dice(LOG_ROOT, "⛔ %s refused: %s", orphan ? "CLOSE_ORPHAN" : "SPAWN", why);
+		send_refused(request, r == 2 ? RXR_REF_NAME_UNKNOWN : RXR_REF_USER);
+		return;
+	}
+	if (own_by_uid(uid)) {
+		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: a child of uid %ld is still "
+		              "alive here (I2)", orphan ? "CLOSE_ORPHAN" : "SPAWN", user, (long)uid);
+		send_refused(request, RXR_REF_CLOSING);
+		return;
+	}
+	/* ⭐ 1.0.0 (no orphan desktops): a REMOTIX scope of that uid is being ended right now (SIGTERM out, SIGKILL due, or the
+	 *    user manager's clean-up still running): a child born here would pick up a desktop that is dying, or be cleaned
+	 *    from under.  «Closing»: the client asks again and gets a fresh one. */
+	if (lx_uid_ending(uid)) {
+		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: a REMOTIX session of uid %ld is being ended by the root side "
+		              "(asked again in a moment)", orphan ? "CLOSE_ORPHAN" : "SPAWN", user, (long)uid);
+		send_refused(request, RXR_REF_CLOSING);
+		return;
+	}
+	/* ⭐ 1.0.0 (§11.57): a LOCAL login of that uid is held in PAM until its remote desktop is gone, or has just been let
+	 *    through: no child for it.  A few seconds later the local session is in logind and the usual refusal takes over. */
+	if (pl_uid_pending(uid, log_now_ms())) {
+		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: a local login of uid %ld is being held (or was let through a moment "
+		              "ago): no remote desktop for it now", orphan ? "CLOSE_ORPHAN" : "SPAWN", user, (long)uid);
+		send_refused(request, RXR_REF_CLOSING);
+		return;
+	}
+	if (orphan && render_grant_remotix_session(uid) != 1) {
+		registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: logind shows no live "
+		              "session of uid %ld with SERVICE=remotix", user, (long)uid);
+		send_refused(request, RXR_REF_NO_ORPHAN);
+		return;
+	}
+	/* ⭐ 1.5 (split audit R1): a desktop is closed only when it has really been abandoned —
+	 *    the root side's own clock (`--abandon-s`, its last child's exit or its own start),
+	 *    not the network side's word: a network side taken over could otherwise close the
+	 *    desktop of anyone who had merely disconnected.  BEFORE the per-uid hold, so a
+	 *    refusal here takes no hold. */
+	if (orphan) {
+		uint64_t left;
+
+		if (!rootside_orphan_abandoned(&R.bounds, uid, log_now_ms(), &left)) {
+			if (left == UINT64_MAX)
+				registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: the abandonment "
+				              "clock is off (--abandon-s 0), no desktop is closed for "
+				              "abandonment", user);
+			else
+				registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: uid %ld has not "
+				              "been without a client for %llu s yet (%llu s to go)", user,
+				              (long)uid, (unsigned long long)(R.bounds.abandon_ms / 1000),
+				              (unsigned long long)((left + 999) / 1000));
+			send_refused_wait(request, RXR_REF_TOO_SOON, left == UINT64_MAX ? 0 : left);
+			return;
+		}
+	}
+	/* ⛔ One CLOSE_ORPHAN per uid per 30 s (review 2, M1): CLOSE_ORPHAN →
+	 *    SIGNAL KILL → reaped → CLOSE_ORPHAN was a new logind session each
+	 *    round, for any user with a live desktop.  ⚠ AFTER logind's check (lane
+	 *    1's pre-release review): a hold is taken only for a uid that really has
+	 *    a remotix session, so names without one cannot fill the table. */
+	if (orphan && !rootside_orphan_uid_admit(&R.bounds, uid, log_now_ms())) {
+		registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN for «%s» refused: one was already asked "
+		              "for uid %ld less than %d s ago (or every hold of the table is in use)",
+		              user, (long)uid, ROOTSIDE_ORPHAN_UID_MS / 1000);
+		send_refused(request, RXR_REF_RATE);
+		return;
+	}
+	for (int i = 0; i < R.cap; i++)
+		if (!R.kids[i].used) {
+			k = &R.kids[i];
+			break;
+		}
+	if (!k) {
+		registro_dice(LOG_ROOT, "⛔ %s for «%s» refused: %d children already (the cap)",
+		              orphan ? "CLOSE_ORPHAN" : "SPAWN", user, R.cap);
+		send_refused(request, RXR_REF_FULL);
+		return;
+	}
+	/* ⛔ The canvas is the only number of the request that reaches the child:
+	 *    out of the RCP bounds (rcp.h RCP_CANVAS_MIN_W/H 320×240, MAX_W/H
+	 *    4096×2304 — the numbers repeated here so this file needs no rcp.h)
+	 *    ⇒ the root side's own, and SAID (review 4 B, finding 4). */
+	if (w < 320 || h < 240 || w > 4096 || h > 2304) {
+		registro_dice(LOG_ROOT, "⚠ %s for «%s» asks a canvas %ux%u outside 320x240..4096x2304: "
+		              "the child is born at the root side's own %ux%u",
+		              orphan ? "CLOSE_ORPHAN" : "SPAWN", user, w, h, R.o->canvas_w,
+		              R.o->canvas_h);
+		w = R.o->canvas_w;
+		h = R.o->canvas_h;
+	}
+	b.canvas_w = w;
+	b.canvas_h = h;
+	/* ⛔ The birth without a password is a child that can only close the
+	 *    desktop (`--close-only`, review of the split, finding 1): the root
+	 *    side's choice here, never a field of the request. */
+	b.close_only = orphan;
+	uint64_t t0 = log_now_ms();
+	o = child_birth(&b, user, rhost, R.next_serial, &c);
+	/* ⭐ the network side's loop waits this long (enrolment, render grant, fork) */
+	registro_dice(LOG_ROOT, "the birth for «%s» took %llu ms (%s)", user,
+	              (unsigned long long)(log_now_ms() - t0),
+	              o == CHILD_READY ? "born" : "refused");
+	if (o != CHILD_READY) {
+		send_refused(request, o == CHILD_NAME_UNKNOWN ? RXR_REF_NAME_UNKNOWN
+		                      : o == CHILD_NAME_MOVED ? RXR_REF_MOVED
+		                      : o == CHILD_CLOSING    ? RXR_REF_CLOSING
+		                                              : RXR_REF_FAILED);
+		return;
+	}
+	memset(k, 0, sizeof *k);
+	k->used = true;
+	k->serial = R.next_serial++;
+	k->pid = c.pid;
+	k->uid = c.uid;
+	k->gid = c.gid;
+	k->render_grant = c.render_grant;
+	k->generation = R.generation;
+	snprintf(k->user, sizeof k->user, "%s", c.user);
+
+	memset(&s, 0, sizeof s);
+	head_fill(&s.h, RXR_SPAWNED, request);
+	s.serial = k->serial;
+	s.pid = (int32_t)c.pid;
+	s.uid = (uint32_t)c.uid;
+	s.gid = (uint32_t)c.gid;
+	snprintf(s.user, sizeof s.user, "%s", c.user);
+	/* ⭐ review 4 B, finding 12: chan_try(), not chan_send() — ONE line for this
+	 *    failure, with its consequence and its errno, not chan_send()'s generic
+	 *    «did not leave» as well */
+	/* ⭐ A PIDFD OF THE CHILD travels with the socket (1.5, pidfd-figlio): the network side compares it with the pidfd the kernel attaches
+	 *    to each message (`SCM_PIDFD`), the exact identity of the sender — where the kernel supports it.  `pidfd_open()` on a child we
+	 *    have just forked and not yet reaped (this loop is the only one that reaps it) cannot name another process.  Without the
+	 *    syscall (kernel < 5.3) it is -1 and the packet carries the socket alone, as before. */
+	int child_pidfd = (int)syscall(SYS_pidfd_open, c.pid, 0);
+	if (child_pidfd >= 0)
+		fcntl(child_pidfd, F_SETFD, FD_CLOEXEC);
+	if (R.chan < 0 || !chan_try2(&s, sizeof s, c.fd, child_pidfd)) {
+		registro_dice(LOG_ROOT, "⛔ the child of «%s» is born but its socket could not "
+		              "be handed over (%s): it is killed", c.user,
+		              R.chan < 0 ? "no network side" : strerror(errno));
+		kill(c.pid, SIGKILL);
+	}
+	if (child_pidfd >= 0)
+		close(child_pidfd);
+	/* ⛔ The root side keeps NO end of the child's socket: when the network
+	 *    side dies, the child must see EOF (§11.50: desktops stay, children go). */
+	close(c.fd);
+}
+
+static void handle_signal(const struct rxr_signal_msg *m)
+{
+	/* ⛔ Only a child born for THIS network side (lane 1's pre-release review):
+	 *    a new network side never held the sockets of the previous one's
+	 *    children — those are the root side's own business (`kids_hurry()`),
+	 *    and their serials are not the new one's to name. */
+	for (int i = 0; i < R.cap; i++)
+		if (R.kids[i].used && R.kids[i].serial == m->serial && R.kids[i].pid > 0
+		    && R.kids[i].generation == R.generation) {
+			kill(R.kids[i].pid, m->sig == RXR_SIG_KILL ? SIGKILL : SIGTERM);
+			return;
+		}
+	log_detail(LOG_ROOT, "SIGNAL for serial %llu: not a live child of this network side "
+	           "(already reaped, or a previous network side's): nothing sent",
+	           (unsigned long long)m->serial);
+}
+
+static void chan_read(void)
+{
+	for (int round = 0; round < 64 && R.chan >= 0; round++) {
+		union {
+			struct rxr_head h;
+			struct rxr_auth a;
+			struct rxr_spawn s;
+			struct rxr_close_orphan c;
+			struct rxr_signal_msg g;
+			char raw[sizeof(struct rxr_auth) + 16];
+		} pk;
+		union {
+			struct cmsghdr c;
+			char b[CMSG_SPACE(sizeof(struct ucred)) + CMSG_SPACE(4 * sizeof(int))];
+		} ctl;
+		struct iovec io = { &pk, sizeof pk };
+		struct msghdr m;
+		struct ucred cred = { 0, (uid_t)-1, (gid_t)-1 };
+		bool has_cred = false, has_fds = false;
+		struct rootside_peer peer = { R.o->remotix_uid, R.net_pid };
+		char why[200];
+		ssize_t n;
+		int kind;
+
+		memset(&m, 0, sizeof m);
+		m.msg_iov = &io;
+		m.msg_iovlen = 1;
+		m.msg_control = ctl.b;
+		m.msg_controllen = sizeof ctl.b;
+		n = recvmsg(R.chan, &m, MSG_DONTWAIT | MSG_TRUNC | MSG_CMSG_CLOEXEC);
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				return;
+			/* ⚠ A network side that died with packets unread is an EOF,
+			 *   not a broken closed list. */
+			if (errno != ECONNRESET) {
+				net_kill(strerror(errno));
+				return;
+			}
+			n = 0;
+		}
+		if (n == 0) {
+			registro_dice(LOG_ROOT, "the network side (pid %ld) closed its channel",
+			              (long)R.net_pid);
+			close(R.chan);
+			R.chan = -1;
+			if (R.net_pid > 0) {
+				kill(R.net_pid, SIGTERM);
+				R.net_kill_at = log_now_ms() + NET_TERM_GRACE_MS;
+			}
+			return;
+		}
+		for (struct cmsghdr *c = CMSG_FIRSTHDR(&m); c; c = CMSG_NXTHDR(&m, c)) {
+			if (c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_CREDENTIALS
+			    && c->cmsg_len == CMSG_LEN(sizeof cred)) {
+				memcpy(&cred, CMSG_DATA(c), sizeof cred);
+				has_cred = true;
+			} else if (c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_RIGHTS) {
+				size_t nfd = (c->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+				for (size_t j = 0; j < nfd; j++) {
+					int fd;
+					memcpy(&fd, CMSG_DATA(c) + j * sizeof(int), sizeof fd);
+					close(fd);
+				}
+				has_fds = true;
+			}
+		}
+		if (has_fds || (m.msg_flags & MSG_CTRUNC)) {
+			explicit_bzero(&pk, sizeof pk);
+			net_kill("a packet carried descriptors: none ever goes this way");
+			return;
+		}
+		kind = rootside_check_packet(&peer, &pk, (size_t)n, has_cred, cred.pid, cred.uid,
+		                             why, sizeof why);
+		if (kind == 0) {
+			explicit_bzero(&pk, sizeof pk);
+			net_kill(why);
+			return;
+		}
+		switch (kind) {
+		case RXR_AUTH:
+			handle_auth(&pk.a);
+			break;
+		case RXR_SPAWN: {
+			char user[RXR_USER_MAX], rhost[RXR_RHOST_MAX];
+			if (!rootside_grant_take(&R.bounds, pk.s.grant, log_now_ms(), user, rhost)) {
+				/* ⚠ One line per second at most (review 2, M1): the
+				 *   check is a memory compare, the line is the cost. */
+				static uint64_t logged_ms;
+				static uint32_t hidden;
+				uint64_t now = log_now_ms();
+
+				hidden++;
+				if (now >= logged_ms + 1000) {
+					registro_dice(LOG_ROOT, "⛔ SPAWN refused: the grant is unknown, "
+					              "used or expired (%u in the last second)", hidden);
+					logged_ms = now;
+					hidden = 0;
+				}
+				send_refused(pk.h.request, RXR_REF_GRANT);
+				break;
+			}
+			birth(pk.h.request, user, rhost, pk.s.canvas_w, pk.s.canvas_h, false);
+			break;
+		}
+		case RXR_CLOSE_ORPHAN:
+			/* ⛔ The bucket BEFORE any work (review 2, M1): the denied file,
+			 *    NSS, the sessions scan and a birth are what it would cost. */
+			if (!rootside_orphan_admit(&R.bounds, log_now_ms())) {
+				static uint64_t logged_ms;
+				static uint32_t hidden;
+				uint64_t now = log_now_ms();
+
+				hidden++;
+				if (now >= logged_ms + 1000) {
+					registro_dice(LOG_ROOT, "⛔ CLOSE_ORPHAN over the root side's bound "
+					              "(%d/s, burst %d): refused without looking — %u in "
+					              "the last second", ROOTSIDE_ORPHAN_PER_S,
+					              ROOTSIDE_ORPHAN_BURST, hidden);
+					logged_ms = now;
+					hidden = 0;
+				}
+				send_refused(pk.h.request, RXR_REF_RATE);
+				break;
+			}
+			birth(pk.h.request, pk.c.user, NULL, R.o->canvas_w, R.o->canvas_h, true);
+			break;
+		case RXR_SIGNAL:
+			handle_signal(&pk.g);
+			break;
+		}
+		explicit_bzero(&pk, sizeof pk);
+	}
+}
+
+static const char *status_text(int st, char *d, size_t cap)
+{
+	if (WIFEXITED(st))
+		snprintf(d, cap, "exited with %d", WEXITSTATUS(st));
+	else if (WIFSIGNALED(st))
+		snprintf(d, cap, "killed by signal %d", WTERMSIG(st));
+	else
+		snprintf(d, cap, "ended (status %d)", st);
+	return d;
+}
+
+static void reap_kids(void)
+{
+	for (int i = 0; i < R.cap; i++) {
+		struct own_child *k = &R.kids[i];
+		struct rxr_child_exited e;
+		char said[80];
+		int st = 0;
+
+		if (!k->used || k->pid <= 0 || waitpid(k->pid, &st, WNOHANG) != k->pid)
+			continue;
+		/* ⛔ The render grant first, then the event: the network side is
+		 *    never asked to remove anything (§11.50). */
+		if (k->render_grant)
+			render_grant_remove(k->user, k->uid, k->gid);
+		/* ⭐ 1.5 (R1): the moment the user was left without a client, for CLOSE_ORPHAN */
+		rootside_exit_note(&R.bounds, k->uid, k->orphaned_ms ? k->orphaned_ms : log_now_ms());
+		registro_dice(LOG_ROOT, "the child of «%s» (pid %ld, serial %llu) is reaped by "
+		              "the root side: %s", k->user, (long)k->pid,
+		              (unsigned long long)k->serial, status_text(st, said, sizeof said));
+		memset(&e, 0, sizeof e);
+		head_fill(&e.h, RXR_CHILD_EXITED, 0);
+		e.serial = k->serial;
+		e.wait_status = st;
+		/* ⚠ Only to the network side the child was born for: a new one
+		 *   does not know that serial. */
+		if (k->generation == R.generation)
+			send_exited(&e);
+		memset(k, 0, sizeof *k);
+	}
+}
+
+/* ⭐ Once a minute: the expired grants are WIPED (not left for the next mint
+ *    to overwrite: a grant past its 30 s is gone from memory too), and one
+ *    detail line says how full every table is — what the soak bench
+ *    (24-privsep-soak.sh) reads to see that nothing accumulates. */
+/* ⭐ 1.5.5 — THE SWEEP OF THE KDE COMPOSITOR THAT NOBODY HOLDS.
+ *
+ * On KDE the remote desktop's compositor is the USER unit `plasma-kwin_wayland.service` with OUR drop-in (session.c): it
+ * lives in the user manager, outside the child's logind scope, and survives the end of the remote session (closed from
+ * outside, a crash, the user entering locally, the leftovers of 1.5.3 after the update).  Here, every KDEHOST_SWEEP_MS,
+ * for each user that has such a host recognised as OURS (`kdehost.h`: the folder `remotix-kwin-host` in a command line
+ * of the unit's own cgroup) and that has NO child of this side and NO live REMOTIX desktop, the unit is stopped.
+ *
+ * ⭐ WHY HERE: stopping a user's unit needs that user's uid and its user manager, and only the ROOT side can drop to
+ *    another uid (the network side runs as `remotix` and cannot).  It forks, drops to the user and runs
+ *    `systemctl --user stop` — no bus joined, no session opened, nothing run with root's rights on the user's behalf.
+ * ⛔ «Live REMOTIX desktop» comes from the same logind files as the found-again check (`rediscover_search_files()`): a
+ *    desktop that outlived the server waits for the reattach and is not touched.  «I could not look» counts as «alive».
+ * ⚠ It blocks this single-threaded loop for the time of a stop (a couple of seconds, 20 s ceiling) and only when
+ *    there is a leftover to stop, which is rare; the pass over /proc without leftovers costs milliseconds. */
+#define KDEHOST_SWEEP_MS 45000
+static void kdehost_sweep(uint64_t now)
+{
+	static uint64_t last_ms;
+	uid_t uids[32];
+	int n;
+	RediscoveredDesktop v[RXR_FOUND_MAX];
+	char why[160];
+	int found = -2;
+
+	if (R.stopping || (last_ms && now < last_ms + KDEHOST_SWEEP_MS))
+		return;
+	last_ms = now ? now : 1;
+	n = kdehost_users(uids, 32);
+	for (int k = 0; k < n; k++) {
+		bool held = own_by_uid(uids[k]) != NULL;
+
+		if (held)
+			continue;
+		if (found == -2) {
+			why[0] = '\0';
+			found = rediscover_search_files(v, RXR_FOUND_MAX, why, sizeof why);
+		}
+		if (found < 0) {
+			registro_dice(LOG_ROOT, "⭐ 1.5.5 sweep: the sessions cannot be read (%s) — I do not know whether the KDE "
+			              "host of uid %u belongs to a live desktop: NOT stopped", why, (unsigned)uids[k]);
+			continue;
+		}
+		for (int j = 0; j < found; j++)
+			held |= v[j].uid == uids[k];
+		if (held)
+			continue;
+		/* ⭐ one stop per round: the whole round stays bounded (~3 s); the next user waits for the next one */
+		if (kdehost_stop(LOG_ROOT, uids[k], "sweep: the user has no REMOTIX child nor live desktop") != 0)
+			break;
+	}
+}
+
+/* ⛔⭐ 1.0.0 — «LOCAL EXCLUDES REMOTE», ENFORCED BY THE ROOT SIDE ITSELF (the owner's principle; holes 1 and 2 of the reading of 17 Nov 2026).
+ *
+ * The network side orders the child's light close within 2–4 s, but it cannot end a REMOTIX session that no child of its own can
+ * reach: the abandoned scope of a desktop found again, the OLD scope left by a child that resumed after a restart, a scope left by
+ * a dead network side.  This side can, and trusts nobody: it reads logind itself, every LX_EVERY_MS, also with no network side.
+ *
+ * THE RULE: a user who has a LOCAL graphical session must have no logind session with SERVICE=remotix and no seat.
+ *   1. /run/systemd/sessions is read (no bus).  A candidate is a seatless SERVICE=remotix session whose uid ALSO has a session
+ *      with a seat.  ⚠ This is only a filter (a seat is necessary for «local»): with no candidate nothing else runs, ever.
+ *   2. The VERDICT is the sentinel's, the same code the network side and the child use (`sentinel_local3()`: seat, Class=user,
+ *      Type wayland/x11/mir, not Remote, not closing; 1 / 0 / -1).  ⛔ GDBus has a worker thread and this side must stay
+ *      single-threaded (box at the top of the file): the question is asked in a short-lived fork that only asks and exits, as
+ *      the card probe does; the answers come back on a pipe, read without waiting.
+ *   3. Only on a «1» answered in THIS round: if a child of ours serves that user, LX_GRACE_MS are given to its own light close;
+ *      then — or at once with no child — the session file is read AGAIN and that scope is ended.
+ *   ⛔ «0», «-1», no answer, a helper that died, an unreadable directory: NOTHING is done, and -1 is said in the log.
+ *
+ * HOW A SCOPE IS ENDED, AND WHY NOT `TerminateSession`: SIGTERM to the processes of
+ * /sys/fs/cgroup/user.slice/user-<uid>.slice/session-<id>.scope, LX_TERM_MS later SIGKILL to what is still in it.  Each pid is
+ * taken with a pidfd and its /proc/<pid>/cgroup must be EXACTLY that scope before the signal leaves: nothing outside the REMOTIX
+ * session's own scope can be hit — not the user manager (user@<uid>.service), not a shared user unit, not the local desktop's
+ * scope (the 1.5.4 lesson: never a Logout, never the session manager).  `TerminateSession` would need the bus here (a thread, or
+ * one more fork) and leaves the timing to systemd's stop timeout (90 s by default); this is bounded by this file, and logind closes
+ * the session by itself when its scope is empty.
+ * The network side learns it by the events that already exist: FOUND_GONE when the stage of a listed desktop dies (`found_check()`),
+ * CHILD_EXITED when a child dies with its scope; a desktop it does not list needs no message.  On KDE our compositor unit lives
+ * outside the scope: `kdehost_stop()` (only if recognised as ours), once the scope is ended and no child of that uid is left —
+ * otherwise `kdehost_sweep()` does it.
+ *
+ * ⛔ AND WHAT REMOTIX PUT IN THE USER MANAGER GOES TOO.  A scope ended here has no child to do the light close's steps 3 and 5
+ * (child.c, `local_light_close()`): the session's dconf profile, our drop-ins in /run/user/<uid>/systemd/user.control (GNOME:
+ * `org.gnome.Shell@….service.d/zz-remotix-monitor.conf`, the HEADLESS Shell — left there, the user's next login at the monitor
+ * is a black screen), the manager's variables that carry our mark.  ⇒ After the ending the SAME two functions the light close
+ * calls (`session_dconf_neutralise()`, `session_clear_out_light()`) run in a fork that has become that user (groups, gid, uid,
+ * no way back, no descriptor of this side): only files with our names and variables whose value carries our mark are removed,
+ * no unit is stopped or restarted, no Logout — exactly what the child's light close does, by the same text.  Not waited for:
+ * its exit is collected in a later turn, LX_CLEAN_MS at most.
+ *
+ * ⛔⭐ THE SECOND RULE, SAME MACHINERY — «NO ORPHAN DESKTOPS» (owner's decision, 17 Nov 2026 night; DECISIONS-11).
+ * A seatless SERVICE=remotix session whose scope still has processes and whose user has NO child of ours must not stay,
+ * local session or not.  `[M]` 17 Nov 2026, the tablet: the service was restarted, the desktop of «user» stayed for the
+ * reattach (§11.50 as it was) with its logind session «closing» — the child, its leader, had left.  GNOME's login screen
+ * holds a local login only while the user's other graphical session is «active»/«online» (gnome-shell 48, loginDialog.js,
+ * `_findConflictingSession`): a «closing» one is no conflict, the local desktop started at once, found
+ * `gnome-session-wayland@gnome.target` still active («Session manager already running!»), died in 0.4 s and left gdm's
+ * screen broken.  The sweep above looks every LX_EVERY_MS: it can never see a local session that lives 0.4 s.
+ *   · while the service runs: an orphan seen in TWO scans in a row (a child that has just been reaped, or is about to be
+ *     born, is not an orphan) is ended with no question to logind — there is nothing to ask;
+ *   · when the service stops: the network side asks every child for the full close; what is still in a REMOTIX scope once
+ *     it is gone (or at the deadline) is ended here, and the root side leaves only when these endings are over
+ *     (`lx_stop_begin()`, `lx_busy()`).
+ * A user who reattaches before the second scan gets a child, and a desktop with a child is not an orphan: it stays. */
+#define LX_CLEAN_MS 15000  /* the clean-up's ceiling (a bus call of 5 s and a daemon-reload inside): then SIGKILL, and said */
+#define LX_EVERY_MS 5000   /* the network side acts within 2–4 s: this is the second belt, and one scan is a few small files */
+#define LX_GRACE_MS 10000  /* a child's light close: the order (2–4 s) + its own 2 s SIGTERM wait + the KDE stop (~3 s) */
+#define LX_TERM_MS  3000   /* between SIGTERM and SIGKILL, as KIDS_TERM_GRACE_MS */
+#define LX_ASK_MS   6000   /* the helper's ceiling: past it the answer is «could not look» */
+#define LX_SAY_MS   60000  /* «could not look» is said once a minute, not every round */
+#define LX_SESS     128    /* session files read per round */
+#define LX_CAND     16     /* candidates per round (a seat has one user, a few with «switch user») */
+#ifndef SYS_pidfd_send_signal
+#define SYS_pidfd_send_signal 424
+#endif
+
+struct lx_sess {
+	char id[RXR_SESSION_MAX];
+	uid_t uid;
+	char user[RXR_USER_MAX];
+	bool seat, ours;                 /* SEAT= not empty; SERVICE=remotix */
+	bool orphan;                     /* candidates only: no child of ours for that uid, and processes in its scope */
+};
+struct lx_answer {
+	char verdict;                    /* '1' local session, '0' surely none, '?' could not look */
+	char detail[160];                /* the sentinel's «session N, wayland on seat0» */
+};
+static struct {
+	uint64_t last_ms, said_ms;
+	pid_t helper;                    /* > 0: a question is in flight */
+	int fd;
+	size_t got;
+	uint64_t deadline;
+	struct lx_sess cand[LX_CAND];
+	int ncand;
+	struct lx_answer ans[LX_CAND];   /* one per candidate, in order */
+	struct { bool used, keep; uid_t uid; uint64_t since; } wait[LX_CAND];          /* the grace, by uid */
+	struct { int phase; struct lx_sess s; uint64_t at; pid_t clean; bool orphan; } end[LX_CAND]; /* 1 SIGTERM sent · 2 ended, KDE stop and clean-up due · 3 clean-up running */
+	char orph[LX_CAND][RXR_SESSION_MAX]; /* the orphans of the previous scan (the second rule: two scans in a row) */
+	int north;
+	int stop_missed;                 /* while stopping: endings that found no slot or signalled nothing (said at the end) */
+	bool stop_begun;                 /* the service is stopping and lx_stop_begin() has run */
+	uint64_t stop_deadline;
+} LX = { .fd = -1 };
+
+/* A logind session id as it may enter a path: letters and digits only (logind's are «12», «c3»). */
+static bool lx_id_ok(const char *id)
+{
+	size_t n = strlen(id);
+
+	if (!n || n >= RXR_SESSION_MAX)
+		return false;
+	for (size_t i = 0; i < n; i++)
+		if (!isalnum((unsigned char)id[i]))
+			return false;
+	return true;
+}
+
+/* One session file of logind (the first of each key, as rediscover.c reads them).  false = not a session we can describe. */
+static bool lx_read(const char *id, struct lx_sess *s)
+{
+	char path[96], *line = NULL;
+	size_t cap = 0;
+	ssize_t len;
+	bool uid_seen = false, uid_ok = false, user_seen = false, seat_seen = false, serv_seen = false;
+	struct stat st;
+	FILE *f;
+	int fd;
+
+	memset(s, 0, sizeof *s);
+	if (!lx_id_ok(id))
+		return false;
+	snprintf(s->id, sizeof s->id, "%s", id);
+	snprintf(path, sizeof path, "/run/systemd/sessions/%s", id);
+	/* a regular file only: NOFOLLOW and NONBLOCK, then S_ISREG (as rediscover.c) */
+	fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+	if (fd < 0)
+		return false;
+	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || !(f = fdopen(fd, "r"))) {
+		close(fd);
+		return false;
+	}
+	while ((len = getline(&line, &cap, f)) > 0) {
+		char *end = NULL;
+
+		if (len > 4096)
+			continue;
+		line[strcspn(line, "\n")] = 0;
+		if (!uid_seen && strncmp(line, "UID=", 4) == 0) {
+			unsigned long v;
+
+			uid_seen = true;
+			errno = 0;
+			v = strtoul(line + 4, &end, 10);
+			uid_ok = line[4] >= '0' && line[4] <= '9' && errno == 0 && *end == 0;
+			s->uid = (uid_t)v;
+		} else if (!user_seen && strncmp(line, "USER=", 5) == 0) {
+			user_seen = true;
+			if (line[5] && strlen(line + 5) < sizeof s->user && !strpbrk(line + 5, "/ \t\r"))
+				snprintf(s->user, sizeof s->user, "%s", line + 5);
+		} else if (!seat_seen && strncmp(line, "SEAT=", 5) == 0) {
+			seat_seen = true;
+			s->seat = line[5] != 0;
+		} else if (!serv_seen && strncmp(line, "SERVICE=", 8) == 0) {
+			serv_seen = true;
+			s->ours = strcmp(line + 8, FOUND_AGAIN_PAM_SERVICE) == 0;
+		}
+	}
+	free(line);
+	fclose(f);
+	/* without the uid or logind's own name for it the session is not judged at all */
+	return uid_ok && s->user[0];
+}
+
+/* Is this session already being ended here? (its SIGTERM is out: it is not asked about again) */
+static bool lx_ending(const char *id)
+{
+	for (int i = 0; i < LX_CAND; i++)
+		if (LX.end[i].phase && strcmp(LX.end[i].s.id, id) == 0)
+			return true;
+	return false;
+}
+
+static bool cgroup_of(pid_t pid, char *out, size_t cap); /* defined further down, with the network side's leftovers */
+static int lx_signal(const struct lx_sess *s, int sig);   /* defined below */
+
+/* Is a REMOTIX scope of this uid being ended right now?  Every phase: SIGTERM out, SIGKILL due, and the clean-up of the
+ * user manager too — a desktop born under that clean-up would lose the drop-ins and variables it has just been given
+ * (the clean-up starts only with no child of that uid, and must not get one while it runs).  `birth()` gives it no child. */
+static bool lx_uid_ending(uid_t uid)
+{
+	for (int i = 0; i < LX_CAND; i++)
+		if (LX.end[i].phase != 0 && LX.end[i].s.uid == uid)
+			return true;
+	return false;
+}
+
+/* Step 1: the candidates into LX.cand.  How many, or -1 if the directory cannot be read.
+ * `all_ours`: the service is stopping — every seatless REMOTIX session with processes is a candidate, at once. */
+static int lx_scan(bool all_ours)
+{
+	char seen[LX_CAND][RXR_SESSION_MAX] = { { 0 } };
+	int nseen = 0;
+
+	struct lx_sess *all = calloc(LX_SESS, sizeof *all);
+	DIR *d = all ? opendir("/run/systemd/sessions") : NULL;
+	struct dirent *e;
+	int n = 0;
+
+	LX.ncand = 0;
+	if (!d) {
+		free(all);
+		return -1;
+	}
+	while (n < LX_SESS && (e = readdir(d)) != NULL)
+		if (lx_read(e->d_name, &all[n])) /* `.ref` pipes and temporary files fail lx_id_ok() */
+			n++;
+	closedir(d);
+	for (int i = 0; i < n && LX.ncand < LX_CAND; i++) {
+		bool seated = false;
+
+		/* ours, WITHOUT a seat, not already being ended: nothing else can ever be a candidate */
+		if (!all[i].ours || all[i].seat || lx_ending(all[i].id))
+			continue;
+		for (int j = 0; j < n; j++)
+			seated |= all[j].seat && all[j].uid == all[i].uid;
+		/* the second rule: nobody of ours holds it and its scope is not empty.  ⚠ By uid, as everything here: with a child
+		 * of that uid alive (an old scope beside a resumed desktop) this is not an orphan, and the first rule covers it */
+		all[i].orphan = !own_by_uid(all[i].uid) && lx_signal(&all[i], 0) > 0;
+		if (all[i].orphan && !all_ours) {
+			bool before = false;
+
+			for (int k = 0; k < LX.north; k++)
+				before |= strcmp(LX.orph[k], all[i].id) == 0;
+			if (nseen < LX_CAND)
+				snprintf(seen[nseen++], sizeof seen[0], "%s", all[i].id);
+			all[i].orphan = before; /* the first sighting only takes note */
+		}
+		if (all_ours ? lx_signal(&all[i], 0) > 0 : (seated || all[i].orphan)) {
+			if (all_ours)
+				all[i].orphan = true; /* ended with no question, child or not: the deadline has passed for it */
+			LX.cand[LX.ncand++] = all[i];
+		}
+		/* else: no seat for this uid and not an orphan twice ⇒ nothing to ask and nothing to end */
+	}
+	free(all);
+	if (!all_ours) {
+		memcpy(LX.orph, seen, sizeof LX.orph);
+		LX.north = nseen;
+	}
+	return LX.ncand;
+}
+
+/* Signals the processes of ONE session scope (`sig` 0: only counts them).  How many it reached, -1 if the scope's cgroup cannot
+ * be read (gone, or not where systemd puts it: then nothing is signalled). */
+static int lx_signal(const struct lx_sess *s, int sig)
+{
+	char path[160], want[160], cg[512];
+	long pid;
+	FILE *f;
+	int fd, n = 0;
+
+	snprintf(path, sizeof path, "/sys/fs/cgroup/user.slice/user-%u.slice/session-%s.scope/cgroup.procs", (unsigned)s->uid,
+	         s->id);
+	/* what /proc/<pid>/cgroup must say, whole: this scope and nothing else (cgroup v2, one «0::» line) */
+	snprintf(want, sizeof want, "0::/user.slice/user-%u.slice/session-%s.scope\n", (unsigned)s->uid, s->id);
+	fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+	if (fd < 0)
+		return -1;
+	if (!(f = fdopen(fd, "r"))) {
+		close(fd);
+		return -1;
+	}
+	while (fscanf(f, "%ld", &pid) == 1) {
+		int pfd;
+
+		if (pid <= 1)
+			continue;
+		/* the pidfd FIRST, then the check: the signal goes to the process that was checked, not to a pid reused meanwhile */
+		pfd = (int)syscall(SYS_pidfd_open, (pid_t)pid, 0);
+		if (pfd < 0)
+			continue;
+		if (cgroup_of((pid_t)pid, cg, sizeof cg) && strcmp(cg, want) == 0 &&
+		    syscall(SYS_pidfd_send_signal, pfd, sig, NULL, 0) == 0)
+			n++;
+		close(pfd);
+	}
+	fclose(f);
+	return n;
+}
+
+/* Step 2: the sentinel's question for every candidate, in a fork that only asks and exits. */
+static void lx_ask_begin(uint64_t now)
+{
+	int pf[2];
+
+	if (pipe2(pf, O_CLOEXEC) != 0)
+		return;
+	LX.helper = fork();
+	if (LX.helper < 0) {
+		close(pf[0]);
+		close(pf[1]);
+		LX.helper = 0; /* no question this round: nothing is done */
+		return;
+	}
+	if (LX.helper == 0) {
+		sentinel *g;
+
+		close(pf[0]);
+		rootside_fork_signals_fresh();            /* not the root side's self-pipe handlers: the ceiling's SIGKILL aside, SIGTERM ends it */
+		(void)prctl(PR_SET_PDEATHSIG, SIGKILL);   /* it does not outlive the root side */
+		g = sentinel_open();                      /* NULL = no system bus: every answer is «could not look» */
+		for (int i = 0; i < LX.ncand; i++) {
+			struct lx_answer a;
+			int v;
+
+			memset(&a, 0, sizeof a);
+			v = g ? sentinel_local3(g, LX.cand[i].user, a.detail, sizeof a.detail) : -1;
+			a.verdict = v == 1 ? '1' : v == 0 ? '0' : '?';
+			if (write(pf[1], &a, sizeof a) != (ssize_t)sizeof a) /* smaller than PIPE_BUF: whole or not at all */
+				_exit(1);
+		}
+		_exit(0);
+	}
+	close(pf[1]);
+	(void)fcntl(pf[0], F_SETFL, O_NONBLOCK);
+	LX.fd = pf[0];
+	LX.got = 0;
+	LX.deadline = now + LX_ASK_MS;
+}
+
+/* 0 = not all here yet · 1 = every answer arrived · -1 = the helper died, wrote less, or passed its ceiling. */
+static int lx_ask_step(uint64_t now)
+{
+	size_t want = (size_t)LX.ncand * sizeof LX.ans[0];
+	bool whole;
+
+	for (;;) {
+		ssize_t n = read(LX.fd, (char *)LX.ans + LX.got, want - LX.got);
+
+		if (n > 0) {
+			LX.got += (size_t)n;
+			if (LX.got == want)
+				break;
+			continue;
+		}
+		if (n < 0 && errno == EINTR)
+			continue;
+		if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK) && now < LX.deadline)
+			return 0;
+		break; /* EOF before the whole answer, an error, or the ceiling */
+	}
+	whole = LX.got == want;
+	close(LX.fd);
+	LX.fd = -1;
+	if (!whole)
+		kill(LX.helper, SIGKILL);
+	(void)waitpid(LX.helper, NULL, 0); /* by pid, never -1; it has exited or was just killed */
+	LX.helper = 0;
+	return whole ? 1 : -1;
+}
+
+/* The SIGTERM of the ending.  `kid`: a child of ours was still serving that user after the grace.
+ * `detail` NULL: the second rule (an orphan, or the service is stopping) — no local session is claimed in the log. */
+static void lx_end_begin(const struct lx_sess *c, const char *detail, bool kid, uint64_t now)
+{
+	struct lx_sess s;
+	int slot = -1, n;
+
+	for (int i = 0; i < LX_CAND && slot < 0; i++)
+		if (!LX.end[i].phase)
+			slot = i;
+	if (slot < 0) {
+		LX.stop_missed += R.stopping; /* while stopping the next round is lx_stop_again(), and the count is said */
+		return; /* every slot is ending something: this one waits for the next round */
+	}
+	/* ⛔ read AGAIN just before acting: still that uid and name, still SERVICE=remotix, still NO seat — or nothing is done */
+	if (!lx_read(c->id, &s) || !s.ours || s.seat || s.uid != c->uid || strcmp(s.user, c->user) != 0) {
+		registro_dice(LOG_ROOT, "local excludes remote: session %s of «%s» (uid %ld) is no longer a seatless REMOTIX session "
+		              "of that user at the second reading: NOT touched", c->id, c->user, (long)c->uid);
+		return;
+	}
+	n = lx_signal(&s, SIGTERM);
+	if (!detail) {
+		if (n < 0) {
+			registro_dice(LOG_ROOT, "⛔ no orphan desktops: the cgroup of session-%s.scope of «%s» (uid %ld) cannot be read "
+			              "(%s): NOTHING signalled", s.id, s.user, (long)s.uid, strerror(errno));
+			return;
+		}
+		if (n == 0)
+			return; /* it emptied by itself between the scan and here: nothing to end, nothing to say */
+		registro_dice(LOG_ROOT, "⛔ no orphan desktops: the REMOTIX session %s of «%s» (uid %ld) %s — it must not stay: SIGTERM "
+		              "to the %d processes of session-%s.scope and to nothing else; SIGKILL in %d s to what is left in it",
+		              s.id, s.user, (long)s.uid,
+		              R.stopping ? "is still there while the service stops"
+		                         : "has live processes and no child of ours (the service restarted, or its network side died, "
+		                           "and nobody reattached)", n, s.id, LX_TERM_MS / 1000);
+		LX.end[slot].s = s;
+		LX.end[slot].at = now;
+		LX.end[slot].orphan = true;
+		LX.end[slot].phase = 1;
+		return;
+	}
+	if (n < 0) {
+		registro_dice(LOG_ROOT, "⛔ local excludes remote: «%s» (uid %ld) has a LOCAL session (%s) and the REMOTIX session %s, "
+		              "but the cgroup of session-%s.scope cannot be read (%s): NOTHING signalled", s.user, (long)s.uid,
+		              detail[0] ? detail : "no detail", s.id, s.id, strerror(errno));
+		return;
+	}
+	registro_dice(LOG_ROOT, "⛔ local excludes remote: «%s» (uid %ld) has a LOCAL session (%s) — the REMOTIX session %s (no seat, "
+	              "%s) must not stay: SIGTERM to the %d processes of session-%s.scope and to nothing else; SIGKILL in %d s to "
+	              "what is left in it", s.user, (long)s.uid, detail[0] ? detail : "no detail", s.id,
+	              kid ? "its child did not close it within the grace" : "no child of ours holds it", n, s.id,
+	              LX_TERM_MS / 1000);
+	LX.end[slot].s = s;
+	LX.end[slot].at = now;
+	LX.end[slot].orphan = false;
+	LX.end[slot].phase = 1;
+}
+
+/* The light close's clean-up of the user manager, as the user (box above).  The pid of the fork, or 0 if it did not start. */
+static pid_t lx_clean_begin(const struct lx_sess *s, bool orphan)
+{
+	const char *why = orphan ? "no orphan desktops: the root side ended the user's REMOTIX session"
+	                         : "local excludes remote: the root side ended the user's REMOTIX session";
+	struct passwd pw, *r = NULL;
+	char buf[4096], run[64], bus[96];
+	bool journal = log_to_journal();
+	pid_t p;
+
+	/* the gid and the home are the system's for that uid; never for root (a REMOTIX session of uid 0 does not exist) */
+	if (s->uid == 0 || getpwuid_r(s->uid, &pw, buf, sizeof buf, &r) != 0 || !r) {
+		registro_dice(LOG_ROOT, "⛔ local excludes remote: uid %ld cannot be looked up: the user manager of «%s» is NOT cleaned "
+		              "(our drop-ins and variables may still be there)", (long)s->uid, s->user);
+		return 0;
+	}
+	snprintf(run, sizeof run, "/run/user/%u", (unsigned)s->uid);
+	snprintf(bus, sizeof bus, "unix:path=/run/user/%u/bus", (unsigned)s->uid);
+	p = fork();
+	if (p < 0)
+		return 0;
+	if (p == 0) {
+		int rc;
+
+		rootside_fork_signals_fresh();          /* not the root side's self-pipe handlers */
+		(void)prctl(PR_SET_PDEATHSIG, SIGKILL); /* it does not outlive the root side */
+		if (journal)
+			(void)log_journal(false);       /* its socket may be any fd: closed, and opened again below (as net_start) */
+		/* ⛔ become the user BEFORE touching a file: the kernel then applies the user's own permissions (as kdehost_spawn) */
+		if (setgroups(0, NULL) != 0 || setresgid(pw.pw_gid, pw.pw_gid, pw.pw_gid) != 0 ||
+		    setresuid(s->uid, s->uid, s->uid) != 0)
+			_exit(126);
+		if (setuid(0) == 0 || setgid(0) == 0)   /* the way back must be closed */
+			_exit(126);
+		if (close_range(3, ~0U, 0) != 0)        /* the channel, the PAM helper, the port: none stays in a user's process */
+			for (int fd = 3; fd < 4096; fd++)
+				close(fd);
+		if (journal)
+			(void)log_journal(true);
+		/* the user's environment as kdehost_spawn gives it, plus HOME: nothing of the root side's own */
+		if (clearenv() != 0 || setenv("XDG_RUNTIME_DIR", run, 1) != 0 || setenv("DBUS_SESSION_BUS_ADDRESS", bus, 1) != 0 ||
+		    setenv("PATH", "/usr/sbin:/usr/bin:/sbin:/bin", 1) != 0 || setenv("LANG", "C", 1) != 0 ||
+		    setenv("HOME", pw.pw_dir, 1) != 0 || chdir("/") != 0)
+			_exit(126);
+		log_identity(s->user);                  /* every line of this process says whose it is */
+		session_dconf_neutralise(why);          /* the light close's step 3 */
+		rc = session_clear_out_light(why);      /* the light close's step 5: 0 done, 2 the manager refused something */
+		_exit(rc == 0 ? 0 : 2);
+	}
+	return p;
+}
+
+/* The SIGKILL of the ending, its outcome, and then our KDE compositor unit and the user manager's clean-up. */
+static void lx_end_step(uint64_t now)
+{
+	for (int i = 0; i < LX_CAND; i++) {
+		const struct lx_sess *s = &LX.end[i].s;
+		const char *rule = LX.end[i].orphan ? "no orphan desktops" : "local excludes remote"; /* which rule ended it */
+
+		if (LX.end[i].phase == 1 && now >= LX.end[i].at + LX_TERM_MS) {
+			int left = lx_signal(s, 0); /* who is still in THAT scope */
+			int hit = left > 0 ? lx_signal(s, SIGKILL) : 0;
+
+			if (left > 0 && hit <= 0)
+				LX.stop_missed += R.stopping;
+			registro_dice(LOG_ROOT, "⛔ %s: session-%s.scope of «%s» (uid %ld) %s", rule, s->id, s->user,
+			              (long)s->uid,
+			              left < 0    ? "is gone (its cgroup is no longer there): ended"
+			              : left == 0 ? "is empty after the SIGTERM: ended"
+			              : hit > 0   ? "still had processes after the SIGTERM: SIGKILL sent to them, ended"
+			                          : "still has processes and the SIGKILL reached none: NOT ended, tried again next round");
+			LX.end[i].phase = 2;
+			LX.end[i].at = now;
+		} else if (LX.end[i].phase == 2 && now > LX.end[i].at) {
+			/* a later turn of the loop: a child killed with the scope has been reaped by now.  With a child of that uid
+			 * still here the unit is left to kdehost_sweep(), which stops it when no child and no desktop are left */
+			LX.end[i].phase = 0;
+			if (!own_by_uid(s->uid)) {
+				(void)kdehost_stop(LOG_ROOT, s->uid, LX.end[i].orphan
+				                       ? "no orphan desktops: the user's REMOTIX session was ended"
+				                       : "local excludes remote: the user's REMOTIX session was ended");
+				/* with a child of that uid still here the clean-up is its light close's, not ours */
+				LX.end[i].clean = lx_clean_begin(s, LX.end[i].orphan);
+				if (LX.end[i].clean > 0) {
+					LX.end[i].phase = 3;
+					LX.end[i].at = now;
+				}
+			}
+		} else if (LX.end[i].phase == 3) {
+			int st = 0;
+			pid_t r = waitpid(LX.end[i].clean, &st, WNOHANG); /* by pid, never -1 */
+			bool late = r == 0 && now >= LX.end[i].at + LX_CLEAN_MS;
+
+			if (r == 0 && !late)
+				continue;
+			if (late) {
+				kill(LX.end[i].clean, SIGKILL);
+				(void)waitpid(LX.end[i].clean, &st, 0);
+			}
+			registro_dice(LOG_ROOT, "%s %s: the user manager of «%s» (uid %ld) %s",
+			              !late && r > 0 && WIFEXITED(st) && WEXITSTATUS(st) == 0 ? "⭐" : "⛔", rule, s->user, (long)s->uid,
+			              late ? "was NOT cleaned within the ceiling (the clean-up was killed): our drop-ins or variables may "
+			                     "still be there — the next REMOTIX birth of that user removes them"
+			              : r > 0 && WIFEXITED(st) && WEXITSTATUS(st) == 0
+			                     ? "is as the light close leaves it (dconf profile neutralised, our drop-ins and marked variables "
+			                       "removed, or there were none: the lines of «session» above say what)"
+			                     : "was NOT fully cleaned (the clean-up did not end well: the lines above say why) — the next "
+			                       "REMOTIX birth of that user removes what is left");
+			LX.end[i].clean = 0;
+			LX.end[i].phase = 0;
+		}
+	}
+}
+
+/* Step 3: what the answers allow.  `answered` false = no usable answer for anyone. */
+static void lx_decide(uint64_t now, bool answered)
+{
+	bool doubt = !answered;
+
+	/* the grace of whoever is no longer «local + child of ours» in THIS round is forgotten: it starts again if it comes back */
+	for (int w = 0; w < LX_CAND; w++)
+		LX.wait[w].keep = false;
+	for (int i = 0; answered && i < LX.ncand; i++)
+		for (int w = 0; w < LX_CAND; w++)
+			if (LX.ans[i].verdict == '1' && LX.wait[w].used && LX.wait[w].uid == LX.cand[i].uid && own_by_uid(LX.cand[i].uid))
+				LX.wait[w].keep = true;
+	for (int w = 0; w < LX_CAND; w++)
+		if (!LX.wait[w].keep)
+			LX.wait[w].used = false;
+
+	for (int i = 0; answered && i < LX.ncand; i++) {
+		const struct lx_sess *c = &LX.cand[i];
+		bool kid = own_by_uid(c->uid) != NULL;
+		int w = -1, free_w = -1;
+
+		LX.ans[i].detail[sizeof LX.ans[i].detail - 1] = 0; /* it came through a pipe: terminated here */
+		if (LX.ans[i].verdict != '1') {
+			/* '0' = surely no local session: nothing.  Anything else = could not look: nothing, and said below */
+			doubt |= LX.ans[i].verdict != '0';
+			continue;
+		}
+		if (kid) {
+			for (int k = 0; k < LX_CAND; k++) {
+				if (LX.wait[k].used && LX.wait[k].uid == c->uid)
+					w = k;
+				else if (!LX.wait[k].used && free_w < 0)
+					free_w = k;
+			}
+			if (w < 0) {
+				if (free_w < 0)
+					continue; /* cannot happen (as many places as candidates); if it did: no clock, no action */
+				LX.wait[free_w].used = true;
+				LX.wait[free_w].uid = c->uid;
+				LX.wait[free_w].since = now;
+				registro_dice(LOG_ROOT, "local excludes remote: «%s» (uid %ld) has a LOCAL session (%s) and a child of ours "
+				              "with the REMOTIX session %s: %d s for its own light close, then the root side ends that scope",
+				              c->user, (long)c->uid, LX.ans[i].detail[0] ? LX.ans[i].detail : "no detail", c->id,
+				              LX_GRACE_MS / 1000);
+				continue;
+			}
+			if (now < LX.wait[w].since + LX_GRACE_MS)
+				continue;
+		}
+		lx_end_begin(c, LX.ans[i].detail, kid, now);
+	}
+	if (doubt && (!LX.said_ms || now >= LX.said_ms + LX_SAY_MS)) {
+		LX.said_ms = now ? now : 1;
+		registro_dice(LOG_ROOT, "⚠ local excludes remote: logind could NOT say whether a user with a REMOTIX session has a local "
+		              "session (%s): NOTHING is ended on a doubt; asked again in %d s (this line at most once a minute)",
+		              answered ? "an answer was «could not look»" : "the question got no whole answer", LX_EVERY_MS / 1000);
+	}
+}
+
+static void localx_sweep(uint64_t now)
+{
+	int n;
+
+	lx_end_step(now); /* also while stopping: the endings of lx_stop_begin() are finished here */
+	if (R.stopping)   /* no new question and no new scan: lx_stop_begin() does the last one */
+		return;
+	if (LX.helper > 0) {
+		int r = lx_ask_step(now);
+
+		if (r != 0)
+			lx_decide(now, r > 0);
+		return;
+	}
+	if (LX.last_ms && now < LX.last_ms + LX_EVERY_MS)
+		return;
+	LX.last_ms = now ? now : 1;
+	n = lx_scan(false);
+	if (n < 0) {
+		if (!LX.said_ms || now >= LX.said_ms + LX_SAY_MS) {
+			LX.said_ms = now ? now : 1;
+			registro_dice(LOG_ROOT, "⚠ local excludes remote: /run/systemd/sessions cannot be read (%s): NOTHING is looked at "
+			              "nor ended (this line at most once a minute)", strerror(errno));
+		}
+		return;
+	}
+	/* the second rule first: an orphan is ended with no question, and leaves the list of those to ask about */
+	{
+		int kept = 0;
+
+		for (int i = 0; i < LX.ncand; i++) {
+			if (LX.cand[i].orphan)
+				lx_end_begin(&LX.cand[i], NULL, false, now);
+			else
+				LX.cand[kept++] = LX.cand[i];
+		}
+		LX.ncand = n = kept;
+	}
+	if (n == 0) { /* nobody has both a seat and a REMOTIX session: no question, no grace running */
+		memset(LX.wait, 0, sizeof LX.wait);
+		return;
+	}
+	lx_ask_begin(now);
+}
+
+/* Is an ending still running? (SIGTERM out, SIGKILL or the clean-up due) */
+static bool lx_busy(void)
+{
+	for (int i = 0; i < LX_CAND; i++)
+		if (LX.end[i].phase)
+			return true;
+	return false;
+}
+
+/* The service is stopping and the network side is gone (or the deadline has passed): every REMOTIX session that still has
+ * processes is ended — the second rule, at once.  The first round; `lx_stop_again()` does the others. */
+static void lx_stop_begin(uint64_t now)
+{
+	int n = lx_scan(true);
+
+	LX.stop_begun = true;
+	LX.stop_missed = 0;
+	LX.stop_deadline = now + LX_TERM_MS + LX_CLEAN_MS + 3000;
+	if (n < 0) {
+		registro_dice(LOG_ROOT, "⚠ no orphan desktops: /run/systemd/sessions cannot be read (%s) while stopping: NOTHING is "
+		              "ended here", strerror(errno));
+		return;
+	}
+	if (n == 0) {
+		registro_dice(LOG_ROOT, "⭐ no orphan desktops: no REMOTIX session is left with processes — the service stops clean");
+		return;
+	}
+	for (int i = 0; i < LX.ncand; i++)
+		lx_end_begin(&LX.cand[i], NULL, own_by_uid(LX.cand[i].uid) != NULL, now);
+	LX.ncand = 0;
+}
+
+/* A later round of the stop, when no ending is running: more than LX_CAND scopes, a slot that was taken, a SIGKILL that
+ * reached nobody.  How many endings it began: 0 = nothing is left to end (or nothing can be read).  The caller bounds the
+ * rounds with LX.stop_deadline. */
+static int lx_stop_again(uint64_t now)
+{
+	int n = lx_scan(true), begun = 0;
+
+	for (int i = 0; i < n; i++) {
+		lx_end_begin(&LX.cand[i], NULL, own_by_uid(LX.cand[i].uid) != NULL, now);
+		begun += lx_ending(LX.cand[i].id);
+	}
+	LX.ncand = 0;
+	return begun;
+}
+
+/* What the stop leaves behind, said once: REMOTIX sessions that still have processes when the root side gives up. */
+static void lx_stop_say(void)
+{
+	int n = lx_scan(true);
+
+	LX.ncand = 0;
+	if (n > 0) /* the endings missed on the way (LX.stop_missed) were tried again: only what is STILL there is a fact */
+		registro_dice(LOG_ROOT, "⛔ no orphan desktops: the service stops and %d REMOTIX session(s) still have processes "
+		              "(%d ending(s) found no slot or reached nobody on the way): the next start of the service ends them", n,
+		              LX.stop_missed);
+}
+
+/* ⛔⭐ 1.0.0 — «A LOCAL LOGIN CLOSES THE REMOTE DESKTOP FIRST» (the owner's order, 18 Nov 2026; DECISIONS-11 §11.57).
+ *
+ * The sweep above finds a local session that EXISTS, seconds later.  GNOME's login screen makes that enough (it holds the
+ * login while the user has another graphical session); SDDM and LightDM hold nothing, and the local desktop starts on the
+ * user manager and the bus the remote one is still using: Plasma adopts the remote units and dies with them, the local
+ * `xfce4-session` finds its bus name taken and leaves — back to the login screen (read in the sources, 18 Nov 2026).
+ * ⇒ The hold is ours, the same for every desktop: `remotix-local-login` (local_login.c), run by `pam_exec` inside the local
+ * login's own PAM stack, leaves an empty file PL_DIR/<uid> and waits for THIS side to remove it.
+ *
+ *   1. the request is seen (inotify wakes the loop; the directory is also read every second);
+ *   2. a child of ours serves that uid ⇒ LOCAL_COMING to the network side: the clients are sent away (0x04) and the child is
+ *      asked for the FULL close — the logout's road, units stopped and everything put back, because the local desktop has
+ *      NOT started (it is held) and must find a user manager with nothing of ours in it;
+ *   3. no child (a desktop nobody holds), or PL_GRACE_MS passed, or the order could not leave: the scope is ended here, by
+ *      the machinery of the first rule (`lx_end_begin()`: SIGTERM/SIGKILL to that scope only, the KDE stop, the clean-up);
+ *   4. no child of that uid, no seatless REMOTIX session of that uid with processes, no ending running ⇒ the file is
+ *      removed and the login goes on.  PL_CEIL_MS at most: then the file is removed anyway, and said.
+ * Until then, and for PL_HOLD_MS after (the local session is about to appear in logind, where the usual refusal takes
+ * over), `birth()` gives that uid no child.
+ *
+ * ⛔ The request is only a uid, in a directory only root can write (0700): nothing in it is believed beyond «look at this
+ *    uid now» — what is ended is what logind's own files say is a seatless SERVICE=remotix session of that uid, read again
+ *    by `lx_end_begin()` just before the signal.
+ * ⛔ Nobody waits for nobody: this side holds LOCK_EX on PL_DIR/.lock for its whole life (the descriptor is CLOEXEC and
+ *    every fork here either execs or closes everything); the hook returns at once when the lock is free.  While the
+ *    service stops no request is served: every desktop is being closed anyway, and the hook returns when this side exits. */
+#define PL_DIR      "/run/remotix/prelocal"
+#define PL_LOCK     ".lock"
+#define PL_MAX      8      /* logins held at the same time (a seat has one login screen) */
+#define PL_GRACE_MS 13000  /* the child's full close: 0.7 s measured on GNOME (18 Nov 2026, the tablet), but its orderly logout may wait
+                            * WAIT_EXIT_MS (10 s, session.c) before forcing, and cutting it short leaves the user manager half closed:
+                            * this is above that budget plus the scope's clear-out; then this side ends the scope */
+#define PL_CEIL_MS  20000  /* a login is never held longer (the hook's own ceiling is 25 s) */
+#define PL_HOLD_MS  10000  /* no birth for that uid after the answer: the local session is about to be registered */
+#define PL_LOOK_MS  200    /* between two looks at the requests being served */
+
+static struct {
+	int dirfd, lockfd, ino;
+	uint64_t looked_ms;
+	struct {
+		bool used, told, forced, had;
+		uid_t uid;
+		char user[RXR_USER_MAX];
+		uint64_t since;
+	} req[PL_MAX];
+	struct { uid_t uid; uint64_t until; } hold[PL_MAX];
+} PL = { .dirfd = -1, .lockfd = -1, .ino = -1 };
+
+/* A request's name: the uid in decimal, no sign, no leading zero, never 0. */
+static bool pl_name_uid(const char *name, uid_t *uid)
+{
+	size_t n = strlen(name);
+	unsigned long long v = 0;
+
+	if (!n || n > 10 || name[0] == '0')
+		return false;
+	for (size_t i = 0; i < n; i++) {
+		if (name[i] < '0' || name[i] > '9')
+			return false;
+		v = v * 10 + (unsigned)(name[i] - '0');
+	}
+	if (v == 0 || v >= 0xFFFFFFFFull)
+		return false;
+	*uid = (uid_t)v;
+	return true;
+}
+
+static void pl_init(void)
+{
+	struct stat st;
+	struct dirent *e;
+	DIR *d = NULL;
+	bool locked = false;
+	int fd, fd2;
+
+	if (mkdir(PL_DIR, 0700) != 0 && errno != EEXIST)
+		goto off;
+	fd = open(PL_DIR, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd < 0)
+		goto off;
+	if (fstat(fd, &st) != 0 || st.st_uid != 0 || fchmod(fd, 0700) != 0) {
+		close(fd);
+		errno = EPERM;
+		goto off;
+	}
+	PL.dirfd = fd;
+	/* the lock FIRST: a second root side started by hand must not wipe the requests of the one that runs.  A hook's own
+	 * probe (LOCK_SH for a few microseconds) can make one attempt fail: tried a few times */
+	PL.lockfd = openat(PL.dirfd, PL_LOCK, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
+	for (int t = 0; PL.lockfd >= 0 && t < 20; t++) {
+		struct timespec nap = { 0, 5 * 1000000L };
+
+		if (flock(PL.lockfd, LOCK_EX | LOCK_NB) == 0) {
+			locked = true;
+			break;
+		}
+		if (errno != EWOULDBLOCK)
+			break;
+		(void)nanosleep(&nap, NULL);
+	}
+	if (!locked) {
+		int e2 = PL.lockfd >= 0 ? EBUSY : errno;
+
+		if (PL.lockfd >= 0)
+			close(PL.lockfd);
+		close(PL.dirfd);
+		PL.lockfd = PL.dirfd = -1;
+		errno = e2;
+		goto off;
+	}
+	/* the requests of a previous life: nobody waits on them any more (their hooks saw the lock free) */
+	fd2 = openat(fd, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd2 >= 0 && !(d = fdopendir(fd2)))
+		close(fd2);
+	while (d && (e = readdir(d)) != NULL) {
+		uid_t uid;
+
+		if (pl_name_uid(e->d_name, &uid))
+			(void)unlinkat(PL.dirfd, e->d_name, 0);
+	}
+	if (d)
+		closedir(d);
+	PL.ino = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+	if (PL.ino >= 0 && inotify_add_watch(PL.ino, PL_DIR, IN_CREATE | IN_MOVED_TO) < 0) {
+		close(PL.ino);
+		PL.ino = -1;
+	}
+	registro_dice(LOG_ROOT, "⭐ a local login closes the remote desktop first (§11.57): requests in %s, %s", PL_DIR,
+	              PL.ino >= 0 ? "seen as they arrive" : "⚠ inotify is not there: seen within a second");
+	return;
+off:
+	registro_dice(LOG_ROOT, "⚠ a local login closes the remote desktop first (§11.57): %s cannot be prepared (%s) — a local "
+	              "login is NOT held; the sweeps of «local excludes remote» stay", PL_DIR, strerror(errno));
+}
+
+static bool pl_active(void)
+{
+	for (int i = 0; i < PL_MAX; i++)
+		if (PL.req[i].used)
+			return true;
+	return false;
+}
+
+/* `birth()`: is a local login of this uid being held, or just let through? */
+static bool pl_uid_pending(uid_t uid, uint64_t now)
+{
+	for (int i = 0; i < PL_MAX; i++)
+		if ((PL.req[i].used && PL.req[i].uid == uid) || (PL.hold[i].until > now && PL.hold[i].uid == uid))
+			return true;
+	return false;
+}
+
+/* The seatless REMOTIX sessions of `uid` that still have processes: how many.  `end`: each one not already being ended is
+ * ended (`lx_end_begin()` reads it again and signals its scope only).  `user`, if given, gets logind's name for the uid. */
+static int pl_sessions(uid_t uid, uint64_t now, bool end, bool kid, char *user, size_t user_len)
+{
+	DIR *d = opendir("/run/systemd/sessions");
+	struct dirent *e;
+	int n = 0;
+
+	if (!d)
+		return 0;
+	while ((e = readdir(d)) != NULL) {
+		struct lx_sess s;
+
+		if (!lx_read(e->d_name, &s) || !s.ours || s.seat || s.uid != uid)
+			continue;
+		if (lx_signal(&s, 0) <= 0)
+			continue;
+		n++;
+		if (user && user_len && !user[0])
+			snprintf(user, user_len, "%s", s.user);
+		if (end && !lx_ending(s.id))
+			lx_end_begin(&s, "a local login of this user is held in PAM until it is gone", kid, now);
+	}
+	closedir(d);
+	return n;
+}
+
+static void pl_answer(int i, uint64_t now, bool closed)
+{
+	char name[16];
+	int h = 0;
+
+	snprintf(name, sizeof name, "%lu", (unsigned long)PL.req[i].uid);
+	(void)unlinkat(PL.dirfd, name, 0);
+	for (int k = 1; k < PL_MAX; k++)
+		if (PL.hold[k].until < PL.hold[h].until)
+			h = k;                               /* the oldest (or a free one: until 0) */
+	PL.hold[h].uid = PL.req[i].uid;
+	PL.hold[h].until = now + PL_HOLD_MS;
+	if (!closed)
+		registro_dice(LOG_ROOT, "⚠ local login of «%s» (uid %ld): its REMOTIX desktop is STILL there after %d s — the login "
+		              "is let through anyway (never held longer); the sweeps of «local excludes remote» go on",
+		              PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid, PL_CEIL_MS / 1000);
+	else if (PL.req[i].had && PL.req[i].forced)
+		registro_dice(LOG_ROOT, "⚠ local login of «%s» (uid %ld): its REMOTIX session is gone (%llu ms, scope ended by the root "
+		              "side: the user manager got the light clean-up only, not the child's full close) — the login goes on",
+		              PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid,
+		              (unsigned long long)(now - PL.req[i].since));
+	else if (PL.req[i].had)
+		registro_dice(LOG_ROOT, "⭐ local login of «%s» (uid %ld): nothing of its REMOTIX desktop is left (%llu ms, closed by "
+		              "its child) — the login goes on", PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid,
+		              (unsigned long long)(now - PL.req[i].since));
+	else
+		log_detail(LOG_ROOT, "local login of uid %ld: no REMOTIX desktop of that user — the login goes on",
+		           (long)PL.req[i].uid);
+	memset(&PL.req[i], 0, sizeof PL.req[i]);
+}
+
+static void pl_step(uint64_t now)
+{
+	char buf[1024];
+	bool fired = false;
+	struct dirent *e;
+	DIR *d = NULL;
+	int fd;
+
+	if (PL.dirfd < 0 || R.stopping)
+		return;
+	while (PL.ino >= 0 && read(PL.ino, buf, sizeof buf) > 0)
+		fired = true;
+	if (!fired && PL.looked_ms && now < PL.looked_ms + (pl_active() ? PL_LOOK_MS : 1000))
+		return;
+	PL.looked_ms = now ? now : 1;
+
+	/* 1. the new requests */
+	fd = openat(PL.dirfd, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd >= 0 && !(d = fdopendir(fd)))
+		close(fd);
+	while (d && (e = readdir(d)) != NULL) {
+		struct stat st;
+		uid_t uid;
+		int slot = -1;
+		bool known = false;
+
+		if (!pl_name_uid(e->d_name, &uid))
+			continue;
+		if (fstatat(PL.dirfd, e->d_name, &st, AT_SYMLINK_NOFOLLOW) != 0 || !S_ISREG(st.st_mode) || st.st_uid != 0)
+			continue;
+		for (int i = 0; i < PL_MAX; i++) {
+			known |= PL.req[i].used && PL.req[i].uid == uid;
+			if (slot < 0 && !PL.req[i].used)
+				slot = i;
+		}
+		if (known || slot < 0)
+			continue;                            /* no slot: it is taken at a later look, the hook waits */
+		memset(&PL.req[slot], 0, sizeof PL.req[slot]);
+		PL.req[slot].used = true;
+		PL.req[slot].uid = uid;
+		PL.req[slot].since = now;
+	}
+	if (d)
+		closedir(d);
+
+	/* 2. each request, one step */
+	for (int i = 0; i < PL_MAX; i++) {
+		struct own_child *k;
+		bool ending, at_once = false;
+		int alive;
+
+		if (!PL.req[i].used)
+			continue;
+		k = own_by_uid(PL.req[i].uid);
+		alive = pl_sessions(PL.req[i].uid, now, false, false, PL.req[i].user, sizeof PL.req[i].user);
+		ending = lx_uid_ending(PL.req[i].uid);
+		if (k && !PL.req[i].user[0])
+			snprintf(PL.req[i].user, sizeof PL.req[i].user, "%s", k->user);
+		if (!k && alive <= 0 && !ending) {
+			pl_answer(i, now, true);
+			continue;
+		}
+		PL.req[i].had = true;
+		if (now >= PL.req[i].since + PL_CEIL_MS) {
+			pl_answer(i, now, false);
+			continue;
+		}
+		if (!PL.req[i].told) {
+			bool left = false;
+
+			PL.req[i].told = true;
+			if (k) {
+				struct rxr_local_coming m;
+
+				memset(&m, 0, sizeof m);
+				head_fill(&m.h, RXR_LOCAL_COMING, 0);
+				m.uid = (uint32_t)PL.req[i].uid;
+				snprintf(m.user, sizeof m.user, "%s", k->user);
+				left = R.net_pid > 0 && chan_send(&m, sizeof m, -1);
+			}
+			registro_dice(LOG_ROOT, "⛔ local login of «%s» (uid %ld) HELD in PAM: its REMOTIX desktop is closed first — %s",
+			              PL.req[i].user[0] ? PL.req[i].user : "?", (long)PL.req[i].uid,
+			              left ? "the network side is asked for the child's FULL close"
+			              : k  ? "the order could NOT leave towards the network side: its scope is ended here"
+			                   : "no child of ours holds it: its scope is ended here");
+			at_once = k && !left;                /* nobody to wait for: no grace */
+		}
+		if (k && !PL.req[i].forced && (at_once || now >= PL.req[i].since + PL_GRACE_MS)) {
+			/* the child did not close it within the grace (or was never asked): its scope, the child in it, is ended */
+			PL.req[i].forced = true;
+			(void)pl_sessions(PL.req[i].uid, now, true, true, NULL, 0);
+		} else if (!k && alive > 0) {
+			/* no child (any more): what is left in a REMOTIX scope of that uid must not stay, and is not waited for */
+			PL.req[i].forced = true;
+			(void)pl_sessions(PL.req[i].uid, now, true, false, NULL, 0);
+		}
+	}
+}
+
+static void tables_minute(uint64_t now)
+{
+	int kids = 0, grants = 0, wiped = 0, pending = 0;
+
+	if (now < R.tables_ms + 60000)
+		return;
+	R.tables_ms = now;
+	for (int i = 0; i < ROOTSIDE_GRANTS_MAX; i++) {
+		if (!R.bounds.grants[i].used)
+			continue;
+		if (R.bounds.grants[i].expires_ms <= now) {
+			explicit_bzero(&R.bounds.grants[i], sizeof R.bounds.grants[i]);
+			wiped++;
+		} else {
+			grants++;
+		}
+	}
+	for (int i = 0; i < R.cap; i++)
+		kids += R.kids[i].used;
+	for (size_t i = 0; i < sizeof R.pending / sizeof R.pending[0]; i++)
+		pending += R.pending[i].used;
+	log_detail(LOG_ROOT, "root side tables: children %d/%d, grants live %d (%d expired wiped), "
+	           "AUTH in flight %d, pending %d, outbox %d, network side generation %u",
+	           kids, R.cap, grants, wiped, R.bounds.in_flight, pending, R.nout, R.generation);
+}
+
+/* ⛔ What was asked to die and did not (findings 2 and 10, box at
+ *    `NET_TERM_GRACE_MS`).  Called every round. */
+static void kids_hurry(uint64_t now)
+{
+	if (R.net_pid > 0 && R.net_kill_at && now >= R.net_kill_at) {
+		registro_dice(LOG_ROOT, "⛔ the network side (pid %ld) closed its channel and did "
+		              "not exit within %d s of SIGTERM: SIGKILL",
+		              (long)R.net_pid, NET_TERM_GRACE_MS / 1000);
+		kill(R.net_pid, SIGKILL);
+		R.net_kill_at = 0;
+	}
+	for (int i = 0; i < R.cap; i++) {
+		struct own_child *k = &R.kids[i];
+
+		if (!k->used || k->pid <= 0 || !k->term_at)
+			continue;
+		if (!k->kill_at && now >= k->term_at) {
+			registro_dice(LOG_ROOT, "⛔ the child of «%s» (pid %ld, serial %llu) did not "
+			              "leave within %d s of its network side's death: SIGTERM (the "
+			              "desktop stays)", k->user, (long)k->pid,
+			              (unsigned long long)k->serial, KIDS_EOF_GRACE_MS / 1000);
+			kill(k->pid, SIGTERM);
+			k->kill_at = now + KIDS_TERM_GRACE_MS;
+		} else if (k->kill_at && now >= k->kill_at) {
+			registro_dice(LOG_ROOT, "⛔ the child of «%s» (pid %ld) did not exit within %d s "
+			              "of SIGTERM: SIGKILL", k->user, (long)k->pid,
+			              KIDS_TERM_GRACE_MS / 1000);
+			kill(k->pid, SIGKILL);
+			k->kill_at = now + KIDS_TERM_GRACE_MS; /* again, until reaped */
+		}
+	}
+}
+
+static void net_start(uint64_t now);
+
+static void reap_net(uint64_t now)
+{
+	char said[80];
+	int st = 0;
+	uint64_t pause = NET_RESTART_FIRST_MS;
+
+	if (R.net_pid <= 0 || waitpid(R.net_pid, &st, WNOHANG) != R.net_pid)
+		return;
+	registro_dice(LOG_ROOT,
+	              "%s the network side (pid %ld) is gone: %s.  Its children see EOF "
+	              "and leave; a desktop left without a child is ended by the root side (no orphan desktops, 1.0.0)",
+	              R.stopping ? "⭐" : "⛔", (long)R.net_pid, status_text(st, said, sizeof said));
+	R.net_pid = 0;
+	R.net_kill_at = 0;
+	if (R.chan >= 0) {
+		close(R.chan);
+		R.chan = -1;
+	}
+	/* ⛔ Its children: the EOF first, then the signals (`kids_hurry()`). */
+	for (int i = 0; i < R.cap; i++)
+		if (R.kids[i].used && R.kids[i].generation == R.generation && !R.kids[i].term_at) {
+			R.kids[i].term_at = now + KIDS_EOF_GRACE_MS;
+			/* ⭐ 1.5 (R1): from here the user has no client, whatever the child takes to leave */
+			R.kids[i].orphaned_ms = now ? now : 1;
+		}
+	if (R.stopping)
+		return;
+	R.deaths_in_row = now - R.net_born_ms < NET_STABLE_MS ? R.deaths_in_row + 1 : 1;
+	for (int i = 1; i < R.deaths_in_row && pause < NET_RESTART_CAP_MS; i++)
+		pause *= 2;
+	if (pause > NET_RESTART_CAP_MS)
+		pause = NET_RESTART_CAP_MS;
+	R.restart_at = now + pause;
+	registro_dice(LOG_ROOT, "⚠ the network side will be started again in %llu ms "
+	              "(death %d in a row)", (unsigned long long)pause, R.deaths_in_row);
+}
+
+/* ⭐ fd `from` onto `to`, CLOEXEC cleared; -1 ⇒ `to` closed. */
+static int place(int from, int to)
+{
+	if (from < 0) {
+		close(to);
+		return 0;
+	}
+	return dup2(from, to) < 0 ? -1 : 0;
+}
+
+/* The whole of /proc/<pid>/cgroup (every hierarchy on a v1/hybrid system,
+ * the one «0::» line on v2): two processes are in the same cgroup when the
+ * files are equal.  `false` when it cannot be read. */
+static bool cgroup_of(pid_t pid, char *out, size_t cap)
+{
+	char path[64];
+	int fd;
+	ssize_t n;
+
+	snprintf(path, sizeof path, "/proc/%ld/cgroup", (long)pid);
+	fd = open(path, O_RDONLY | O_CLOEXEC);
+	if (fd < 0)
+		return false;
+	n = read(fd, out, cap - 1);
+	close(fd);
+	if (n <= 0 || (size_t)n >= cap - 1)
+		return false;
+	out[n] = 0;
+	return true;
+}
+
+/* ⭐ 1.6 (R8 B): the network side is PID 1 of a PID namespace of its own, and when it dies the kernel kills every process in it:
+ *    nothing it forked survives, nothing keeps fds 4/5 or the TLS key.  What follows stays as a net for a leftover that is NOT in
+ *    that namespace (a network side of an older root side, left by an upgrade).
+ * ⛔ Review 2, L1: what a dead network side forked is still uid `remotix`,
+ *    and keeps fds 4/5 (the port) and the TLS key across the restart —
+ *    `reap_net()` waited only for its pid.  ⇒ Before each start, every
+ *    process of uid `remotix` that lives in THIS root side's own cgroup is
+ *    SIGKILLed: a fork of our network side stays in our cgroup (systemd's unit,
+ *    or the container's), whatever it does.
+ * ⛔⛔ And ONLY those (16 Oct 2026, the coordinator's decision, option a): the
+ *    first form became `remotix` and `kill(-1, SIGKILL)`ed EVERY process of that
+ *    uid — in a test box two rehearsals (the privsep one and the server one) killed each
+ *    other's network sides in a loop (privsep red on three boxes,
+ *    20261016-122655).  Another REMOTIX server's network side runs as the same
+ *    uid but in ANOTHER cgroup (its own unit): it is not ours, and is left
+ *    alone.  Done as root, reading /proc — no fork, no `kill(-1)`.
+ *  ⚠ A root side not under systemd (a bench, a container's pid 1) shares its
+ *    cgroup with whatever else runs there as `remotix`: still «ours». */
+static void net_leftovers_kill(void)
+{
+	static char own[4096];
+	char other[4096];
+	DIR *d;
+	struct dirent *e;
+	int killed = 0;
+
+	if (!own[0] && !cgroup_of(getpid(), own, sizeof own)) {
+		registro_dice(LOG_ROOT, "⚠ the root side cannot read its own cgroup: the leftovers "
+		              "of a dead network side are NOT swept");
+		return;
+	}
+	d = opendir("/proc");
+	if (!d) {
+		/* review 4 B, finding 14: as the cgroup failure above */
+		registro_dice(LOG_ROOT, "⚠ the root side cannot read /proc (%s): the leftovers of "
+		              "a dead network side are NOT swept", strerror(errno));
+		return;
+	}
+	while ((e = readdir(d)) != NULL) {
+		char path[64];
+		struct stat st;
+		pid_t pid;
+
+		if (e->d_name[0] < '1' || e->d_name[0] > '9')
+			continue;
+		pid = (pid_t)strtol(e->d_name, NULL, 10);
+		snprintf(path, sizeof path, "/proc/%ld", (long)pid);
+		if (stat(path, &st) != 0 || st.st_uid != R.o->remotix_uid)
+			continue;
+		if (pid == R.net_pid || !cgroup_of(pid, other, sizeof other)
+		    || strcmp(other, own) != 0)
+			continue;
+		if (kill(pid, SIGKILL) == 0)
+			killed++;
+	}
+	closedir(d);
+	if (killed)
+		registro_dice(LOG_ROOT, "⛔ %d process(es) of uid %ld (remotix) were still alive in this "
+		              "root side's cgroup before the network side's start — a dead network "
+		              "side's leftovers: SIGKILL (other cgroups' are another server's, left "
+		              "alone)", killed, (long)R.o->remotix_uid);
+}
+
+/* What the previous network side leaves behind, emptied before a new one starts
+ * (the fuzz harness calls it too, as its «a new network side»). */
+static void net_generation_reset(void)
+{
+	R.nout = 0; /* the serials of the dead one mean nothing to the new one */
+	/* ⛔ And its grants (lane 1's pre-release review): they were handed to the
+	 *    previous network side, in its VERDICTs — this one never saw them, and a
+	 *    SPAWN with one would be a grant that left the process it was given to.
+	 *    Wiped at every start, whatever road ended the previous one. */
+	for (int i = 0; i < ROOTSIDE_GRANTS_MAX; i++)
+		explicit_bzero(&R.bounds.grants[i], sizeof R.bounds.grants[i]);
+}
+
+
+/* ======================================================================= */
+/* ⭐ 1.6 (R8) — THE DESKTOPS FOUND AGAIN, ASKED BY THE ROOT SIDE            */
+/*
+ * The network side no longer reads /proc: THIS side looks, before it forks the network side (every start, so a restarted network
+ * side learns the desktops of the children that died with the old one, as its own search did in 1.5), and tells it over the
+ * channel — FOUND_AGAIN × N, FOUND_END(N), and later FOUND_GONE.  ⛔ No GDBus here (the root side stays single-threaded):
+ * logind's own files, `rediscover_search_files()`.  ⭐ The later sweep of 1.5 (the whole question every 10 s) is gone: each
+ * stage is watched by a pidfd, and its start time (field 22 of /proc/<pid>/stat) says it is the same process the search saw —
+ * a reused pid is another process.  Where `pidfd_open` is missing the start time is read again every FOUND_POLL_MS.
+ * ⚠ `birth()` does NOT take an entry out of this table: a desktop whose user now has a child stays listed until its stage dies (the
+ *   network side removes it from ITS table when the child is born, and acts on FOUND_GONE only for an entry still there); a
+ *   restarted network side is told the table as it is, which is what 1.5's own search at its start would have found.
+ * ⚠ A desktop that dies BEFORE it was announced is simply not announced (and not counted in FOUND_END); one that dies after
+ *   is announced with FOUND_GONE, which can only follow FOUND_END (`found_pump()`).
+ */
+#ifndef SYS_pidfd_open
+#define SYS_pidfd_open 434
+#endif
+
+static void found_clear(void)
+{
+	if (R.found)
+		for (int i = 0; i < RXR_FOUND_MAX; i++) {
+			if (R.found[i].used && R.found[i].pidfd >= 0)
+				close(R.found[i].pidfd);
+			memset(&R.found[i], 0, sizeof R.found[i]);
+			R.found[i].pidfd = -1;
+		}
+	R.ngone = 0;
+	R.found_promised = 0;
+	R.found_phase = FOUND_IDLE;
+	R.found_outcome = RXR_FOUND_OK;
+}
+
+/* The stage is watched by pidfd; false = it is gone already, or the pid now belongs to another process.  The pidfd is opened
+ * BEFORE the start time is read: a pid reused in between shows a different start time, one reused after is not what the
+ * pidfd points at. */
+static bool found_watch(struct found_slot *s, const char *proc_root)
+{
+	unsigned long long st;
+	int fd = (int)syscall(SYS_pidfd_open, s->stage, 0);
+
+	if (fd < 0 && errno == ESRCH)
+		return false;
+	s->pidfd = fd < 0 ? -1 : fd;
+	if (!rediscover_starttime(proc_root, s->stage, &st) || st != s->starttime) {
+		if (s->pidfd >= 0)
+			close(s->pidfd);
+		s->pidfd = -1;
+		return false;
+	}
+	return true;
+}
+
+/* The table from a search (`ok` false = the root side could not look: the table is empty and FOUND_END says UNKNOWN). */
+static void found_install(const RediscoveredDesktop *v, int n, bool ok, const char *proc_root)
+{
+	found_clear();
+	R.found_outcome = ok ? RXR_FOUND_OK : RXR_FOUND_UNKNOWN;
+	for (int i = 0; ok && v && i < n && i < RXR_FOUND_MAX; i++) {
+		struct found_slot *s = &R.found[i];
+
+		s->stage = v[i].stage;
+		s->starttime = v[i].starttime;
+		if (!found_watch(s, proc_root)) {
+			registro_dice(LOG_ROOT, "⚠ the stage of «%s» (pid %ld) was gone before it could be watched: "
+			              "not announced", v[i].user, (long)v[i].stage);
+			memset(s, 0, sizeof *s);
+			s->pidfd = -1;
+			continue;
+		}
+		s->used = s->pending = true;
+		s->uid = v[i].uid;
+		s->sessions = v[i].sessions;
+		snprintf(s->user, sizeof s->user, "%s", v[i].user);
+		snprintf(s->session, sizeof s->session, "%s", v[i].session);
+		snprintf(s->comm, sizeof s->comm, "%s", v[i].comm);
+		R.found_promised++;
+	}
+	R.found_phase = FOUND_SENDING;
+}
+
+static void found_look(void)
+{
+	RediscoveredDesktop *v = R.found ? calloc(RXR_FOUND_MAX, sizeof *v) : NULL;
+	char why[256] = "";
+	int n;
+
+	if (!v) {
+		found_install(NULL, 0, false, "/proc");
+		return;
+	}
+	n = rediscover_search_files(v, RXR_FOUND_MAX, why, sizeof why);
+	if (n < 0) {
+		registro_dice(LOG_ROOT, "⛔ PHASE 17 T7: could not look for live REMOTIX desktops (%s): the network "
+		              "side is told, and counts none", why);
+		found_install(NULL, 0, false, "/proc");
+	} else {
+		found_install(v, n, true, "/proc");
+		registro_dice(LOG_ROOT, "⭐ live REMOTIX desktops no child holds: %d (watched by pidfd, told to the "
+		              "network side at its start)", R.found_promised);
+	}
+	free(v);
+}
+
+static void found_note_gone(struct found_slot *s)
+{
+	registro_dice(LOG_ROOT, "⚠ the desktop found again of «%s» is gone (the stage pid %ld «%s» vanished)%s",
+	              s->user, (long)s->stage, s->comm, s->pending ? ": it was not announced yet" : "");
+	if (s->pending) {
+		R.found_promised--;
+	} else if (R.ngone < RXR_FOUND_MAX) {
+		R.gone[R.ngone].uid = s->uid;
+		snprintf(R.gone[R.ngone].user, sizeof R.gone[R.ngone].user, "%s", s->user);
+		R.ngone++;
+	}
+	if (s->pidfd >= 0)
+		close(s->pidfd);
+	memset(s, 0, sizeof *s);
+	s->pidfd = -1;
+}
+
+/* Which stages are gone — every turn of the loop (it wakes at least once a second); the pidfds are polled with no wait. */
+/* ⭐ 1.6 (avvio): the startup probe found no codec because the card's NODE was missing — at boot it can appear AFTER the unit
+ *    starts (13 Nov 2026, Debian 13: renderD128 came seconds late and the server refused every HELLO for hours).  Measure again,
+ *    2 s then doubling up to 60 s, WITHOUT stopping this loop (the probe is a child, collected when it answers); when something is
+ *    found, say it and tell the network side (CODEC), which cannot open the card.  A node that opens but encodes nothing is not a
+ *    matter of time: a few tries and one line, then stop (`child_video_retry_worthwhile`). */
+static void codec_retry(uint64_t now)
+{
+	struct rxr_codec c;
+	bool ok = false;
+
+	/* what did not leave (a full channel) goes again every round, until it does; a NEW network side makes it useless (READY carries it) */
+	if (R.codec_to_send && R.chan >= 0) {
+		memset(&c, 0, sizeof c);
+		head_fill(&c.h, RXR_CODEC, 0);
+		snprintf(c.offered, sizeof c.offered, "%s", R.offered);
+		snprintf(c.explanation, sizeof c.explanation, "%s", R.explanation);
+		if (chan_send(&c, sizeof c, -1))
+			R.codec_to_send = false;
+	}
+	if (!R.codec_watch || R.codecs_ok || R.stopping)
+		return;
+	if (!R.codec_probe) {
+		if (now < R.codec_next_ms)
+			return;
+		R.codec_probe = child_video_probe_begin();
+		if (!R.codec_probe) {   /* fork failed: not at every round */
+			R.codec_next_ms = now + R.codec_every_ms;
+			registro_dice(LOG_STARTUP, "⛔ the card probe could not be started (fork: %s): trying again in %llu ms",
+			              strerror(errno), (unsigned long long)R.codec_every_ms);
+		}
+		return;
+	}
+	if (child_video_probe_step(&R.codec_probe, &ok, R.offered, sizeof R.offered, R.explanation, sizeof R.explanation) == 0)
+		return;
+	now = log_now_ms();
+	R.codecs_ok = ok;
+	if (!ok) {
+		R.codec_every_ms = R.codec_every_ms >= 30000 ? 60000 : R.codec_every_ms * 2;
+		R.codec_next_ms = now + R.codec_every_ms;
+		if (!child_video_retry_worthwhile(&R.codec_opens)) {
+			R.codec_watch = false;
+			registro_dice(LOG_STARTUP,
+			              "⛔ the card node opens but nothing encodes (%s): not a matter of time, NOT measuring again — "
+			              "fix the card or its driver and restart", R.explanation);
+		}
+		return;
+	}
+	registro_dice(LOG_STARTUP,
+	              "⭐ the card arrived %llu s after startup — video.codec offered in the HERE_I_AM from now on: «%s» — %s",
+	              (unsigned long long)((now - R.codec_t0_ms) / 1000), R.offered, R.explanation);
+	R.codec_to_send = true;   /* no network side now: its next READY carries R.offered; otherwise sent from the next round */
+}
+
+static void found_check(uint64_t now)
+{
+	bool reread = now >= R.found_poll_ms + FOUND_POLL_MS;
+
+	if (!R.found)
+		return;
+	if (reread)
+		R.found_poll_ms = now;
+	for (int i = 0; i < RXR_FOUND_MAX; i++) {
+		struct found_slot *s = &R.found[i];
+		bool dead = false;
+
+		if (!s->used)
+			continue;
+		if (s->pidfd >= 0) {
+			struct pollfd pf = { s->pidfd, POLLIN, 0 };
+
+			dead = poll(&pf, 1, 0) > 0;
+		} else if (reread) {
+			unsigned long long st;
+
+			dead = !rediscover_starttime("/proc", s->stage, &st) || st != s->starttime;
+		}
+		if (dead)
+			found_note_gone(s);
+	}
+}
+
+/* Sends what is owed to the current network side, in order, as far as the channel takes it; what did not leave goes next turn
+ * (POLLOUT).  READY first (net_start), then FOUND_AGAIN for each slot still pending, then FOUND_END with the number of
+ * FOUND_AGAIN promised (a slot that died unannounced was taken out of it), then the FOUND_GONE notes. */
+static void found_pump(void)
+{
+	if (R.chan < 0 || !R.found)
+		return;
+	if (R.found_phase == FOUND_SENDING) {
+		struct rxr_found_end e;
+
+		for (int i = 0; i < RXR_FOUND_MAX; i++) {
+			struct found_slot *s = &R.found[i];
+			struct rxr_found_again m;
+
+			if (!s->used || !s->pending)
+				continue;
+			memset(&m, 0, sizeof m);
+			head_fill(&m.h, RXR_FOUND_AGAIN, 0);
+			m.uid = (uint32_t)s->uid;
+			m.stage = (int32_t)s->stage;
+			m.sessions = s->sessions;
+			memcpy(m.user, s->user, sizeof m.user);
+			memcpy(m.session, s->session, sizeof m.session);
+			memcpy(m.comm, s->comm, sizeof m.comm);
+			if (!chan_try(&m, sizeof m, -1))
+				return;
+			s->pending = false;
+		}
+		memset(&e, 0, sizeof e);
+		head_fill(&e.h, RXR_FOUND_END, 0);
+		e.count = (uint32_t)R.found_promised;
+		e.outcome = R.found_outcome;
+		if (!chan_try(&e, sizeof e, -1))
+			return;
+		R.found_phase = FOUND_LISTED;
+	}
+	while (R.found_phase == FOUND_LISTED && R.ngone > 0) {
+		struct rxr_found_gone g;
+
+		memset(&g, 0, sizeof g);
+		head_fill(&g.h, RXR_FOUND_GONE, 0);
+		g.uid = (uint32_t)R.gone[0].uid;
+		memcpy(g.user, R.gone[0].user, sizeof g.user);
+		if (!chan_try(&g, sizeof g, -1))
+			return;
+		memmove(R.gone, R.gone + 1, (size_t)(R.ngone - 1) * sizeof R.gone[0]);
+		R.ngone--;
+	}
+}
+
+static bool found_wants_out(void)
+{
+	return R.chan >= 0 && (R.found_phase == FOUND_SENDING || (R.found_phase == FOUND_LISTED && R.ngone > 0));
+}
+
+/* ⛔ The network side's environment, from an ALLOW-LIST (lane 4's review, M4):
+ *    the root side's whole `environ` crossed the exec before — anything the
+ *    unit, a drop-in or an administrator's shell put there.  Kept: a fixed PATH,
+ *    the locale (LANG, LC_*), TZ, JOURNAL_STREAM (log.c: is stderr the journal),
+ *    LD_LIBRARY_PATH (the benches' own ngtcp2 builds; set by root, never by the
+ *    network), REMOTIX_* (the root side's own switches, if a bench sets one) and
+ *    DBUS_SYSTEM_BUS_ADDRESS (a moved system bus is followed by both sides: the
+ *    rediscovery asks logind on it — lane 4's cross-review).
+ *    Everything else stays behind.  Built in the fork, before the exec. */
+static char **net_environment(void)
+{
+	static char path[] = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+	static char *env[64];
+	int n = 0;
+
+	env[n++] = path;
+	for (char **e = environ; e && *e && n < 63; e++) {
+		const char *v = *e;
+
+		if (strncmp(v, "LANG=", 5) == 0 || strncmp(v, "LC_", 3) == 0
+		    || strncmp(v, "TZ=", 3) == 0 || strncmp(v, "JOURNAL_STREAM=", 15) == 0
+		    || strncmp(v, "LD_LIBRARY_PATH=", 16) == 0 || strncmp(v, "REMOTIX_", 8) == 0
+		    || strncmp(v, "DBUS_SYSTEM_BUS_ADDRESS=", 24) == 0)
+			env[n++] = (char *)v;
+	}
+	env[n] = NULL;
+	return env;
+}
+
+static void net_start(uint64_t now)
+{
+	int sv[2], one = 1;
+	pid_t p;
+	struct rxr_ready r;
+	sigset_t all, before;
+
+	R.restart_at = 0;
+	net_generation_reset();
+	net_leftovers_kill();
+	found_look(); /* ⭐ 1.6 (R8): before the fork, so the list is ready when the network side asks */
+	if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, sv) != 0) {
+		registro_dice(LOG_ROOT, "⛔ no channel for the network side (socketpair: %s): "
+		              "retried in %d s", strerror(errno), NET_RESTART_CAP_MS / 1000);
+		R.restart_at = now + NET_RESTART_CAP_MS;
+		return;
+	}
+	/* ⛔ review 4 B, finding 15: without SO_PASSCRED no packet carries the
+	 *    kernel's stamp, every one fails the check, and the network side is
+	 *    killed and restarted for ever with a line that blames it. */
+	if (setsockopt(sv[0], SOL_SOCKET, SO_PASSCRED, &one, sizeof one) != 0
+	    || setsockopt(sv[1], SOL_SOCKET, SO_PASSCRED, &one, sizeof one) != 0) {
+		registro_dice(LOG_ROOT, "⛔ SO_PASSCRED does not turn on on the network side's "
+		              "channel (%s): it is not started — retried in %d s", strerror(errno),
+		              NET_RESTART_CAP_MS / 1000);
+		close(sv[0]);
+		close(sv[1]);
+		R.restart_at = now + NET_RESTART_CAP_MS;
+		return;
+	}
+	/* ⛔ Every signal blocked across the `fork()`: the copy resets the
+	 *    dispositions BEFORE it unblocks, so `on_signal()` never runs in it
+	 *    (review of §11.50, finding 3). */
+	sigfillset(&all);
+	sigprocmask(SIG_SETMASK, &all, &before);
+	/* ⭐ 1.6 (R8 B): a fork whose child is PID 1 of a PID namespace of its own (walls.c); `p` is its pid as THIS side sees it */
+	p = walls_fork_pidns();
+	if (p != 0)
+		sigprocmask(SIG_SETMASK, &before, NULL);
+	if (p < 0) {
+		registro_dice(LOG_ROOT, "⛔ fork of the network side: %s — retried in %d s",
+		              strerror(errno), NET_RESTART_CAP_MS / 1000);
+		close(sv[0]);
+		close(sv[1]);
+		R.restart_at = now + NET_RESTART_CAP_MS;
+		return;
+	}
+	if (p == 0) {
+		char why[512] = "";
+		int c = fcntl(sv[1], F_DUPFD_CLOEXEC, 10);
+		int u = R.o->udp_fd >= 0 ? fcntl(R.o->udp_fd, F_DUPFD_CLOEXEC, 10) : -1;
+		int t = R.o->tcp_fd >= 0 ? fcntl(R.o->tcp_fd, F_DUPFD_CLOEXEC, 10) : -1;
+
+		/* ⛔⛔ The journal's socket of the root side may BE fd 3, 4 or 5 (it is
+		 *     opened first, at main.c's start): `place()` dup2s the channel
+		 *     over it, and every line written in this fork after that went INTO
+		 *     THE CHANNEL — `[M]` 16 Oct 2026, private box: «broke the closed
+		 *     list: wrong magic or version (4f495250…)», «PRIO» of «PRIORITY=»,
+		 *     the network side killed in a loop as soon as this fork wrote its
+		 *     «walls in force» line.  ⇒ The journal is closed in the fork
+		 *     before the fds move, and opened again on a free fd after. */
+		bool journal = log_to_journal();
+
+		if (journal)
+			(void)log_journal(false);
+		/* ⛔ review 4 B, finding 9: every exit of this fork says why, not only
+		 *    the walls' (reap_net() prints the code alone) */
+		if (c < 0 || place(c, ROOTSIDE_FD_CHANNEL) || place(u, ROOTSIDE_FD_UDP)
+		    || place(t, ROOTSIDE_FD_TCP)) {
+			if (journal)
+				(void)log_journal(true);
+			registro_dice(LOG_ROOT, "⛔⛔ the network side's fds 3/4/5 could not be put in "
+			              "place (%s): it is NOT started", strerror(errno));
+			_exit(125);
+		}
+		if (close_range(ROOTSIDE_FD_TCP + 1, ~0U, 0) != 0)
+			for (int i = ROOTSIDE_FD_TCP + 1; i < 4096; i++)
+				close(i);
+		/* the journal again, on a free fd (CLOEXEC: gone at the execve) */
+		if (journal)
+			(void)log_journal(true);
+		/* review 4 B, finding 24: the shared reset — SIGPIPE stays ignored */
+		rootside_fork_signals_fresh();
+
+		/* ⛔ The walls, as root, before the `exec` — any failure and the
+		 *    network side does not start (§11.50). */
+		if (walls_apply(R.o, why, sizeof why) != 0) {
+			registro_dice(LOG_ROOT, "⛔⛔ the network side's walls did NOT go up: %s.  "
+			              "It is NOT started (no network side without its walls)", why);
+			_exit(126);
+		}
+		/* ⭐ review 4 B, finding 6: which walls, said once per birth */
+		registro_dice(LOG_ROOT, "⭐ the network side's walls in force: %s", walls_in_force());
+		/* ⚠ After the uid change, which clears it.  ⭐ 1.6 (R8 B): the old «getppid() != me» check is gone — in its own PID
+		 *   namespace the parent is not visible (getppid() says 0) — a root side that died in between is seen by the network
+		 *   side at its first read of fd 3 (EOF, `rootside_attach`), and PR_SET_PDEATHSIG is armed again there. */
+		prctl(PR_SET_PDEATHSIG, SIGTERM);
+		execve("/proc/self/exe", R.o->net_argv, net_environment());
+		registro_dice(LOG_ROOT, "⛔⛔ execve of the network side failed (%s): it is NOT "
+		              "started", strerror(errno));
+		_exit(127);
+	}
+	close(sv[1]);
+	R.chan = sv[0];
+	R.net_pid = p;
+	if (fcntl(R.chan, F_SETFL, O_NONBLOCK) != 0) {
+		/* review 4 B, finding 15: a blocking channel would stall the root side */
+		registro_dice(LOG_ROOT, "⛔ the network side's channel cannot be made non-blocking "
+		              "(%s)", strerror(errno));
+		net_kill("its channel could not be made non-blocking");
+		return;
+	}
+	R.net_born_ms = now;
+	R.generation++;
+	R.codec_to_send = false; /* the READY below carries R.offered, as it is now */
+	memset(&r, 0, sizeof r);
+	head_fill(&r.h, RXR_READY, 0);
+	r.remotix_uid = (uint32_t)R.o->remotix_uid;
+	r.codecs_ok = R.codecs_ok ? 1 : 0;
+	r.codec_watch = R.codec_watch ? 1 : 0;
+	snprintf(r.offered, sizeof r.offered, "%s", R.offered);
+	snprintf(r.explanation, sizeof r.explanation, "%s", R.explanation);
+	(void)chan_send(&r, sizeof r, -1);
+	found_pump(); /* READY first, then the desktops found again */
+	registro_dice(LOG_ROOT, "⭐ network side started: pid %ld, uid %ld (remotix), fd 3 "
+	              "the channel, 4 UDP, 5 TCP", (long)p, (long)R.o->remotix_uid);
+}
+
+int rootside_main(const struct rootside_options *o)
+{
+	struct sigaction sa;
+	int pp[2];
+	ssize_t n;
+
+	if (!o || !o->net_argv || !o->net_argv[0] || o->remotix_uid == 0 || o->cap <= 0) {
+		registro_dice(LOG_ROOT, "⛔ the root side does not start: %s",
+		              !o || !o->net_argv || !o->net_argv[0] ? "no network side command line"
+		              : o->remotix_uid == 0 ? "the network side's user is uid 0"
+		                                    : "no children cap");
+		return 1;
+	}
+	R.o = o;
+	session_dconf_system_db_ensure(); /* ⭐ N5, 19 Nov 2026: the GNOME locks' system database, if missing or stale */
+	if (o->encoding_route)
+		(void)child_encoding_route(o->encoding_route);
+	if (o->render_node && o->render_node[0])
+		(void)child_render_node(o->render_node);
+	/* ⛔ The binary the children run is asked of the kernel (as
+	 *    `children_turn_on()` did), never of argv. */
+	n = readlink("/proc/self/exe", R.my_path, sizeof R.my_path - 1);
+	if (n <= 0 || strstr((R.my_path[n] = 0, R.my_path), " (deleted)")) {
+		registro_dice(LOG_ROOT, "⛔ the root side does not know which binary it runs "
+		              "(«%s»): it does not start", n > 0 ? R.my_path : "?");
+		return 1;
+	}
+	R.birth.canvas_w = o->canvas_w;
+	R.birth.canvas_h = o->canvas_h;
+	R.birth.dir_survey = o->dir_survey && o->dir_survey[0] ? o->dir_survey : NULL;
+	R.birth.quality_rises = o->quality_recovery;
+	R.birth.bandwidth_cap_mbit = o->bandwidth_cap_mbit;
+	R.birth.audio_silence = o->audio_silence;
+	R.birth.my_path = R.my_path;
+	R.birth.parent_uid = (long)o->remotix_uid;
+	R.cap = o->cap;
+	R.kids = (struct own_child *)calloc((size_t)R.cap, sizeof *R.kids);
+	R.outbox = (struct rxr_child_exited *)calloc((size_t)R.cap * 4, sizeof *R.outbox);
+	R.found = (struct found_slot *)calloc(RXR_FOUND_MAX, sizeof *R.found);
+	R.gone = (struct found_gone_note *)calloc(RXR_FOUND_MAX, sizeof *R.gone);
+	found_clear();
+	/* review 4 B, finding 9: rootside.h promises «the reason is logged» */
+	if (!R.kids || !R.outbox || !R.found || !R.gone) {
+		registro_dice(LOG_ROOT, "⛔ the root side does not start: no memory for its tables "
+		              "(%d children, %d CHILD_EXITED outbox)", R.cap, R.cap * 4);
+		return 1;
+	}
+	R.next_serial = 1;
+	/* ⚠ The port stays out of every other fork (usermod, the probe): only the
+	 *   network side gets it, by dup2 onto 4 and 5. */
+	if (o->udp_fd >= 0)
+		(void)fcntl(o->udp_fd, F_SETFD, FD_CLOEXEC);
+	if (o->tcp_fd >= 0)
+		(void)fcntl(o->tcp_fd, F_SETFD, FD_CLOEXEC);
+
+	/* 1. the codec probe, as root, as 1.0 did — before any handler of ours */
+	registro_dice(LOG_STARTUP,
+	              "⭐ phase 18 — encoding test at startup, in a separate process: the "
+	              "«opened: …» lines at 256x256 below are its own, not a session's");
+	R.codecs_ok = child_video_capabilities(R.offered, sizeof R.offered, R.explanation,
+	                                       sizeof R.explanation);
+	R.codec_t0_ms = log_now_ms();
+	R.codec_every_ms = 2000;
+	R.codec_next_ms = R.codec_t0_ms + R.codec_every_ms;
+	R.codec_watch = !R.codecs_ok;   /* node missing: until it appears; node opens but nothing encodes: 5 more tries, then stop */
+	if (R.codec_watch)
+		registro_dice(LOG_STARTUP, child_video_card_missing()
+		              ? "⭐ the card's node does not open yet: measuring again (2 s, then doubling up to 60 s) until it does"
+		              : "⭐ the card's node opens but nothing encodes yet (driver or firmware still loading?): measuring again, 5 more tries (2 s, then doubling), then I stop");
+	/* 2. the render grants a previous run left */
+	render_grant_sweep();
+	/* 3. the signals, through a self-pipe */
+	if (pipe2(pp, O_CLOEXEC | O_NONBLOCK) != 0) {
+		registro_dice(LOG_ROOT, "⛔ the root side does not start: no self-pipe for its "
+		              "signals (%s)", strerror(errno));
+		return 1;
+	}
+	R.pipe_r = pp[0];
+	R.pipe_w = pp[1];
+	memset(&sa, 0, sizeof sa);
+	sa.sa_handler = on_signal;
+	sa.sa_flags = SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGQUIT, &sa, NULL);   /* ⭐ rilettura-fix B1: main.c's e3de2871 gave SIGQUIT a handler that sets a flag THIS loop does not read: it would do nothing; same stop as SIGTERM */
+	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGUSR2, &sa, NULL);
+	sigaction(SIGCHLD, &sa, NULL);
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
+	/* 4. the PAM helper, now this side's child */
+	R.pam = helper_turn_on_root(on_pam_outcome, NULL);
+	/* ⛔ review 4 B, finding 10: NULL is only «no memory for the helper's
+	 *    table» (a helper that does not START is retried inside it, 1 s → 60 s)
+	 *    — without the table every AUTH would be «not checked» with no line */
+	if (!R.pam) {
+		registro_dice(LOG_ROOT, "⛔ the root side does not start: no memory for the PAM "
+		              "helper's table (every login would be «not checked»)");
+		return 1;
+	}
+	rootside_bounds_init(&R.bounds, log_now_ms());
+	pl_init(); /* 1.0.0 (§11.57): the local login's hold */
+	R.bounds.abandon_ms = (o->abandon_s > ROOTSIDE_ABANDON_S_MAX ? ROOTSIDE_ABANDON_S_MAX
+	                                                          : o->abandon_s) * 1000;
+	registro_dice(LOG_ROOT,
+	              "⭐ ROOT SIDE on (pid %ld, DECISIONS.md §11.50): single-threaded, PAM "
+	              "helper and children below it, up to %d children; the network side "
+	              "runs as uid %ld",
+	              (long)getpid(), R.cap, (long)o->remotix_uid);
+	/* 5. the network side */
+	net_start(log_now_ms());
+
+	for (;;) {
+		struct pollfd p[4];
+		int np = 0, i_chan = -1, i_pam = -1;
+		uint64_t now;
+		unsigned char sigs[64];
+		bool usr1 = false, usr2 = false;
+
+		p[np].fd = R.pipe_r;
+		p[np++].events = POLLIN;
+		if (R.chan >= 0) {
+			i_chan = np;
+			p[np].fd = R.chan;
+			p[np++].events = POLLIN | ((R.nout > 0 || found_wants_out()) ? POLLOUT : 0);
+		}
+		if (helper_descriptor(R.pam) >= 0) {
+			i_pam = np;
+			p[np].fd = helper_descriptor(R.pam);
+			p[np++].events = POLLIN;
+		}
+		if (PL.ino >= 0) { /* a local login's request: only the wake-up, pl_step() reads it */
+			p[np].fd = PL.ino;
+			p[np++].events = POLLIN;
+		}
+		for (int k = 0; k < np; k++)
+			p[k].revents = 0;
+		(void)poll(p, (nfds_t)np, R.stopping || pl_active() ? 100 : 1000);
+		now = log_now_ms();
+
+		while ((n = read(R.pipe_r, sigs, sizeof sigs)) > 0)
+			for (ssize_t k = 0; k < n; k++) {
+				if ((sigs[k] == SIGTERM || sigs[k] == SIGINT || sigs[k] == SIGQUIT) && !R.stopping) {
+					R.stopping = true;
+					R.stop_deadline = now + STOP_WAIT_MS;
+					registro_dice(LOG_ROOT, "⭐ signal %d: the network side is asked "
+					              "to stop (SIGTERM), %d s at most",
+					              sigs[k], STOP_WAIT_MS / 1000);
+					if (R.net_pid > 0)
+						kill(R.net_pid, SIGTERM);
+				} else if (sigs[k] == SIGUSR1) {
+					usr1 = true;
+				} else if (sigs[k] == SIGUSR2) {
+					usr2 = true;
+				}
+			}
+		/* ⭐ The bench's trigger reaches this process (the main PID): it is
+		 *    passed on to the children here, as `children_move()` did. */
+		for (int w = 0; w < 2; w++) {
+			int which = w ? SIGUSR2 : SIGUSR1;
+			if (!(w ? usr2 : usr1))
+				continue;
+			for (int i = 0; i < R.cap; i++)
+				if (R.kids[i].used && R.kids[i].pid > 0) {
+					kill(R.kids[i].pid, which);
+					registro_dice(LOG_CHILD,
+					              "⭐ trigger: %s forwarded to the child of «%s» (pid %ld)",
+					              which == SIGUSR2 ? "SIGUSR2" : "SIGUSR1",
+					              R.kids[i].user, (long)R.kids[i].pid);
+				}
+		}
+
+		if (i_chan >= 0 && (p[i_chan].revents & (POLLIN | POLLHUP | POLLERR)))
+			chan_read();
+		if (R.nout > 0)
+			outbox_flush();
+		reap_kids();
+		reap_net(now);
+		found_check(now);
+		codec_retry(now);
+		found_pump();
+		kids_hurry(now);
+		tables_minute(now);
+		kdehost_sweep(now);
+		pl_step(now);      /* 1.0.0 (§11.57): a local login held in PAM — its remote desktop is closed first */
+		localx_sweep(now); /* 1.0.0: «local excludes remote», by this side alone (box above lx_scan) */
+		if (i_pam >= 0 && (p[i_pam].revents & (POLLIN | POLLHUP | POLLERR)))
+			helper_move(R.pam, NULL, NULL);
+		helper_expired(R.pam, now, NULL, NULL);
+
+		if (R.stopping) {
+			bool kids = false;
+			int left = 0;
+			for (int i = 0; i < R.cap; i++)
+				left += R.kids[i].used;
+			kids = left > 0;
+			if (R.net_pid <= 0 && (!kids || now >= R.stop_deadline)) {
+				/* ⭐ 1.0.0, no orphan desktops: what is still in a REMOTIX scope is ended before leaving (a child that
+				 *    did not leave is in its scope and goes with it), and the endings are waited for */
+				if (!LX.stop_begun) {
+					if (kids)
+						registro_dice(LOG_ROOT, "⚠ %d child(ren) still alive at the stop deadline: they are ended "
+						              "with their REMOTIX scopes", left);
+					lx_stop_begin(now);
+				}
+				if (lx_busy() && now < LX.stop_deadline)
+					continue;
+				/* nothing running: is anything left? (more scopes than slots, a SIGKILL that reached nobody) */
+				if (!lx_busy() && now < LX.stop_deadline && lx_stop_again(now) > 0)
+					continue;
+				lx_stop_say();
+				/* review 4 B, finding 16: said, not left to «stopped» */
+				if (kids || lx_busy())
+					registro_dice(LOG_ROOT, "⚠ the root side stops with %d child(ren) still alive%s: systemd's "
+					              "KillMode=mixed takes them", left,
+					              lx_busy() ? " and an ending not finished within its ceiling" : "");
+				break;
+			}
+			if (now >= R.stop_deadline && R.net_pid > 0) {
+				registro_dice(LOG_ROOT, "⚠ the network side did not stop within %d s: "
+				              "SIGKILL", STOP_WAIT_MS / 1000);
+				kill(R.net_pid, SIGKILL);
+				R.stop_deadline = now + 1000;
+			}
+			continue;
+		}
+		if (R.net_pid <= 0 && R.restart_at && now >= R.restart_at)
+			net_start(now);
+	}
+	helper_turn_off(R.pam);
+	registro_dice(LOG_ROOT, "⭐ root side stopped");
+	return 0;
+}
+
+/* ======================================================================= */
+/* THE NETWORK SIDE'S CLIENT                                                 */
+
+union rpk {
+	struct rxr_head h;
+	struct rxr_ready ready;
+	struct rxr_verdict v;
+	struct rxr_spawned s;
+	struct rxr_spawn_refused r;
+	struct rxr_child_exited e;
+	struct rxr_found_again fa;
+	struct rxr_found_end fe;
+	struct rxr_found_gone fg;
+	struct rxr_codec codec;
+	struct rxr_local_coming lc;
+};
+
+#define CLIENT_AUTHS 32
+#define CLIENT_GRANTS 32
+/* ⛔ Review 4, finding 4: an AUTH whose VERDICT never comes (lost at a full
+ *    queue, a root side that dropped it) held its entry for good, and with the
+ *    table full the next AUTH OVERWROTE entry 0 — someone else's pending login.
+ *    Now an entry is freed by its VERDICT, by a VERDICT lost at the full queue,
+ *    or by age: well past helper.c's flight expiry (8 s), when nobody waits for
+ *    that answer any more.  A full table REFUSES the AUTH; nothing is
+ *    overwritten (the grants likewise). */
+#define CLIENT_AUTH_STALE_MS 30000
+/* ⛔ Only VERDICTs are put aside (review of the split, findings 4 and 5):
+ *    they need `helper_move()`'s delivery, and are delivered at its next call
+ *    — `helper_expired()` makes one every loop round.  CHILD_EXITED is
+ *    dispatched at once wherever it arrives (it only marks a slot), so no
+ *    queue can lose it.  4096 VERDICTs: each answers an AUTH this side sent,
+ *    and none is sent while a wait holds the loop. */
+#define CLIENT_QUEUE 4096
+
+static struct {
+	int fd;
+	/* ⭐ the pidfd of the child that came with the last SPAWNED (1.5, pidfd-figlio), until `rootside_spawn()` claims it */
+	int pidfd;
+	bool has_pidfd;
+	bool attached, lost;
+	pid_t root_pid;
+	uint64_t next_request;
+	RootsideVerdict on_verdict;
+	void *verdict_ctx;
+	RootsideChildExited on_exited;
+	void *exited_ctx;
+	uint32_t last_wait_ms; /* R1: the TOO_SOON answer's wait */
+	/* ⭐ 1.6 (R8): what the root side said about the desktops found again */
+	struct rootside_found_seq fseq;
+	struct {
+		int n;
+		bool ended;
+		uint8_t outcome;
+		struct rxr_found_again v[RXR_FOUND_MAX];
+	} found;
+	RootsideFoundGone on_gone;
+	void *gone_ctx;
+	RootsideLocalComing on_local;
+	void *local_ctx;
+	RootsideCodec on_codec;
+	void *codec_ctx;
+	struct {
+		bool used;
+		uint64_t request;
+		uint64_t at_ms;   /* when the AUTH left: an entry older than CLIENT_AUTH_STALE_MS is free */
+		char user[RXR_USER_MAX];
+		char rhost[RXR_RHOST_MAX];
+	} auths[CLIENT_AUTHS];
+	struct {
+		bool used;
+		uint8_t grant[RXR_GRANT_BYTES];
+		char user[RXR_USER_MAX];
+		char rhost[RXR_RHOST_MAX];
+		char canon[RXR_USER_MAX];   /* ⭐ rilettura-fix M1: the system's name for `user` (the VERDICT's), "" = none; lives and dies with the grant */
+		uint64_t expires_ms;
+	} grants[CLIENT_GRANTS];
+	struct rxr_verdict q[CLIENT_QUEUE];
+	int qhead, qn;
+} C = { .fd = -1, .next_request = 1 };
+
+static size_t size_of_event(int kind)
+{
+	switch (kind) {
+	case RXR_READY:         return sizeof(struct rxr_ready);
+	case RXR_VERDICT:       return sizeof(struct rxr_verdict);
+	case RXR_SPAWNED:       return sizeof(struct rxr_spawned);
+	case RXR_SPAWN_REFUSED: return sizeof(struct rxr_spawn_refused);
+	case RXR_CHILD_EXITED:  return sizeof(struct rxr_child_exited);
+	case RXR_FOUND_AGAIN:   return sizeof(struct rxr_found_again);
+	case RXR_FOUND_END:     return sizeof(struct rxr_found_end);
+	case RXR_FOUND_GONE:    return sizeof(struct rxr_found_gone);
+	case RXR_CODEC:         return sizeof(struct rxr_codec);
+	case RXR_LOCAL_COMING:  return sizeof(struct rxr_local_coming);
+	default:                return 0;
+	}
+}
+
+static void client_lost(const char *why)
+{
+	if (C.lost)
+		return;
+	C.lost = true;
+	registro_dice(LOG_ROOT, "⛔⛔ the channel to the root side is lost: %s", why);
+	if (C.fd >= 0) {
+		close(C.fd);
+		C.fd = -1;
+	}
+}
+
+/* 1 = a packet in `pk` (`*fd` its descriptor or -1) · 0 = nothing within
+ * `timeout_ms` · -1 = lost.  A packet that is not the root side's, or not of
+ * the list, is dropped with its line and 0 is returned. */
+static int client_recv(int timeout_ms, union rpk *pk, int *fd)
+{
+	union {
+		struct cmsghdr c;
+		char b[CMSG_SPACE(sizeof(struct ucred)) + CMSG_SPACE(4 * sizeof(int))];
+	} ctl;
+	struct iovec io = { pk, sizeof *pk };
+	struct msghdr m;
+	struct ucred cred = { 0, (uid_t)-1, (gid_t)-1 };
+	bool has_cred = false;
+	int nfds = 0;
+	ssize_t n;
+
+	*fd = -1;
+	if (C.has_pidfd) { /* one nobody claimed: a SPAWNED that nobody waited for */
+		close(C.pidfd);
+		C.has_pidfd = false;
+	}
+	if (C.fd < 0)
+		return -1;
+	if (timeout_ms > 0) {
+		struct pollfd p = { C.fd, POLLIN, 0 };
+		if (poll(&p, 1, timeout_ms) <= 0)
+			return 0;
+	}
+	memset(&m, 0, sizeof m);
+	m.msg_iov = &io;
+	m.msg_iovlen = 1;
+	m.msg_control = ctl.b;
+	m.msg_controllen = sizeof ctl.b;
+	n = recvmsg(C.fd, &m, MSG_DONTWAIT | MSG_TRUNC | MSG_CMSG_CLOEXEC);
+	if (n < 0) {
+		if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+			return 0;
+		client_lost(strerror(errno));
+		return -1;
+	}
+	if (n == 0) {
+		client_lost("the root side closed it (EOF)");
+		return -1;
+	}
+	for (struct cmsghdr *c = CMSG_FIRSTHDR(&m); c; c = CMSG_NXTHDR(&m, c)) {
+		if (c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_CREDENTIALS
+		    && c->cmsg_len == CMSG_LEN(sizeof cred)) {
+			memcpy(&cred, CMSG_DATA(c), sizeof cred);
+			has_cred = true;
+		} else if (c->cmsg_level == SOL_SOCKET && c->cmsg_type == SCM_RIGHTS) {
+			size_t k = (c->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+			for (size_t j = 0; j < k; j++) {
+				int d;
+				memcpy(&d, CMSG_DATA(c) + j * sizeof(int), sizeof d);
+				if (*fd < 0)
+					*fd = d;
+				else if (nfds == 1 && !C.has_pidfd) { /* the second descriptor of a SPAWNED: the child's pidfd */
+					C.pidfd = d;
+					C.has_pidfd = true;
+				} else
+					close(d);
+				nfds++;
+			}
+		}
+	}
+	if (!has_cred || cred.uid != 0 || cred.pid != C.root_pid || n < (ssize_t)sizeof pk->h
+	    || pk->h.magic != RXR_MAGIC || pk->h.version != RXR_VERSION
+	    || (size_t)n != size_of_event(pk->h.kind)
+	    || (nfds > 0) != (pk->h.kind == RXR_SPAWNED) || nfds > 2
+	    || (pk->h.kind == RXR_VERDICT && !rxr_canon_valid(pk->v.canon))) {   /* ⭐ rilettura-fix M1 */
+		registro_dice(LOG_ROOT, "⛔ a packet on the root channel that is not the root "
+		              "side's or not of the list (%zd bytes, kind %u, uid %ld, pid %ld, "
+		              "%d fd): DISCARDED", n, n >= (ssize_t)sizeof pk->h ? pk->h.kind : 0,
+		              has_cred ? (long)cred.uid : -1L, has_cred ? (long)cred.pid : -1L,
+		              nfds);
+		if (*fd >= 0)
+			close(*fd);
+		*fd = -1;
+		if (C.has_pidfd) {
+			close(C.pidfd);
+			C.has_pidfd = false;
+		}
+		return 0;
+	}
+	return 1;
+}
+
+/* `false` when it did not leave (said here, once): the caller does not wait
+ * for an answer to it (review 4 B, finding 2). */
+static bool client_send(const void *p, size_t len)
+{
+	if (C.fd < 0)
+		return false;
+	if (send(C.fd, p, len, MSG_NOSIGNAL | MSG_DONTWAIT) != (ssize_t)len) {
+		registro_dice(LOG_ROOT, "⛔ a packet of kind %u to the root side did not leave (%s)",
+		              ((const struct rxr_head *)p)->kind, strerror(errno));
+		return false;
+	}
+	return true;
+}
+
+static void dispatch(union rpk *pk, int fd)
+{
+	switch (pk->h.kind) {
+	case RXR_CODEC:
+		pk->codec.offered[sizeof pk->codec.offered - 1] = 0;
+		pk->codec.explanation[sizeof pk->codec.explanation - 1] = 0;
+		if (C.on_codec)
+			C.on_codec(C.codec_ctx, pk->codec.offered, pk->codec.explanation);
+		break;
+	case RXR_VERDICT: {
+		int k = -1;
+		for (int i = 0; i < CLIENT_AUTHS; i++)
+			if (C.auths[i].used && C.auths[i].request == pk->h.request)
+				k = i;
+		int g = -1;
+		uint64_t now = log_now_ms();
+		if (k >= 0 && pk->v.outcome == RXR_YES) {
+			for (int i = 0; i < CLIENT_GRANTS; i++)
+				if (!C.grants[i].used || C.grants[i].expires_ms <= now) {
+					g = i;
+					break;
+				}
+			/* ⛔ never another user's live grant (review 4, finding 4) */
+			if (g < 0)
+				registro_dice(LOG_ROOT, "⛔ the grant table is full (%d live grants): «%s»'s "
+				              "grant is NOT kept — the birth will be refused and the "
+				              "password asked again", CLIENT_GRANTS, C.auths[k].user);
+		}
+		if (g >= 0) {
+			memset(&C.grants[g], 0, sizeof C.grants[g]);
+			C.grants[g].used = true;
+			memcpy(C.grants[g].grant, pk->v.grant, RXR_GRANT_BYTES);
+			/* same-sized arrays, both terminated by `rootside_auth()` */
+			memcpy(C.grants[g].user, C.auths[k].user, sizeof C.grants[g].user);
+			memcpy(C.grants[g].rhost, C.auths[k].rhost, sizeof C.grants[g].rhost);
+			memcpy(C.grants[g].canon, pk->v.canon, sizeof C.grants[g].canon);   /* validated at receipt: terminated, plausible */
+			/* ⚠ A little less than the root side's life: never sent dead. */
+			C.grants[g].expires_ms = now + RXR_GRANT_LIFE_MS - 2000;
+		}
+		if (k >= 0)
+			C.auths[k].used = false;
+		explicit_bzero(pk->v.grant, sizeof pk->v.grant);
+		/* ⭐ A1: the outcome is one of the list (`RXR_OUTCOME_MAX`).  A value outside it is not a refusal to count: it is said, and taken as
+		 *    «not checked» (never counted, 0x0E) — what a defect of ours deserves. */
+		if (!rootside_verdict_outcome_ok(pk->v.outcome)) {
+			registro_dice(LOG_ROOT, "⛔ a VERDICT for request %llu with outcome %u, which is not in the list (0..%d): taken as «not checked»",
+			              (unsigned long long)pk->h.request, pk->v.outcome, RXR_OUTCOME_MAX);
+			pk->v.outcome = RXR_NOT_CHECKED;
+		}
+		if (C.on_verdict)
+			C.on_verdict(C.verdict_ctx, pk->h.request, pk->v.outcome);
+		break;
+	}
+	case RXR_CHILD_EXITED:
+		if (C.on_exited)
+			C.on_exited(C.exited_ctx, pk->e.serial, pk->e.wait_status);
+		break;
+	case RXR_FOUND_AGAIN:
+	case RXR_FOUND_END:
+	case RXR_FOUND_GONE: {
+		char why[160];
+
+		/* ⛔ the order and the count are the root side's promise: broken ⇒ the channel is */
+		if (rootside_found_step(&C.fseq, pk->h.kind, pk->fe.count, pk->fe.outcome, why, sizeof why) != 0) {
+			client_lost(why);
+			break;
+		}
+		if (pk->h.kind == RXR_FOUND_AGAIN) {
+			pk->fa.user[sizeof pk->fa.user - 1] = 0;
+			pk->fa.session[sizeof pk->fa.session - 1] = 0;
+			pk->fa.comm[sizeof pk->fa.comm - 1] = 0;
+			C.found.v[C.found.n++] = pk->fa;
+		} else if (pk->h.kind == RXR_FOUND_END) {
+			C.found.ended = true;
+			C.found.outcome = pk->fe.outcome;
+		} else {
+			pk->fg.user[sizeof pk->fg.user - 1] = 0;
+			if (C.on_gone)
+				C.on_gone(C.gone_ctx, (uid_t)pk->fg.uid, pk->fg.user);
+		}
+		break;
+	}
+	case RXR_LOCAL_COMING:
+		pk->lc.user[sizeof pk->lc.user - 1] = 0;
+		if (C.on_local)
+			C.on_local(C.local_ctx, (uid_t)pk->lc.uid, pk->lc.user);
+		break;
+	case RXR_SPAWNED:
+		/* ⛔ An answer nobody waits for any more (its wait timed out): a
+		 *    child nobody holds is not left alive. */
+		registro_dice(LOG_ROOT, "⛔ SPAWNED for «%s» (serial %llu) arrived after its "
+		              "wait: the child is killed", pk->s.user,
+		              (unsigned long long)pk->s.serial);
+		if (fd >= 0)
+			close(fd);
+		if (C.has_pidfd) {
+			close(C.pidfd);
+			C.has_pidfd = false;
+		}
+		(void)rootside_signal(pk->s.serial, SIGKILL);
+		return;
+	default:
+		log_detail(LOG_ROOT, "root channel: a packet of kind %u nobody waits for",
+		           pk->h.kind);
+		break;
+	}
+	if (fd >= 0)
+		close(fd);
+}
+
+/* A packet that arrived while a wait held the loop: a VERDICT is put aside
+ * for `rootside_move()`; anything else is dispatched now. */
+static void aside_or_dispatch(union rpk *pk, int fd)
+{
+	if (pk->h.kind != RXR_VERDICT) {
+		dispatch(pk, fd);
+		return;
+	}
+	if (C.qn >= CLIENT_QUEUE) {
+		/* ⚠ Not silent for the login: helper.c's flight expires it «not
+		 *   checked», never counted towards the ban. */
+		registro_dice(LOG_ROOT, "⛔⛔ the root channel's queue is full: the VERDICT for "
+		              "request %llu is LOST (it expires «not checked»)",
+		              (unsigned long long)pk->h.request);
+		explicit_bzero(pk->v.grant, sizeof pk->v.grant);
+		/* ⛔ … and its AUTH entry goes with it (review 4, finding 4) */
+		for (int i = 0; i < CLIENT_AUTHS; i++)
+			if (C.auths[i].used && C.auths[i].request == pk->h.request)
+				C.auths[i].used = false;
+		return;
+	}
+	C.q[(C.qhead + C.qn) % CLIENT_QUEUE] = pk->v;
+	C.qn++;
+	explicit_bzero(pk->v.grant, sizeof pk->v.grant);
+}
+
+static void queue_drain(void)
+{
+	while (C.qn > 0) {
+		union rpk pk;
+
+		memset(&pk, 0, sizeof pk);
+		pk.v = C.q[C.qhead];
+		explicit_bzero(&C.q[C.qhead], sizeof C.q[C.qhead]);
+		C.qhead = (C.qhead + 1) % CLIENT_QUEUE;
+		C.qn--;
+		dispatch(&pk, -1);
+	}
+}
+
+bool rootside_attach(int fd, int timeout_ms, struct rxr_ready *ready)
+{
+	union rpk pk;
+	int one = 1, got;
+	uint64_t until = log_now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
+
+	C.fd = fd;
+	C.root_pid = getppid(); /* ⭐ 1.6 (R8 B): 0 — the root side is outside this PID namespace; the kernel stamps its packets with pid 0 too */
+	/* ⛔ review 4 B, finding 15: each one checked — without SO_PASSCRED no
+	 *    packet from the root side would carry its stamp, and the line would
+	 *    have been a misleading «no READY» */
+	if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0
+	    || setsockopt(fd, SOL_SOCKET, SO_PASSCRED, &one, sizeof one) != 0
+	    || fcntl(fd, F_SETFL, O_NONBLOCK) != 0) {
+		registro_dice(LOG_ROOT, "⛔ the root channel (fd %d) cannot be set up "
+		              "(CLOEXEC, SO_PASSCRED, O_NONBLOCK: %s)", fd, strerror(errno));
+		return false;
+	}
+	for (;;) {
+		uint64_t now = log_now_ms();
+		int d;
+
+		if (now >= until)
+			break;
+		got = client_recv((int)(until - now), &pk, &d);
+		if (got < 0)
+			return false;
+		if (got == 1 && pk.h.kind == RXR_READY) {
+			pk.ready.offered[sizeof pk.ready.offered - 1] = 0;
+			pk.ready.explanation[sizeof pk.ready.explanation - 1] = 0;
+			if (ready)
+				*ready = pk.ready;
+			C.attached = true;
+			{
+				char w[64];
+
+				memset(&C.fseq, 0, sizeof C.fseq);
+				C.found.n = 0;
+				C.found.ended = false;
+				(void)rootside_found_step(&C.fseq, RXR_READY, 0, 0, w, sizeof w);
+			}
+			registro_dice(LOG_ROOT, "⭐ attached to the root side (pid %ld): this is the "
+			              "NETWORK SIDE, uid %ld", (long)C.root_pid, (long)getuid());
+			return true;
+		}
+		if (got == 1) {
+			registro_dice(LOG_ROOT, "⛔ the root side's first packet is kind %u, not READY",
+			              pk.h.kind);
+			if (d >= 0)
+				close(d);
+		}
+	}
+	registro_dice(LOG_ROOT, "⛔ no READY from the root side within %d ms", timeout_ms);
+	return false;
+}
+
+bool rootside_attached(void) { return C.attached; }
+int rootside_descriptor(void) { return C.attached ? C.fd : -1; }
+bool rootside_lost(void) { return C.lost; }
+
+void rootside_hook_verdict(RootsideVerdict fn, void *ctx)
+{
+	C.on_verdict = fn;
+	C.verdict_ctx = ctx;
+}
+
+void rootside_hook_child_exited(RootsideChildExited fn, void *ctx)
+{
+	C.on_exited = fn;
+	C.exited_ctx = ctx;
+}
+
+void rootside_hook_codec(RootsideCodec fn, void *ctx)
+{
+	C.on_codec = fn;
+	C.codec_ctx = ctx;
+}
+
+void rootside_hook_found_gone(RootsideFoundGone fn, void *ctx)
+{
+	C.on_gone = fn;
+	C.gone_ctx = ctx;
+}
+
+void rootside_hook_local_coming(RootsideLocalComing fn, void *ctx)
+{
+	C.on_local = fn;
+	C.local_ctx = ctx;
+}
+
+int rootside_wait_found(RediscoveredDesktop *v, int cap, int timeout_ms, char *why, size_t why_len)
+{
+	uint64_t until = log_now_ms() + (uint64_t)(timeout_ms > 0 ? timeout_ms : 0);
+
+	if (why && why_len)
+		why[0] = '\0';
+	while (!C.found.ended) {
+		uint64_t now = log_now_ms();
+		union rpk pk;
+		int d, got;
+
+		if (C.fd < 0) {
+			snprintf(why, why_len, "the channel to the root side is lost");
+			return -1;
+		}
+		if (now >= until) {
+			snprintf(why, why_len, "the root side did not finish its list within %d ms", timeout_ms);
+			return -1;
+		}
+		got = client_recv((int)(until - now), &pk, &d);
+		if (got < 0) {
+			snprintf(why, why_len, "the channel to the root side is lost");
+			return -1;
+		}
+		if (got == 1)
+			aside_or_dispatch(&pk, d);
+	}
+	if (C.found.outcome != RXR_FOUND_OK) {
+		snprintf(why, why_len, "the root side could not look (see its log)");
+		return -1;
+	}
+	for (int i = 0; i < C.found.n && i < cap; i++) {
+		const struct rxr_found_again *f = &C.found.v[i];
+
+		memset(&v[i], 0, sizeof v[i]);
+		v[i].uid = (uid_t)f->uid;
+		v[i].stage = (pid_t)f->stage;
+		v[i].sessions = f->sessions;
+		snprintf(v[i].user, sizeof v[i].user, "%s", f->user);
+		snprintf(v[i].session, sizeof v[i].session, "%s", f->session);
+		snprintf(v[i].comm, sizeof v[i].comm, "%s", f->comm);
+	}
+	return C.found.n < cap ? C.found.n : cap;
+}
+
+void rootside_move(void)
+{
+	union rpk pk;
+	int d;
+
+	queue_drain();
+	for (int round = 0; round < 256 && C.fd >= 0; round++) {
+		int got = client_recv(0, &pk, &d);
+		if (got <= 0)
+			break;
+		dispatch(&pk, d);
+		queue_drain(); /* what a dispatch's SPAWN wait put aside */
+	}
+}
+
+bool rootside_auth(uint64_t request, const char *user, const char *password,
+                   const char *rhost)
+{
+	struct rxr_auth a;
+	int k = -1;
+	uint64_t now = log_now_ms();
+
+	if (C.fd < 0 || !user || !password)
+		return false;
+	/* ⛔ a free entry BEFORE sending, or the AUTH is refused (review 4,
+	 *    finding 4): a stale one (older than CLIENT_AUTH_STALE_MS) counts as free */
+	for (int i = 0; i < CLIENT_AUTHS; i++)
+		if (!C.auths[i].used || now >= C.auths[i].at_ms + CLIENT_AUTH_STALE_MS) {
+			k = i;
+			break;
+		}
+	if (k < 0) {
+		/* Step 2 (F1): the typed name is never written before PAM's yes — the request number instead */
+		registro_dice(LOG_ROOT, "⛔ %d AUTH already waiting for their VERDICT: login request %llu "
+		              "is NOT asked (refused, never overwriting another)", CLIENT_AUTHS,
+		              (unsigned long long)request);
+		return false;
+	}
+	memset(&a, 0, sizeof a);
+	head_fill(&a.h, RXR_AUTH, request);
+	snprintf(a.user, sizeof a.user, "%s", user);
+	snprintf(a.password, sizeof a.password, "%s", password);
+	snprintf(a.rhost, sizeof a.rhost, "%s", rhost ? rhost : "");
+	if (send(C.fd, &a, sizeof a, MSG_NOSIGNAL | MSG_DONTWAIT) != (ssize_t)sizeof a) {
+		/* ⭐ review 4 B, finding 12: said HERE, with the real errno — helper.c
+		 *    writes no second line for a refused rootside_auth() */
+		/* Step 2 (F1): no typed name before PAM's yes — the request number instead */
+		registro_dice(LOG_ROOT, "⛔ the AUTH of login request %llu did not leave towards the root "
+		              "side (%s): it is answered NO, not asked", (unsigned long long)request,
+		              strerror(errno));
+		explicit_bzero(&a, sizeof a);
+		return false;
+	}
+	explicit_bzero(&a, sizeof a);
+	C.auths[k].used = true;
+	C.auths[k].request = request;
+	C.auths[k].at_ms = now;
+	snprintf(C.auths[k].user, sizeof C.auths[k].user, "%s", user);
+	snprintf(C.auths[k].rhost, sizeof C.auths[k].rhost, "%s", rhost ? rhost : "");
+	return true;
+}
+
+bool rootside_has_grant(const char *user, const char *rhost)
+{
+	uint64_t now = log_now_ms();
+
+	for (int i = 0; i < CLIENT_GRANTS; i++)
+		if (C.grants[i].used && C.grants[i].expires_ms > now
+		    && (strcmp(C.grants[i].user, user) == 0
+		        /* ⭐ rilettura-fix M1: the children are keyed by the SYSTEM's name (main.c asks for it), the grant by the TYPED one: either names it */
+		        || (C.grants[i].canon[0] && strcmp(C.grants[i].canon, user) == 0))
+		    && strcmp(C.grants[i].rhost, rhost ? rhost : "") == 0)
+			return true;
+	return false;
+}
+
+/* SPAWNED / SPAWN_REFUSED for `request`; the rest is put aside. */
+static int wait_birth(uint64_t request, int timeout_ms, struct rootside_born *out)
+{
+	uint64_t until = log_now_ms() + (uint64_t)timeout_ms;
+
+	for (;;) {
+		uint64_t now = log_now_ms();
+		union rpk pk;
+		int d, got;
+
+		if (now >= until)
+			return ROOTSIDE_NO_ANSWER;
+		got = client_recv((int)(until - now), &pk, &d);
+		if (got < 0)
+			return ROOTSIDE_LOST;
+		if (got == 0)
+			continue;
+		if ((pk.h.kind == RXR_SPAWNED || pk.h.kind == RXR_SPAWN_REFUSED)
+		    && pk.h.request == request) {
+			if (pk.h.kind == RXR_SPAWN_REFUSED) {
+				C.last_wait_ms = pk.r.reason == RXR_REF_TOO_SOON ? pk.r.wait_ms : 0;
+				return pk.r.reason ? pk.r.reason : RXR_REF_FAILED;
+			}
+			memset(out, 0, sizeof *out);
+			out->serial = pk.s.serial;
+			out->pid = (pid_t)pk.s.pid;
+			out->uid = (uid_t)pk.s.uid;
+			out->gid = (gid_t)pk.s.gid;
+			out->fd = d;
+			out->pidfd = C.has_pidfd ? C.pidfd : -1; /* claimed: the caller owns it now */
+			C.has_pidfd = false;
+			pk.s.user[sizeof pk.s.user - 1] = 0;
+			snprintf(out->user, sizeof out->user, "%s", pk.s.user);
+			return 0;
+		}
+		/* an old SPAWNED: killed, never queued with its fd */
+		aside_or_dispatch(&pk, d);
+	}
+}
+
+int rootside_spawn(const char *user, const char *rhost, uint32_t canvas_w,
+                   uint32_t canvas_h, int timeout_ms, struct rootside_born *out)
+{
+	struct rxr_spawn s;
+	uint64_t now = log_now_ms();
+	int k = -1;
+
+	if (C.fd < 0 || !user)
+		return ROOTSIDE_LOST;
+	for (int i = 0; i < CLIENT_GRANTS; i++)
+		if (C.grants[i].used && C.grants[i].expires_ms > now
+		    && (strcmp(C.grants[i].user, user) == 0
+		        /* ⭐ rilettura-fix M1: the children are keyed by the SYSTEM's name (main.c asks for it), the grant by the TYPED one: either names it */
+		        || (C.grants[i].canon[0] && strcmp(C.grants[i].canon, user) == 0))
+		    && strcmp(C.grants[i].rhost, rhost ? rhost : "") == 0)
+			k = i;
+	if (k < 0)
+		return ROOTSIDE_NO_GRANT;
+	memset(&s, 0, sizeof s);
+	head_fill(&s.h, RXR_SPAWN, C.next_request++);
+	memcpy(s.grant, C.grants[k].grant, RXR_GRANT_BYTES);
+	explicit_bzero(&C.grants[k], sizeof C.grants[k]); /* single use, here too */
+	s.canvas_w = canvas_w;
+	s.canvas_h = canvas_h;
+	if (!client_send(&s, sizeof s)) {
+		explicit_bzero(s.grant, sizeof s.grant);
+		return ROOTSIDE_NOT_SENT;
+	}
+	explicit_bzero(s.grant, sizeof s.grant);
+	return wait_birth(s.h.request, timeout_ms, out);
+}
+
+/* ⭐ rilettura-fix M1: the system's name for a TYPED one, from the live grant of its login — no NSS here.  false = no live entry: the caller keeps the typed name.
+ *    The entry is the grant's: single use (gone at the birth), 30 s at most, empty after a restart of this side. */
+bool rootside_canonical(const char *typed, char *out, size_t cap)
+{
+	uint64_t now = log_now_ms();
+
+	if (!typed || !*typed || !out || cap == 0)
+		return false;
+	for (int i = 0; i < CLIENT_GRANTS; i++)
+		if (C.grants[i].used && C.grants[i].expires_ms > now && C.grants[i].canon[0] && strcmp(C.grants[i].user, typed) == 0) {
+			if (strlen(C.grants[i].canon) >= cap)
+				return false;
+			snprintf(out, cap, "%s", C.grants[i].canon);
+			return true;
+		}
+	return false;
+}
+
+uint64_t rootside_last_wait_ms(void)
+{
+	return C.last_wait_ms;
+}
+
+int rootside_close_orphan(const char *user, int timeout_ms, struct rootside_born *out)
+{
+	struct rxr_close_orphan c;
+
+	if (C.fd < 0 || !user)
+		return ROOTSIDE_LOST;
+	memset(&c, 0, sizeof c);
+	head_fill(&c.h, RXR_CLOSE_ORPHAN, C.next_request++);
+	snprintf(c.user, sizeof c.user, "%s", user);
+	if (!client_send(&c, sizeof c))
+		return ROOTSIDE_NOT_SENT;
+	return wait_birth(c.h.request, timeout_ms, out);
+}
+
+bool rootside_signal(uint64_t serial, int sig)
+{
+	struct rxr_signal_msg m;
+
+	if (C.fd < 0)
+		return false;
+	memset(&m, 0, sizeof m);
+	head_fill(&m.h, RXR_SIGNAL, C.next_request++);
+	m.serial = serial;
+	m.sig = sig == SIGKILL ? RXR_SIG_KILL : RXR_SIG_TERM;
+	if (send(C.fd, &m, sizeof m, MSG_NOSIGNAL | MSG_DONTWAIT) != (ssize_t)sizeof m) {
+		/* ⭐ review 4 B, finding 13: a SIGNAL that does not leave leaves that
+		 *    child alive (a late SPAWNED's, a refused one's) — said, once,
+		 *    here, for every caller */
+		registro_dice(LOG_ROOT, "⛔ SIGNAL %s for serial %llu did not leave towards the root "
+		              "side (%s): that child is NOT signalled",
+		              sig == SIGKILL ? "KILL" : "TERM", (unsigned long long)serial,
+		              strerror(errno));
+		return false;
+	}
+	return true;
+}
+
+void rootside_pump_until(bool (*done)(void *ctx), void *ctx, int timeout_ms)
+{
+	uint64_t until = log_now_ms() + (uint64_t)timeout_ms;
+
+	for (;;) {
+		uint64_t now = log_now_ms();
+		union rpk pk;
+		int d, got;
+
+		/* ⛔ No VERDICT is delivered here: this is not `helper_move()`,
+		 *    and a verdict without its delivery is a login lost
+		 *    (finding 5).  They wait for the next round's. */
+		if (done(ctx) || now >= until || C.fd < 0)
+			return;
+		got = client_recv((int)(until - now), &pk, &d);
+		if (got == 1)
+			aside_or_dispatch(&pk, d);
+		else if (got < 0)
+			return;
+	}
+}
