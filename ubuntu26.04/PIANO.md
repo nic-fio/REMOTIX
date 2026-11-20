@@ -44,3 +44,9 @@ l'avviso del postinst su labwc non scatta su Xubuntu (c'è `gnome-shell`); comme
 keyfiles» in `session.h`/`session.c`; «Debian trixie only» in `CLAUDE.md`; «DEBIAN 13 ONLY» in `src/remotix.pam`;
 systemd 257 in `local_login.c`; ngtcp2/nghttp3 nel `Makefile`; «i desktop sopravvivono allo stop del servizio»);
 `prove/check-package.py` non conosce `/etc/dconf/db/remotix` e pretende AppArmor in enforce. Aperti nel registro: E3, E4.
+
+**Chiusura (20 nov 2026, sera; ordine del proprietario «chiudi i punti aperti»).** Pubblicati: sul sito il pacchetto Debian
+corretto (sha256 `421b0e4b…cf92`, con nota nella storia della pagina e invito a reinstallare) e, per Ubuntu, il sorgente di
+labwc/wlroots accanto al pacchetto; su GitHub i rilasci `debian13-1.0.0` e `ubuntu26.04-1.0.0` (pacchetti, manuali, sorgente
+di labwc); il rilascio `v1.0.0` resta con una nota che rimanda a quello nuovo. Repo riordinato: un ramo, `debian13/` e
+`ubuntu26.04/`. I sorgenti del sito restano fuori dal repo per scelta del proprietario. Prossimo lavoro: Fedora.

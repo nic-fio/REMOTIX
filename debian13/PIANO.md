@@ -215,3 +215,9 @@ di Debian usate nella home come immagini generiche.
 manuali per distribuzione e il pacchetto Ubuntu `unione11` (sha256 `08772d85…36ab`); file online identici a `site/out/`.
 NON pubblicati: il rilascio di Ubuntu su GitHub e il pacchetto Debian corretto (online resta `d2ec4771…`, regola a 15
 azioni, mentre il manuale tecnico di Debian online descrive già la regola a 19): da decidere.
+
+**Chiusura (20 nov 2026, sera; ordine del proprietario «chiudi i punti aperti»).** Pubblicati: sul sito il pacchetto Debian
+corretto (sha256 `421b0e4b…cf92`, con nota nella storia della pagina e invito a reinstallare) e, per Ubuntu, il sorgente di
+labwc/wlroots accanto al pacchetto; su GitHub i rilasci `debian13-1.0.0` e `ubuntu26.04-1.0.0` (pacchetti, manuali, sorgente
+di labwc); il rilascio `v1.0.0` resta con una nota che rimanda a quello nuovo. Repo riordinato: un ramo, `debian13/` e
+`ubuntu26.04/`. I sorgenti del sito restano fuori dal repo per scelta del proprietario. Prossimo lavoro: Fedora.
