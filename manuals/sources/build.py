@@ -4,7 +4,9 @@ SCRAPER): the canon was taken from PHONESTRA on 10 Oct 2026.
 
 It produces self-contained HTML files (no external files), in English:
   manuals/Technical Manual — Debian 13.html   from the chapters in technical-debian13/chNN_*.py
+  manuals/Technical Manual — Ubuntu 26.04.html  from the chapters in technical-ubuntu26.04/chNN_*.py  (key "tecnico-ubuntu")
   manuals/User Manual.html                     from the chapters in user/chNN_*.py
+  manuals/User Manual — Ubuntu 26.04.html      from the chapters in user-ubuntu26.04/chNN_*.py  (key "utente-ubuntu")
 A chapter directory that is still empty is skipped: what exists is built.
 
 Each chapter exposes CHAPTER = (title, [(section_title, html), ...]).
@@ -16,8 +18,8 @@ common canon, identical byte for byte in all the manuals, and are not modified
 here; REMOTIX's only additions live in EXTRA_CSS, below.
 The file map and the numbers table are counted from the sources at every generation.
 
-    python3 manuals/sources/build.py [tecnico|utente]          regenerates the manuals (default: both)
-    python3 manuals/sources/build.py --check [tecnico|utente]  checks that they are aligned with the code
+    python3 manuals/sources/build.py [tecnico|tecnico-ubuntu|utente|utente-ubuntu]          regenerates the manuals (default: all)
+    python3 manuals/sources/build.py --check [tecnico|tecnico-ubuntu|utente|utente-ubuntu]  checks that they are aligned with the code
 
 It needs the pygments and Pillow libraries (packages python3-pygments and python3-pil).
 """
@@ -38,7 +40,11 @@ VERSION = re.search(r"RX_VERSION:-([0-9.]+)", (ROOT / "build" / "build-deb.sh").
 MANUALS = {
     "tecnico": dict(dir="technical-debian13", file="Technical Manual — Debian 13.html",
                     title="Technical Manual — REMOTIX for Debian 13", h1="Technical Manual — Debian 13"),
+    "tecnico-ubuntu": dict(dir="technical-ubuntu26.04", file="Technical Manual — Ubuntu 26.04.html",
+                           title="Technical Manual — REMOTIX for Ubuntu 26.04", h1="Technical Manual — Ubuntu 26.04"),
     "utente": dict(dir="user", file="User Manual.html", title="User Manual — REMOTIX", h1="User Manual"),
+    "utente-ubuntu": dict(dir="user-ubuntu26.04", file="User Manual — Ubuntu 26.04.html",
+                          title="User Manual — REMOTIX for Ubuntu 26.04", h1="User Manual — Ubuntu 26.04"),
 }
 
 # After the canon (style.css), only the rules for elements that exist only in REMOTIX's manual
@@ -368,7 +374,7 @@ def file_map(groups, cap):
     mancano = sorted(set(tutti) - set(citati))
     in_excess = sorted(set(citati) - set(tutti))
     if mancano or in_excess:
-        raise SystemExit("the manual's file map needs updating (technical-debian13/appB_map.py):"
+        raise SystemExit("the manual's file map needs updating (chNN_map.py of the manual's chapter folder):"
                          + "".join(f"\n  missing {f}" for f in mancano)
                          + "".join(f"\n  no longer exists {f}" for f in in_excess))
     out = []
@@ -623,7 +629,7 @@ def controlla(kinds=tuple(MANUALS)):
     in_code |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
     in_manual = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", pagina))
     # The variables the product reads are documented in the technical manual: the user manual alone need not.
-    for v in sorted(in_code - in_manual) if "tecnico" in kinds else ():
+    for v in sorted(in_code - in_manual) if any(k.startswith("tecnico") for k in kinds) else ():
         errori.append(f"undocumented environment variable: {v}")
     # The benches' ones may be cited (they are not mandatory): they exist, but the product does not read them.
     tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + code_text("prove", "boxes", "server")))

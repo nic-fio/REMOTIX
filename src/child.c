@@ -9551,7 +9551,7 @@ remount_capture:
 					              "nobody must be able to do it, and the "
 					              "machine belongs to several people.  ⇒ The "
 					              "polkit rule is missing, or it does not cover all "
-					              "twelve actions",
+					              "the forbidden actions",
 					              detail[0] ? detail : "no details");
 				sentinel_close(guard);
 			}
