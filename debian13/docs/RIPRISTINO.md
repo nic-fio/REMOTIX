@@ -1,6 +1,9 @@
 # RIPRISTINO — rifare REMOTIX (Debian 13) da zero, partendo solo dal repo
 
-BOZZA del 20 nov 2026. Vale per il ramo `main` del repo pubblico `https://github.com/nic-fio/REMOTIX`.
+BOZZA del 20 nov 2026. Vale per la cartella `debian13/` del ramo `main` del repo pubblico `https://github.com/nic-fio/REMOTIX`.
+
+Il 20 nov 2026 il repo è stato riordinato: un solo ramo `main` con una cartella per distribuzione (`debian13/`, `ubuntu26.04/`). **Dopo il riordino i comandi qui sotto sono aggiornati ma la costruzione NON è stata riprovata** (verrà riprovata a parte): le marche PROVATO sotto valgono per la forma precedente del repo (un ramo per distribuzione, clone nella cartella `debian`).
+
 Ogni passo è marcato:
 
 - **PROVATO** = eseguito il 20 nov 2026 su un server pulito, partendo da un clone fresco del repo, senza altro materiale.
@@ -25,17 +28,18 @@ Non servono: Go, i vecchi repository, la cartella `benches/`, copie locali. Nell
 
 ```
 mkdir -p <CARTELLA> && cd <CARTELLA>
-git clone --branch main https://github.com/nic-fio/REMOTIX debian
+git clone https://github.com/nic-fio/REMOTIX
+cd REMOTIX/debian13
 ```
 
-PROVATO. (Il ramo `ubuntu-26.04` è un altro pacchetto, vedi la sua `docs/RIPRISTINO.md`.)
+PROVATO. (La cartella `ubuntu26.04/` è un altro pacchetto, vedi la sua `docs/RIPRISTINO.md`.)
 
 ## 3. Preparare il server
 
 Dopo ogni riavvio del server (il sistema è in RAM) si lancia, **dal clone**, come utente normale (non root):
 
 ```
-bash <CARTELLA>/debian/server/prepara-server.sh
+bash <CARTELLA>/REMOTIX/debian13/server/prepara-server.sh
 ```
 
 PROVATO: finisce con `ALL OK`. Fa, in ordine: mette il nome della macchina in `/etc/hosts`; crea le cartelle di lavoro sotto
@@ -65,7 +69,7 @@ Il pacchetto di riferimento è `remotix_1.0.0-1+deb13_amd64.deb`, impronta sha25
 Comando (PROVATO, stima: una decina di minuti la prima volta, con l'immagine di costruzione da fare da zero; non cronometrato):
 
 ```
-cd <CARTELLA>/debian
+cd <CARTELLA>/REMOTIX/debian13
 SOURCE_DATE_EPOCH=1795130069 RX_VERSION=1.0.0 RX_REVISION=1 \
   OUTPUT=<CARTELLA>/pacchetti  build/build-deb.sh > costruzione.log 2>&1 &
 ```
@@ -105,7 +109,7 @@ I tre file e le date del riferimento (secondi dall'epoca Unix):
 Per ottenere **esattamente** l'impronta attesa, prima di costruire:
 
 ```
-cd <CARTELLA>/debian
+cd <CARTELLA>/REMOTIX/debian13
 touch -d @1794944120 debian/remotix.service
 touch -d @1794944092 debian/remotix.tmpfiles
 touch -d @1794931143 debian/remotix.lintian-overrides
@@ -133,7 +137,7 @@ PROVATO. I manuali in `manuals/*.html` si generano da `manuals/sources/`. Servon
 (sul server: `sudo apt-get install python3-pygments python3-pil`; `python3-pil` c'era già).
 
 ```
-cd <CARTELLA>/debian
+cd <CARTELLA>/REMOTIX/debian13
 python3 manuals/sources/build.py            # riscrive i due manuali (Technical e User, Debian 13)
 python3 manuals/sources/build.py --check    # dice «manual aligned with the code» se sono allineati al codice
 ```
@@ -169,7 +173,7 @@ NON RIPROVATO; l'immagine `debian-13-genericcloud-amd64.qcow2` va scaricata a ma
 2. Le tre date dei file del passo 4.1 (solo qui e nel pacchetto salvato).
 3. Il fatto che `sudo` debba funzionare senza password per l'utente (gli script usano `echo | sudo -S`).
 4. I percorsi fissi `/media/REMOTIX-DEBIAN/...` (script di preparazione, `build-deb.sh`, `prove/fresh.sh`): un disco persistente su `/media` è un requisito.
-5. L'ordine: clone, poi `prepara-server.sh`, poi `build-deb.sh` (il repo lo dice nelle intestazioni, ma non in un punto solo: ora è qui).
+5. L'ordine: clone (un solo clone per tutte le distribuzioni), poi `cd debian13`, `prepara-server.sh`, poi `build-deb.sh` (il repo lo dice nelle intestazioni, ma non in un punto solo: ora è qui).
 6. La rete: `github.com`, `docker.io` e i server di pacchetti Debian devono essere raggiungibili dal server.
 7. Per i manuali: `python3-pygments` e `python3-pil` (scritti nell'intestazione di `build.py`, ma non installati da `prepara-server.sh`).
 8. Per la macchina virtuale `vm.sh`: l'immagine Debian «genericcloud» da scaricare (NON RIPROVATO).

@@ -1,6 +1,9 @@
 # RIPRISTINO — rifare REMOTIX (Ubuntu 26.04) da zero, partendo solo dal repo
 
-BOZZA del 20 nov 2026. Vale per il ramo `ubuntu-26.04` del repo pubblico `https://github.com/nic-fio/REMOTIX`.
+BOZZA del 20 nov 2026. Vale per la cartella `ubuntu26.04/` del ramo `main` del repo pubblico `https://github.com/nic-fio/REMOTIX`.
+
+Il 20 nov 2026 il repo è stato riordinato: un solo ramo `main` con una cartella per distribuzione (`debian13/`, `ubuntu26.04/`). **Dopo il riordino i comandi qui sotto sono aggiornati ma la costruzione NON è stata riprovata** (verrà riprovata a parte): le marche PROVATO sotto valgono per la forma precedente del repo (un ramo per distribuzione, clone nella cartella `ubuntu`).
+
 Ogni passo è marcato:
 
 - **PROVATO** = eseguito il 20 nov 2026 su un server pulito, partendo da un clone fresco del repo, senza altro materiale.
@@ -24,7 +27,8 @@ di sviluppo, `<CARTELLA>` = dove si clona il repo (nella prova: una cartella nuo
 
 ```
 mkdir -p <CARTELLA> && cd <CARTELLA>
-git clone --branch ubuntu-26.04 https://github.com/nic-fio/REMOTIX ubuntu
+git clone https://github.com/nic-fio/REMOTIX
+cd REMOTIX/ubuntu26.04
 ```
 
 PROVATO.
@@ -34,7 +38,7 @@ PROVATO.
 Dopo ogni riavvio del server (sistema in RAM), **dal clone**, come utente normale (non root):
 
 ```
-bash <CARTELLA>/ubuntu/server/prepara-server.sh
+bash <CARTELLA>/REMOTIX/ubuntu26.04/server/prepara-server.sh
 ```
 
 PROVATO: finisce con `ALL OK`. Fa, in ordine: nome macchina in `/etc/hosts`; cartelle di lavoro in `/media/REMOTIX-UBUNTU/`;
@@ -60,7 +64,7 @@ Pacchetto di riferimento: `remotix_1.0.0-1+ubuntu26.04_amd64.deb`, sha256 atteso
 Comando (PROVATO; stima: una decina di minuti la prima volta, con l'immagine di costruzione da fare da zero; non cronometrato):
 
 ```
-cd <CARTELLA>/ubuntu
+cd <CARTELLA>/REMOTIX/ubuntu26.04
 SOURCE_DATE_EPOCH=1795130069 RX_VERSION=1.0.0 RX_REVISION=1 \
   OUTPUT=<CARTELLA>/pacchetti  build/build-deb.sh > costruzione.log 2>&1 &
 ```
@@ -98,7 +102,7 @@ tranne **la data di modifica di 4 file**. Motivo: `git` non conserva le date dei
 Per ottenere **esattamente** l'impronta attesa, prima di costruire:
 
 ```
-cd <CARTELLA>/ubuntu
+cd <CARTELLA>/REMOTIX/ubuntu26.04
 touch -d @1795012701 debian/remotix.service debian/remotix.tmpfiles debian/remotix.lintian-overrides
 touch -d @1795013328 debian/needrestart/remotix.conf
 ```
@@ -121,12 +125,12 @@ Ubuntu li aggiorna (il `.buildinfo` del riferimento elenca le versioni esatte), 
 PROVATO. Servono `python3`, `python3-pygments`, `python3-pil` (`sudo apt-get install python3-pygments python3-pil`).
 
 ```
-cd <CARTELLA>/ubuntu
+cd <CARTELLA>/REMOTIX/ubuntu26.04
 python3 manuals/sources/build.py            # riscrive «Technical Manual — Ubuntu 26.04.html» e «User Manual — Ubuntu 26.04.html»
 python3 manuals/sources/build.py --check    # «manual aligned with the code» se allineati al codice
 ```
 
-Nella prova i due file rigenerati sono **identici byte per byte** a quelli del repo (`git status` pulito). I manuali di Debian stanno solo nel ramo `main`.
+Nella prova i due file rigenerati sono **identici byte per byte** a quelli del repo (`git status` pulito). I manuali di Debian stanno nella cartella `debian13/`.
 
 ## 6. Il banco di prova: quattro macchine virtuali con la scheda video ceduta
 
@@ -190,7 +194,7 @@ in `prove/log/<tag>/` e una tabella in `summary.txt`; esce con 0 solo se ogni ri
 Sul banco a macchine virtuali (il banco della versione finale):
 
 ```
-cd <CARTELLA>/ubuntu/prove
+cd <CARTELLA>/REMOTIX/ubuntu26.04/prove
 RX_BANCO=vm ./all.sh gnome --fresh <percorso del .deb>     # macchina «ubuntu»: stato pulito, installa il pacchetto, poi tutti i controlli
 RX_BANCO=vm ./all.sh gnome --clean                          # stato pulito, senza reinstallare
 ```
@@ -210,7 +214,7 @@ Regola del proprietario: le prove le decide e le lancia lui, non partono da sole
 2. Le quattro date dei file del passo 4.1.
 3. `sudo` senza password per l'utente (gli script usano `echo | sudo -S`).
 4. I percorsi fissi: `/media/REMOTIX-UBUNTU/...` (script, `build-deb.sh`, `prove/fresh.sh`, banco VM), `/media/REMOTIX-DEBIAN/podman` (immagini podman, **condiviso con Debian**), `/media/DOWNLOAD/` (le ISO).
-5. L'ordine: clone, `prepara-server.sh`, `build-deb.sh`.
+5. L'ordine: clone (un solo clone per tutte le distribuzioni), poi `cd ubuntu26.04`, `prepara-server.sh`, `build-deb.sh`.
 6. La rete: `github.com`, `gitlab.freedesktop.org`, `docker.io`, i server dei pacchetti Ubuntu devono essere raggiungibili dal server (e il server di costruzione è Debian 13, non Ubuntu).
 7. `python3-pygments` e `python3-pil` per i manuali (nell'intestazione di `build.py`, ma non installati da `prepara-server.sh`).
 8. Il file di impronte di riferimento: i due sha256 sono qui, non nel repo.
