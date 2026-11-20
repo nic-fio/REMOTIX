@@ -1,6 +1,6 @@
 """User Manual, chapter 1 — what REMOTIX is, what it needs, what it does not do.
 Sources: src/page.html (sign-in page, REASON_TEXT), docs/SPECS.md §5, §11.4, §11.5, §12, debian/control,
-debian/remotix.preinst, src/main.c (defaults), LICENSE.md; for Ubuntu 26.04 the technical manual of this branch
+debian/remotix.preinst, src/main.c (defaults), LICENSE.md; for Ubuntu 26.04 the technical manual of this tree
 (chapters 12, 15, 17, 24) and docs/REGISTRO-problemi.md."""
 from build import arrow, box, c, fig, note, p, rif, sysf, table, ul, warn, zone
 

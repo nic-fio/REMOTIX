@@ -302,7 +302,7 @@ $ RX_BANCO=vm /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --only ban,audio-f
         [c("python3 prove/check-<name>.py --box <de>"), "one check alone; several take " + c("--only a,b") + " to run some names"],
     ], "«TAB» — Running pieces of the suite") + \
     note(c("fresh.sh") + " looks for " + c("box.sh") + " in " + sysf("prove/boxes/") + " and, if that folder is not there, in the top-level " + c("boxes/") + ": it works from a plain checkout. "
-         + c("lib.py") + " does the same with its " + c("BOXES") + " variable. The warning that the Debian manual carried about a layout difference does not apply to " + c("fresh.sh") + " on this branch; "
+         + c("lib.py") + " does the same with its " + c("BOXES") + " variable. The warning that the Debian manual carried about a layout difference does not apply to " + c("fresh.sh") + " in this tree; "
          + c("matrix.sh") + " has no mention of " + c("boxes") + " and calls " + c("fresh.sh") + ", so it follows.", "No layout difference.")
 
 # ── 17.5 ─────────────────────────────────────────────────────────────────────

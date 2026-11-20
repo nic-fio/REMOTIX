@@ -157,7 +157,7 @@ S5 = p("The question \"how many users can one machine serve\" has no measured an
       "The same checks were not run on the virtual machines of Kubuntu, Xubuntu and Lubuntu.")
 
 # ── 19.6 ─────────────────────────────────────────────────────────────────────
-S6 = p("These are properties of the source, not observations. Each names its definition. The constants were read again in the tree of this branch.", lead=True) + \
+S6 = p("These are properties of the source, not observations. Each names its definition. The constants were read again in this tree.", lead=True) + \
     table(["Limit", "Value", "Where"], [
         ["<b>declared limit: users at the same time</b>", "<b>8</b> (owner's decision, " + c("DECISIONS-11") + " §11.51, confirmed 18 Nov 2026)",
          "a declared value, not a constant: the technical default below is higher"],
@@ -185,7 +185,7 @@ S6 = p("These are properties of the source, not observations. Each names its def
     ], "«TAB» — Limits fixed in the code") + \
     p("The decision of 17 Nov 2026, recorded in the plan of the Debian tree, that the address ban stays at 20 failed attempts in 5 minutes matches the second row of the ban "
       "counters. The constants of the first twelve rows are the same as on Debian 13 (the diff of " + c("rcp.h") + " and " + c("budget.h") + " does not touch them, "
-      "and the lines of " + c("rcp.c") + " that define them are unchanged); the last four rows are specific to this branch.")
+      "and the lines of " + c("rcp.c") + " that define them are unchanged); the last four rows are specific to this tree.")
 
 # ── 19.7 ─────────────────────────────────────────────────────────────────────
 S7 = p("This list is deliberate: a manual that stays silent about a missing measurement invites a reader to invent one.", lead=True) + \

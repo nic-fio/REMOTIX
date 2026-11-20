@@ -6,7 +6,7 @@ def items(rows, cap):
 S_INTRO = p("This appendix lists what is known to be open, unverified or inconsistent in REMOTIX 1.0.0 for Ubuntu 26.04, area by area. It is "
             "meant to be complete rather than flattering. An item is here because a source file, a check, the problem register "
             "(<code>docs/REGISTRO-problemi.md</code>) or <code>docs/STORIA-ubuntu-26.04.md</code> (the history of the work) says so; where something was read only in a comment and not observed, it is said. "
-            "Two sections are specific to this branch: what real machines showed that the container boxes did not, and the open points of the Ubuntu port. "
+            "Two sections are specific to this tree: what real machines showed that the container boxes did not, and the open points of the Ubuntu port. "
             "The last section lists the places where code, comments and documents disagree: in every case the code "
             "was taken as the truth and the chapters describe the code.", lead=True) + \
     note("The package <code>remotix_1.0.0-1+ubuntu26.04_amd64.deb</code> (the test build named <code>unione10</code>) had one full round of <code>prove/all.sh</code>, on the GNOME virtual machine, on 19 Nov 2026: "
@@ -24,7 +24,7 @@ S_UNVERIFIED = items([
      "were fine on all four machines. A Samsung DeX was tried on GNOME in the container boxes on 19 Nov 2026 (OK); it was <b>not repeated on the virtual machines nor on the other three desktops</b>. On the virtual machines the owner tried Linux and Android clients on all four desktops on the evening of 19 Nov. Safari, iOS and a Firefox on Windows were never tested."],
     ["GNOME, first tap after login", "The first touch tap can land on the initial point if the pointer position arrives before "
      "Mutter is ready (<code>touch_announce_pointer</code>). Seen on Debian 13 (1 case in 13); not proven; low priority. Not re-measured on Mutter 50 (not verified on Ubuntu 26.04)."],
-    ["NVIDIA", "No NVIDIA card was used with this branch. Comments cite measurements on a rented RTX 4090 of an earlier build; "
+    ["NVIDIA", "No NVIDIA card was used with this tree. Comments cite measurements on a rented RTX 4090 of an earlier build; "
      "the group of <code>/dev/nvidia*</code> is not handled by the grants. The Intel integrated card with GNOME 50 was also never run with the functional suite."],
     ["4096×2304", "The coded limit is 4096×2304; the declared limit is 3K. In the Ubuntu round <code>canvas-limits</code> passes on GNOME, and a view of 4096×2304 or 5120×2880 gives a canvas of 3840×2160, "
      "the last rung of the page's own size ladder. Nothing larger was obtained, and no frame rate or quality figure exists at those sizes."],
@@ -46,7 +46,7 @@ S_UNVERIFIED = items([
      "the fallback with <code>dconf</code> absent, nor of an administrator's <code>DCONF_PROFILE</code> in the environment of the child itself (the case tried was one set only in the user manager's environment, <code>environment.d</code>): "
      "both are <b>not verified on Ubuntu 26.04</b>."],
     ["Measured figures in comments", "Figures such as the pixel scan time, the 160 ms drift, the 1.86/0.97 Gpixel/s conversion rates and the "
-     "39.54 fps drawn by GNOME at 60 Hz come from comments of earlier builds and were not re-measured on Ubuntu 26.04. The figures that comments of this branch carry (KWin 6.6.7, Mutter 50) are dated 18 and 19 Nov 2026 and name their machine."],
+     "39.54 fps drawn by GNOME at 60 Hz come from comments of earlier builds and were not re-measured on Ubuntu 26.04. The figures that comments of this tree carry (KWin 6.6.7, Mutter 50) are dated 18 and 19 Nov 2026 and name their machine."],
     ["Package check", "<code>prove/check-package.py</code> (install, first start, remove, purge, reinstall) was never run on Ubuntu 26.04 and is not part of the virtual-machine bench: it is a declared SKIP. "
      "No real removal or purge was ever done on Ubuntu. The installs on the virtual machines exercise the <code>postinst</code> (and the upgrade runs of <code>prerm</code> and <code>postrm</code> with <code>--reinstall</code>); the purge block was run once, alone, extracted into a script, on one virtual machine (the user's file removed, the user's settings intact: \"simulated purge\" in the history)."],
 ], "«TAB» — What was not verified.")
@@ -117,7 +117,7 @@ S_OPEN = items([
     ["Faillock detection", "The detection of <code>pam_faillock</code> works on English text only."],
     ["Quotas unmeasured", "The ban table (160 bans / 256 slots) and the unknown-user limit of 5 were not measured."],
     ["Kernel requirements", "Landlock needs kernel 6.12 (skipped on older ones), <code>mount_setattr</code> needs 5.12, "
-     "the seccomp filter exists for x86_64 and aarch64 only (the aarch64 one was never run). The kernel of Ubuntu 26.04 is 7.0, so the requirement is met; the branch for an older kernel was not exercised on this branch."],
+     "the seccomp filter exists for x86_64 and aarch64 only (the aarch64 one was never run). The kernel of Ubuntu 26.04 is 7.0, so the requirement is met; the branch for an older kernel was not exercised in this tree."],
     ["Trust boundaries", "The root side is root and unconfined, and PAM modules run as root; users are separated by uid only; "
      "the product adds users to the card groups and puts ACLs on <code>renderD*</code>."],
     ["Power belts shipped off", "The logind power-key and no-suspend drop-ins are installed off, so the power button still works. The polkit rule is the only belt in force (19 actions)."],
@@ -189,7 +189,7 @@ S_TEST = items([
      "<code>lib.sweep()</code> lists the prefixes of every check (<code>bc|lc|mu|rs|ac|cb|bn|dkf?|md|in|ph|pl</code>). <code>headless-multi.sh</code> and <code>lifecycle-window.py</code> have no caller. <code>base-check.py</code> and <code>check-base.py</code> are near duplicates."],
     ["Unit tests", "No in-tree tests exist for <code>hsrate.h</code>, <code>msgrate.h</code>, <code>linebudget.h</code>, <code>dimcheck.h</code>, <code>unchanged.h</code>, <code>damage_classify</code>."],
     ["Build", "A plain <code>make</code> in <code>src/</code> needs <code>TWIN=none</code>; <code>debian/rules</code> passes it. <code>SOURCE_DATE_EPOCH</code> defaults to file mtimes, so two checkouts differ; <code>build/build-deb.sh</code> takes the latest mtime of the tree it copies."],
-    ["Clean-up", "Tranche 2 of the non-Debian clean-up is moot on this branch: the Ubuntu code it would have removed is live. Many identifiers are Italian (<code>registro_dice()</code>, <code>SORGENTI</code>, <code>wt_chi</code>, ...). A port to a distribution with SELinux needs the removed SELinux code again."],
+    ["Clean-up", "Tranche 2 of the non-Debian clean-up is moot in this tree: the Ubuntu code it would have removed is live. Many identifiers are Italian (<code>registro_dice()</code>, <code>SORGENTI</code>, <code>wt_chi</code>, ...). A port to a distribution with SELinux needs the removed SELinux code again."],
 ], "«TAB» — Open points in testing and build.")
 
 S_UBUNTU_OPEN = items([
@@ -232,7 +232,7 @@ CONTRA = [
     ["Licences", "CLAUDE.md", "Says licenses/ ships in the package; debian/rules installs only THIRD-PARTY-LICENSES."],
     ["Hooks", "rcp.h:164", "«Three, and no more»; about 27 exist."],
     ["Pending caps", "transport.h:129; hsrate.h:3", "Say 8 and 32. Code: PENDING_PER_ADDRESS 16, PENDING_PER_48 64."],
-    ["Page caps", "page.h PAGE_MAX_CLIENTS comment; page.c", "Say 4 per address and a page of about 907 KB. Code: PAGE_PER_ADDRESS 32, PAGE_PER_48 64; the page is 937 399 bytes on this branch."],
+    ["Page caps", "page.h PAGE_MAX_CLIENTS comment; page.c", "Say 4 per address and a page of about 907 KB. Code: PAGE_PER_ADDRESS 32, PAGE_PER_48 64; the page is 937 399 bytes in this tree."],
     ["Keepalive", "rcp.c:8746 comment; webtransport.c keepalive_rule()", "Comment: PINGs only during credentials. Code: every state except finished."],
     ["Client close codes", "webtransport.c closed_by_client() ~7597; RCP.md §8.2", "Code accepts 0x01..0x0F; RCP.md and reason_for_82() up to 0x10."],
     ["Shutdown wait", "main.c ~4140", "Comment: two seconds. Loop: 4000 ms."],
@@ -247,12 +247,12 @@ CONTRA = [
     ["GNOME 48 names in comments", "child.c:1682; rediscover.h:27; input.c:2075-2079", "<code>ConditionEnvironment</code> where GNOME 50 uses an <code>Assert</code> line; <code>gnome-session-binary</code> as the GNOME marker; «Mutter does not offer the lever» (GNOME 48 reading)."],
     ["Firefox worker", "page.html ~1318-1346, 9800-9803; DECISIONS-11 §11.36", "«Proposal, not decided»; code makes it the default; the decision is marked DECIDED."],
     ["Pointer mode, WebGL2", "page.html CSS 395-460; Viewer constructor ~3295", "<code>both</code> as default (code: <code>cl_mode = \"system\"</code>); WebGL2 «not the default» wording; <code>classic_input.hook()</code> (page.html:11411) does not exist."],
-    ["Ctrl+Alt+Del", "SPECS §7.3-bis, §5.2-bis", "Require the button and Ctrl+Alt+End; the page hides one and removed the other. The checks of this branch follow the page."],
+    ["Ctrl+Alt+Del", "SPECS §7.3-bis, §5.2-bis", "Require the button and Ctrl+Alt+End; the page hides one and removed the other. The checks of this tree follow the page."],
     ["Session survival", "SPECS §5.2 box", "Reports the T2 measurement of 29 Sep 2026: stopping the unit leaves the desktops alive. Since §11.56 (17 Nov 2026) an orderly stop closes them; SPECS was not updated."],
     ["Test windows", "check-media.py docstring; DECISIONS §4.6-septies", "250 ms (code 400 ms); UHD 730 (corrected to 770 in DECISIONS-11 §11.21)."],
     ["Polkit action count", "src/remotix-no-poweroff.rules (older paragraphs); DECISIONS.md §4.7; SPECS.md §A4", "The twelve or fifteen actions of earlier paragraphs are history: the rule now forbids nineteen (20 Nov 2026), and both documents say so in a dated update."],
     ["Missing files", "Comments in many headers", "Cite benches/, phases/, STUDIES.md, CODER.md, REVIEWER.md: not in this tree. main.c:3153 and :514 carry old wording."],
-    ["PIANO.md", "PIANO.md", "The file of this branch is a summary of the Ubuntu work (the full history is in docs/STORIA-ubuntu-26.04.md), not the 1.0.0 Debian plan: the Debian statements about the unblock, the 8 users against RCP_SESSION_CAP = 10 and check-package 8/8 do not apply to it."],
+    ["PIANO.md", "PIANO.md", "The file of this tree is a summary of the Ubuntu work (the full history is in docs/STORIA-ubuntu-26.04.md), not the 1.0.0 Debian plan: the Debian statements about the unblock, the 8 users against RCP_SESSION_CAP = 10 and check-package 8/8 do not apply to it."],
 ]
 
 S_CONTRA = table(["Subject", "Where", "What disagrees"], CONTRA,

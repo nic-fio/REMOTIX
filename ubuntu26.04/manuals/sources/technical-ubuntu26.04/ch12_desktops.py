@@ -38,7 +38,7 @@ S1 = p("REMOTIX serves four Wayland desktops that belong to three compositor fam
          c("logout()") + " without waiting for a reply, then SIGTERM to labwc"],
     ], "«TAB» — The four desktops side by side") + \
     p("<b>Versions on Ubuntu 26.04.</b> The versions below are those of the Ubuntu 26.04 packages as read in the studies of "
-      "this branch (" + c("studio/1-gnome50-avvio.md") + ", " + c("studio/3-sessione-ubuntu.md") + ", "
+      "this tree (" + c("studio/1-gnome50-avvio.md") + ", " + c("studio/3-sessione-ubuntu.md") + ", "
       + c("studio/4-mutter50-cattura-input.md") + ", " + c("studio/6-kubuntu-kwin-labwc.md") + ", "
       + c("studio/7-xubuntu-lubuntu.md") + ": packages opened in disposable containers) and, for dconf, on the virtual machine of "
       "the dconf measurements (" + c("docs/REGISTRO-problemi.md") + " C5). They were not read again on a running machine for "
@@ -55,7 +55,7 @@ S1 = p("REMOTIX serves four Wayland desktops that belong to three compositor fam
     p("<b>One desktop per machine.</b> REMOTIX looks for the desktop that is installed; it does not arbitrate between "
       "desktops that coexist (" + c("DECISIONS.md") + " §0.6). When two are found the choice is made and declared "
       "«ambiguous» (" + rif("How the desktop is recognised") + "). The package installs no desktop; with none of the "
-      "four the server says so at startup (" + c("debian/control") + "). One case is new on this branch: XFCE or LXQt "
+      "four the server says so at startup (" + c("debian/control") + "). One case is new in this tree: XFCE or LXQt "
       "found on a machine without the package " + c("labwc") + " (a Recommends, so " + c("--no-install-recommends")
       + " leaves it out). " + c("session_missing_component()") + " says so before any child exists: the parent refuses the login "
       "after PAM's yes with " + c("0x0E") + " (" + c("delivery_verdict()") + " in " + c("main.c") + "), no process is spawned and "
@@ -651,7 +651,7 @@ S6 = p("GNOME is started through the machine's own GNOME session (on Ubuntu 26.0
       "fallback) removes from the user's own dconf, once, the four keys that older REMOTIX versions wrote there (the two power-sleep "
       "types, " + c("idle-delay") + " and " + c("lock-enabled") + "), if they still hold exactly those values. The mark is "
       + sysf("~/.local/state/remotix/gnome-ripristinato") + "; without the " + c("dconf") + " program nothing is done and no mark is written. "
-      "No earlier REMOTIX was distributed on Ubuntu, so on this branch it matters only for a machine where an older build was tried. The "
+      "No earlier REMOTIX was distributed on Ubuntu, so in this tree it matters only for a machine where an older build was tried. The "
       "postrm removes the mark at purge.") + \
     p("<b>Verification.</b> After the birth nothing is written: " + c("session_dconf_verify()") + " <i>re-reads</i> every key through the "
       "session profile, as the Shell and the " + c("gsd-*") + " daemons do, and says whether it is in force («session keys re-read: 21 in "
@@ -1079,7 +1079,7 @@ S10 = p("One table to answer «where does REMOTIX write, for this desktop?». " 
 # 11. Behaviours worth knowing
 # ═════════════════════════════════════════════════════════════════════════
 S11 = p("What follows is what the maintainer will meet on the four desktops. The sources are " + c("docs/REGISTRO-problemi.md")
-        + " (sections D and E), the studies of the branch, the code and its comments; what was not seen on Ubuntu 26.04 is said.",
+        + " (sections D and E), the studies of the tree, the code and its comments; what was not seen on Ubuntu 26.04 is said.",
         lead=True) + \
     table(["Desktop", "Behaviour", "Source and status"], [
         ["GNOME", "<b>The session is born in the Activities Overview</b>, which covers the desktop and holds the input, so the "
@@ -1120,7 +1120,7 @@ S11 = p("What follows is what the maintainer will meet on the four desktops. The
     p("The AppArmor profile and what was observed on a real Ubuntu 26.04 are in " + rif("The AppArmor profile and its mode")
       + ". The canvas limits that the product guarantees (3K, eight users) are in " + rif("Security model") + " and "
       + rif("Performance and capacity") + "; the maximum canvas that the decoder of the test browser reached on Debian is not a result "
-      "of this branch and is not repeated.") + \
+      "of this tree and is not repeated.") + \
     p("<b>Places that differ per desktop</b> (the list to walk when a fifth is added): " + c("recognize_desktop()") + ", "
       + c("desktop_name()") + ", " + c("compose_environment()") + ", " + c("write_dropin()") + ", " + c("start()") + ", "
       + c("inactive_unit()") + ", " + c("really_terminate()") + ", " + c("session_settings()") + ", " + c("session_inhibit()")

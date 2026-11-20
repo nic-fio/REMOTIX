@@ -1,6 +1,6 @@
 """User Manual, chapter 2 — installing REMOTIX (Ubuntu 26.04): the steps, then one section for each part.
 Sources: debian/control, debian/remotix.preinst, .postinst, .prerm, .postrm, .service, .conf, .ufw, denied-users,
-src/remotix.pam, src/certificates.c, src/main.c (options), docs/SPECS.md §4.1; the technical manual of this branch,
+src/remotix.pam, src/certificates.c, src/main.c (options), docs/SPECS.md §4.1; the technical manual of this tree,
 chapter 15 (the package) and 24 (what was and was not verified)."""
 from build import c, note, p, rif, steps, sysf, table, term, ui, ul, warn
 

@@ -63,7 +63,7 @@ S2 = p("REMOTIX authenticates against its own PAM service, named " + c("remotix"
       "the four flavours was postponed (study 11, item S5.P6) and was not made; for the sessions of the four flavours see the "
       "ordering of the " + c("pam_exec") + " line below. The header of " + c("src/remotix.pam") + " still carries Debian-only wording "
       "(«DEBIAN 13 ONLY», the other distribution families): these are leftovers of the earlier tree and not statements about this "
-      "branch.") + \
+      "tree.") + \
     table(["Stack", "Lines in " + c("remotix.pam"), "Why"], [
         [c("auth"), c("requisite pam_listfile.so item=user sense=deny file=/etc/remotix/denied-users onerr=fail")
          + ", then " + c("@include common-auth"),

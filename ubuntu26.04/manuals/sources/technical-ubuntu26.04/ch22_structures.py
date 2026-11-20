@@ -268,7 +268,7 @@ S6 = p("All RCP/1 message types by number. The bodies are in " + c("docs/RCP.md"
         ["0x0B", c("RCP_PROTOCOL_ERROR"), "a violation of the bytes"],
         ["0x0C", c("RCP_SERVER_CLOSING"), "the service is stopping"],
         ["0x0D", c("RCP_TIMED_OUT"), "a handshake ceiling expired"],
-        ["0x0E", c("RCP_SESSION_UNSERVABLE"), "the attach is well formed but cannot be served: six routes (the cap, a closing desktop, no stage, an unknown layout, memory, and the two of this branch: the desktop's compositor is not installed, answered by " + c("delivery_verdict()") + " through " + c("session_missing_component()") + " before a child is born, and a stage refused for the scale, " + c("stage_refused_by_child()") + ")"],
+        ["0x0E", c("RCP_SESSION_UNSERVABLE"), "the attach is well formed but cannot be served: six routes (the cap, a closing desktop, no stage, an unknown layout, memory, and the two of this tree: the desktop's compositor is not installed, answered by " + c("delivery_verdict()") + " through " + c("session_missing_component()") + " before a child is born, and a stage refused for the scale, " + c("stage_refused_by_child()") + ")"],
         ["0x0F", c("RCP_ALREADY_ACTIVE_REMOTELY"), "another live client of the user holds the slot"],
         ["0x10", c("RCP_SESSION_TERMINATED"), "the graphical session ended (Log Out). Sent through " + c("wt_dismiss_user_session_over()") + ": a client that is logged in gets it at once; one already admitted but still inside the fixed second gets it in place of ADMITTED; one still waiting for PAM is skipped, so it never receives a false 0x10 (a login refused with 0x0E \"still closing\" did, before 18 Nov 2026)"],
     ], "«TAB» — The farewell reasons (RCP.md §8.2, " + c("rcp.h") + ")")

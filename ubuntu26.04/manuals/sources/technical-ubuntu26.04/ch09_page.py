@@ -58,7 +58,7 @@ S1 = p("The whole client is one file, " + c("src/page.html") + ": the login page
       + " and " + rif("Security model") + ".")
 
 # ── 2. Structure ──────────────────────────────────────────────────────────
-S2 = p("The file is about 14 000 lines and 0.9 MB (14 258 lines and 937 399 bytes on the Ubuntu branch), most of it comments that carry the reason and the measurement behind "
+S2 = p("The file is about 14 000 lines and 0.9 MB (14 258 lines and 937 399 bytes on the Ubuntu tree), most of it comments that carry the reason and the measurement behind "
        "each rule, plus the embedded Opus decoder and the probe keyframes. The code is organised in blocks, and the three input blocks are "
        "“anchors”, each written inside its own markers.", lead=True) + \
     table(["Block", "Main names", "Covered in"], [

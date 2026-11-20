@@ -23,7 +23,7 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
        "from: a browser with WebTransport and WebCodecs is the client. The user types the Linux user name and "
        "password of the machine, the server checks them with PAM, and the page shows that user's own desktop. "
        "This manual describes version " + c(VERSION) + " for <b>Ubuntu 26.04</b> (“resolute”), built from the code of the "
-       "branch " + c("ubuntu-26.04") + ": one codebase and one package for the four flavours of that release, Ubuntu (GNOME), "
+       "folder " + c("ubuntu26.04/") + ": one codebase and one package for the four flavours of that release, Ubuntu (GNOME), "
        "Kubuntu (KDE Plasma), Xubuntu (XFCE) and Lubuntu (LXQt). Each distribution that REMOTIX serves has its own manual "
        "with the same table of contents.",
        lead=True) + OVERVIEW + \
@@ -305,7 +305,7 @@ PARTS = [
 S5 = p("How big REMOTIX is, part by part. The lines are counted from the sources every time the manual is generated: "
        "the files kept by git under " + c("src/") + ", " + c("debian/") + ", " + c("build/") + ", " + c("prove/") + ", "
        + c("boxes/") + " and " + c("server/") + ", plus the manual's own sources; binary files are left out. The last "
-       "row counts every file under " + c("manuals/sources/") + ", which in this branch includes the chapters of the "
+       "row counts every file under " + c("manuals/sources/") + ", which in this tree includes the chapters of the "
        "manual of the other distribution that was kept here.",
        lead=True) + numeri(PARTS, "«TAB» — The project's parts and their line counts") + \
     p("A large share of the C is comment: by the project's rules a non-obvious line carries the reason, the measurement "

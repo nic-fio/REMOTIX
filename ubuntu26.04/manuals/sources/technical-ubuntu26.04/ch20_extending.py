@@ -1,11 +1,11 @@
-"""Chapter 20 — Extending REMOTIX and porting to another distribution (Ubuntu 26.04 branch: the second port). Sources: the code of this branch
+"""Chapter 20 — Extending REMOTIX and porting to another distribution (Ubuntu 26.04 tree: the second port). Sources: the code of this tree
 (src/session.c, src/session.h, src/kwin.c, src/main.c, src/rcp.c, src/rcp.h, src/msgrate.h, src/page.html, src/encoder.c, src/child.c, debian/*,
 build/*, prove/*, server/*), docs/REGISTRO-problemi.md (every entry, "on a new distribution" line), docs/INVENTARIO-non-debian.md,
 docs/PULIZIA-tranche1.md, studio/5-sistema-ubuntu.md, studio/8-pacchetto-e-prove.md."""
 from build import c, h4, note, p, rif, steps, sysf, table, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("REMOTIX 1.0.0 exists twice: for Debian 13 (trixie), on the branch " + c("main") + ", and for Ubuntu 26.04 (resolute) with its four flavours "
+S1 = p("REMOTIX 1.0.0 exists twice: for Debian 13 (trixie), in the folder " + c("debian13/") + ", and for Ubuntu 26.04 (resolute) with its four flavours "
        "(Ubuntu with GNOME, Kubuntu with KDE Plasma, Xubuntu with XFCE, Lubuntu with LXQt), in this tree. The second tree is a separate copy of the first, "
        "with its own packaging, its own build image, its own test bench and its own manual: the rule that a port is a copy and not a new <code>if</code> "
        "in the old tree has been followed once, and this chapter is written from what that port needed.", lead=True) + \
@@ -22,14 +22,14 @@ S1 = p("REMOTIX 1.0.0 exists twice: for Debian 13 (trixie), on the branch " + c(
          "that is dead on one distribution is a loan, not a deletion.", "Removed code comes back.") + \
     note("The history of the clean-up is in two documents of " + c("docs/") + ": " + c("docs/INVENTARIO-non-debian.md") + " lists what existed only for another "
          "distribution, with a verdict per item; " + c("docs/PULIZIA-tranche1.md") + " records what tranche 1 removed on 17 Nov 2026 on the Debian tree, with "
-         "the proof that each item was unreachable on trixie. Both describe the Debian tree; on this branch part of that code is live again. Line numbers in "
+         "the proof that each item was unreachable on trixie. Both describe the Debian tree; in this tree part of that code is live again. Line numbers in "
          "the inventory are those of the tree before tranche 1 and no longer point to the right lines.", "Where the history is.")
 
 # ── 20.2 ─────────────────────────────────────────────────────────────────────
 S2 = p("The table lists what a porter must look at, area by area, for the two distributions the tree has been ported to. The Debian column describes the "
-       "branch " + c("main") + " and is quoted from the Debian 13 manual; the Ubuntu column was read in the code of this branch. Names are files and "
+       "folder " + c("debian13/") + " and is quoted from the Debian 13 manual; the Ubuntu column was read in the code of this tree. Names are files and "
        "functions, not line numbers.", lead=True) + \
-    table(["Area", "Debian 13 (main)", "Ubuntu 26.04 (this branch)", "Where"], [
+    table(["Area", "Debian 13 (debian13/)", "Ubuntu 26.04 (this tree)", "Where"], [
         "Packaging and build",
         ["package format", ".deb through debhelper compat 13, " + c("dh-apparmor") + ", maintainer scripts calling " + c("deb-systemd-invoke") + ", "
          + c("getent") + ", " + c("systemd-sysusers") + ", " + c("systemd-tmpfiles"),
@@ -130,8 +130,8 @@ S2 = p("The table lists what a porter must look at, area by area, for the two di
 
 # ── 20.3 ─────────────────────────────────────────────────────────────────────
 S3 = p("The Debian tree removed, on 17 Nov 2026, the code that could not be reached on trixie (" + c("docs/PULIZIA-tranche1.md") + "). The Ubuntu port is the "
-       "proof that a porter meets each of those problems again: the table says, item by item, what came back on this branch.", lead=True) + \
-    table(["Removed on Debian", "What it did", "On the Ubuntu branch"], [
+       "proof that a porter meets each of those problems again: the table says, item by item, what came back in this tree.", lead=True) + \
+    table(["Removed on Debian", "What it did", "On the Ubuntu tree"], [
         ["SELinux handling in " + c("child.c") + " and " + c("walls.c"), "set the SELinux level of a login like sshd; set the exec context of the network side; the " + c("-ldl") + " link flag",
          "still absent (no SELinux handling anywhere in the code). Needed again on a distribution with SELinux enabled by default"],
         ["Ubuntu session names in " + c("desktop_of_session_name()"), "mapped " + c("xubuntu") + ", " + c("lubuntu") + ", " + c("kubuntu") + ", " + c("ubuntu"),
@@ -170,7 +170,7 @@ S3 = p("The Debian tree removed, on 17 Nov 2026, the code that could not be reac
         "a check that looks for the 1.0 location will not find them.",
     ]) + \
     p("What tranche 2 listed as still to do (the remaining Ubuntu and Xubuntu detection in " + c("session.c") + ", the emulation of a local login's " + c("XDG_*")
-      + " variables) is live code on this branch and is described in " + rif("The four desktops") + ", not left as work. Comments naming other distributions, and the other "
+      + " variables) is live code in this tree and is described in " + rif("The four desktops") + ", not left as work. Comments naming other distributions, and the other "
       "cosmetic items, are in " + rif("Appendix C — Known issues and open points") + ".")
 
 # ── 20.4 (new) ───────────────────────────────────────────────────────────────
@@ -240,7 +240,7 @@ S4 = p("The tree is not a template for a port, but the porting questions are now
         + c("other") + " does depends on the distribution (on some it is a hard deny, so every right password is refused). The program checks "
         "the file at start-up (" + c("main.c") + "). Look at where the session's " + c("PATH") + " comes from.",
         "<b>Check polkit.</b> The rules directory; the groups that polkit calls administrator; whether a default privilege table overrides the rules; and the <b>implications</b> "
-        "of the policy files of that systemd version (run " + c("power-implied") + "; the list of forbidden actions is 19 on this branch; the same correction was made for Debian on 20 Nov 2026 (rule with 19 actions on main; the rebuilt Debian package is not yet published), and the test from the seat of the local user with the corrected Debian package was done on the owner's tablet on 20 Nov 2026: all refused, and on any new distribution it must be derived again).",
+        "of the policy files of that systemd version (run " + c("power-implied") + "; the list of forbidden actions is 19 in this tree; the same correction was made for Debian on 20 Nov 2026 (rule with 19 actions in debian13/; the rebuilt Debian package is not yet published), and the test from the seat of the local user with the corrected Debian package was done on the owner's tablet on 20 Nov 2026: all refused, and on any new distribution it must be derived again).",
         "<b>Check the display manager and the session names</b> the desktops register, against " + c("desktop_session()") + ", " + c("gnome_session()") + " and the readers in " + c("session.c")
         + ". Check the order of the substring tests: a name that contains another (xubuntu, ubuntu) must be asked first.",
         "<b>Check mandatory access control on a real or virtual machine.</b> If SELinux is on, the removed handling of " + c("child.c") + " and " + c("walls.c") + " is needed. For AppArmor, adapt the profile, "
@@ -279,7 +279,7 @@ S5 = p("RCP/1 is closed by design: a receiver that does not understand a message
         "<b>The page,</b> both directions: how it encodes or decodes the message, and what it does on an unexpected type. A server message the page does not know "
         "ends the session with " + c("PROTOCOL_ERROR") + ".",
         "<b>A farewell that must reach a client in every state</b> goes through " + c("wt_dismiss_user_session_over()") + " in " + c("webtransport.c") + ": it says the farewell at once to a client that is logged in, keeps it until the fixed second for a client that was already admitted, and skips a connection that "
-        "is still waiting for PAM, so that a stranger trying passwords under that name learns nothing and nobody receives a false " + c("RCP_SESSION_TERMINATED") + ". It is the model of the farewells of this branch that end a session "
+        "is still waiting for PAM, so that a stranger trying passwords under that name learns nothing and nobody receives a false " + c("RCP_SESSION_TERMINATED") + ". It is the model of the farewells of this tree that end a session "
         "(" + c("RCP_SESSION_UNSERVABLE") + " when a stage is refused, " + c("RCP_SESSION_TERMINATED") + " at a Log Out).",
         "<b>Log lines</b> follow " + rif("Conventions") + " (the mark at the head of a body sets the journal priority).",
         "<b>A check:</b> a new name in an existing check, or a new check file (below). The test is the page driven by a real browser, so the page and the server "

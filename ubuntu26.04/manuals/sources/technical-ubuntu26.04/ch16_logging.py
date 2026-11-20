@@ -253,7 +253,7 @@ S6B = p("The priority of a line is decided in " + c("line()") + " by the first n
         "levels by changing <b>only the mark at the head</b> of the body; text, logic and the " + c("log_detail")
         + " levels were left alone. The aim was that " + c("journalctl -b -p err") + " should contain only what needs "
         "a person. The counts below come from that document (a full run on the four test containers of the Debian 13 work, 17 Nov 2026) and were "
-        "not re-measured on Ubuntu 26.04; the lines this branch added (D-015, the scale refusal, the KDE logout, the guest labwc) were not "
+        "not re-measured on Ubuntu 26.04; the lines this tree added (D-015, the scale refusal, the KDE logout, the guest labwc) were not "
         "part of that pass, and each of them follows the same rule of the head mark.", lead=True) + \
     table(["Class", "Examples (source file)", "New level"], [
         ["Routine reports of a normal life cycle", "the child's birth report " + c("child.c") + "; the child leaving at "
@@ -399,7 +399,7 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
         [c("rootside"), "⚠ D-015: /etc/dconf/db/remotix is missing and /usr/bin/dconf (package dconf-cli) is missing: the GNOME remote sessions use the declared fallback", "No tool, no database; from the code, not seen in a run."],
         [c("rootside"), "⚠ D-015: … could NOT be made|put right (…): the GNOME remote sessions use the declared fallback|the database that is there", "The compile failed; from the code."],
     ], "«TAB» — The lines of the session's dconf: the first six from the runs of 19 Nov 2026 on the Ubuntu virtual machine (logs " + sysf("log/dconf-correzione/") + ", a few abbreviated), the last three from the code") + \
-    h4("Other lines new on this branch") + \
+    h4("Other lines new in this tree") + \
     table(["Area", "The line contains", "Means"], [
         [c("child"), "⛔ «user» passed PAM but the desktop cannot be born: <desktop> needs `labwc` and it is NOT installed on this server — the administrator must install the package `labwc` (it is only a Recommends, so `--no-install-recommends` leaves it out).  ⭐ The child is NOT spawned, it gets 0x0E",
          "XFCE or LXQt without " + c("labwc") + ", checked at every login (" + c("session_missing_component()") + " in " + c("main.c") + "). KDE does not need the distribution's labwc, so the check does not apply to it."],
@@ -408,7 +408,7 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
         [c("child"), "⭐ this end FOLLOWS THE SCALE REFUSAL (our own close), not a logout from the desktop menu", "Written before the «user logged out» line when the end of the session is our own close."],
         [c("child"), "⚠ no «stage refused» hook: the clients of «user» were NOT warned", "A defect of wiring: nobody was told; not expected in a release."],
         [c("startup"), "the desktop of this machine: <desktop> — several desktops are installed here, and this one is named by the display manager configuration of this machine («<session name>»)", "More than one desktop is installed; the name of the session the display manager offers decides (" + c("desktop_of_session_name()") + " knows " + c("xubuntu") + ", " + c("lubuntu") + ", " + c("kubuntu") + " and " + c("ubuntu") + " as well as the generic names)."],
-    ], "«TAB» — Other declarations of this branch (code of " + c("main.c") + ", " + c("child.c") + "; the first and the last were not seen in a recorded run)") + \
+    ], "«TAB» — Other declarations of this tree (code of " + c("main.c") + ", " + c("child.c") + "; the first and the last were not seen in a recorded run)") + \
     p("While running, the parent writes once a minute a cumulative line about the local-session guardian "
       "(" + c("guardian: calls=… worst_ms=… tenants=… loop_gaps=… worst_gap_ms=…") + ", period "
       + c("GUARDIAN_COUNT_MS") + " = 60,000 ms) instead of one line per two-second pass. At shutdown it sends the "

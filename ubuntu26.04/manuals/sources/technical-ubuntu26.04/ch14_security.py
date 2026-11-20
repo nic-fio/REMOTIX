@@ -215,7 +215,7 @@ S4 = p("The profile is " + c("debian/remotix_network.apparmor") + ", installed a
       + " rule, which enforce might need). The rules for " + sysf("/proc") + " are still marked «not tried» in the profile. The "
       "parser of Ubuntu (apparmor 5.0.2) compiles the profile without warnings, with and without an " + c("abi") + " line (study 5 §1.3, "
       + c("apparmor_parser -QTK -S") + " in a container); the profile has no " + c("abi") + " line. The header of the profile still describes "
-      "the state of 17 Nov 2026 on a Debian 13 virtual machine: it is a leftover of the earlier tree and does not describe this branch.") + \
+      "the state of 17 Nov 2026 on a Debian 13 virtual machine: it is a leftover of the earlier tree and does not describe this tree.") + \
     note("the lesson recorded in REGISTRO C4 for a new distribution: the containers do not test the security profile, so before closing a "
          "distribution there must be one successful login on a real or virtual machine with AppArmor in force, and the start-up line "
          "«§5.1 … CONNECTED» must be read in the log; after a change of kernel, Debian too is to be tried again.", "Lesson of C4.") + \
@@ -272,7 +272,7 @@ S5 = p("The rule is that a user with an active local graphical session gets a re
       "nothing about the account. Before, a login refused with " + c("0x0E") + " «still closing» could receive a false " + c("0x10")
       + " (seen on 18 Nov 2026 in a rejoin 8 to 10.5 s after the logout of a young session; comment in " + c("webtransport.c") + ").") + \
     p("<b>What else answers " + c("0x0E") + ".</b> The text the page shows for " + c("0x0E") + " is generic on purpose, because the byte "
-      "covers several different causes (a comment in " + c("page.html") + " lists them as six routes). Two are new on this branch: "
+      "covers several different causes (a comment in " + c("page.html") + " lists them as six routes). Two are new in this tree: "
       "the desktop's compositor is not installed (XFCE or LXQt without " + c("labwc") + ": the parent says it before spawning the child, in "
       + c("delivery_verdict()") + " through " + c("session_missing_component()") + "; no process, no logind session; the log names the "
       "package the administrator must install; " + rif("The four desktops side by side") + "), and the child's refusal of the stage "
@@ -579,7 +579,7 @@ S8 = p("The honest list, from the code and the decisions:", lead=True) + \
          "puts a POSIX ACL for the user's private group on " + c("/dev/dri/renderD*") + " and records it in "
          + c("/var/lib/remotix/render-grants") + "; " + c("remotix --drop-render-grants") + " takes it back. Both are "
          "necessary for the card, and both are changes to the system that an administrator should know about. The other things the "
-         "package puts on the machine, which this branch adds to the list: <b>the system dconf database</b> " + sysf("/etc/dconf/db/remotix")
+         "package puts on the machine, which this tree adds to the list: <b>the system dconf database</b> " + sysf("/etc/dconf/db/remotix")
          + " (compiled by the postinst, and again by the service at its start if it is missing or different; removed by the postrm at remove "
          "and purge); <b>the small user file</b> " + sysf("~/.config/dconf/remotix") + " (the keyboard layout of the remote session, three keys, "
          "emptied at every birth; removed at purge as the user, only that regular file, " + rif("GNOME: headless Shell and session dconf")

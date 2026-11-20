@@ -1,13 +1,13 @@
-"""Chapter 21 — Conventions (Ubuntu 26.04 branch). Sources: CLAUDE.md, and what is observed in src/ (log.h, log.c, rcp.h, session.h, cid.h, msgrate.h,
-Makefile), debian/, build/, prove/, boxes/, server/, docs/. Counts were retaken on this branch on 20 Nov 2026."""
+"""Chapter 21 — Conventions (Ubuntu 26.04 tree). Sources: CLAUDE.md, and what is observed in src/ (log.h, log.c, rcp.h, session.h, cid.h, msgrate.h,
+Makefile), debian/, build/, prove/, boxes/, server/, docs/. Counts were retaken in this tree on 20 Nov 2026."""
 from build import c, h4, note, p, rif, sysf, table, tip, ul, warn
 
 # ── 21.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("The rules that are written are in " + c("CLAUDE.md") + ", about a dozen lines of them. On this branch the file is the one of the Debian tree carried "
+S1 = p("The rules that are written are in " + c("CLAUDE.md") + ", about a dozen lines of them. In this tree the file is the one of the Debian tree carried "
        "over and not rewritten: its title, its first paragraph and its build lines are Debian's, and they are not repeated here as facts of this tree (they are listed in "
        + rif("Appendix C — Known issues and open points") + "). Everything else in this chapter is observed in the tree and said as an observation: where the code does not "
        "follow a rule, the chapter says so.", lead=True) + \
-    table(["Rule (from CLAUDE.md)", "In practice on this branch"], [
+    table(["Rule (from CLAUDE.md)", "In practice in this tree"], [
         ["one distribution per tree; four desktops; no distribution detection or per-distribution code (a future distribution gets its own, separate code)",
          "the tree is the separate copy for Ubuntu 26.04 and its four flavours. The product does read the machine for session names and the distribution's session; see " + rif("Where the code depends on the distribution")
          + " and " + rif("The one-distribution rule")],
@@ -20,9 +20,9 @@ S1 = p("The rules that are written are in " + c("CLAUDE.md") + ", about a dozen 
          c("debian/rules") + " passes " + c("--no-enable --no-start") + " to " + c("dh_installsystemd")],
         ["the owner decides how and when tests run", "the checks of " + c("prove/") + " are started by hand; nothing in the package or the build runs them"],
         ["licences ship in the package", c("LICENSE.md") + " is appended to " + c("debian/copyright") + " by " + c("build/build-deb.sh") + "; "
-         + c("THIRD-PARTY-LICENSES") + " is installed under " + sysf("/usr/share/doc/remotix") + ". On this branch both name our labwc (GPL-2, with two LGPL-2+ files) and wlroots (MIT), and "
+         + c("THIRD-PARTY-LICENSES") + " is installed under " + sysf("/usr/share/doc/remotix") + ". In this tree both name our labwc (GPL-2, with two LGPL-2+ files) and wlroots (MIT), and "
          "the corresponding source " + sysf("remotix-<version>-labwc-source.tar.gz") + " is published with each release; " + c("licenses/") + " does not ship"],
-        ["never compile or run heavy work on the CHUWI tablet; build and test on the dev server", "all the scripts assume the dev server's paths, " + sysf("/media/REMOTIX-UBUNTU") + " on this branch (" + rif("Testing") + ")"],
+        ["never compile or run heavy work on the CHUWI tablet; build and test on the dev server", "all the scripts assume the dev server's paths, " + sysf("/media/REMOTIX-UBUNTU") + " in this tree (" + rif("Testing") + ")"],
     ], "«TAB» — The written rules and what the tree does with them")
 
 # ── 21.2 ─────────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ S2 = p("The text of the product is English: comments, log lines, messages and th
         c("wt_chi") + " in the WebTransport module and " + c("codificatore_chiedi_chiave") + " in the encoder code.",
         "In the build and server scripts, output and folder names: " + sysf("costruzione.log") + ", " + sysf("immagine.log") + ", " + sysf("controlli.txt") + ", " + sysf("elenco.txt")
         + ", " + sysf("pacchetti/") + ", " + sysf("prove/") + ", " + c("prepara-server.sh") + ". " + c("fanwatch.py") + " is English.",
-        "New on this branch, all Italian names quoted as they are: the VM scripts " + c("server/vm-radeon.sh") + " (commands " + c("crea") + " create, " + c("accendi") + " switch on, " + c("spegni") + " switch off, "
+        "New in this tree, all Italian names quoted as they are: the VM scripts " + c("server/vm-radeon.sh") + " (commands " + c("crea") + " create, " + c("accendi") + " switch on, " + c("spegni") + " switch off, "
         + c("ssh") + ", " + c("stato") + " state, " + c("istantanea") + " snapshot, " + c("ripristina") + " restore, " + c("prova-avvio") + " start-up test), " + c("server/vm-radeon-aggiorna.sh") + " (update), "
         + c("server/vm-radeon-controllo.sh") + " (check), " + c("server/vm-radeon-installa.sh") + " (install), " + c("server/live-installa.sh") + " (installer for a live image); the folder of our labwc, "
         + c("build/labwc-ospite/") + " (<i>ospite</i> = guest, the labwc that hosts KWin); the bench variables " + c("RX_BANCO") + " (<i>banco</i> = bench), " + c("RX_TEMPO") + " (<i>tempo</i> = time factor), " + c("RX_BAN_ADDR") + ", "
@@ -77,7 +77,7 @@ S2 = p("The text of the product is English: comments, log lines, messages and th
 # ── 21.3 ─────────────────────────────────────────────────────────────────────
 S3 = p("The comments are long on purpose. A block comment states <b>why</b> a thing is the way it is, with the date, the source and the failure it prevents. "
        "The code is short next to its comments (105,799 lines of C and headers in " + c("src/") + " plus a page of 14,258 lines, most of it in a few large files: "
-       + c("child.c") + " 12,671 lines, " + c("rcp.c") + " 10,485, " + c("webtransport.c") + " 9,618, " + c("session.c") + " 8,829; counted with " + c("wc -l") + " on this branch on 20 Nov 2026).", lead=True) + \
+       + c("child.c") + " 12,671 lines, " + c("rcp.c") + " 10,485, " + c("webtransport.c") + " 9,618, " + c("session.c") + " 8,829; counted with " + c("wc -l") + " in this tree on 20 Nov 2026).", lead=True) + \
     table(["Mark", "Meaning as the sources use it"], [
         ["a star", "a decision or a point of emphasis, usually with a date and a reference to a decision register"],
         ["a prohibition sign", "a hard rule, or a consequence that must not be lost; in a log line it also sets the severity (below)"],
@@ -95,7 +95,7 @@ S3 = p("The comments are long on purpose. A block comment states <b>why</b> a th
         "Citing a section that has moved is the usual way a comment goes stale.",
         "<b>The decision register</b> uses three marks for certainty: decided, derived and open (the header of " + c("docs/DECISIONS.md") + "). A derived entry is corrected "
         "without discussion if wrong; a decided one is reopened only by a measurement that contradicts it.",
-        "<b>Measurements carry a date and a machine.</b> On this branch the " + c("[M]") + " marks added on 18 and 19 Nov 2026 name where the figure was taken (for example a Ubuntu 26.04 virtual machine "
+        "<b>Measurements carry a date and a machine.</b> In this tree the " + c("[M]") + " marks added on 18 and 19 Nov 2026 name where the figure was taken (for example a Ubuntu 26.04 virtual machine "
         "with its snaps, or the KDE test machine " + c("rx-kde") + "); a mark without a machine is not a figure to quote.",
         "<b>Comments are not always right.</b> The manual follows the rule that the code wins when the two disagree; the places where they were found to "
         "disagree are listed in " + rif("Appendix C — Known issues and open points") + ".",
@@ -109,7 +109,7 @@ S4 = p("The product is written to fail closed and to say so. The rules below are
         ["A failure is a no, never a maybe (invariant I3: the guard starts from denied).",
          "a login whose check request cannot be sent is refused at once, in " + c("rcp.h") + " (the " + c("ask_verify") + " hook returns false)"],
         ["A fallback or a degradation is declared in the log, so that an intended behaviour can be told from an accident.",
-         c("log.h") + " opens with the rule; the ambiguity of two desktops installed is picked and declared; the dconf model of this branch says \"DECLARED FALLBACK, D-015 (19 Nov 2026)\" when it goes back to the 1.0.0 behaviour"],
+         c("log.h") + " opens with the rule; the ambiguity of two desktops installed is picked and declared; the dconf model of this tree says \"DECLARED FALLBACK, D-015 (19 Nov 2026)\" when it goes back to the 1.0.0 behaviour"],
         ["What changes what the user sees is born off (invariant I6).", "the bench function is off by default; the budget knob is off by default (" + rif("Quality, degradation and budget") + ")"],
         ["Do not degrade whoever is inside to let someone in (invariant I1: never detach).", "when the budget is full the new session is refused with a reason; the first user is not slowed"],
         ["The session survives the client (invariant I4).", "a closed browser, a killed browser or a cut line leave the desktop running (" + rif("Startup and life cycle") + ")"],
@@ -144,7 +144,7 @@ S5 = p("Logging has one funnel, " + c("src/log.c") + ", so that rules about what
         "the modifiers, decided by " + c("log_speakable_key()") + ". A typed user name is not logged before the verdict (tested by " + c("typed-names-not-logged") + ").",
         "<b>Rate-limit what a client can trigger.</b> Lines that a hostile or broken client can cause repeatedly are written with a counter and an interval (see the burst line "
         "of " + c("webtransport.c") + " in the priority register).",
-        "<b>Say what, not \"error\".</b> A line names the thing that was not understood or that failed and, where there is one, the reason code. Two lines of this branch show it: the "
+        "<b>Say what, not \"error\".</b> A line names the thing that was not understood or that failed and, where there is one, the reason code. Two lines of this tree show it: the "
         "verdict that names the missing " + c("labwc") + " package in " + c("delivery_verdict()") + ", and the line of " + c("stage_refused_by_child()") + " that says the stage was refused for the scale and how many clients were sent away.",
     ])
 
@@ -175,7 +175,7 @@ S6 = p("The tree has a few fixed places and a few habits that follow from where 
 
 
 # ── 21.7 ─────────────────────────────────────────────────────────────────────
-S7 = p("A few conventions are new on this branch. They were not needed on Debian 13, and each comes from a failure of the Ubuntu port.", lead=True) + \
+S7 = p("A few conventions are new in this tree. They were not needed on Debian 13, and each comes from a failure of the Ubuntu port.", lead=True) + \
     table(["Convention", "Where it is visible", "Why"], [
         ["A check that cannot decide says so with its own verdict, never with a pass: <b>SKIP</b> (it cannot be done on this bench) and <b>NOTE</b> (a fact, not a verdict). A round in which nothing passed ends with "
          "\"NO CHECK PRODUCED A PASS\", and a round run with " + c("--only") + " says \"PARTIAL RUN\" and exits with 3.",
@@ -186,7 +186,7 @@ S7 = p("A few conventions are new on this branch. They were not needed on Debian
         ["A <code>deny</code> line of the AppArmor profile is written with the operations it means, and two stars where the name contains a slash.", c("debian/remotix_network.apparmor"),
          "register C4: a bare <code>deny unix addr=@*</code> forbade every socket on the Ubuntu kernel, in complain mode too"],
         ["A declared fallback is a log line that names the decision (for example D-015) and the date, so that a fallback can be told from an accident.", c("src/session.c"),
-         "the dconf model of this branch keeps the 1.0.0 behaviour as a fallback and says so"],
+         "the dconf model of this tree keeps the 1.0.0 behaviour as a fallback and says so"],
         ["A problem raised by a reviewer in the code carries a tag in the comment (for example N5, 19 Nov 2026) next to the date.", c("src/session.c"), "so that a later reader can find the finding in the register and the revision"],
         ["The bench has a name for each kind of machine (" + c("RX_BANCO=vm") + " for the virtual machines) and a factor for the slower ones (" + c("RX_TEMPO") + ", an integer, never zero and never a free text).",
          c("prove/all.sh") + ", " + c("prove/lib.py"), "a slower bench must not turn a deadline into \"no deadline\" by a wrong value"],

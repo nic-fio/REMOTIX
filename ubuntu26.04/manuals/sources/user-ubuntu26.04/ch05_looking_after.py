@@ -2,7 +2,7 @@
 Sources: debian/remotix.service, .conf, .tmpfiles, .sysusers, .postinst, .prerm, .postrm, debian/rules,
 src/main.c (options and defaults), src/child.c (group enrolment), src/render_grant.c, src/session.c,
 src/remotix-*.rules, debian/remotix_network.apparmor, docs/SPECS.md §4.1, §5.2, §5.4; the technical manual of this
-branch, chapters 12 (the GNOME settings model), 14, 15 and 24."""
+tree, chapters 12 (the GNOME settings model), 14, 15 and 24."""
 from build import c, note, p, rif, sysf, table, term, tree, ui, ul, warn
 
 S_SERVICE = p("REMOTIX is one systemd service called <b>remotix</b>. It is installed switched off and not started "

@@ -33,7 +33,7 @@ S1 = p("REMOTIX for Ubuntu 26.04 is one binary package, " + c("remotix") + ", bu
          + c("debian/remotix.postinst") + " (upgrade restart, “the desktops stay alive”), the one in " + c("debian/remotix.prerm")
          + " (why the sessions are closed first) and the one in " + c("debian/remotix.service") + " about " + c("KillMode")
          + ". Since 17 Nov 2026 (" + c("DECISIONS-11") + " §11.56) an orderly stop closes the desktops; those comments are "
-         "product text, to be corrected at the next build. A fifth statement of the same age is gone on this branch: the child no "
+         "product text, to be corrected at the next build. A fifth statement of the same age is gone in this tree: the child no "
          "longer passes " + c("--session-fd") + " to keep the logind session alive (" + c("DECISIONS-11") + " §11.55, with a note of "
          "18 Nov 2026: since systemd 258 logind holds the session by a pidfd of its leader; this tree has systemd 259). The leftovers are listed in "
          + rif("Appendix C — Known issues and open points") + ".", "Stale wording.")
@@ -148,7 +148,7 @@ S3 = p("The " + c("preinst") + " runs before the files are unpacked and has two 
     p("Verification on Ubuntu 26.04: " + c("check-package.py") + " has a " + c("preinst") + " check, which tries the refusal of a "
       "person's account only (it creates one with uid 1500 and a shell); it was not run for this manual and it is not part of the VM "
       "bench (" + rif("The package check") + "). The refusal without a card is in no check; it was not verified on Ubuntu 26.04. The "
-      "installation without a card was <b>not</b> tried on this branch either: the install logs of the four VMs list a render node.")
+      "installation without a card was <b>not</b> tried in this tree either: the install logs of the four VMs list a render node.")
 
 # ── 15.4 postinst ────────────────────────────────────────────────────────
 S4 = p("The " + c("postinst") + " does, on " + c("configure") + ", in this order, and never lets a failure make apt "
@@ -441,7 +441,7 @@ S6 = p("Removal has two scripts and two outcomes. " + c("apt remove") + " keeps 
       + c("page.html") + ", which is the program and not documentation.") + \
     p("<b>Verification on Ubuntu 26.04.</b> The four VMs and the live systems ran installation, restart and (for the three flavours installed from a clean state) the "
       "first start of the package, and the service came up active and enabled with " + c("remotix_network") + " loaded; the removal and the purge were <b>not</b> run by a check on this "
-      "branch. " + c("check-package.py") + " names its checks install, first-start, apparmor, remove, purge, reinstall, preinst, recommends and fresh-end, "
+      "tree. " + c("check-package.py") + " names its checks install, first-start, apparmor, remove, purge, reinstall, preinst, recommends and fresh-end, "
       "and compares snapshots of " + sysf("/etc") + ", " + sysf("/usr") + ", " + sysf("/var/lib") + " and " + sysf("/run") + ", of users, groups and unit files, before and after; "
       "it needs a box that can be reset, which a VM cannot (" + rif("The package check") + "), and no run of it on Ubuntu 26.04 is on record. The clean purge, with the two "
       "new removals of 19 Nov 2026, is therefore a reading of the script, not a measurement. The AppArmor check is BLOCKED in containers, which have no AppArmor interface.")

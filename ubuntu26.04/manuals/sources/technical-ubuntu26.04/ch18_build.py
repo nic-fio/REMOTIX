@@ -65,7 +65,7 @@ S1 = p("REMOTIX is never built on the host. " + c("build/build-deb.sh") + " buil
 
 # ── 18.2 ─────────────────────────────────────────────────────────────────────
 S2 = p("Ubuntu 26.04 packages ngtcp2 1.16.0 and nghttp3 1.12.0, both in " + c("universe") + " (the report " + c("studio/8-pacchetto-e-prove.md") + ", read from " + c("apt-cache") + "; not re-measured for this manual). The comment in " + c("src/Makefile")
-       + " still gives the figures of Debian (1.11 and 1.8), which is wrong for this branch and is a comment of the source, not of the manual. Either set is too old: the product needs ngtcp2 "
+       + " still gives the figures of Debian (1.11 and 1.8), which is wrong for this tree and is a comment of the source, not of the manual. Either set is too old: the product needs ngtcp2 "
        "at least 1.25 with the " + c("ngtcp2_crypto_ossl") + " bridge (the " + c("NGTCP2_STREAM_CLOSE2_FLAG_*") + " flags used by "
        + c("transport.c") + ") and OpenSSL at least 3.5 for the native QUIC API (Ubuntu 26.04 has 3.5.5: " + c("make deps") + " printed " + c("openssl 3.5.5 (>= 3.5.0)") + " in the build of the release package). So the image builds the two libraries from source, "
        "pinned at one version, and installs only the static archives.", lead=True) + \
