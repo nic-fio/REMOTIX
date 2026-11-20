@@ -134,8 +134,8 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (ports 8811 to 88
          "first leaves"],
         [c("check-desktop.py") + " (2500 s)",
          c("power-entries-absent") + ", " + c("no-password-windows") + ", " + c("users-shell-and-environment") + ", "
-         + c("settings-intact") + ", " + c("canvas-limits") + ", " + c("reattach-windows-inside") + ", " + c("session-cap"),
-         "power actions refused by logind and polkit (15 login1 actions) and the box stays up; no polkit password window and no "
+         + c("settings-intact") + ", " + c("canvas-limits") + ", " + c("reattach-windows-inside") + ", " + c("session-cap") + ", " + c("power-implied"),
+         "power actions refused by logind and polkit (15 login1 actions asked, 19 forbidden by the rule) and the box stays up; no polkit password window and no "
          "keyring prompt; the shell and environment of a local login; the user's own settings intact after use and Log Out (file "
          "writes watched with fanotify); canvases from 200x150 to 5120x2880 (multiple of 16, 320x240 to 4096x2304); a window "
          "born in a large canvas is inside after a reattach; with " + c("--session-cap 2") + " the third user is refused"],

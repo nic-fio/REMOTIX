@@ -340,8 +340,14 @@ S6 = p("A REMOTIX session has no seat, so polkit gives it the answer meant for a
         "has " + c("CAP_SYS_BOOT") + ", so " + c("sudo systemctl poweroff") + " keeps working. The consequence for "
         "testing is that the rule cannot be checked from the root side: it must be checked as the user, from inside "
         "the session. " + c("check-desktop.py") + " does that: logind's " + c("CanPowerOff") + " and its siblings "
-        "answer no, " + c("pkcheck") + " refuses the 15 actions, and a real " + c("systemctl poweroff") + " as the "
-        "user fails (check " + c("power-entries-absent") + ").",
+        "answer no, " + c("pkcheck") + " refuses the 15 actions it is asked about, and a real " + c("systemctl poweroff") + " as the "
+        "user fails (check " + c("power-entries-absent") + "). <b>The rule forbids 19 actions, not 15:</b> four more, "
+        + c("set-reboot-parameter") + ", " + c("set-reboot-to-firmware-setup") + ", " + c("set-reboot-to-boot-loader-menu") + " and "
+        + c("set-reboot-to-boot-loader-entry") + ", carry the annotation " + c("org.freedesktop.policykit.imply") + " = "
+        + c("reboot") + " and are allowed for the user seated at the machine, so polkit granted " + c("reboot") + " by implication "
+        "despite the rule's explicit NO (an explicit NO is not enough against an implication) (found 20 November 2026; in 1.0.0 a local user could restart the machine when alone on it). "
+        "The check " + c("power-implied") + " reads the installed rule and every policy file of the machine and fails if an action "
+        "left alone implies, even through a chain, a forbidden one.",
         "<b>How the second rule recognises a REMOTIX session.</b> Not from the subject's fields (" + c("local")
         + " and " + c("seat") + " are the same for ssh, and the programs that ask run under the user manager's service, where polkit hands the rule no session) but by " + c("remotix-polkit-seated") + ", a shell script that "
         "reads logind's state files in " + c("/run/systemd/sessions") + " for a session of that user with "

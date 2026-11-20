@@ -601,7 +601,7 @@ symptom, find the step, and look at **who** had to do it. ⛔ Never start from t
 | A1 | the **user exists** and has a password | provisioning | PAM refuses: «wrong user or password» — and the diagnosis points at the password |
 | A2 | ⛔ the user is in the groups **`video`** and **`render`** | provisioning | ⚠ **the symptom is «slow», not «broken»**: without a seat the `uaccess` ACLs do not arrive, Mesa falls back to **llvmpipe** and the compositor draws in software: even a command in the terminal answers with a visible delay |
 | A3 | `/etc/pam.d/remotix` exists **and calls `pam_systemd`** | provisioning | no logind session ⇒ the compositor **does not start at all** (see B3) |
-| A4 | the **polkit** rule (12 actions) and `logind.conf` | provisioning | a remote user can shut down the machine and take it away from everyone (`DECISIONS.md` §4.7) |
+| A4 | the **polkit** rule (19 actions: 12 at first, 15 on 17 Nov 2026, 19 on 20 Nov 2026 when the four `set-reboot-*` that imply `reboot` were added) and `logind.conf` | provisioning | a remote user can shut down the machine and take it away from everyone (`DECISIONS.md` §4.7) |
 | A5 | the **udev** rule for the graphics card | provisioning | the compositor picks the GPU **at random**; the measurements apply to that hardware and not to the product (§4.6-quinquies) |
 | A6 | ⛔ **the server does NOT run inside a user session** | whoever starts the service | `pam_systemd`, if the caller is already in a session, **does not create a second one and does not say so**: the children are left without runtime, without bus and without desktop. ⚠ In production it does not happen (system unit); **it happens only in testing**, that is where we study |
 

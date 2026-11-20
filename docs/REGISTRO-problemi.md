@@ -122,6 +122,46 @@ Le voci aperte stanno in fondo.
 
 ---
 
+### C4. «Nessuno spegne la macchina»: il riavvio restava possibile all'utente seduto al computer (20 nov 2026)
+- **Quando:** trovato dal proprietario il 20 nov 2026 sul proprio tablet Debian, davanti alla macchina: «come mai sembra
+  che posso spegnere?».
+- **Che cosa è successo:** la regola `50-remotix-no-poweroff.rules` vietava 15 azioni di logind e il giro di prove
+  confermava «spegnere no, riavviare no». Ma l'utente locale, davanti alla macchina, otteneva «sì» al riavvio
+  (`CanPowerOff` no, `CanReboot` yes; `pkcheck` autorizzava `reboot`). Il manuale dichiarava «nessuno».
+- **Causa:** nella policy di logind quattro azioni NON vietate (`set-reboot-parameter`, `set-reboot-to-firmware-setup`,
+  `set-reboot-to-boot-loader-menu`, `set-reboot-to-boot-loader-entry`) portano l'annotazione
+  `org.freedesktop.policykit.imply` = `reboot` e il permesso «sì» per l'utente attivo seduto alla macchina: chi è
+  autorizzato per una di esse lo è anche per `reboot`, e polkit lo concede per implicazione NONOSTANTE il NO
+  della nostra regola su `reboot` (un NO esplicito non basta contro un'implicazione di un'azione autorizzata). Le quattro azioni sono ora vietate (19 in tutto).
+- **Perché non si era visto:** il giro guardava solo la sessione REMOTA (`power-entries-absent`: logind e `pkcheck` dal
+  desktop remoto, che non è «seduto alla macchina», quindi il «sì» per l'utente attivo non vale) e solo le 15 azioni che
+  conoscevamo per nome; le implicazioni della policy non erano mai state lette. Una prova fatta dal posto sbagliato
+  dice sempre quello che ci si aspetta.
+- **Gravità, onesta (caso schermata di accesso, MISURATO il 20 nov 2026 su Ubuntu 26.04 GNOME, VM, regola vecchia):** l'utente della
+  schermata di accesso (greeter) è «attivo e locale»: `pkcheck` da un suo processo CONCEDEVA `reboot` (e nient'altro fra le
+  15: spegnere e le altre forme restavano negate). Quindi con nessuno collegato chi sta davanti alla macchina poteva
+  riavviare dal menu della schermata di accesso senza accedere. Con la regola nuova: tutte e 19 negate. Su Debian 13 non misurato: dedotto dallo stesso meccanismo.
+  Nota di metodo: il «Leader» della sessione del greeter è un processo di ROOT, e polkit autorizza root senza condizioni
+  (il primo giro del controllo vedeva tutte le azioni concesse): `power-local-seat` prende un processo dell'utente del
+  greeter, non di root. Per lo stesso motivo `pkcheck` per root non prova nulla, e `sudo systemctl reboot` resta possibile.
+- **Gravità, onesta:** con altri utenti collegati logind chiede `reboot-multiple-sessions`, che era ed è negata. Il buco
+  permetteva quindi il riavvio solo a un utente locale, e solo quando era l'unico sulla macchina. Non permetteva di
+  spegnere. Il manuale però diceva «nessuno».
+- **Soluzione:** quattro azioni in più nella regola; nuovo controllo `power-implied` in `prove/check-desktop.py`: legge la
+  regola installata e TUTTI i file `*.policy` della macchina, costruisce le implicazioni (anche a catena) e fallisce se
+  un'azione non vietata ne implica una vietata.
+- **Provato su Debian 13 (20 nov 2026, tablet del proprietario, pacchetto ricostruito `1.0.0-1+deb13` con la regola a 19
+  azioni, installato con `apt install --reinstall`):** da un processo dell'utente locale nella sua sessione attiva `pkcheck`
+  nega `reboot`, `power-off`, `halt`, `suspend` e le quattro `set-reboot-*`; taratura: `chvt` concessa. logind risponde «no» a
+  `CanReboot`, `CanPowerOff`, `CanHalt`, `CanRebootToFirmwareSetup` (prima della correzione `CanReboot` era «yes»). Non
+  provato su Debian: il caso della schermata di accesso. Il pacchetto corretto di Debian non è ancora pubblicato.
+- **Su una distribuzione nuova:** (1) una regola che vieta azioni va controllata anche contro le IMPLICAZIONI della
+  policy, e dal posto dell'utente LOCALE (seduto), oltre che da quello remoto; (2) farlo girare `power-implied` con la
+  versione di systemd della distribuzione (le azioni `set-reboot-*` e le loro implicazioni cambiano fra versioni);
+  (3) provare a mano `pkcheck --action-id org.freedesktop.login1.reboot` dalla sessione locale.
+
+---
+
 ## D. Comportamenti dei desktop da ricordare
 
 - **XFCE** rifiuta un'uscita chiesta mentre si sta ancora avviando («deve essere a riposo»): REMOTIX in quel caso

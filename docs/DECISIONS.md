@@ -7143,6 +7143,11 @@ labwc che ce lo analizziamo e compiliamo da soli»*.
   disappear from the menus of the desktops, `systemctl poweroff` is refused). For local users too: the machine is
   shared. **Root keeps it**: logind checks `CAP_SYS_BOOT` before polkit, so `sudo systemctl poweroff` and
   `sudo systemctl reboot` work as always (`[M]` 15 Aug 2026, §4.7).
+  - **Update 20 Nov 2026** (the text above is history: twelve, then fifteen on 17 Nov): the rule now forbids **nineteen**
+    actions. The four `set-reboot-parameter` / `-to-firmware-setup` / `-to-boot-loader-menu` / `-to-boot-loader-entry`
+    carry `org.freedesktop.policykit.imply` = `reboot` and default `yes` for the seated user, so polkit granted
+    `reboot` to the local user DESPITE the rule's explicit NO (an explicit NO is not enough against an implication) (found by the owner; the owner's decision: «è un bug e va
+    corretto», version stays 1.0.0). Check `power-implied` in `prove/check-desktop.py`; `docs/REGISTRO-problemi.md`.
 - **What stays the administrator's choice**: the other two belts of §4.7 (`remotix-no-suspend.conf`, no suspend
   at all even for root; `remotix-power-keys.conf`, the power keys) stay switched off in `/usr/share/remotix/belts/`.
 - **§10.49's filter is withdrawn** (complexity = vulnerability): some 500 lines of C between every desktop and the

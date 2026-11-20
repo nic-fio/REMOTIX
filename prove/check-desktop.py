@@ -12,9 +12,17 @@ session's logind scope and with the environment of the desktop's panel (deskkit.
 desktop's own programs would be seen as.
 
   power-entries-absent         (5.9 A4, 11.3) logind CanPowerOff/CanReboot/CanHalt/CanSuspend/CanHibernate/CanHybridSleep as the user
-                               say no; polkit (pkcheck) refuses the 15 login1 power actions; real `systemctl poweroff|reboot|halt|
+                               say no; polkit (pkcheck) refuses the 15 login1 power actions it is asked about
+                               (what it does NOT see: power-implied, power-local-seat); real `systemctl poweroff|reboot|halt|
                                suspend|hibernate|hybrid-sleep` attempts are refused and the box stays up; the desktop's own belts
                                (LXQt's lxqt-leave, XFCE's whisker buttons, GNOME's lock); a photo of the desktop's exit menu
+  power-implied                (20 Nov 2026) reads the INSTALLED rule 50-remotix-no-poweroff.rules and ALL polkit policy files of the box
+                               (no session needed, no python3 needed in the box: the files are brought out with cat); FAIL if an action
+                               NOT forbidden IMPLIES (annotation org.freedesktop.policykit.imply, also by chain) a forbidden one: polkit
+                               would grant the forbidden action despite the rule's explicit NO (the set-reboot-* -> reboot hole)
+  power-local-seat             (20 Nov 2026) from ROOT, no REMOTIX session: pkcheck, as the process of the greeter (the active session on
+                               seat0 = the user at the machine), of EVERY forbidden action: all must be refused; calibrated against
+                               login1.chvt, which must be GRANTED. No greeter (containers) = BLOCKED
   no-password-windows          (1.5.3) the system bus is watched for any polkit BeginAuthentication (= a password window) and the
                                user's bus for keyring/wallet prompts, from the login to 60 s after the desktop settled, with the file
                                manager and a terminal opened; pictures after each step
@@ -50,7 +58,7 @@ from lib import PASS, FAIL, BLOCKED, Fail, ToolError  # noqa: E402
 
 PW = "dkpass2026"
 NAMES = ("power-entries-absent", "no-password-windows", "users-shell-and-environment", "settings-intact", "canvas-limits",
-         "reattach-windows-inside", "session-cap")
+         "reattach-windows-inside", "session-cap", "power-implied", "power-local-seat")
 TERMINAL = {"xfce": "xfce4-terminal", "lxqt": "qterminal", "gnome": "gnome-terminal", "kde": "konsole"}
 FILEMGR = {"xfce": "thunar", "lxqt": "pcmanfm-qt", "gnome": "nautilus", "kde": "dolphin"}
 SHELLS = ("bash", "sh", "dash", "zsh", "fish")
@@ -873,6 +881,145 @@ def check_cap(rig, de, a):
     return (FAIL, "; ".join(bad) + " -- " + ev) if bad else (PASS, ev)
 
 
+# ------------------------------------------------------------------------------------------------- 1b. power actions implied
+RULES_INSTALLED = "/usr/share/polkit-1/rules.d/50-remotix-no-poweroff.rules"
+IMPLY_KEY = "org.freedesktop.policykit.imply"
+READ_POLICY_SCRIPT = ("echo; echo \"@@FILE %s\"; cat %s 2>&1; for f in /usr/share/polkit-1/actions/*.policy; do echo; echo \"@@FILE $f\"; cat \"$f\"; done"
+                      % (RULES_INSTALLED, RULES_INSTALLED))
+
+
+def forbidden_actions(rules_text):
+    """The "org.freedesktop.login1.*" strings of the rule file (comments removed)."""
+    code = re.sub(r"/\*.*?\*/", "", rules_text, flags=re.S)
+    code = re.sub(r"//[^\n]*", "", code)
+    return set(re.findall(r'"(org\.freedesktop\.login1\.[A-Za-z0-9._-]+)"', code))
+
+
+def implication_graph(policies):
+    """{action: set(actions it implies)} from the texts of the .policy files ({name: xml text}). A implies B = whoever is
+    authorised for A is authorised for B."""
+    g = {}
+    for name, text in policies.items():
+        root = ET.fromstring(text)
+        for act in root.iter("action"):
+            aid = act.get("id")
+            g.setdefault(aid, set())
+            for an in act.iter("annotate"):
+                if an.get("key") == IMPLY_KEY and an.text:
+                    g[aid].update(an.text.split())
+    return g
+
+
+def implied_holes(forbidden, g):
+    """[(A, B)]: A NOT forbidden, B forbidden, B reachable from A through the implications (transitive closure)."""
+    holes = []
+    for a in sorted(g):
+        if a in forbidden:
+            continue
+        seen, todo = set(), list(g[a])
+        while todo:
+            x = todo.pop()
+            if x in seen:
+                continue
+            seen.add(x)
+            todo.extend(g.get(x, ()))
+        holes.extend((a, b) for b in sorted(seen & forbidden))
+    return holes
+
+
+def analyse_power_implied(rules_text, policies):
+    """(holes, number of forbidden actions, number of policy files)."""
+    forb = forbidden_actions(rules_text)
+    if not forb:
+        raise ToolError("no org.freedesktop.login1 action found in the rule file")
+    return implied_holes(forb, implication_graph(policies)), len(forb), len(policies)
+
+
+def split_files(text):
+    out, cur = {}, None
+    for line in text.splitlines(keepends=True):
+        if line.startswith("@@FILE "):
+            cur = line[7:].strip()
+            out[cur] = ""
+        elif cur is not None:
+            out[cur] += line
+    return out
+
+
+SEAT_SCRIPT = r"""
+for s in $(loginctl list-sessions --no-legend | awk '{print $1}'); do
+  loginctl show-session $s -p Id -p Seat -p Active -p Leader -p Class -p Name | tr '\n' ' '; echo; done | sed 's/^/@@S /'
+"""
+
+
+def greeter_leader(t):
+    """(session id, leader pid) of the ACTIVE session on seat0, or (None, why)."""
+    for l in t.splitlines():
+        if not l.startswith("@@S "):
+            continue
+        kv = dict(x.split("=", 1) for x in l[4:].split() if "=" in x)
+        if kv.get("Seat") == "seat0" and kv.get("Active") == "yes" and kv.get("Leader", "0") not in ("", "0"):
+            return kv.get("Id"), kv["Leader"], kv
+    return None, "no ACTIVE session on seat0 (no greeter or no seat in this machine): the check cannot look", {}
+
+
+def check_power_local_seat(rig, de):
+    box = rig.box
+    c, t = box.run(SEAT_SCRIPT, timeout=60)
+    sid, leader, kv = greeter_leader(t)
+    if sid is None:
+        raise ToolError(leader)
+    # The Leader of a greeter session can be a ROOT process (GDM's session worker): polkit authorises root unconditionally, which would
+    # make every action look granted. Take a process of the session that belongs to the session's user (not root) instead.
+    c, t = box.run("cg=$(systemctl show -p ControlGroup --value $(loginctl show-session %s -p Scope --value)); "
+                   "u=$(loginctl show-session %s -p User --value); "
+                   "for p in $(find /sys/fs/cgroup$cg -name cgroup.procs -exec cat {} + 2>/dev/null); do "
+                   "[ \"$(stat -c %%u /proc/$p 2>/dev/null)\" = \"$u\" ] && [ \"$u\" != 0 ] && { echo \"@@P $p $u\"; break; }; done" % (sid, sid), timeout=30)
+    pp = [l.split() for l in t.splitlines() if l.startswith("@@P ")]
+    if not pp:
+        raise ToolError("the active session %s of seat0 has no process of a non-root user (polkit authorises root unconditionally, so the "
+                        "check cannot look); session: %s" % (sid, " ".join("%s=%s" % i for i in sorted(kv.items()))))
+    leader = pp[0][1]
+    kv["ProcessUid"] = pp[0][2]
+    c, t = box.run("cat %s" % RULES_INSTALLED)
+    forb = sorted(forbidden_actions(t))
+    if not forb or "polkit.addRule" not in t:
+        raise ToolError("could not read the installed rule: %s" % t[:120])
+    script = "for a in %s org.freedesktop.login1.chvt; do pkcheck --action-id $a --process %s >/dev/null 2>&1; echo \"@@pk $a=$?\"; done" % (
+        " ".join(forb), leader)
+    c, t = box.run(script, timeout=120)
+    pk = {x.split("=")[0]: int(x.split("=")[1]) for x in sec_lines(t, "@@pk") if re.match(r".*=\d+$", x)}
+    chvt = pk.pop("org.freedesktop.login1.chvt", None)
+    if chvt != 0:
+        raise ToolError("the seat is not the right one: login1.chvt (granted to the active local user by default) gave rc=%s for session %s "
+                        "leader %s (%s)" % (chvt, sid, leader, " ".join("%s=%s" % i for i in sorted(kv.items()))))
+    missing = [a for a in forb if a not in pk]
+    if missing:
+        raise ToolError("pkcheck gave no answer for: %s" % ", ".join(missing))
+    granted = sorted(a.replace("org.freedesktop.login1.", "") for a, r in pk.items() if r == 0)
+    other = sorted("%s rc=%d" % (a.replace("org.freedesktop.login1.", ""), r) for a, r in pk.items() if r not in (0, 1))
+    if granted:
+        raise Fail("from the seat's active session %s (process %s) polkit GRANTS: %s" % (sid, leader, ", ".join(granted)))
+    return PASS, "from the active session of seat0 (%s, process %s) all %d forbidden actions are refused%s; calibration: chvt granted" % (
+        sid, leader, len(forb), ("; not rc=1: " + ", ".join(other)) if other else "")
+
+
+def check_power_implied(rig, de):
+    c, t = rig.box.run(READ_POLICY_SCRIPT, timeout=120)
+    files = split_files(t)
+    rules = files.pop(RULES_INSTALLED, "")
+    if "<action" not in "".join(files.values()) or "polkit.addRule" not in rules:
+        raise ToolError("could not read the rule or the policy files in the box: %s" % t[:160].replace("\n", " "))
+    try:
+        holes, nforb, nfiles = analyse_power_implied(rules, files)
+    except ET.ParseError as e:
+        raise ToolError("a policy file is not readable as XML: %s" % e)
+    if holes:
+        raise Fail("actions NOT forbidden that imply a forbidden one (polkit grants the forbidden action despite the rule's NO): %s" %
+                   ", ".join("%s -> %s" % (a.replace("org.freedesktop.", ""), b.replace("org.freedesktop.", "")) for a, b in holes))
+    return PASS, "%d forbidden actions in %s; %d policy files read; no action left alone implies a forbidden one" % (nforb, RULES_INSTALLED, nfiles)
+
+
 # ------------------------------------------------------------------------------------------------------------------ main
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -932,6 +1079,10 @@ def main():
             if rig.g:
                 rig.g.close()
                 rig.g = None
+        if "power-implied" in want:
+            res.attempt("power-implied", lambda: check_power_implied(rig, de))
+        if "power-local-seat" in want:
+            res.attempt("power-local-seat", lambda: check_power_local_seat(rig, de))
         rig.user = "dkf"
         if "settings-intact" in want:
             res.attempt("settings-intact", lambda: check_settings(rig, de, a))

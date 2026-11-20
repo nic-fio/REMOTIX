@@ -41,10 +41,22 @@
  * (`prove/check-desktop.py`, `power-entries-absent`).  ⇒ Fifteen actions now.
  * The other login1 actions of trixie are not about stopping the machine and
  * are left alone (attach-device, chvt, flush-devices, inhibit-*, lock-sessions,
- * manage, set-self-linger, set-user-linger, set-wall-message,
- * set-reboot-parameter, set-reboot-to-*: they only prepare or annotate a boot,
- * they do not power anything off).  Hybrid-sleep and suspend-then-hibernate have
- * no action of their own: logind asks for `suspend*` / `hibernate*`.
+ * manage, set-self-linger, set-user-linger, set-wall-message).  Hybrid-sleep
+ * and suspend-then-hibernate have no action of their own: logind asks for
+ * `suspend*` / `hibernate*`.
+ *
+ * ⛔ CORRECTED, 20 November 2026 — the four `set-reboot-*` actions are NOT
+ * harmless, and they are forbidden too (nineteen actions now).  In logind's
+ * policy each of them carries `org.freedesktop.policykit.imply` =
+ * `org.freedesktop.login1.reboot`: whoever is authorised for one of them is
+ * authorised for `reboot` DESPITE this rule's explicit NO on `reboot` (an explicit NO
+ * is not enough against an implication from an authorised action).  Their
+ * default is "yes" for the user sitting at the machine ⇒ `[M]` on Debian 13
+ * with 1.0.0 the local user got CanPowerOff "no" and CanReboot "yes" (found by
+ * the owner on his own machine; `pkcheck` said the same).  ⚠ An action that
+ * only "prepares" a boot is a way in if the policy says it IMPLIES one of
+ * ours: `prove/check-desktop.py` (`power-implied`) reads the policy files and
+ * fails if an action left alone implies a forbidden one.
  *
  * ---------------------------------------------------------------------------
  * ⭐ ROOT NEEDS NO EXCEPTION, and it was MEASURED
@@ -81,6 +93,10 @@ polkit.addRule(function (action, subject) {
         "org.freedesktop.login1.reboot",
         "org.freedesktop.login1.reboot-multiple-sessions",
         "org.freedesktop.login1.reboot-ignore-inhibit",
+        "org.freedesktop.login1.set-reboot-parameter",
+        "org.freedesktop.login1.set-reboot-to-firmware-setup",
+        "org.freedesktop.login1.set-reboot-to-boot-loader-menu",
+        "org.freedesktop.login1.set-reboot-to-boot-loader-entry",
         "org.freedesktop.login1.halt",
         "org.freedesktop.login1.halt-multiple-sessions",
         "org.freedesktop.login1.halt-ignore-inhibit",
