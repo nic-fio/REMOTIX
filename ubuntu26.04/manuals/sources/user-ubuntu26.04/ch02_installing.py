@@ -5,7 +5,7 @@ chapter 15 (the package) and 24 (what was and was not verified)."""
 from build import c, note, p, rif, steps, sysf, table, term, ui, ul, warn
 
 S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. There is no installer program. These "
-             "are the steps; the commands are in the sections below. REMOTIX 1.0.0 is for Ubuntu 26.04 (Ubuntu, Kubuntu, Xubuntu, Lubuntu).", lead=True) + \
+             "are the steps; the commands are in the sections below. REMOTIX 1.0.1 is for Ubuntu 26.04 (Ubuntu, Kubuntu, Xubuntu, Lubuntu).", lead=True) + \
     steps([
         "<b>Check the machine</b>: Ubuntu 26.04 with one of the four desktops installed, a video card that "
         "encodes (see " + rif("What you need") + "), the <i>universe</i> part of the archive switched on, and a way "
@@ -24,9 +24,9 @@ S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. Th
       "(see " + rif("Users, groups and what REMOTIX changes") + ").")
 
 S_DEB_INSTALL = p("This section is for <b>Ubuntu 26.04</b>. The package is a single file named like "
-                  + c("remotix_1.0.0-1+ubuntu26.04_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
+                  + c("remotix_1.0.1-1+ubuntu26.04_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
                   "an ordinary PC). Put it on the machine and, in the folder where it is, run:", lead=True) + \
-    term("$ sudo apt install ./remotix_1.0.0-1+ubuntu26.04_amd64.deb\n"
+    term("$ sudo apt install ./remotix_1.0.1-1+ubuntu26.04_amd64.deb\n"
          "$ sudo systemctl enable --now remotix\n"
          "$ systemctl status remotix", "Install and start") + \
     p("The first command installs REMOTIX and what it needs. The second makes the service start with the machine "
@@ -35,7 +35,7 @@ S_DEB_INSTALL = p("This section is for <b>Ubuntu 26.04</b>. The package is a sin
       "Use <b>apt install</b> and not <i>dpkg -i</i>: apt reads from the package what REMOTIX needs and installs it "
       "from Ubuntu's archive, while dpkg fetches nothing and leaves the installation incomplete. If you install the "
       "same version again over itself (for example a package rebuilt with the same number), use "
-      + c("sudo apt install --reinstall ./remotix_1.0.0-1+ubuntu26.04_amd64.deb") + ".") + \
+      + c("sudo apt install --reinstall ./remotix_1.0.1-1+ubuntu26.04_amd64.deb") + ".") + \
     p("<b>What apt brings along.</b> Besides REMOTIX's own files, apt installs what REMOTIX needs to run and the "
       "things it recommends:") + \
     table(["Kind", "Packages", "Why"], [

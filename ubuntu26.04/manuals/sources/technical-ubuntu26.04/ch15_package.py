@@ -8,7 +8,7 @@ S1 = p("REMOTIX for Ubuntu 26.04 is one binary package, " + c("remotix") + ", bu
        "the package's own labwc, is in "
        + rif("Build and release") + ". The package is " + c("Architecture: any") + ": the binary is compiled for the "
        "machine, and the walls of the network side exist only for x86_64 and aarch64 (" + rif("Security model") + "). "
-       "The version of the file is " + c("1.0.0-1+ubuntu26.04") + " and the changelog names the suite " + c("resolute")
+       "The version of the file is " + c("1.0.1-1+ubuntu26.04") + " and the changelog names the suite " + c("resolute")
        + " (" + rif("Version and release") + ").",
        lead=True) + \
     p("The package changes the machine as little as possible, and says so in the maintainer scripts. It creates one "
@@ -464,11 +464,11 @@ S7 = p("The package installs the service disabled and does not start it. The adm
     ], "«TAB» — The package and the service") + \
     h4("Installing as the administrator does") + \
     p("The administrator's way is two commands, and it is the one the bench follows (" + c("server/vm-radeon-installa.sh") + "):") + \
-    code("sudo apt install ./remotix_1.0.0-1+ubuntu26.04_amd64.deb\nsudo systemctl enable --now remotix", "bash", "Install and start") + \
+    code("sudo apt install ./remotix_1.0.1-1+ubuntu26.04_amd64.deb\nsudo systemctl enable --now remotix", "bash", "Install and start") + \
     p("The same version installed over an earlier build of itself is not a change for apt, which then does nothing; " + c("apt install --reinstall ./remotix_*.deb")
       + " replaces the files (it is what " + c("prove/banco-vm/box.sh install") + ", " + c("server/live-installa.sh") + " and " + c("server/vm-radeon-installa.sh")
       + " run, so that a package rebuilt with the same version number is really installed). A reinstall runs the maintainer scripts as an upgrade would: "
-      "the service is restarted if it was running, and the encoding test of the " + c("postinst") + " is not repeated. On the release run the line of apt was "
+      "the service is restarted if it was running, and the encoding test of the " + c("postinst") + " is not repeated. On the run of the 1.0.0 release the line of apt was "
       + c("Unpacking remotix (1.0.0-1+ubuntu26.04) over (1.0.0-1+ubuntu26.04)…") + " followed by " + c("Setting up remotix (1.0.0-1+ubuntu26.04)…") + ".") + \
     h4("needrestart") + \
     p("On Ubuntu, " + c("needrestart") + " (run by apt after an upgrade, by " + c("unattended-upgrades") + " or by hand) restarts a service that uses a library that has just "

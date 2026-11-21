@@ -3,13 +3,15 @@ from build import c, note, p, rif, table, ul, warn
 def items(rows, cap):
     return table(["Item", "State"], rows, cap)
 
-S_INTRO = p("This appendix lists what is known to be open, unverified or inconsistent in 1.0.0, area by area. It is "
+S_INTRO = p("This appendix lists what is known to be open, unverified or inconsistent in 1.0.1, area by area. It is "
             "meant to be complete rather than flattering. An item is here because a source file, a check or "
             "<code>PIANO.md</code> says so; where something was read only in a comment and not observed, it is said. "
             "The last two sections list the places where code, comments and documents disagree: in every case the code "
             "was taken as the truth and the chapters describe the code.", lead=True) + \
     note("The package has been run through <code>prove/all.sh</code> on four desktops on 17 Nov 2026 (see the chapter on "
-         "testing). Nothing in this appendix is a failure of that run unless it is stated so.", "Scope.")
+         "testing), on the code of 1.0.0. Release 1.0.1 changed only the choice of key positions in <code>keyboard.c</code> and the Keyboard menu of the page; "
+         "the key-position change was compared with the old rule on 98 layouts, and no full round of <code>prove/all.sh</code> on 1.0.1 is recorded in the sources read for this manual. "
+         "Nothing in this appendix is a failure of that run unless it is stated so.", "Scope.")
 
 S_UNVERIFIED = items([
     ["AppArmor in a session", "The profile <code>remotix_network</code> is in complain mode. It was loaded on a Debian 13 VM "
@@ -103,7 +105,7 @@ S_PAGE = items([
     ["Ctrl+Alt+Del button", "Hidden unless <code>?logbook</code> is in the address; Ctrl+Alt+End was removed. SPECS §7.3-bis and §5.2-bis still require them, so <code>page-cad-button</code> and <code>page-ctrl-alt-end</code> fail. "
      "<code>run_logout()</code> exists but nothing calls <code>logout_show(true)</code>."],
     ["Firefox", "The video worker is the default on desktop Firefox without an isolated live proof. The Firefox clipboard checks pass in the final run although PIANO's first status lists the item as open."],
-    ["Keyboard layout and zoom", "No user-selectable keyboard layout (<code>navigator.language</code> is only a hint); a change of <code>devicePixelRatio</code> (page zoom) is not handled."],
+    ["Keyboard layout and zoom", "The sign-in form has a Keyboard menu (since 1.0.1) but it offers only the 33 plain layouts of the <code>KEYBOARDS</code> table: no variants such as «US international»; the layout can be changed only at sign-in (the <code>LAYOUT</code> message exists, the page does not send it); a layout the server cannot compile gets the generic «the server could not open your session» refusal, with the reason only in the log; a change of <code>devicePixelRatio</code> (page zoom) is not handled."],
     ["Test switches", "<code>?canvas=2d</code>, <code>?canvas=bmp</code>, <code>?draw=mse</code> and <code>#video_fault</code> remain; deleting the MSE path is undecided."],
     ["KDE", "A held Delete key is kept by the desktop (visible in diagnostics only). Klipper stops following above 10 changes a second."],
     ["Audio and clipboard", "No Safari or Windows Firefox; text only; no microphone. <code>SCHED_FIFO</code> may be refused with <code>CONFIG_RT_GROUP_SCHED</code>, so audio can crackle under load."],

@@ -432,10 +432,10 @@ S7B = p("The container boxes could not show what a real Ubuntu does: the profile
         + " adapted to run against them. It is the bench of the release.", lead=True) + \
     h4("The four machines") + \
     table(["Machine (check key)", "ISO", "How the disk was made", "ssh / REMOTIX ports with the Radeon", "Display manager"], [
-        [c("ubuntu") + " (" + c("gnome") + ")", c("ubuntu-26.04-desktop-amd64.iso"), "unattended installation, " + c("autoinstall") + ", with a temporary virtual video card; the VM powers itself off at the end", "2341 / 8841", c("gdm3")],
+        [c("ubuntu") + " (" + c("gnome") + ")", c("ubuntu-26.04.1-desktop-amd64.iso"), "unattended installation, " + c("autoinstall") + ", with a temporary virtual video card; the VM powers itself off at the end", "2341 / 8841", c("gdm3")],
         [c("kubuntu") + " (" + c("kde") + ")", c("kubuntu-26.04.1-desktop-amd64.iso"), "built from the squashfs of the ISO (" + c("casper/filesystem.squashfs") + ") the way Calamares does", "2342 / 8842", c("sddm")],
-        [c("xubuntu") + " (" + c("xfce") + ")", c("xubuntu-26.04-desktop-amd64.iso"), "built from the squashfs layers " + c("casper/minimal.squashfs") + " and " + c("casper/minimal.standard.squashfs"), "2343 / 8843", c("lightdm")],
-        [c("lubuntu") + " (" + c("lxqt") + ")", c("lubuntu-26.04-desktop-amd64.iso"), "built from the same two layers as Xubuntu", "2344 / 8844", c("sddm")],
+        [c("xubuntu") + " (" + c("xfce") + ")", c("xubuntu-26.04.1-desktop-amd64.iso"), "built from the squashfs layers " + c("casper/minimal.squashfs") + " and " + c("casper/minimal.standard.squashfs"), "2343 / 8843", c("lightdm")],
+        [c("lubuntu") + " (" + c("lxqt") + ")", c("lubuntu-26.04.1-desktop-amd64.iso"), "built from the same two layers as Xubuntu", "2344 / 8844", c("sddm")],
     ], "«TAB» — The four VMs of server/vm-radeon.sh (ISO names and ports from the script; display managers from fresh-vm.sh)") + \
     p("Why three disks are not an " + c("autoinstall") + ": Kubuntu and Lubuntu come with Calamares, and the live kernel of Xubuntu crashed the installer (a kernel oops, recorded in docs/STORIA-ubuntu-26.04.md and in the comment of the script). "
       + c("crea") + " then builds the disk by hand: a GPT partition table with a 512 MB EFI partition and an ext4 root, the layers of the ISO unpacked one over the other with " + c("rsync") + ", then a stage run in a chroot "

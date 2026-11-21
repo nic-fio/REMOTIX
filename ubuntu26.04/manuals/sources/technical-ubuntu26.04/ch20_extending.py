@@ -5,7 +5,7 @@ docs/PULIZIA-tranche1.md, studio/5-sistema-ubuntu.md, studio/8-pacchetto-e-prove
 from build import c, h4, note, p, rif, steps, sysf, table, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("REMOTIX 1.0.0 exists twice: for Debian 13 (trixie), in the folder " + c("debian13/") + ", and for Ubuntu 26.04 (resolute) with its four flavours "
+S1 = p("REMOTIX 1.0.1 exists twice: for Debian 13 (trixie), in the folder " + c("debian13/") + ", and for Ubuntu 26.04 (resolute) with its four flavours "
        "(Ubuntu with GNOME, Kubuntu with KDE Plasma, Xubuntu with XFCE, Lubuntu with LXQt), in this tree. The second tree is a separate copy of the first, "
        "with its own packaging, its own build image, its own test bench and its own manual: the rule that a port is a copy and not a new <code>if</code> "
        "in the old tree has been followed once, and this chapter is written from what that port needed.", lead=True) + \
@@ -49,7 +49,7 @@ S2 = p("The table lists what a porter must look at, area by area, for the two di
          c("docker.io/library/ubuntu:26.04") + " with apt (universe on). The static QUIC libraries remain: Ubuntu 26.04 carries ngtcp2 1.16 and nghttp3 1.12 (studio 8), too old for the pinned "
          "1.25.0 and 1.18.0. The image also fetches, and checks the sha256 of, the two upstream tarballs of our labwc",
          c("build/Containerfile") + ", " + c("build/quic-static.sh") + ", " + c("build/labwc-ospite/fetch.sh")],
-        ["package version and archives", sysf("remotix_1.0.0-1+deb13_amd64.deb"), sysf("remotix_1.0.0-1+ubuntu26.04_amd64.deb") + " (suite " + c("resolute") + ") and the source of our labwc, "
+        ["package version and archives", sysf("remotix_1.0.1-1+deb13_amd64.deb"), sysf("remotix_1.0.1-1+ubuntu26.04_amd64.deb") + " (suite " + c("resolute") + ") and the source of our labwc, "
          + sysf("remotix-<version>-labwc-source.tar.gz") + ", published with every release because labwc is GPL-2", c("build/build-deb.sh") + ", " + c("LICENSE.md")],
         ["install paths", c("/usr/libexec/remotix/remotix") + ", " + c("/usr/share/polkit-1/rules.d") + ", " + c("/etc/ufw/applications.d") + ", "
          + c("/etc/apparmor.d"), "the same, plus " + sysf("/usr/libexec/remotix/labwc") + " and " + sysf("/etc/needrestart/conf.d") + ". " + c("ufw") + " is installed but off by default on Ubuntu (" + c("ENABLED=no") + ")",

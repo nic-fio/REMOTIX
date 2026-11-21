@@ -400,7 +400,10 @@ S10 = p(c("keyboard.c") + " (keyboard) solves the reverse problem of a keyboard:
          "A fixed table (level 1 = Shift, level 2 = AltGr) would be wrong: on " + c("de(neo)") + " the level-3 key is 43, not 100"],
         ["Locks are never used", "Masks that need CapsLock or NumLock are discarded",
          "A lock changes the session for the next letters"],
-        ["Shortest path wins", "Fewest modifiers, then the lowest keycode", "Keeps the keypad away from digits"],
+        ["Ordinary PC keys first", "A candidate on a key of an ordinary PC keyboard (" + c("pc_key()") + ": evdev 1 to 111, 119, 121, 124, 125 to 127) always beats one on a «special» key of the XKB tables ("
+         + c("KEY_DOLLAR") + " 434, " + c("KEY_EURO") + " 435, " + c("KEY_KPLEFTPAREN") + " 179 and " + c("KEY_KPRIGHTPAREN") + " 180, " + c("KEY_KPEQUAL") + " 117, " + c("KEY_KPPLUSMINUS") + " 118); the special ones stay as the last resort (since 1.0.1)",
+         "A program that forwards raw key positions, such as a virtual machine (for example QEMU), has no such keys and lost " + c("$ ( ) = €") + ". Compared with the old rule on 98 layouts, 359 of 13,311 combinations change, all and only those six characters"],
+        ["Shortest path wins", "Within the same class, fewest modifiers, then the lowest keycode", "Keeps the keypad away from digits"],
         ["At most four positions", c("KEYBOARD_MAX_POSITIONS") + " = 4", "Worst case measured: three ("
          + c("√") + " on " + c("de(neo)") + " is 100 + 43 + 17, 14 Aug 2026)"],
         ["Only the first group", "A keymap with several layouts uses the first, declared", ""],
@@ -417,8 +420,9 @@ S11 = p("The layout is negotiated at every attach, like the canvas, for two reas
         "reachable and to make shortcut positions match. The client proposes, the server asks the session, "
         "and the session's real keymap is always the one in force.", lead=True) + \
     steps([
-        "<b>The page proposes</b> a layout in " + c("ATTACH") + " from " + c("navigator.language")
-        + " (" + c("layout()") + "): " + c("en") + " becomes " + c("us") + " (or " + c("gb") + "/"
+        "<b>The page proposes</b> a layout in " + c("ATTACH") + ": the value of the " + c("Keyboard") + " menu of the sign-in form (" + c("layout()") + "), which is preset to the choice "
+        "remembered in " + c("localStorage[\"remotix.keyboard\"]") + " or else to the guess of " + c("layout_from_browser()") + " from " + c("navigator.language")
+        + " (the table of the 33 layouts is " + c("KEYBOARDS") + "; " + rif("The connection sequence") + "). The guess: " + c("en") + " becomes " + c("us") + " (or " + c("gb") + "/"
         + c("ie") + " by region), " + c("sv") + " → " + c("se") + ", " + c("da") + " → " + c("dk") + ", "
         + c("cs") + " → " + c("cz") + ", " + c("el") + " → " + c("gr") + ", " + c("he") + " → " + c("il")
         + ", " + c("ja") + " → " + c("jp") + ", " + c("ko") + " → " + c("kr") + ", " + c("uk") + " → "
@@ -464,7 +468,8 @@ S11 = p("The layout is negotiated at every attach, like the canvas, for two reas
       "“never detach” applies); the same layout as the current one asks nothing; there is no "
       "reply on the wire. The page does not send this message today.") + \
     note("a page cannot know the physical layout of the keyboard in front of it; " + c("navigator.language")
-         + " is a hint. Letting the user choose is the real cure and has not been decided.", "Not settled yet:")
+         + " is only the preset of the menu, and since 1.0.1 the user can choose. What is still missing: layouts with a variant (such as US international), and a change while the session is open (the " + c("LAYOUT")
+         + " message exists, the page does not send it).", "Limits:")
 
 LIBEI_SEQ = seq(
     [("Child", "input.c", "blue"), ("libei", "client context", "dark"), ("Compositor", "Mutter or KWin", "green")],
@@ -634,7 +639,7 @@ S16 = p("What the checks of " + c("prove/") + " exercise for input, and what the
     p("The final run of " + c("prove/all.sh") + " gave XFCE 111 of 118, LXQt 112, KDE 111 and GNOME 104; every non-green item is explained in " + c("PIANO.md") + " and the input ones are in the table above "
       "(the GNOME shortfall also includes " + c("pkexec") + " with an empty " + c("SHELL") + ", which is intended). The owner's own test with Samsung DeX on GNOME (17 Nov 2026) found the pointer, keyboard, "
       "clipboard, audio and video and window resize regular. Not verified: a real phone, the Android on-screen keyboard, Safari, labwc's own shortcuts inside a full XFCE session, "
-      "and the layout change on every compositor with a physical non-US keyboard (the check uses the Italian layout through " + c("navigator.language") + " and sends AltGr characters as the characters themselves, because DevTools and WebDriver cannot press AltGr).")
+      "and the layout change on every compositor with a physical non-US keyboard (the check uses the Italian layout, set through the browser language that presets the Keyboard menu, and sends AltGr characters as the characters themselves, because DevTools and WebDriver cannot press AltGr).")
 
 S15 = p("The main decisions of the input subsystem, with the reason that made each one.", lead=True) + \
     table(["Decision", "Rejected alternative", "Reason"], [

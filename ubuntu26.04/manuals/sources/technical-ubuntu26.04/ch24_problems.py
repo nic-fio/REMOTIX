@@ -3,7 +3,7 @@ from build import c, note, p, rif, sysf, table, ul, warn
 def items(rows, cap):
     return table(["Item", "State"], rows, cap)
 
-S_INTRO = p("This appendix lists what is known to be open, unverified or inconsistent in REMOTIX 1.0.0 for Ubuntu 26.04, area by area. It is "
+S_INTRO = p("This appendix lists what is known to be open, unverified or inconsistent in REMOTIX 1.0.1 for Ubuntu 26.04, area by area. The change of 1.0.1 (the PC-key preference of <code>keyboard.c</code> and the Keyboard menu of the page) has not had a full round of <code>prove/all.sh</code> on this tree; the rounds recorded below are on the 1.0.0 package. It is "
             "meant to be complete rather than flattering. An item is here because a source file, a check, the problem register "
             "(<code>docs/REGISTRO-problemi.md</code>) or <code>docs/STORIA-ubuntu-26.04.md</code> (the history of the work) says so; where something was read only in a comment and not observed, it is said. "
             "Two sections are specific to this tree: what real machines showed that the container boxes did not, and the open points of the Ubuntu port. "
@@ -156,7 +156,7 @@ S_PAGE = items([
      "The checks were aligned to this on 18 Nov 2026 (<code>page-cad-hidden</code>, <code>page-ctrl-alt-end-passes</code>, register B3) and pass in the Ubuntu round; SPECS §7.3-bis and §5.2-bis still describe the old requirements. "
      "<code>run_logout()</code> exists but nothing calls <code>logout_show(true)</code>."],
     ["Firefox", "The video worker is the default on desktop Firefox without an isolated live proof. The Firefox clipboard checks pass in the Ubuntu round. The Firefox audio check was BLOCKED once by the test browser (Marionette did not answer) and passed on both repeats."],
-    ["Keyboard layout and zoom", "No user-selectable keyboard layout (<code>navigator.language</code> is only a hint); a change of <code>devicePixelRatio</code> (page zoom) is not handled."],
+    ["Keyboard layout and zoom", "The keyboard layout is chosen in the sign-in menu (33 layouts, preset from <code>navigator.language</code>, remembered in <code>localStorage</code>); there are no variants such as “US international”, it can be changed only by signing out and in, and a layout the server does not have is refused with the generic message of the session. A change of <code>devicePixelRatio</code> (page zoom) is not handled."],
     ["Test switches", "<code>?canvas=2d</code>, <code>?canvas=bmp</code>, <code>?draw=mse</code> and <code>#video_fault</code> remain; deleting the MSE path is undecided."],
     ["KDE", "A held Delete key is kept by the desktop (visible in diagnostics only). Klipper stops following above 10 changes a second."],
     ["Audio and clipboard", "No Safari or Windows Firefox; text only; no microphone. <code>SCHED_FIFO</code> may be refused with <code>CONFIG_RT_GROUP_SCHED</code>, so audio can crackle under load."],

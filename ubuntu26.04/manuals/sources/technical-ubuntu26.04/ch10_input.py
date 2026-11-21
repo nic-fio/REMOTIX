@@ -405,7 +405,11 @@ S10 = p(c("keyboard.c") + " (keyboard) solves the reverse problem of a keyboard:
          "A fixed table (level 1 = Shift, level 2 = AltGr) would be wrong: on " + c("de(neo)") + " the level-3 key is 43, not 100"],
         ["Locks are never used", "Masks that need CapsLock or NumLock are discarded",
          "A lock changes the session for the next letters"],
-        ["Shortest path wins", "Fewest modifiers, then the lowest keycode", "Keeps the keypad away from digits"],
+        ["Ordinary PC keys first", c("pc_key()") + " (evdev 1 to 111, 119, 121, 124 and 125 to 127) beats the “special” one-key positions of the XKB tables ("
+         + c("KEY_DOLLAR") + " 434, " + c("KEY_EURO") + " 435, " + c("KEY_KPLEFTPAREN") + " 179 and " + c("KEY_KPRIGHTPAREN") + " 180, " + c("KEY_KPEQUAL") + " 117, "
+         + c("KEY_KPPLUSMINUS") + " 118), which stay as the last resort",
+         "Programs that forward raw key positions, such as virtual machines (QEMU for example), have no such key and lost " + c("$ ( ) = €") + " in 1.0.0; fixed in release 1.0.1"],
+        ["Shortest path wins", "Within the same class (PC key or special): fewest modifiers, then the lowest keycode", "Keeps the keypad away from digits"],
         ["At most four positions", c("KEYBOARD_MAX_POSITIONS") + " = 4", "Worst case measured: three ("
          + c("√") + " on " + c("de(neo)") + " is 100 + 43 + 17, 14 Aug 2026)"],
         ["Only the first group", "A keymap with several layouts uses the first, declared", ""],
@@ -422,8 +426,9 @@ S11 = p("The layout is negotiated at every attach, like the canvas, for two reas
         "reachable and to make shortcut positions match. The client proposes, the server asks the session, "
         "and the session's real keymap is always the one in force.", lead=True) + \
     steps([
-        "<b>The page proposes</b> a layout in " + c("ATTACH") + " from " + c("navigator.language")
-        + " (" + c("layout()") + "): " + c("en") + " becomes " + c("us") + " (or " + c("gb") + "/"
+        "<b>The page proposes</b> a layout in " + c("ATTACH") + ": the value of the sign-in form's Keyboard menu (" + c("layout()") + "; a choice kept in " + c("localStorage") + ", see "
+        + rif("What the page stores and what it declares") + "), which is preset from " + c("navigator.language")
+        + " (" + c("layout_from_browser()") + ") when nothing was chosen: " + c("en") + " becomes " + c("us") + " (or " + c("gb") + "/"
         + c("ie") + " by region), " + c("sv") + " → " + c("se") + ", " + c("da") + " → " + c("dk") + ", "
         + c("cs") + " → " + c("cz") + ", " + c("el") + " → " + c("gr") + ", " + c("he") + " → " + c("il")
         + ", " + c("ja") + " → " + c("jp") + ", " + c("ko") + " → " + c("kr") + ", " + c("uk") + " → "
@@ -474,9 +479,9 @@ S11 = p("The layout is negotiated at every attach, like the canvas, for two reas
     p("While the session is open, " + c("LAYOUT") + " (" + c("0x0009") + ") changes the layout: a "
       "well-formed unknown layout does <b>not</b> close the session (the previous keyboard still works, and "
       "“never detach” applies); the same layout as the current one asks nothing; there is no "
-      "reply on the wire. The page does not send this message today.") + \
+      "reply on the wire. The page does not send this message today (the menu is read only at sign-in).") + \
     note("a page cannot know the physical layout of the keyboard in front of it; " + c("navigator.language")
-         + " is a hint. Letting the user choose is the real cure and has not been decided.", "Not settled yet:")
+         + " is only the preset of the menu. Since 1.0.1 the user chooses, once per browser; what is still missing is a change without signing out, and variants such as “US international”.", "Limits:")
 
 LIBEI_SEQ = seq(
     [("Child", "input.c", "blue"), ("libei", "client context", "dark"), ("Compositor", "Mutter or KWin", "green")],

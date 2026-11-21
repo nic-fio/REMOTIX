@@ -10,7 +10,8 @@ S_SIGNIN = p("These are the sentences the page shows when you sign in or when th
         [ui("incorrect username or password"),
          "The user name or the password is wrong, or the account is one that cannot sign in (locked, expired, "
          "excluded). The page cannot tell which, by design: a stranger must not learn whether a user name exists.",
-         "Check the user name and the password (caps lock, keyboard layout). Careful: every failure counts toward "
+         "Check the user name and the password (caps lock, and the <b>Keyboard</b> menu of the sign-in form: it must match "
+         "the keyboard you type on). Careful: every failure counts toward "
          "a temporary ban (see below).",
          "The journal has the detail (see " + rif("Where the administrator looks") + "). Check the account with "
          + c("sudo passwd -S USER") + ", the list in " + sysf("/etc/remotix/denied-users") + " and whether a file "
@@ -214,6 +215,9 @@ S_DESIGN = p("Some things REMOTIX does not offer, deliberately. They are not def
         "<b>No remote sign-in for root</b>, and none for a user at the machine's own screen.",
         "<b>One session per user, one connected browser at a time.</b>",
         "<b>The page cannot send</b> the key combinations that the browser keeps (see " + rif("The keyboard") + ").",
+        "<b>The keyboard is chosen at sign-in</b>: to change it, sign out and sign in again with another choice in the Keyboard menu. "
+        "Wrong characters or shortcuts on the wrong key almost always mean that the menu does not match your keyboard; with a virtual "
+        "machine inside the desktop, choose the layout of the system in it.",
     ])
 
 S_KNOWN = p("These are the problems known on Ubuntu 26.04 that a user or an administrator may meet. None of them "

@@ -8,8 +8,13 @@ S_SIGNIN = p("Open the machine's address in the browser: <code class=\"sys\">htt
              "about the certificate: see " + rif("Ubuntu 26.04: the first visit and the certificate") + ".", lead=True) + \
     p("The page shows a sign-in form with two fields, <b>Username</b> and <b>Password</b>, and a <b>Connect</b> "
       "button. Type the user name and password you have on that machine — the ones you would use at its own "
-      "screen — and press Connect. At the bottom the page says “Encrypted connection” and the name of the "
-      "machine.") + \
+      "screen — and press Connect. Between the two fields and the button there is a <b>Keyboard</b> menu, "
+      "which tells the machine what kind of keyboard you are typing on (Italian, French, German, English (US) and so on: "
+      "33 layouts). It already shows the layout that goes with the language of your browser, so most people leave it "
+      "alone; if your keyboard is different, choose the right one before pressing Connect. When you choose, the page "
+      "remembers it on that browser and that device, and proposes it again next time; the browser language is used "
+      "only until you have chosen. To change keyboard later, sign out and sign in again. At the bottom the page says "
+      "“Encrypted connection” and the name of the machine.") + \
     ul([
         "The answer takes about a second even when everything is right, and a refusal for a wrong user name or "
         "password takes about two and a half seconds. That is deliberate: it makes it impossible to tell, by "
@@ -74,9 +79,15 @@ S_KEYS = p("<b>Typing.</b> Letters, numbers and symbols travel as <i>letters</i>
            "included) come out right. Keys that are not letters — Enter, Tab, Esc, the arrows, F1 to F12, Ctrl, "
            "Alt, Super — travel as <i>positions</i> on the keyboard, and so do letters when you hold Ctrl, Alt or "
            "Super (a shortcut such as Ctrl+C is a command, not text). The desktop's keyboard layout is set again "
-           "at every sign-in. On GNOME the layout the page sends is written for the session in a small file in "
+           "at every sign-in, from the Keyboard menu of the sign-in form. On GNOME the layout the page sends is written for the session in a small file in "
            "your home folder (" + sysf("~/.config/dconf/remotix") + "), which only REMOTIX uses.", lead=True) + \
     ul([
+        "If characters come out wrong (for example a <i>y</i> where you typed a <i>z</i>, or a symbol that is not the one printed on "
+        "your key), or a shortcut seems to be on the wrong key, check the <b>Keyboard</b> menu of the sign-in form: it must be the "
+        "layout of the keyboard you are really typing on. Sign out, sign in again with the right one.",
+        "If you use a <b>virtual machine</b> (for example QEMU) inside the remote desktop, choose in the Keyboard menu the layout "
+        "of the system that runs <i>in the virtual machine</i>: such programs pass on the keys by position, and the guest system "
+        "turns the positions into characters with its own layout.",
         "A character that is on no key of the session's layout (an emoji, another alphabet) produces <b>nothing</b>; "
         "it never produces a different letter. The server notes it in its log.",
         "Characters you compose with <b>dead keys</b> (an accent typed first, then the letter) or with an <b>input "

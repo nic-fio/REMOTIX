@@ -48,7 +48,7 @@ S_SIGNIN = p("These are the sentences the page shows when you sign in or when th
             "happens again ask whoever administers the server — the precise reason is in its log"),
          "The server could not give you a desktop. This one sentence covers several different causes, on "
          "purpose: <b>the server is full</b> (the number of sessions has reached the ceiling, 10 by default), the "
-         "desktop could not be created, the keyboard layout was not known, memory ran out, or the window is larger "
+         "desktop could not be created, the keyboard layout chosen in the Keyboard menu was not known to the machine (try another one), memory ran out, or the window is larger "
          "than the browser can decode.",
          "Try again in a moment. If it keeps happening, ask the administrator.",
          "Look in the journal at the time of the attempt (see " + rif("Where the administrator looks") + "). If the "
@@ -197,6 +197,19 @@ S_ADMIN = p("The administrator has three places to look, and three quick checks.
          "$ sudo /usr/libexec/remotix/remotix --encoding-test h264   # does the card encode? (exit 0 = yes)",
          "Quick checks")
 
+S_KEYBOARD = p("The page cannot see what keyboard you have in front of you. It guesses from the language of the browser, "
+               "and the <b>Keyboard</b> menu of the sign-in form lets you correct the guess.", lead=True) + \
+    ul([
+        "<b>Wrong characters, or a shortcut on the wrong key</b> (a letter or symbol that is not the one printed on your "
+        "key): sign out, sign in again and choose in the Keyboard menu the layout of your keyboard. The page remembers "
+        "the choice on that browser and device.",
+        "<b>A virtual machine inside the remote desktop</b> (for example QEMU): choose in the menu the same layout as "
+        "the system that runs inside the virtual machine. The symbols " + c("$ ( ) = €") + " and the like are sent "
+        "on ordinary keys, as on a normal keyboard, so that such programs receive them.",
+        "<b>The layout cannot be changed while you are connected</b>, and variants (for example the US international "
+        "layout with dead keys) are not in the menu: see " + rif("The keyboard") + ".",
+    ])
+
 S_DESIGN = p("Some things REMOTIX does not offer, deliberately. They are not defects.", lead=True) + \
     ul([
         "<b>No power off, restart, suspend or hibernate</b> from a remote desktop. The entries are not in the "
@@ -216,5 +229,6 @@ CHAPTER = ("When something does not work", [
     ("The three clocks", S_CLOCKS),
     ("How a session ends", S_FAREWELL),
     ("Where the administrator looks", S_ADMIN),
+    ("Wrong characters or keys", S_KEYBOARD),
     ("What cannot be done, by design", S_DESIGN),
 ])

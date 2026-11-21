@@ -281,5 +281,17 @@ può ancora chiedere di separarla in una 1.0.2.
 **Stato (21 nov 2026).** Parti A e B scritte, revisore APPROVATO per entrambe, pacchetti `1.0.1-1` costruiti per Debian 13
 e Ubuntu 26.04 (cartelle `pacchetti/1.0.1-con-tastiera` sul server; controlli tutti superati). **Provato dal proprietario
 su Debian 13**, dentro QEMU, su GNOME e su XFCE (le due strade dei tasti): Chrome in italiano con tastiera scelta «English
-(US)» e Firefox in inglese senza toccare il menu — tutti i caratteri giusti. Manca: la prova su Ubuntu 26.04 (macchine
-virtuali da ricostruire), il commit, la pubblicazione (sito, rilasci su GitHub, una frase nel manuale utente).
+(US)» e Firefox in inglese senza toccare il menu — tutti i caratteri giusti. **Provato dal proprietario su Ubuntu 26.04**, nella macchina virtuale `xubuntu` (XFCE) ricostruita
+dalla ISO 26.04.1, e poi nella macchina `ubuntu` (GNOME), ciascuna con un sistema avviato dentro QEMU: la tastiera funziona in
+entrambe. Codice nel repo (commit del 21 nov).
+
+**Pubblicazione (21 nov 2026, ordine del proprietario «pubblica»).** Manuali utente e tecnico delle due distribuzioni
+aggiornati alla 1.0.1 e rigenerati (revisore: APPROVATO al secondo giro; `build.py --check`: allineati). Pacchetti pubblicati,
+costruiti con `SOURCE_DATE_EPOCH=1795252771 RX_VERSION=1.0.1 RX_REVISION=1`:
+`remotix_1.0.1-1+deb13_amd64.deb` sha256 `07a7bf7b2a7a0acfe53c5fed804480c3f39cd1673a0463a6626bb5182051939f`;
+`remotix_1.0.1-1+ubuntu26.04_amd64.deb` sha256 `cd3b6c72d56eba1c62f3817106f49d2a9301af3110f0cca89b89e3150ff2976f`;
+sorgente di labwc `remotix-1.0.1-labwc-source.tar.gz` sha256 `bf6c3ab8ad4a01103c9bb8ecd91f397850086071729896cb2aca49c332edfb09`.
+Sul sito: pagine di Debian 13 e Ubuntu 26.04 alla 1.0.1 con la voce «1.0.1 — the keyboard» nella storia, manuali e pacchetti
+nuovi (quelli della 1.0.0 restano scaricabili). Su GitHub: rilasci `debian13-1.0.1` e `ubuntu26.04-1.0.1`.
+Per la 1.0.1 non è stato fatto un giro completo di prove automatiche: valgono il confronto sulle 98 tastiere e le prove
+a mano del proprietario. Prossimo lavoro: Fedora, che parte da questo codice.

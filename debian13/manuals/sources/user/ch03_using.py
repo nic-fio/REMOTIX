@@ -8,8 +8,12 @@ S_SIGNIN = p("Open the machine's address in the browser: <code class=\"sys\">htt
              "about the certificate: see " + rif("Debian 13: the first visit and the certificate") + ".", lead=True) + \
     p("The page shows a sign-in form with two fields, <b>Username</b> and <b>Password</b>, and a <b>Connect</b> "
       "button. Type the user name and password you have on that machine — the ones you would use at its own "
-      "screen — and press Connect. At the bottom the page says “Encrypted connection” and the name of the "
-      "machine.") + \
+      "screen — and press Connect. Between the password and the button there is also a <b>Keyboard</b> menu: it "
+      "says which keyboard layout your keyboard has (Italian, German, US and so on, 33 in all). It starts already "
+      "set to the layout that matches the language of your browser, so most people never touch it; if the characters "
+      "you type come out wrong, choose the right one before pressing Connect. The page remembers your choice, on that "
+      "browser and that device, for the next time. At the bottom the page says “Encrypted connection” and the name "
+      "of the machine.") + \
     ul([
         "The answer takes about a second even when everything is right, and a refusal for a wrong user name or "
         "password takes about two and a half seconds. That is deliberate: it makes it impossible to tell, by "
@@ -68,8 +72,16 @@ S_KEYS = p("<b>Typing.</b> Letters, numbers and symbols travel as <i>letters</i>
            "included) come out right. Keys that are not letters — Enter, Tab, Esc, the arrows, F1 to F12, Ctrl, "
            "Alt, Super — travel as <i>positions</i> on the keyboard, and so do letters when you hold Ctrl, Alt or "
            "Super (a shortcut such as Ctrl+C is a command, not text). The desktop's keyboard layout is set again "
-           "at every sign-in.", lead=True) + \
+           "at every sign-in, from the <b>Keyboard</b> menu of the sign-in form (see " + rif("Signing in") + "); to "
+           "change it, sign out and sign in again, choosing the other layout.", lead=True) + \
     ul([
+        "<b>If a character or a shortcut comes out on the wrong key</b> (for example a symbol that is not the one "
+        "printed on your key), the Keyboard menu is not set to your keyboard: sign out and sign in again with the "
+        "right layout.",
+        "<b>If you use a virtual machine inside the remote desktop</b> (for example QEMU), choose in the Keyboard "
+        "menu the layout of the system that runs <i>inside</i> the virtual machine, not necessarily that of your "
+        "own keyboard: such programs pass the keys on by their position, and the system inside reads them with its own "
+        "layout.",
         "A character that is on no key of the session's layout (an emoji, another alphabet) produces <b>nothing</b>; "
         "it never produces a different letter. The server notes it in its log.",
         "Characters you compose with <b>dead keys</b> (an accent typed first, then the letter) or with an <b>input "

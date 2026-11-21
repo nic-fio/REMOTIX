@@ -4,7 +4,7 @@ src/page.html, src/encoder.c, src/child.c, debian/*, prove/*."""
 from build import c, h4, note, p, rif, steps, sysf, table, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("REMOTIX 1.0.0 is written for one distribution, Debian 13 (trixie). The rule is in " + c("CLAUDE.md") + ": \"no distro detection "
+S1 = p("REMOTIX 1.0.1 is written for one distribution, Debian 13 (trixie). The rule is in " + c("CLAUDE.md") + ": \"no distro detection "
        "or per-distro code (a future distro gets its own, separate code)\". The product does not read " + c("/etc/os-release") + " to "
        "choose a behaviour; where a distribution used to need a branch, the branch was removed, not generalised (" + c("docs/PULIZIA-tranche1.md")
        + "). The consequence for a maintainer is simple: a port is a separate copy of the tree with its own packaging, its own PAM file and "

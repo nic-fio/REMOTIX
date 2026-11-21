@@ -4,7 +4,7 @@ src/remotix.pam, src/certificates.c, src/main.c (options), docs/SPECS.md §4.1."
 from build import c, note, p, rif, steps, sysf, table, term, ui, ul, warn
 
 S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. There is no installer program. These "
-             "are the steps; the commands are in the sections below. REMOTIX 1.0.0 is for Debian 13 (trixie).", lead=True) + \
+             "are the steps; the commands are in the sections below. REMOTIX 1.0.1 is for Debian 13 (trixie).", lead=True) + \
     steps([
         "<b>Check the machine</b>: one of the four desktops installed, a video card that encodes (see "
         + rif("What you need") + "), and a way to reach it on the network.",
@@ -22,9 +22,9 @@ S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. Th
       "(see " + rif("Users, groups and what REMOTIX changes") + ").")
 
 S_DEB_INSTALL = p("This section is for <b>Debian 13 (trixie)</b>. The package is a single file named like "
-                  + c("remotix_1.0.0-1+deb13_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
+                  + c("remotix_1.0.1-1+deb13_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
                   "an ordinary PC). Put it on the machine and, in the folder where it is, run:", lead=True) + \
-    term("$ sudo apt install ./remotix_1.0.0-1+deb13_amd64.deb\n"
+    term("$ sudo apt install ./remotix_1.0.1-1+deb13_amd64.deb\n"
          "$ sudo systemctl enable --now remotix\n"
          "$ systemctl status remotix", "Install and start") + \
     p("The first command installs REMOTIX and what it needs. The second makes the service start with the machine "

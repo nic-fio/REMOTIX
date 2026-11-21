@@ -181,15 +181,21 @@ S4 = p("The login form has two fields and a button — " + c("#username") + ", "
         "the first-frame watch starts, the control channel is read in a loop (" + c("listen_control()")
         + "), and " + c("FIT_CANVAS") + " is sent once for the window size.",
     ]) + \
-    p("The keyboard layout is guessed from " + c("navigator.language") + " (" + c("en") + " → " + c("us")
+    p("The keyboard layout sent in " + c("ATTACH") + " is the value of the " + c("Keyboard") + " menu of the sign-in form (" + c("select#keyboard") + ", with the hint line "
+      + c("#keyboard-hint") + "), which " + c("layout()") + " returns after checking it against the " + c("KEYBOARDS") + " table; if the menu is missing or holds something unknown, "
+      + c("layout()") + " falls back to " + c("layout_from_browser()") + ". " + c("KEYBOARDS") + " lists the 33 layouts that "
+      + c("layout_from_browser()") + " can return (code and English name, sorted by name). At load the menu is filled and preset to the choice remembered in "
+      + c("localStorage[\"remotix.keyboard\"]") + " if that is a code of the table, otherwise to the guess; choosing a layout stores it (a blocked or failing storage only means «not remembered», no error) "
+      "and the hint says whether the value is the user's choice or comes from the browser language. The wire format and the server are unchanged. The menu is read at "
+      + c("ATTACH") + ", so changing it means signing out and in again. The guess, " + c("layout_from_browser()") + " (the former " + c("layout()") + "), reads " + c("navigator.language") + " (" + c("en") + " → " + c("us")
       + ", except " + c("en-GB") + " → " + c("gb") + " and " + c("en-IE") + " → " + c("ie") + "; about thirty languages "
       "whose XKB name equals the ISO code pass through, a few are mapped, such as " + c("sv") + " → " + c("se")
-      + " and " + c("da") + " → " + c("dk") + "; the rest falls back to " + c("us") + "); a page cannot know the physical keyboard, and choosing it is described in "
+      + " and " + c("da") + " → " + c("dk") + "; the rest falls back to " + c("us") + "); a page cannot know the physical keyboard, which is why the menu exists. Negotiation with the server is described in "
       + rif("Keyboard layout negotiation") + ". The input stream coalesces pointer moves: when the writer's " + c("desiredSize")
       + " is at or below zero, a " + c("POINTER") + " is held aside and replaced by the next one, and any key or "
       "button pushes it out first (measured from Samsung DeX on 14 Aug 2026: median round trip 135 ms but worst 2161 ms, "
       "a queue rather than a slow network). Keys and buttons are never dropped.") + \
-    p("The page does not store the user name, the password or any session token: nothing persists after the tab closes "
+    p("The page does not store the user name, the password or any session token: the only thing it keeps on the device is the keyboard choice "
       "(" + rif("What the page stores and what it declares") + ").")
 
 # ── 5. Capabilities ───────────────────────────────────────────────────────
@@ -542,10 +548,10 @@ S13 = p("The page measures its own share of the latency and exposes it, so that 
       "The shortcuts bar is the one place where diagnostics hide something a user may want, which is why " + rif("Shortcuts the browser keeps") + " states it.")
 
 # ── 14. What the page stores and declares ─────────────────────────────────
-S14 = p("The page keeps nothing on the device and declares what it does and does not do.", lead=True) + \
+S14 = p("The page keeps on the device only the keyboard choice and declares what it does and does not do.", lead=True) + \
     table(["Question", "Answer from the code"], [
-        ["Browser storage", "The page contains no use of " + c("localStorage") + ", " + c("sessionStorage") + ", IndexedDB, cookies or the Cache API. "
-         "Nothing is written to the device by the page itself; closing the tab discards the log, the counters and the probe results"],
+        ["Browser storage", "The page uses " + c("localStorage") + " for one key only, " + c("remotix.keyboard") + ": the code of the layout the user chose in the Keyboard menu (a per-browser preference, since 1.0.1). "
+         "It contains no use of " + c("sessionStorage") + ", IndexedDB, cookies or the Cache API. Nothing else is written to the device by the page itself; closing the tab discards the log, the counters and the probe results"],
         ["Credentials", "The user name and password are read from the two fields when Connect is pressed and sent in " + c("CREDENTIALS")
          + "; the password field is emptied after every attempt, and neither value is logged. The fields carry " + c("autocomplete=\"username\"")
          + " and " + c("autocomplete=\"current-password\"") + ", so a password manager of the browser may offer to store them: that is the browser's feature, not the page's"],

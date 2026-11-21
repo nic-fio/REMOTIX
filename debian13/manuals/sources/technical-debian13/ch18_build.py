@@ -84,7 +84,7 @@ S3 = p("The script is a sequence of steps; every output goes to " + c("$OUTPUT")
         [c("OUTPUT"), sysf("/media/REMOTIX-DEBIAN/pacchetti"), "where the results go"],
         [c("WORK"), c("$OUTPUT/.work"), "scratch space with the copies of the tree; " + c("TMPDIR") + " is set under it, never "
          + c("/tmp") + " (RAM-only machines)"],
-        [c("RX_VERSION"), c("1.0.0~dev"), "the upstream version (see the section on versions)"],
+        [c("RX_VERSION"), c("1.0.1~dev"), "the upstream version (see the section on versions)"],
         [c("RX_REVISION"), c("1"), "the Debian revision"],
         [c("SOURCE_DATE_EPOCH"), "newest mtime in " + c("src/") + ", " + c("debian/") + ", " + c("LICENSE.md") + " and "
          + c("THIRD-PARTY-LICENSES"), "the build date, for a reproducible package"],
@@ -220,21 +220,21 @@ S6 = p("The labels R4, R13, R14, R23 and R24 are requirement names carried over 
 S7 = p("The version of the product exists only as package metadata. I found no version constant in " + c("src/") + " (no source file or "
        "header carries the number), and the page and the protocol have their own versions that are not the package's.", lead=True) + \
     table(["Where", "What"], [
-        [c("RX_VERSION") + " in " + c("build/build-deb.sh"), "the upstream version; the default is " + c("1.0.0~dev") + ". The tilde makes a development build sort "
-         "BEFORE 1.0.0 in dpkg's ordering"],
+        [c("RX_VERSION") + " in " + c("build/build-deb.sh"), "the upstream version; the default is " + c("1.0.1~dev") + ". The tilde makes a development build sort "
+         "BEFORE 1.0.1 in dpkg's ordering"],
         [c("RX_REVISION"), "the Debian revision, default 1"],
-        ["the full version", c("<RX_VERSION>-<RX_REVISION>+deb13") + ", for example " + c("1.0.0-1+deb13") + "; the file is "
-         + c("remotix_1.0.0-1+deb13_amd64.deb")],
+        ["the full version", c("<RX_VERSION>-<RX_REVISION>+deb13") + ", for example " + c("1.0.1-1+deb13") + "; the file is "
+         + c("remotix_1.0.1-1+deb13_amd64.deb")],
         [c("debian/changelog"), "not in git: written by " + c("prepare_copy") + " with that version, the distribution " + c("trixie") + ", urgency medium, "
          "one line \"Debian 13 build\" and a maintainer line written in the script (the same name and address as in " + c("debian/control") + ")"],
-        ["the manual's cover", c("manuals/sources/build.py") + " reads the default of " + c("RX_VERSION") + " and drops " + c("~dev") + ": the manual says 1.0.0"],
+        ["the manual's cover", c("manuals/sources/build.py") + " reads the default of " + c("RX_VERSION") + " and drops " + c("~dev") + ": the manual says 1.0.1"],
     ], "«TAB» — Where the version lives") + \
-    term("""$ RX_VERSION=1.0.0 RX_REVISION=1 OUTPUT=/media/REMOTIX-DEBIAN/pacchetti/1.0.0 build/build-deb.sh
-$ TWICE=1 RX_VERSION=1.0.0 build/build-deb.sh          # also R23""", "Building the release package") + \
-    p("Without " + c("RX_VERSION") + " a build is a development build, " + c("remotix_1.0.0~dev-1+deb13_amd64.deb") + ".") + \
+    term("""$ RX_VERSION=1.0.1 RX_REVISION=1 OUTPUT=/media/REMOTIX-DEBIAN/pacchetti/1.0.1 build/build-deb.sh
+$ TWICE=1 RX_VERSION=1.0.1 build/build-deb.sh          # also R23""", "Building the release package") + \
+    p("Without " + c("RX_VERSION") + " a build is a development build, " + c("remotix_1.0.1~dev-1+deb13_amd64.deb") + ".") + \
     h4("What \"release\" means in this tree") + \
     p("The tree has no release script, no signing step, no repository and no publication tool: the old packaging and site folders were "
-      "not carried over (" + c("docs/INVENTARIO-non-debian.md") + "). A release is the output of " + c("build-deb.sh") + " with " + c("RX_VERSION=1.0.0")
+      "not carried over (" + c("docs/INVENTARIO-non-debian.md") + "). A release is the output of " + c("build-deb.sh") + " with " + c("RX_VERSION=1.0.1")
       + ": the .deb, the " + c(".buildinfo") + " and the check files. The package is built unsigned (" + c("-us -uc") + "). PIANO.md leaves "
       "publication, the site and public repositories to the owner's decision, so none of them is described as existing.")
 
