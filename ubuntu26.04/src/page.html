@@ -526,11 +526,19 @@
 
   .signin #signin-form { display: grid; gap: 1.1em; }
   .signin label { display: block; font-size: .82em; font-weight: 600; color: var(--label); margin: 0 0 .49em; }
-  .signin input { width: 100%; box-sizing: border-box; font: inherit; font-size: 1em; color: var(--ink);
+  .signin input, .signin select { width: 100%; box-sizing: border-box; font: inherit; font-size: 1em; color: var(--ink);
     padding: .72em .85em; border: 1px solid var(--field-border); border-radius: .55em; background: #fff;
     box-shadow: 0 1px 2px rgba(11,20,48,.06); transition: border-color .15s, box-shadow .15s; }
-  .signin input:hover { border-color: var(--field-border-hover); }
-  .signin input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(20,102,224,.2); }
+  /* the keyboard menu: drawn like the inputs, with its own chevron */
+  .signin select { appearance: none; -webkit-appearance: none; padding-right: 2.6em; cursor: pointer;
+    background-color: #fff; background-repeat: no-repeat; background-position: right .85em center; background-size: 1em;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.5 8l4.5 4.5L14.5 8' fill='none' stroke='%235b6478' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+  .signin .hint { margin: .5em 0 0; font-size: .78em; line-height: 1.4; color: var(--muted);
+    display: flex; gap: .45em; align-items: flex-start; }
+  .signin .hint svg { flex: none; width: 1.1em; height: 1.1em; margin-top: .08em; color: var(--accent); }
+  .signin .hint.saved svg { color: var(--vivid); }
+  .signin input:hover, .signin select:hover { border-color: var(--field-border-hover); }
+  .signin input:focus, .signin select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(20,102,224,.2); }
 
   .signin #signin-button { margin-top: .4em; font: inherit; font-size: 1em; font-weight: 650; color: #fff;
     padding: .82em; border: 0; border-radius: .55em; cursor: pointer;
@@ -638,6 +646,14 @@
           <div>
             <label for="password">Password</label>
             <input id="password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <div>
+            <label for="keyboard">Keyboard</label>
+            <select id="keyboard" name="keyboard" aria-describedby="keyboard-hint"></select>
+            <p class="hint" id="keyboard-hint">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 9v5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="10" cy="6.2" r="1.1" fill="currentColor"/></svg>
+              <span id="keyboard-hint-text"></span>
+            </p>
           </div>
           <button type="submit" id="signin-button">Connect
             <span class="spinner" aria-hidden="true"></span>
@@ -5263,10 +5279,10 @@ class Viewer {
  *
  * ⚠ And it remains a declared `[?]`: a page CANNOT know the PHYSICAL
  *   keyboard layout of whoever looks at it — the interface language is a
- *   hint, not a datum.  This table is an honest fallback; the real cure is
- *   letting the user choose, and `SPECS.md` §7.3 is the place where that
- *   decision will be taken. */
-function layout() {
+ *   hint, not a datum.  This table is an honest fallback, and since 1.0.1
+ *   it is only that: the sign-in form has a «Keyboard» menu, preset from
+ *   this function, and `layout()` below returns what the menu says. */
+function layout_from_browser() {
   const l = (navigator.language || "it-IT").toLowerCase();
   const language = l.slice(0, 2);
   const region = l.length > 3 ? l.slice(3, 5) : "";
@@ -5291,6 +5307,58 @@ function layout() {
   if (language === "uk") return "ua";
   return "us";
 }
+
+/* The keyboards the sign-in menu offers, by name: exactly the codes
+   `layout_from_browser()` can return, sorted by name. */
+const KEYBOARDS = [
+  ["be", "Belgian"], ["bg", "Bulgarian"], ["hr", "Croatian"], ["cz", "Czech"], ["dk", "Danish"],
+  ["nl", "Dutch"], ["gb", "English (UK)"], ["us", "English (US)"], ["fi", "Finnish"], ["fr", "French"],
+  ["de", "German"], ["at", "German (Austria)"], ["ch", "German (Switzerland)"], ["gr", "Greek"],
+  ["il", "Hebrew"], ["hu", "Hungarian"], ["ie", "Irish"], ["it", "Italian"], ["jp", "Japanese"],
+  ["kr", "Korean"], ["no", "Norwegian"], ["pl", "Polish"], ["pt", "Portuguese"], ["br", "Portuguese (Brazil)"],
+  ["ro", "Romanian"], ["ru", "Russian"], ["rs", "Serbian"], ["sk", "Slovak"], ["si", "Slovenian"],
+  ["es", "Spanish"], ["se", "Swedish"], ["tr", "Turkish"], ["ua", "Ukrainian"],
+];
+const KEYBOARD_KEY = "remotix.keyboard";
+const keyboard_known = (code) => KEYBOARDS.some(k => k[0] === code);
+const keyboard_name = (code) => (KEYBOARDS.find(k => k[0] === code) || ["", code])[1];
+
+/* The layout sent in ATTACH: what the sign-in menu says; if the menu is
+   missing or holds something unknown, the browser-language guess. */
+function layout() {
+  const sel = $("keyboard");
+  if (sel && keyboard_known(sel.value)) return sel.value;
+  return layout_from_browser();
+}
+
+/* The menu: filled at load, preset to the remembered choice (a property of
+   this device, kept in localStorage) or else to the browser-language guess.
+   ⚠ Storage may be blocked or hold junk: any failure means «not remembered». */
+(function keyboard_menu() {
+  const sel = $("keyboard"), hint = $("keyboard-hint"), text = $("keyboard-hint-text");
+  if (!sel) return;
+  for (const [code, label] of KEYBOARDS) sel.add(new Option(label, code));
+  const guess = layout_from_browser();
+  let chosen = false;
+  let saved = null;
+  try { saved = localStorage.getItem(KEYBOARD_KEY); } catch (e) { saved = null; }
+  if (saved && keyboard_known(saved)) chosen = true; else saved = null;
+  sel.value = saved || guess;
+  function say() {
+    if (hint) hint.classList.toggle("saved", chosen);
+    if (!text) return;
+    text.textContent = chosen
+      ? "Your choice, remembered on this device."
+        + (sel.value !== guess ? " Your browser language suggests " + keyboard_name(guess) + "." : "")
+      : "Set from your browser language. Change it if your keyboard is different.";
+  }
+  sel.addEventListener("change", () => {
+    chosen = true;
+    try { localStorage.setItem(KEYBOARD_KEY, sel.value); } catch (e) { /* not remembered: no error */ }
+    say();
+  });
+  say();
+})();
 
 /* ⛔ The fingerprint is FETCHED AGAIN before every attempt (§4.1-bis). If the
    fetch fails the one served with the page is used, and IT IS SAID: a silent

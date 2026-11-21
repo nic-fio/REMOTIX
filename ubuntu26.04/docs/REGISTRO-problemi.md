@@ -282,6 +282,41 @@ Le voci aperte stanno in fondo.
 
 ---
 
+## D-bis. Tastiera e programmi che leggono i tasti grezzi (versione 1.0.1, 21 nov 2026)
+
+Tutto nasce da una prova del proprietario: da remoto, dentro QEMU, alcuni caratteri non uscivano o uscivano diversi.
+Nei programmi normali non si vede nulla, perché ricevono il carattere già fatto dal desktop; QEMU, le altre macchine
+virtuali e forse qualche gioco leggono invece la **posizione** del tasto, e mostrano due difetti distinti.
+
+### D-bis.1 Alcuni caratteri sparivano: il server premeva tasti che su un PC non esistono
+- **Che cosa si vedeva:** dentro QEMU non uscivano `$`, `(`, `)` e, con la sessione italiana, nemmeno `=` e `€`.
+- **Causa:** per ogni carattere il server sceglieva la strada con meno tasti. Le tabelle di tastiera di Linux hanno
+  tasti «speciali» che fanno da soli quei caratteri (dollaro, euro, parentesi e uguale di certi tastierini): un tasto
+  solo batteva Shift+4. Ma su una tastiera da PC quei tasti non ci sono, e QEMU li scartava.
+- **Correzione:** `src/keyboard.c` — i tasti di una tastiera normale vengono sempre prima; quelli speciali restano come
+  ultima scelta, per i caratteri che in quella tastiera non si fanno in altro modo.
+- **Come è stato verificato:** confronto a tappeto regola vecchia/nuova con il codice vero, 98 tastiere, tabelle di
+  Debian 13 e di Ubuntu 26.04: su 13.311 combinazioni ne cambiano 359, tutte e solo dei sei caratteri `$ ( ) = € ±`.
+  Provato dal proprietario dentro QEMU su Debian.
+- **Su una distribuzione nuova:** il difetto sta nel nostro codice e le tabelle sono comuni a tutto Linux: partire dal
+  codice già corretto. Se le tabelle di una distribuzione portano altri tasti speciali, rifare il confronto.
+
+### D-bis.2 Caratteri diversi da quelli premuti: la tastiera era indovinata dalla lingua del browser
+- **Che cosa si vedeva:** browser in italiano e tastiera fisica americana (il caso del proprietario): dentro QEMU
+  `(` dava `*`, `-` dava `/`, `@` dava `q`. Con il browser in inglese tutto giusto.
+- **Causa:** una pagina web non può sapere che tastiera ha chi la guarda; la pagina la deduceva dalla lingua del browser
+  e il server impostava la sessione di conseguenza. Sessione italiana + sistema ospitato americano = tasti letti con la
+  tabella sbagliata. Lo stesso scarto può spostare le scorciatoie con Ctrl e Alt.
+- **Correzione:** `src/page.html` — nella maschera di accesso c'è il menu «Keyboard», preimpostato sulla tastiera che
+  risulta dalla lingua del browser; l'utente può cambiarla e la scelta resta ricordata in quel browser. Server e
+  protocollo non cambiano. Chi non tocca il menu ottiene la tastiera di prima.
+- **Regola per chi usa macchine virtuali da remoto:** la tastiera scelta nella maschera deve essere quella del sistema
+  che gira dentro la macchina virtuale.
+- **Limiti noti:** niente varianti (per esempio «US internazionale»); per cambiare tastiera ci si scollega e si rientra;
+  se il server non ha la tastiera scelta, il messaggio di rifiuto è generico e non la nomina.
+
+---
+
 ## E. Aperti (non bloccanti)
 
 ### E1. XFCE: nella sessione remota lo sfondo è nero

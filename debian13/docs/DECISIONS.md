@@ -4179,6 +4179,14 @@ press Shift, press 30, release 30, release Shift); repetition is not ours (wlroo
 discards repeated keys, it is the application that repeats); and the layout declared by the client
 — v1's «question no. 7» — is no longer needed to *interpret*, only to *choose* (5-bis.7).
 
+> ⭐ **1.0.1 (21 Nov 2026) — two corrections, both found by the owner typing inside QEMU**, a program that forwards
+> RAW key positions instead of taking the finished character from the compositor. (1) `keyboard_positions_for()` now
+> prefers the keys of an ordinary PC keyboard: the one-key «special» positions of the XKB tables (KEY_DOLLAR, KEY_EURO,
+> KEY_KPLEFTPAREN/RIGHTPAREN, KEY_KPEQUAL, KEY_KPPLUSMINUS) used to win as the shortest path, and no PC keyboard has
+> them. (2) The layout declared in `ATTACH` is no longer only the browser-language guess: the sign-in form has a
+> «Keyboard» menu, preset from that guess and remembered per browser — the «letting the user choose» this section and
+> `page.html` had left open. Wire format and server unchanged. Details: `docs/REGISTRO-problemi.md` §D-bis.
+
 ### 5-bis.6-bis ✅ ⭐ Composed accents and Asian keyboards stay **out, declared**
 
 *14 Aug 2026, decided by the user in front of the phase 4 measurement

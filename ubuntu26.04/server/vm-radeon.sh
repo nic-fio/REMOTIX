@@ -24,10 +24,10 @@ CODE=/usr/share/OVMF/OVMF_CODE_4M.fd VARS0=/usr/share/OVMF/OVMF_VARS_4M.fd
 
 # desktop table: iso, ssh port, REMOTIX port
 case "${2:-}" in
-ubuntu)  ISO=$ISODIR/ubuntu-26.04-desktop-amd64.iso SSHP=2341 RXP=8841 KIND=autoinstall;;
+ubuntu)  ISO=$ISODIR/ubuntu-26.04.1-desktop-amd64.iso SSHP=2341 RXP=8841 KIND=autoinstall;;
 kubuntu) ISO=$ISODIR/kubuntu-26.04.1-desktop-amd64.iso SSHP=2342 RXP=8842 KIND=squashfs LAYERS="casper/filesystem.squashfs";;
-xubuntu) ISO=$ISODIR/xubuntu-26.04-desktop-amd64.iso SSHP=2343 RXP=8843 KIND=squashfs LAYERS="casper/minimal.squashfs casper/minimal.standard.squashfs";;
-lubuntu) ISO=$ISODIR/lubuntu-26.04-desktop-amd64.iso SSHP=2344 RXP=8844 KIND=squashfs LAYERS="casper/minimal.squashfs casper/minimal.standard.squashfs";;
+xubuntu) ISO=$ISODIR/xubuntu-26.04.1-desktop-amd64.iso SSHP=2343 RXP=8843 KIND=squashfs LAYERS="casper/minimal.squashfs casper/minimal.standard.squashfs";;
+lubuntu) ISO=$ISODIR/lubuntu-26.04.1-desktop-amd64.iso SSHP=2344 RXP=8844 KIND=squashfs LAYERS="casper/minimal.squashfs casper/minimal.standard.squashfs";;
 *) echo "usage: $0 crea|accendi|spegni|ssh|stato|prova-avvio ubuntu|kubuntu|xubuntu|lubuntu [cmd]; $0 istantanea|ripristina <name> <label>"; exit 2;;
 esac
 NAME=$2

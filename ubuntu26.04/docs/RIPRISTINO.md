@@ -142,10 +142,10 @@ e `manuals/` (capitolo «The VM bench» del manuale tecnico, `docs/STORIA-ubuntu
 
 | Nome | Desktop | ISO attesa da `vm-radeon.sh` | Porte ssh / REMOTIX |
 |---|---|---|---|
-| `ubuntu` | gnome | `ubuntu-26.04-desktop-amd64.iso` (installazione automatica) | 2341 / 8841 |
+| `ubuntu` | gnome | `ubuntu-26.04.1-desktop-amd64.iso` (installazione automatica) | 2341 / 8841 |
 | `kubuntu` | kde | `kubuntu-26.04.1-desktop-amd64.iso` | 2342 / 8842 |
-| `xubuntu` | xfce | `xubuntu-26.04-desktop-amd64.iso` | 2343 / 8843 |
-| `lubuntu` | lxqt | `lubuntu-26.04-desktop-amd64.iso` | 2344 / 8844 |
+| `xubuntu` | xfce | `xubuntu-26.04.1-desktop-amd64.iso` | 2343 / 8843 |
+| `lubuntu` | lxqt | `lubuntu-26.04.1-desktop-amd64.iso` | 2344 / 8844 |
 
 **Preparazione dell'hardware (cose NON nel codice, ma nei documenti).**
 
@@ -159,8 +159,7 @@ e `manuals/` (capitolo «The VM bench» del manuale tecnico, `docs/STORIA-ubuntu
 4. Le ISO vanno scaricate a mano in **`/media/DOWNLOAD/`** (percorso fisso nello script). Cartelle ufficiali (da `studio/8-pacchetto-e-prove.md`, non riverificate oggi;
    ogni cartella ha `SHA256SUMS`): `https://releases.ubuntu.com/26.04/`, `https://cdimage.ubuntu.com/kubuntu/releases/26.04/release/`,
    `https://cdimage.ubuntu.com/xubuntu/releases/26.04/release/`, `https://cdimage.ubuntu.com/lubuntu/releases/26.04/release/`.
-   **Attenzione**: lo studio elenca per Ubuntu, Xubuntu e Lubuntu i file `…26.04.1…`, mentre lo script si aspetta `ubuntu-26.04-…`, `xubuntu-26.04-…`, `lubuntu-26.04-…`
-   (senza `.1`) e `kubuntu-26.04.1-…`. Va deciso al momento (rinominare il file scaricato o correggere lo script), e controllato il nome esatto in cartella.
+   Dal 21 nov 2026 lo script si aspetta per tutti e quattro i file `…26.04.1…` (prima tre erano senza `.1`): controllare comunque il nome esatto in cartella.
 5. Tutti i comandi di `vm-radeon.sh` hanno percorsi fissi in `/media/REMOTIX-UBUNTU/vm-radeon/` e vogliono `sudo` senza password.
 
 **Comandi** (da `server/vm-radeon.sh`, uno per volta; la scheda è una sola e uno `.lock` impedisce due comandi insieme):

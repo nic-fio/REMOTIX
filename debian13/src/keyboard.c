@@ -833,12 +833,24 @@ static int mask_keys(Keyboard *t, xkb_mod_mask_t mask,
 	return 1;
 }
 
+/*
+ * 1 when the evdev code is a key of an ordinary PC keyboard, 0 for the
+ * "special" keys of the XKB tables (KEY_DOLLAR, KEY_EURO, KEY_KPLEFTPAREN,
+ * KPEQ, KEY_KPPLUSMINUS, ...) that a PC keyboard does not have.
+ */
+static int pc_key(uint16_t evdev)
+{
+	return (evdev >= 1 && evdev <= 111) || evdev == 119 || evdev == 121 ||
+	       evdev == 124 || (evdev >= 125 && evdev <= 127);
+}
+
 int keyboard_positions_for(Keyboard *t, uint32_t character,
                            uint16_t codes[KEYBOARD_MAX_POSITIONS], size_t *n)
 {
 	xkb_keycode_t min, max;
 	uint16_t best[KEYBOARD_MAX_POSITIONS];
 	size_t best_n = 0;
+	int best_pc = 0;
 	int found = 0;
 
 	if (!t || !t->keymap || !codes || !n)
@@ -861,7 +873,7 @@ int keyboard_positions_for(Keyboard *t, uint32_t character,
 	min = xkb_keymap_min_keycode(t->keymap);
 	max = xkb_keymap_max_keycode(t->keymap);
 
-	for (xkb_keycode_t k = min; k <= max && !(found && best_n == 1); k++)
+	for (xkb_keycode_t k = min; k <= max && !(found && best_n == 1 && best_pc); k++)
 	{
 		xkb_level_index_t levels = xkb_keymap_num_levels_for_key(t->keymap, k, t->group);
 
@@ -908,22 +920,35 @@ int keyboard_positions_for(Keyboard *t, uint32_t character,
 			{
 				uint16_t via[KEYBOARD_MAX_POSITIONS];
 				size_t how_many_mod = 0;
+				int cand_pc;
 
 				if (!mask_keys(t, masks[m], via, &how_many_mod))
 					continue;
 
 				/*
-				 * The shortest path is kept: the fewer modifiers are pressed,
+				 * A key of an ordinary PC keyboard always beats a special key
+				 * (KEY_DOLLAR, KEY_EURO, ...): programs that forward raw key
+				 * positions, such as QEMU, have no such key and would lose the
+				 * character (owner's finding of 21 Nov 2026, release 1.0.1).
+				 * Special keys stay as the last resort.  Within the same class
+				 * the shortest path is kept: the fewer modifiers are pressed,
 				 * the fewer things can go wrong, and it is also what a hand
 				 * would do.  On a tie, the lowest key wins — which is the
 				 * criterion that keeps the numeric keypad out of the digits.
 				 */
-				if (found && how_many_mod + 1 >= best_n)
-					continue;
+				cand_pc = pc_key(EVDEV_DA_XKB(k));
+				if (found)
+				{
+					if (!cand_pc && best_pc)
+						continue;
+					if (cand_pc == best_pc && how_many_mod + 1 >= best_n)
+						continue;
+				}
 
 				memcpy(best, via, how_many_mod * sizeof *via);
 				best[how_many_mod] = EVDEV_DA_XKB(k);
 				best_n = how_many_mod + 1;
+				best_pc = cand_pc;
 				found = 1;
 			}
 		}

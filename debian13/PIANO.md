@@ -221,3 +221,65 @@ corretto (sha256 `421b0e4b…cf92`, con nota nella storia della pagina e invito 
 labwc/wlroots accanto al pacchetto; su GitHub i rilasci `debian13-1.0.0` e `ubuntu26.04-1.0.0` (pacchetti, manuali, sorgente
 di labwc); il rilascio `v1.0.0` resta con una nota che rimanda a quello nuovo. Repo riordinato: un ramo, `debian13/` e
 `ubuntu26.04/`. I sorgenti del sito restano fuori dal repo per scelta del proprietario. Prossimo lavoro: Fedora.
+
+---
+
+## Versione 1.0.1 — tastiera (21 nov 2026)
+
+Nata da una prova del proprietario: da remoto, dentro QEMU, alcuni caratteri non uscivano o uscivano sbagliati.
+QEMU (come altre macchine virtuali) legge i tasti grezzi, quindi mostra due difetti che nei programmi normali non si vedono.
+
+### Parte A — tasti speciali (FATTA, in attesa della sola pubblicazione)
+- **Difetto.** Per fare `$`, `(`, `)`, `=`, `€`, `±` il server sceglieva tasti «speciali» che su una tastiera da PC non
+  esistono (un tasto solo batteva Shift+tasto). Dentro QEMU il carattere spariva.
+- **Correzione.** In `src/keyboard.c` i tasti di una tastiera normale vengono sempre prima; quelli speciali restano come
+  ultima scelta. Revisore: APPROVATO.
+- **Verifica.** Confronto a tappeto sul server, codice vero, 98 tastiere, tabelle di Debian 13 e di Ubuntu 26.04: su 13.311
+  combinazioni ne cambiano 359, tutte e solo di quei sei caratteri; nessun carattere perso. Pacchetto costruito, controlli
+  tutti superati. Provato dal proprietario su Debian dentro QEMU con la sessione americana: funziona.
+
+### Parte B — scelta della tastiera nella maschera di accesso (FATTA; OK del proprietario il 21 nov)
+- **Difetto.** La pagina indovina la tastiera dalla lingua del browser. Chi ha browser italiano e tastiera americana (il
+  proprietario) ottiene una sessione italiana: dentro QEMU escono caratteri diversi da quelli premuti, e le scorciatoie
+  con Ctrl/Alt possono cadere su un altro tasto. Oggi l'unico rimedio è cambiare lingua al browser.
+- **Obiettivo.** Nella maschera di accesso, sotto la password, un menu «Keyboard» con cui l'utente dice che tastiera ha.
+
+**Come funziona**
+1. Il menu nasce **preimpostato sulla tastiera che risulta dalla lingua del browser** (proposta del proprietario, 21 nov,
+   al posto di una voce «Automatic»): chi non tocca nulla ottiene esattamente la tastiera di oggi.
+2. Dalla lista si cambia: le tastiere per nome (English (US), English (UK), Italian, German, French, Spanish, …), le
+   stesse che la pagina conosce già oggi, una trentina, in ordine alfabetico.
+3. Una riga di aiuto sotto il campo dice da dove viene il valore («dalla lingua del browser, cambiala se la tua
+   tastiera è diversa»; dopo una scelta: «scelta tua, ricordata su questo dispositivo»).
+3-bis. La scelta fatta a mano viene ricordata in quel browser (è una proprietà del dispositivo, non dell'utente): al
+   collegamento successivo è già selezionata. Se il browser non permette di ricordarla, si riparte dalla lingua del
+   browser, senza errori. Esempio approvato dal proprietario il 21 nov («ok, aggiorna il piano e procedi»).
+4. La scelta viaggia verso il server nello stesso messaggio di oggi: **nessuna modifica al server né al protocollo**,
+   cambia solo la pagina. Il server rifiuta già, con un messaggio, una tastiera che il sistema non conosce.
+5. La tastiera vale per quel collegamento; per cambiarla ci si scollega e si rientra.
+
+**File.** `src/page.html` (maschera, funzione che sceglie la tastiera, memoria della scelta). Poi una riga in
+`docs/DECISIONS.md` e la voce in `docs/REGISTRO-problemi.md`. Manuale utente: una frase, al momento della pubblicazione.
+
+**Fuori da questo lavoro.** Le varianti (per esempio «US internazionale») e gli accenti composti, già dichiarati fuori;
+il cambio di tastiera a sessione aperta.
+
+**Rischi.**
+- Una scelta sbagliata dell'utente dà scorciatoie sbagliate: è lo stesso effetto di oggi, ma ora rimediabile dal menu.
+- La maschera è vista anche dal telefono: il menu non deve rovinare la disposizione su schermi piccoli.
+- La pagina di Debian e quella di Ubuntu differiscono in pochi punti: la modifica va fatta uguale in entrambe.
+
+**Fatto quando.**
+- Con browser in italiano e scelta «English (US)», la sessione risulta americana e dentro QEMU i caratteri escono giusti.
+- Senza toccare il menu il comportamento è identico alla 1.0.0.
+- La scelta è ancora lì dopo aver chiuso e riaperto il browser.
+- Il revisore dà APPROVATO e il proprietario ha provato su Debian (sul server) e su Ubuntu (macchine virtuali).
+
+**Versione.** La parte B esce dentro la 1.0.1 (non tocca il server, e la 1.0.1 non è ancora pubblicata); il proprietario
+può ancora chiedere di separarla in una 1.0.2.
+
+**Stato (21 nov 2026).** Parti A e B scritte, revisore APPROVATO per entrambe, pacchetti `1.0.1-1` costruiti per Debian 13
+e Ubuntu 26.04 (cartelle `pacchetti/1.0.1-con-tastiera` sul server; controlli tutti superati). **Provato dal proprietario
+su Debian 13**, dentro QEMU, su GNOME e su XFCE (le due strade dei tasti): Chrome in italiano con tastiera scelta «English
+(US)» e Firefox in inglese senza toccare il menu — tutti i caratteri giusti. Manca: la prova su Ubuntu 26.04 (macchine
+virtuali da ricostruire), il commit, la pubblicazione (sito, rilasci su GitHub, una frase nel manuale utente).
