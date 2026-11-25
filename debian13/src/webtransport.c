@@ -6705,6 +6705,42 @@ size_t wt_dismiss_user_logged(const char *user, uint8_t reason, const char *deta
 	return how_many;
 }
 
+/* ⭐ 19 Nov 2026 — THE GRAPHICAL SESSION OF `user` IS OVER (its child said so, or is gone): who is told.
+ *    Three kinds of connection carry that name, and each gets a different treatment:
+ *      1. LOGGED IN (`rcp_logged_in()`): the farewell now, as `wt_dismiss_user_logged()` does;
+ *      2. ADMITTED BUT STILL INSIDE THE FIXED SECOND (`rcp_admitted_waiting()`): its «yes» was for the session that has
+ *         just ended (a child that is closing admits nobody: `delivery_verdict()` answers 0x0E), so ADMITTED would
+ *         lead it to a black page that nobody ever closes.  It gets the same farewell, but KEPT until the fixed second
+ *         has passed (`rcp_dismiss_login()`, §4.4-bis): it leaves in the place of ADMITTED;
+ *      3. STILL WAITING FOR PAM, or with a «no» already kept: skipped.  It was never attached to that session, and a
+ *         stranger trying passwords under that name must learn nothing about the account (§4.4).
+ *    ⛔ `wt_dismiss_user()` told all three at once: `[M]` 18 Nov 2026 a login refused with 0x0E «still closing» received
+ *       a false 0x10 «the session has ended» instead. */
+size_t wt_dismiss_user_session_over(const char *user, uint8_t reason, const char *detail)
+{
+	size_t how_many = 0;
+
+	if (!user || !user[0])
+		return 0;
+	for (wt *w = alive_before; w; w = w->alive_after) {
+		const char *my;
+
+		if (!w->rcp || w->closing >= 0)
+			continue;
+		my = rcp_user(w->rcp);
+		if (!my || strcmp(my, user) != 0)
+			continue;
+		if (rcp_logged_in(w->rcp))
+			wt_dismiss(w, reason, detail);
+		else if (rcp_admitted_waiting(w->rcp))
+			rcp_dismiss_login(w->rcp, reason, detail);
+		else
+			continue;
+		how_many++;
+	}
+	return how_many;
+}
+
 size_t wt_dismiss_ticket(uint64_t ticket, uint8_t reason, const char *detail)
 {
 	for (wt *w = alive_before; w; w = w->alive_after) {

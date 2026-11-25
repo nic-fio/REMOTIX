@@ -1504,7 +1504,13 @@ Input *input_open_kwin(KwinSession *kwin, uint32_t canvas_w, uint32_t canvas_h, 
 
 int input_dropped(const Input *in)
 {
-	return in && !in->wlr && in->dropped;
+	if (!in)
+		return 0;
+	/* ⭐ wlroots (XFCE, LXQt): the flag lives in the `WlrInput`, which stays in `in->wlr` after
+	 *    the drop until a reattach replaces it; `in->dropped` is the libei/GNOME flag. */
+	if (in->wlr)
+		return wlr_input_dropped(in->wlr);
+	return in->dropped;
 }
 
 int input_descriptor(Input *in)

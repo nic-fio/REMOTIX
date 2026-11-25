@@ -1005,14 +1005,17 @@ const REASON_TEXT = {
    *       it gave no gesture: whoever reads it does not know whether to wait,
    *       to reload, or whether they got something wrong.
    *
-   * ⛔⛔ AND IT STAYS GENERIC ON PURPOSE, because `0x0E` covers FIVE different
+   * ⛔⛔ AND IT STAYS GENERIC ON PURPOSE, because `0x0E` covers SIX different
    *      routes: unknown layout (`rcp.c` ~2760) · slot register full (~2865)
    *      · canvas not grantable under `video.max_size` (~2925) ·
    *      memory exhausted on the control channel (~7255) · ⭐ and since 25
    *      August **all stages busy** (`main.c` ~485, the P3 cure).
-   *      ⇒ Making it precise for one would make it FALSE for the other four.
+   *      · ⭐ and since 18 Nov 2026 **the desktop's compositor is not installed**
+   *      (`labwc` with `--no-install-recommends`, `main.c`): a sixth route, so the
+   *      sentence below stays as generic as before.
+   *      ⇒ Making it precise for one would make it FALSE for the other five.
    *      And for the same reason the gesture is not "ask to raise the cap": a
-   *      cap exists in two cases out of five, and in the other three there is
+   *      cap exists in two cases out of six, and in the other four there is
    *      nothing to raise.
    *
    * ⛔⛔ THE BODY'S DETAIL CANNOT BE SHOWN, and this was checked here instead

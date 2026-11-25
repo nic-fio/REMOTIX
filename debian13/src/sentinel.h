@@ -176,8 +176,9 @@ void sentinel_collect(sentinel *s);
  * protection that lives in a file must be **verified**, not believed.
  *
  * Asks logind `CanPowerOff`/`CanReboot`/`CanSuspend`/`CanHibernate` and
- * demands **`no`** from all four.  ⛔ «challenge» is NOT enough: it shows the
- * menu entry instead of removing it.
+ * demands **`no`** (or `na`, «not available here») from all four.  ⛔ «challenge»
+ * is NOT enough: it shows the menu entry instead of removing it.  An error answer
+ * counts as «not safe», and the detail names the call and the error.
  *
  * ⛔⛔ THE CHILD CALLS IT, NEVER THE SERVER: `[M]` root is answered «yes»
  *     because logind looks at `CAP_SYS_BOOT` before polkit.

@@ -952,6 +952,132 @@ static void closes_report(transport *t, ngtcp2_tstamp now)
 	t->closes_in_window = t->closes_quiet = 0;
 }
 
+/* ⭐ WHY A CONNECTION CLOSED, in one phrase, for the line that says it closed (22 Nov 2026: a browser said «Opening handshake failed» and the log
+ *   showed only «closed (0 left)» — who closed and why was not written anywhere).  Read from ngtcp2 when the connection is reaped:
+ *   · the PEER closed (draining): the error it SENT, `ngtcp2_conn_get_ccerr2()` (header of ngtcp2 1.25: type, error_code, reason);
+ *   · WE closed (closing period): our own `last_error`;
+ *   · idle timeout: said as such (the two places that see NGTCP2_ERR_IDLE_CLOSE write it into our `last_error`, which is only read here);
+ *   · neither (dropped without a close frame, a write failure, DROP_CONN): our `last_error` if it holds one, «no error recorded» if it is untouched.
+ *   A QUIC CRYPTO error is 0x100 + the TLS alert number (RFC 9001 §4.8): the alert is named (42 bad_certificate, 45 certificate_expired,
+ *   46 certificate_unknown, 48 unknown_ca…), the phrase that tells whether the TLS handshake had completed is added.
+ *   The reason phrase is the PEER's text: only printable ASCII (a double quote becomes a dot), 60 characters at most.  Nothing of the client but what the line already carried.
+ *   It decides nothing and changes no behaviour. */
+static const char *tls_alert_name(unsigned a)
+{
+	switch (a) {
+	case 10: return "unexpected_message";
+	case 20: return "bad_record_mac";
+	case 40: return "handshake_failure";
+	case 42: return "bad_certificate";
+	case 43: return "unsupported_certificate";
+	case 44: return "certificate_revoked";
+	case 45: return "certificate_expired";
+	case 46: return "certificate_unknown";
+	case 47: return "illegal_parameter";
+	case 48: return "unknown_ca";
+	case 49: return "access_denied";
+	case 50: return "decode_error";
+	case 51: return "decrypt_error";
+	case 70: return "protocol_version";
+	case 71: return "insufficient_security";
+	case 80: return "internal_error";
+	case 86: return "inappropriate_fallback";
+	case 90: return "user_canceled";
+	case 109: return "missing_extension";
+	case 110: return "unsupported_extension";
+	case 112: return "unrecognized_name";
+	case 113: return "bad_certificate_status_response";
+	case 115: return "unknown_psk_identity";
+	case 116: return "certificate_required";
+	case 120: return "no_application_protocol";
+	default: return "unknown alert";
+	}
+}
+
+static const char *transport_error_name(uint64_t code)
+{
+	switch (code) {
+	case 0x0: return "NO_ERROR";
+	case 0x1: return "INTERNAL_ERROR";
+	case 0x2: return "CONNECTION_REFUSED";
+	case 0x3: return "FLOW_CONTROL_ERROR";
+	case 0x4: return "STREAM_LIMIT_ERROR";
+	case 0x5: return "STREAM_STATE_ERROR";
+	case 0x6: return "FINAL_SIZE_ERROR";
+	case 0x7: return "FRAME_ENCODING_ERROR";
+	case 0x8: return "TRANSPORT_PARAMETER_ERROR";
+	case 0x9: return "CONNECTION_ID_LIMIT_ERROR";
+	case 0xa: return "PROTOCOL_VIOLATION";
+	case 0xb: return "INVALID_TOKEN";
+	case 0xc: return "APPLICATION_ERROR";
+	case 0xd: return "CRYPTO_BUFFER_EXCEEDED";
+	case 0xe: return "KEY_UPDATE_ERROR";
+	case 0xf: return "AEAD_LIMIT_REACHED";
+	case 0x10: return "NO_VIABLE_PATH";
+	default: return "";
+	}
+}
+
+static void close_why(const connection *c, char *out, size_t n)
+{
+	const ngtcp2_ccerr *e;
+	const char *who, *what;
+	char code[96], phrase[80] = "";
+	bool handshake = ngtcp2_conn_get_handshake_completed2(c->conn) != 0;
+
+	if (ngtcp2_conn_in_draining_period2(c->conn)) {
+		who = "the PEER closed it";
+		e = ngtcp2_conn_get_ccerr2(c->conn);
+	} else if (ngtcp2_conn_in_closing_period2(c->conn)) {
+		who = "WE closed it";
+		e = &c->last_error;
+	} else {
+		who = "dropped without a CONNECTION_CLOSE";
+		e = &c->last_error;
+	}
+	switch (e->type) {
+	case NGTCP2_CCERR_TYPE_IDLE_CLOSE:
+		snprintf(code, sizeof code, "idle timeout (silence)");
+		break;
+	case NGTCP2_CCERR_TYPE_VERSION_NEGOTIATION:
+		snprintf(code, sizeof code, "version negotiation");
+		break;
+	case NGTCP2_CCERR_TYPE_DROP_CONN:
+		snprintf(code, sizeof code, "dropped silently");
+		break;
+	case NGTCP2_CCERR_TYPE_RETRY:
+		snprintf(code, sizeof code, "retry");
+		break;
+	case NGTCP2_CCERR_TYPE_APPLICATION:
+		snprintf(code, sizeof code, "application error 0x%llx", (unsigned long long)e->error_code);
+		break;
+	default:
+		if (e->error_code >= NGTCP2_CRYPTO_ERROR && e->error_code <= NGTCP2_CRYPTO_ERROR + 0xff) {
+			unsigned a = (unsigned)(e->error_code - NGTCP2_CRYPTO_ERROR);
+
+			snprintf(code, sizeof code, "transport error CRYPTO 0x%llx = TLS alert %u %s", (unsigned long long)e->error_code, a,
+			         tls_alert_name(a));
+		} else {
+			what = transport_error_name(e->error_code);
+			if (e == &c->last_error && !ngtcp2_conn_in_closing_period2(c->conn) && e->error_code == 0 && e->reasonlen == 0)
+				snprintf(code, sizeof code, "no error recorded"); /* the default of an untouched last_error (DROP_CONN...), not a NO_ERROR the peer sent */
+			else
+				snprintf(code, sizeof code, "transport error 0x%llx%s%s", (unsigned long long)e->error_code, *what ? " " : "", what);
+		}
+	}
+	if (e->reason && e->reasonlen > 0) {
+		size_t i, m = e->reasonlen < 60 ? e->reasonlen : 60, k = 0;
+
+		phrase[k++] = ' ';
+		phrase[k++] = '"';
+		for (i = 0; i < m && k < sizeof phrase - 5; i++)
+			phrase[k++] = (e->reason[i] >= 0x20 && e->reason[i] <= 0x7e && e->reason[i] != '"') ? (char)e->reason[i] : '.';
+		phrase[k++] = '"';
+		phrase[k] = '\0';
+	}
+	snprintf(out, n, "%s: %s%s; TLS handshake %s", who, code, phrase, handshake ? "COMPLETED" : "NOT completed");
+}
+
 static void reap_dead(transport *t)
 {
 	connection **p = &t->prime;
@@ -961,19 +1087,22 @@ static void reap_dead(transport *t)
 			*p = c->upcoming;
 			/* ⭐ only the connections that NEVER logged in (`unlogged` still set) are limited to
 			 * BIRTH_LINES per window; the closing of a session that logged in is always written. */
+			char why[320];
+
+			close_why(c, why, sizeof why);
 			if (c->unlogged) {
 				closes_report(t, now_ns());
 				if (++t->closes_in_window <= BIRTH_LINES) {
-					registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
-					              c->provenance, t->how_many - 1);
+					registro_dice(REG_QUIC, "connection with %s closed (%zu left) — %s",
+					              c->provenance, t->how_many - 1, why);
 				} else {
 					t->closes_quiet++;
-					log_detail(REG_QUIC, "connection with %s closed (%zu left)",
-					           c->provenance, t->how_many - 1);
+					log_detail(REG_QUIC, "connection with %s closed (%zu left) — %s",
+					           c->provenance, t->how_many - 1, why);
 				}
 			} else {
-				registro_dice(REG_QUIC, "connection with %s closed (%zu left)",
-				              c->provenance, t->how_many - 1);
+				registro_dice(REG_QUIC, "connection with %s closed (%zu left) — %s",
+				              c->provenance, t->how_many - 1, why);
 			}
 			if (c->unlogged) {
 				c->unlogged = false;
@@ -2055,6 +2184,9 @@ static void read_packet_1(transport *t, const struct sockaddr *local,
 	if (rv != 0) {
 		if (rv == NGTCP2_ERR_DRAINING || rv == NGTCP2_ERR_IDLE_CLOSE ||
 		    rv == NGTCP2_ERR_CLOSING) {
+			/* only for the log line (close_why): the idle close is written down as such; no CONNECTION_CLOSE follows, as before */
+			if (rv == NGTCP2_ERR_IDLE_CLOSE && c->last_error.error_code == 0)
+				ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
 			c->dead_run = true;
 			return;
 		}
@@ -2457,12 +2589,15 @@ void transport_expired(transport *t)
 		if (ngtcp2_conn_get_expiry2(c->conn) <= now) {
 			int rv = ngtcp2_conn_handle_expiry(c->conn, now);
 			if (rv != 0) {
-				if (rv == NGTCP2_ERR_IDLE_CLOSE)
+				if (rv == NGTCP2_ERR_IDLE_CLOSE) {
 					registro_dice(REG_QUIC,
 					              "%s: thirty seconds of silence, "
 					              "disconnected (§2.2)",
 					              c->provenance);
-				else {
+					/* only for the log line (close_why); no CONNECTION_CLOSE is written */
+					if (c->last_error.error_code == 0)
+						ngtcp2_ccerr_set_liberr(&c->last_error, rv, NULL, 0);
+				} else {
 					registro_dice(REG_QUIC, "%s: timer expired: %s",
 					              c->provenance, ngtcp2_strerror(rv));
 					/* ⛔ 24 Oct 2026 (audit ngtcp2 1.25; present since 1.0): the
