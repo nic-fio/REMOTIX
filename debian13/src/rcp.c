@@ -8685,6 +8685,14 @@ void rcp_closed_by_client(rcp_session *s, uint8_t code)
 	s->state = S_FINISHED;
 }
 
+/* ⭐ 19 Nov 2026: PAM's «yes» is in and nothing refused it, but ADMITTED has not left yet (the fixed second of §4.4-bis is
+ *    still running).  ⛔ Not `rcp_logged_in()`: nothing may be said on the wire before that second has passed — whoever
+ *    must send this login away uses `rcp_dismiss_login()`, which keeps the farewell until then. */
+bool rcp_admitted_waiting(const rcp_session *s)
+{
+	return s && s->state == S_WAIT_VERDICT && !s->expected_verdict && s->cred_good && !s->held_farewell;
+}
+
 bool rcp_awaits_verdict(const rcp_session *s, uint64_t ticket)
 {
 	/* the walls of `rcp_verdict()`: alive, in wait-verdict, asked, its own number */

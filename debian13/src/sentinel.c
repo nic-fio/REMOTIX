@@ -887,24 +887,33 @@ bool sentinel_shutdown_forbidden(sentinel *s, char *detail, size_t how_much)
 		return false;
 
 	for (int i = 0; ACTIONS[i]; i++) {
+		g_autoptr(GError) error = NULL;
 		g_autoptr(GVariant) response =
-			call(s, LOGIND_PATH, IFACE_MANAGER, ACTIONS[i], NULL,
-		               G_VARIANT_TYPE("(s)"), WAIT_MS);
+			g_dbus_connection_call_sync(s->bus, LOGIND_NAME, LOGIND_PATH, IFACE_MANAGER,
+			                            ACTIONS[i], NULL, G_VARIANT_TYPE("(s)"),
+			                            G_DBUS_CALL_FLAGS_NONE, WAIT_MS, NULL, &error);
 		const char *outcome = NULL;
-		char piece[64];
+		char piece[192];
 
 		if (!response) {
+			/* ⛔ An ERROR stays an alarm (we do not know), but the line says which call
+			 *    failed and why: «(no answer)» alone left the alarm unreadable. */
 			all_no = false;
-			outcome = "(no answer)";
+			if (error)
+				g_dbus_error_strip_remote_error(error);
+			g_snprintf(piece, sizeof piece, "%s=(ERROR: %.120s) ", ACTIONS[i],
+			           error ? error->message : "no answer");
 		} else {
 			g_variant_get(response, "(&s)", &outcome);
 			/* ⛔ «challenge» is NOT enough: it means «yes, asking for a
 			 *    password», and on GNOME it **shows the menu entry**
-			 *    instead of removing it. */
-			if (g_strcmp0(outcome, "no") != 0)
+			 *    instead of removing it.
+			 * ⭐ «na» is «not available on this machine» (a VM, a server): nobody can
+			 *    do it, so it is as safe as «no». */
+			if (g_strcmp0(outcome, "no") != 0 && g_strcmp0(outcome, "na") != 0)
 				all_no = false;
+			g_snprintf(piece, sizeof piece, "%s=%s ", ACTIONS[i], outcome ? outcome : "?");
 		}
-		g_snprintf(piece, sizeof piece, "%s=%s ", ACTIONS[i], outcome ? outcome : "?");
 		if (detail && how_much)
 			g_strlcat(detail, piece, how_much);
 	}

@@ -678,6 +678,8 @@ bool rcp_is_finished(const rcp_session *s);
 /* `ADMITTED` was sent and the session is not over (wait-attach, active,
  * detached): before that the user name is only the one claimed at CREDENTIALS. */
 bool rcp_logged_in(const rcp_session *s);
+/* PAM said yes, nothing refused it, ADMITTED not sent yet (the fixed second is running): see `rcp.c`. */
+bool rcp_admitted_waiting(const rcp_session *s);
 
 /* ⛔ §4.2: the page has closed the WebTransport session, and said so with the
  * reason inside the close.  The slot (§8.2 reason 0x0F) is left HERE:

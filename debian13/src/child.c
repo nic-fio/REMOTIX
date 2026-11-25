@@ -396,7 +396,13 @@ struct body_stage {
 	uint32_t streams;          /* how many codecs delivered */
 	char monitor[64];
 	char fault[224];
+	/* ⭐ 19 Nov 2026: 1 ONLY when the stage was refused for the SCALE (guard 2): a fault that no retry cures, the user
+	 *    must be told (0x0E) and the session closed.  At the END of the struct on purpose: a body of the old size still
+	 *    reads, with 0 = «not fatal» (`STAGE_MIN`).  Never set for the transient faults of the birth. */
+	uint32_t fatal;
 };
+/* the size of the body before `fatal` existed: the least a parent accepts */
+#define STAGE_MIN offsetof(struct body_stage, fatal)
 
 /* ⛔⭐ The stage's answer to the canvas request.  ⚠ `got_w == 0` means
  *     "I did not make it", and it is NOT a size: it is the other face of the
@@ -719,6 +725,8 @@ struct children {
 	void *ctx_session_finished;
 	ChildLocalFound on_local_found; /* ⭐ 1.5.4 */
 	void *ctx_local_found;
+	ChildStageRefused on_stage_refused; /* ⭐ 19 Nov 2026 */
+	void *ctx_stage_refused;
 	ChildCanvasWait on_canvas_wait;
 	void *ctx_canvas_wait;
 	/* ⭐ PHASE 7 — the audio blocks.  ⚠ It has a context of ITS OWN and does
@@ -3509,6 +3517,10 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		              "client asked for it: the user logged out from the "
 		              "desktop menu).  Whoever is watching gets the farewell 0x10",
 		              g->user);
+		/* ⭐ 19 Nov 2026: the child may say this BEFORE it dismantles its stage and leaves (it can take up to 25 s
+		 *    where RealtimeKit cannot start): from here it is «closing», so a login in the meantime gets the true 0x0E
+		 *    «still closing» and is never attached to a desktop that is going away (`children_alive_of()`). */
+		g->closing_asked_ms = log_now_ms() ? log_now_ms() : 1;
 		if (f->on_session_finished)
 			f->on_session_finished(f->ctx_session_finished, g->user, g->uid);
 		else
@@ -3521,13 +3533,15 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 	case MSG_LOCAL_FOUND:
 		/*
 		 * ⛔⭐ 1.5.4, defence 3: the child found a local session of its user and
-		 *     did the light close.  It is NOT «the user logged out» (0x10): the
-		 *     clients are sent away with 0x04 by the hook, and the child leaves
-		 *     on its own.
+		 *     is going to do the light close.  Since 19 Nov 2026 this message comes
+		 *     BEFORE the close (the close dismantles the stage, and that can wait
+		 *     for PipeWire/RealtimeKit for up to 25 s).  It is NOT «the user logged
+		 *     out» (0x10): the clients are sent away with 0x04, and the child
+		 *     leaves on its own after the close.
 		 */
 		registro_dice(LOG_CHILD,
 		              "⭐ defence 3: the child of «%s» found a LOCAL session of its "
-		              "user and closed lightly (the local desktop untouched).  "
+		              "user and is closing lightly (the local desktop untouched).  "
 		              "Whoever is watching gets 0x04 — not the 0x10",
 		              g->user);
 		if (f->on_local_found)
@@ -3541,9 +3555,11 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		return true;
 	case MSG_STAGE: {
 		struct body_stage p;
-		if (byte < sizeof p)
+		if (byte < STAGE_MIN)
 			return refused_quietly(g);
-		memcpy(&p, body, sizeof p);
+		/* ⭐ 19 Nov 2026: a body of the old size (without `fatal`) is read as «not fatal» */
+		memset(&p, 0, sizeof p);
+		memcpy(&p, body, byte < sizeof p ? byte : sizeof p);
 		/* ⛔ 24 Oct 2026, review of the child-msg fuzz (present since 1.0, 04f6aa18): `monitor`
 		 *   and `fault` come from the untrusted socket and the log prints them with %s: the
 		 *   final zero is FORCED, not assumed. */
@@ -3558,6 +3574,20 @@ static bool handle(struct children *f, struct child *g, const struct head *t,
 		              p.take, p.monitor, p.monitor_before, p.monitor_after,
 		              p.width, p.height, p.stride, p.bit, p.streams,
 		              p.fault[0] ? " — " : "", p.fault);
+		/* ⭐⭐ 19 Nov 2026: the stage was refused for the SCALE and the child is going to close the session: the
+		 *    clients get the 0x0E (the generic «could not open your session») instead of a black page, and from here
+		 *    the user is «closing» exactly as when the child says the session is over (`MSG_SESSION_FINISHED`
+		 *    above), so a login in the meantime is never attached to a desktop that is going away. */
+		if (p.fatal) {
+			g->closing_asked_ms = log_now_ms() ? log_now_ms() : 1;
+			if (f->on_stage_refused)
+				f->on_stage_refused(f->ctx_stage_refused, g->user, g->uid);
+			else
+				registro_dice(LOG_CHILD,
+				              "⚠ no «stage refused» hook: the clients of «%s» "
+				              "were NOT warned",
+				              g->user);
+		}
 		return true;
 	}
 	case MSG_CURSOR: {
@@ -4474,6 +4504,14 @@ void children_hook_local_found(children *f, ChildLocalFound fn, void *ctx)
 		return;
 	f->on_local_found = fn;
 	f->ctx_local_found = ctx;
+}
+
+void children_hook_stage_refused(children *f, ChildStageRefused fn, void *ctx)
+{
+	if (!f)
+		return;
+	f->on_stage_refused = fn;
+	f->ctx_stage_refused = ctx;
 }
 
 bool children_terminate_session(children *f, const char *user, int why)
@@ -5696,6 +5734,15 @@ static bool session_closed_by_user;
  *    already asked for it" and waited to make it BE BORN AGAIN — that is, it
  *    prevented logging out.  ⇒ A mounted KWin stage also means "seen alive". */
 static bool vista_viva;
+/* ⭐ 19 Nov 2026: the parent has ALREADY been told «the graphical session is over» (`MSG_SESSION_FINISHED`) by
+ *    `session_over_early()`, before the stage was dismantled: the §7.6 road at the remount must not say it twice.
+ *    Cleared whenever the session is seen alive again.
+ * ⭐ Said only on a CERTAIN death (`session_life()` == DEAD).  After it the child cannot find the session again in any
+ *    branch of the loop except one: a compositor that takes its name back before the remount reads it (about a second;
+ *    nothing of ours does that, and `org.gnome.Shell@…` is `Restart=no`).  Otherwise the remount reads DEAD with
+ *    `vista_viva` set → §7.6 → `raise(SIGTERM)` → the child leaves.  In that one case the parent has already sent the
+ *    clients away and keeps the child «closing» for `CLOSING_GRACE_MS` (30 s). */
+static bool finished_told;
 
 /*
  * ⛔⭐⭐ 1.5.4, DEFENCE 3 — «THIS USER HAS A LOCAL SESSION: I TOUCH NOTHING».
@@ -8821,9 +8868,10 @@ static bool take_stage(uint32_t canvas_w, uint32_t canvas_h,
 		 *   the user had closed reappear.
 		 */
 		if (p.state_session != SESSION_DEAD &&
-		    p.state_session != SESSION_NOT_READ)
+		    p.state_session != SESSION_NOT_READ) {
 			vista_viva = true;
-		else if (p.state_session == SESSION_DEAD && vista_viva) {
+			finished_told = false;
+		} else if (p.state_session == SESSION_DEAD && vista_viva) {
 			vista_viva = false;
 			session_closed_by_user = true;
 			registro_dice(LOG_CHILD,
@@ -8832,7 +8880,11 @@ static bool take_stage(uint32_t canvas_w, uint32_t canvas_h,
 			              "desktop menu.  ⛔ I am NOT making it be born again: remaking it "
 			              "would mean preventing them from logging out.  Warning the "
 			              "parent, which gives whoever is watching the farewell 0x10");
-			send_msg(MSG_SESSION_FINISHED, NULL, 0, NULL, 0);
+			/* ⭐ 19 Nov 2026: usually told already, BEFORE the dismantling (`session_over_early()`): once only */
+			if (!finished_told) {
+				finished_told = true;
+				send_msg(MSG_SESSION_FINISHED, NULL, 0, NULL, 0);
+			}
 			send_msg(MSG_STAGE, &p, sizeof p, NULL, 0);
 			/* ⭐ and nobody who had detached from the desktop stays in the scope */
 			session_clear_out_scope();
@@ -9041,6 +9093,7 @@ static bool take_stage(uint32_t canvas_w, uint32_t canvas_h,
 			return false;
 		}
 		vista_viva = true;
+		finished_told = false;
 	} else {
 	CHRONO_START("mount the stage (mutter_apri)");
 	mut = mutter_open(&mistake);
@@ -9119,8 +9172,10 @@ remount_capture:
 	 *    its stream: the session IS there.  ⛔ Not on the XFCE/LXQt family
 	 *    (`mut` is NULL there): see the 21 Sep note above.
 	 */
-	if (mut)
+	if (mut) {
 		vista_viva = true;
+		finished_told = false;
+	}
 	/* ⭐ PHASE 12 — on Plasma the cursor theme is invisible on purpose
 	 *    (`session.c`), so the metadata will always say "no image": that
 	 *    hiding must NOT be delivered, or whoever is watching is left without a
@@ -9547,7 +9602,7 @@ remount_capture:
 
 		if (!already_done) {
 			sentinel *guard;
-			char detail[192];
+			char detail[384]; /* four answers; an error text is cut at 120 characters */
 
 			already_done = true;
 
@@ -9836,6 +9891,42 @@ static uid_t parent_uid = 0;
  *     most the network side gets is what CLOSE_ORPHAN is for: that abandoned
  *     desktop closed.  Nobody passes it today (phase D5, inert). */
 static bool close_only = false;
+
+/* ⭐⭐ 19 Nov 2026 — «THE SESSION IS OVER» IS SAID BEFORE THE STAGE IS DISMANTLED, NOT AFTER.
+ *
+ * ⛔ `[M]` 18 Nov 2026, Ubuntu 26.04 box: after a Log Out from the desktop the child dismantled the stage first
+ *    (`unmount_stage()`: capture, input, clipboard) and said `MSG_SESSION_FINISHED` at the next remount.  The
+ *    dismantling waits for PipeWire (`pw_stream_destroy`), and PipeWire's `module-rt` (loaded by both of our contexts,
+ *    `sound.c`, `capture.c`) is stuck in a D-Bus call to RealtimeKit for up to 25 s wherever `rtkit-daemon` is installed
+ *    but cannot start (containers, hardened machines): the page stayed on the last image, without a word, for 17 s.
+ * ⭐ The farewell does not depend on the dismantling: it is the same message, sent first.  The parent then also
+ *    counts this child as «closing» (`MSG_SESSION_FINISHED` in `children`), so a login in the meantime gets the
+ *    true 0x0E «still closing», never a desktop that is going away.
+ * ⛔ And it is sent ONLY ON A CERTAIN DEATH: `session_life()` == DEAD, i.e. the session bus ANSWERED and the compositor's
+ *    name has no owner.  «Does not answer» / «I could not look» (a slow Mutter, a busy bus) is NOT death, and the
+ *    farewell is irreversible: in doubt nothing is said here and the old road holds (the remount, a second later, asks
+ *    `session_state()` and decides).  The question is asked ONCE by the caller (`life`), not again here.
+ * ⛔ KDE stays OUT: with a KWin stage mounted (`stage_kwin`) a KWin restarted by systemd leaves its name without an owner
+ *    for a moment, so «no owner» is not certain there.  KDE waits for a proof on a live machine.
+ * ⭐ A child that has said this cannot find the session again: the remount reads `session_state()` DEAD with
+ *    `vista_viva` set and takes the §7.6 road, which ends in `raise(SIGTERM)` (`take_stage`); the only other way out
+ *    of the loop is a close order or a signal.  If a session came back from certain death (a new `gnome-shell` under the
+ *    same user bus) the clients are already gone and the parent keeps the child «closing» for `CLOSING_GRACE_MS`. */
+static void session_over_early(const char *why, SessionLife life)
+{
+	if (life != SESSION_LIFE_DEAD || stage_kwin)
+		return;
+	if (finished_told || !vista_viva || close_only || session_closed_by_user)
+		return;
+	finished_told = true;
+	registro_dice(LOG_CHILD,
+	              "⭐ 19 Nov 2026: the graphical session of «%s» is over, CERTAINLY (%s: the bus answered, the compositor's "
+	              "name has no owner): the parent is told NOW, before the stage is dismantled — the dismantling can wait for "
+	              "PipeWire (RealtimeKit) for up to 25 s",
+	              g_get_user_name(), why);
+	send_msg(MSG_SESSION_FINISHED, NULL, 0, NULL, 0);
+}
+
 static uint64_t close_only_since_ms;
 
 /* ------------------------------------------------------------------------- */
@@ -10541,8 +10632,10 @@ void child_alive(int argc, char **argv)
 		 *    the parent asked for the light close (`CHILDREN_EXIT_LOCAL`): light
 		 *    close, tell the parent, exit.  ⛔ NEVER the logout of the desktop. */
 		if (local_found) {
-			local_light_close(&mut, &cat, "guard in the child");
+			/* ⭐ 19 Nov 2026: the parent is told BEFORE the light close (it dismantles the stage, which can wait for
+			 *    PipeWire/RealtimeKit for up to 25 s): the clients get their 0x04 at once, as for every other end. */
 			send_msg(MSG_LOCAL_FOUND, NULL, 0, NULL, 0);
+			local_light_close(&mut, &cat, "guard in the child");
 			break;
 		}
 		/* ⛔ The close-only child's own end (box at `close_only`). */
@@ -11712,17 +11805,35 @@ void child_alive(int argc, char **argv)
 #define EIS_GONE_LOOK_MS 1000
 		if (cat && !stage_kwin && input_dropped(stage_input)) {
 			static uint64_t eis_looked_ms;
+			static int eis_unknown;
 			uint64_t t_now = log_now_ms();
 
 			if (t_now - eis_looked_ms >= EIS_GONE_LOOK_MS) {
 				eis_looked_ms = t_now;
-				if (!session_alive()) {
+				SessionLife life = session_life(); /* ONE question: the gate and the early farewell both use it */
+
+				/* ⭐ 19 Nov 2026: «I could not look» is NOT «dead».  At a logout the user's session bus itself goes away
+				 *    for a moment (`[M]` `dbus.service` stopped by `gnome-session-restart-dbus`), so the answer can be
+				 *    UNKNOWN exactly when the session has just ended: the dismantling (which can stall) is not started
+				 *    at the first UNKNOWN but asked again after a second, up to `EIS_UNKNOWN_ROUNDS` times; if it stays
+				 *    UNKNOWN the old road holds (dismantle, no early farewell). */
+#define EIS_UNKNOWN_ROUNDS 3
+				if (life == SESSION_LIFE_ALIVE)
+					eis_unknown = 0;
+				else if (life == SESSION_LIFE_UNKNOWN && ++eis_unknown < EIS_UNKNOWN_ROUNDS)
+					registro_dice(LOG_CHILD,
+					              "the input channel is closed and I could not look at the session (round %d of %d): "
+					              "asking again before dismantling",
+					              eis_unknown, EIS_UNKNOWN_ROUNDS);
+				else {
+					eis_unknown = 0;
 					registro_dice(LOG_CHILD,
 					              "⚠ THE COMPOSITOR CLOSED THE INPUT CHANNEL AND THE "
 					              "SESSION NO LONGER ANSWERS: the graphical session is "
 					              "over (logout, or the compositor died).  Dismantling "
 					              "the stage, and the next attempt will be able to say "
 					              "whether the session is closed");
+					session_over_early("the compositor closed the input channel", life);
 					unmount_stage(&mut, &cat);
 					stage_wait_ms = STAGE_RETRY_MIN_MS;
 					stage_retry_ms = log_now_ms() + stage_wait_ms;
@@ -12295,6 +12406,9 @@ void child_alive(int argc, char **argv)
 				              mistake ? mistake->message : "no details");
 				g_clear_error(&mistake);
 				capture_stopped_free(&fo);
+				/* ⭐ 19 Nov 2026: early farewell only on a certain death, and never with a KWin stage (KDE waits for a proof) */
+				if (!stage_kwin)
+					session_over_early("the stage fell", session_life());
 				unmount_stage(&mut, &cat);
 				stage_wait_ms = STAGE_RETRY_MIN_MS;
 				stage_retry_ms = log_now_ms() + stage_wait_ms;

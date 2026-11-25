@@ -235,21 +235,28 @@ GDBusConnection *sess_bus(GError **mistake)
  *   exactly what the caller wanted to know, obtained in a millisecond
  *   instead of thirty seconds.
  */
-static gboolean name_has_owner(GDBusConnection *bus, const char *name)
+/* ⭐ 19 Nov 2026: three answers instead of two.  1 = the bus ANSWERED and the name has an owner; 0 = the bus ANSWERED and
+ *    nobody owns the name; -1 = I could not ask (no bus, call failed or timed out): that is NOT «nobody owns it». */
+static int name_owner_three(GDBusConnection *bus, const char *name)
 {
 	g_autoptr(GVariant) response = NULL;
 	gboolean c_e = FALSE;
 
 	if (!bus || !name)
-		return FALSE;
+		return -1;
 	response = g_dbus_connection_call_sync(
 		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
 		"NameHasOwner", g_variant_new("(s)", name), G_VARIANT_TYPE("(b)"),
 		G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_NAME_MS, NULL, NULL);
 	if (!response)
-		return FALSE;
+		return -1;
 	g_variant_get(response, "(b)", &c_e);
-	return c_e;
+	return c_e ? 1 : 0;
+}
+
+static gboolean name_has_owner(GDBusConnection *bus, const char *name)
+{
+	return name_owner_three(bus, name) == 1;
 }
 
 /* A call to Mutter, without declaring the type of the answer. */
@@ -746,6 +753,27 @@ const char *session_desktop_name(void)
 	return desktop_name();
 }
 
+/* ⭐ 18 Nov 2026 — the program the chosen desktop NEEDS and the machine does not have, or NULL.
+ *   Only `labwc` for XFCE and LXQt: it is a Recommends of the package (`--no-install-recommends`
+ *   leaves it out) and these desktops bring no compositor of their own.  `wlr-randr` is not
+ *   asked for (a failing one still lets the session be born: `measured_primary()`), nor is
+ *   Xwayland; KDE has the KWin fallback and GNOME its own compositor.
+ *   ⚠ LIMIT: the PARENT looks in the PATH of the service, the session starts with the one of
+ *   the PAM login; they agree for `/usr/bin` (where `labwc` is packaged), not for a labwc
+ *   installed in a folder only one of the two PATHs has.
+ *   ⚠ Looked up at EVERY call, not once like `recognize_desktop()`: an administrator who
+ *   installs the package while the server runs is believed at the next login. */
+const char *session_missing_component(void)
+{
+	DesktopSession d = desktop_session();
+	g_autofree char *found = NULL;
+
+	if (d != SESSION_DESKTOP_XFCE && d != SESSION_DESKTOP_LXQT)
+		return NULL;
+	found = g_find_program_in_path(SESSION_PROCESS_XFCE);
+	return found ? NULL : SESSION_PROCESS_XFCE;
+}
+
 /*
  * ⭐⭐ PHASE 17, D8 (`DECISIONS.md` §10.20) — WHICH GNOME SESSION: the distribution's
  *      DEFAULT one, not always `gnome`.
@@ -995,20 +1023,26 @@ static int my_processes(const char *name)
 	return amount;
 }
 
-bool session_alive(void)
+/* ⭐ 19 Nov 2026: the question with THREE answers, for whoever must act on «dead» and not only on «does not answer»
+ *    (`child.c`, the early farewell): ALIVE; DEAD = the bus answered and the compositor's name has no owner;
+ *    UNKNOWN = I could not look (no bus, a call failed or timed out, any other error).  ⚠ Only DEAD is certain. */
+SessionLife session_life(void)
 {
 	g_autoptr(GDBusConnection) bus = NULL;
 	g_autoptr(GVariant) response = NULL;
+	g_autoptr(GError) mistake = NULL;
+	const char *name = NULL;
+	int owner;
 
 	bus = sess_bus(NULL);
 	if (!bus)
-		return false;
+		return SESSION_LIFE_UNKNOWN;
 
 	/* ⭐ On Plasma the weak question is KWin's name: it is not activatable (the
 	 *    compositor takes it when it starts), and the weakness is the same one
 	 *    declared in `session.h` — «alive» does not mean «ready». */
 	if (e_kde())
-		return name_has_owner(bus, "org.kde.KWin");
+		name = "org.kde.KWin";
 
 	/* ⭐ PHASE 13 — on XFCE the weak question is the session manager's name.
 	 *    `[M]` 20 Sep 2026: it appears on the USER bus, because we start `labwc`
@@ -1017,8 +1051,8 @@ bool session_alive(void)
 	 *    the other two, with a wider margin: between the name and the USABLE
 	 *    session there are up to 8 s per priority group, and they are structural
 	 *    (`STARTUP_TIMEOUT_WAYLAND`, `STUDIES.md` §xfce §9.4). */
-	if (e_xfce())
-		return name_has_owner(bus, SESSION_BUS_XFCE);
+	else if (e_xfce())
+		name = SESSION_BUS_XFCE;
 
 	/* ⭐ PHASE 14 — on LXQt, the same weak question: the name of `lxqt-session`
 	 *    on the user bus (labwc starts without `dbus-run-session`, as on XFCE).
@@ -1028,8 +1062,12 @@ bool session_alive(void)
 	 *   has no GLib loop to listen to it.  [?] To be measured on the box:
 	 *   how long passes between the name and the panel, and whether in between capture
 	 *   on labwc fails and retries (as on XFCE) or does something else. */
-	if (e_lxqt())
-		return name_has_owner(bus, SESSION_BUS_LXQT);
+	else if (e_lxqt())
+		name = SESSION_BUS_LXQT;
+	if (name) {
+		owner = name_owner_three(bus, name);
+		return owner > 0 ? SESSION_LIFE_ALIVE : owner == 0 ? SESSION_LIFE_DEAD : SESSION_LIFE_UNKNOWN;
+	}
 
 	/*
 	 * ⛔ IT IS NOT ENOUGH THAT THE NAME IS TAKEN, for two different reasons, both
@@ -1039,10 +1077,23 @@ bool session_alive(void)
 	 *    of readiness.  A real method is called and we check that the answer
 	 *    ARRIVES — without interpreting it: only one thing matters here.
 	 */
-	response = ask_mutter(bus, "org.gnome.Mutter.DisplayConfig",
-	                           "/org/gnome/Mutter/DisplayConfig",
-	                           "org.gnome.Mutter.DisplayConfig", "GetCurrentState", NULL);
-	return response != NULL;
+	owner = name_owner_three(bus, "org.gnome.Mutter.DisplayConfig");
+	if (owner == 0)
+		return SESSION_LIFE_DEAD;
+	if (owner < 0)
+		return SESSION_LIFE_UNKNOWN;
+	/* The name has an owner (the bus ANSWERED): the call goes straight to the owner, the same arguments `ask_mutter()` uses
+	 * but WITHOUT its second question about the name — that one would turn «I could not ask» (timeout, bus gone between
+	 * the two questions) into NAME_HAS_NO_OWNER.  ANY error here is UNKNOWN, never DEAD: the next look will say. */
+	response = g_dbus_connection_call_sync(bus, "org.gnome.Mutter.DisplayConfig", "/org/gnome/Mutter/DisplayConfig",
+	                                       "org.gnome.Mutter.DisplayConfig", "GetCurrentState", NULL, NULL,
+	                                       G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_POLL_MS, NULL, &mistake);
+	return response ? SESSION_LIFE_ALIVE : SESSION_LIFE_UNKNOWN;
+}
+
+bool session_alive(void)
+{
+	return session_life() == SESSION_LIFE_ALIVE;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -4717,8 +4768,22 @@ static bool force_refused(void)
 static bool really_terminate(void)
 {
 	if (!session_alive()) {
-		registro_dice(LOG_SESSION, "there was no session to stop");
-		return false;
+		/* ⭐ The desktop may be gone already (it logged out by itself, or died): then the close is
+		 *    DONE, not failed, and the caller must exit and clear out.  ⛔ But «the name is not
+		 *    on the bus» is the WEAK question (it also answers no for a bus that did not reply, a
+		 *    desktop that has not taken its name yet, or a manager that died with the compositor
+		 *    alive): «gone» needs the same double proof as `wait_until_done()` — the name AND the
+		 *    units/process of the desktop.  If the units or the process are still there, nothing
+		 *    is claimed: the normal road below goes on (orderly exit, then the forced step). */
+		if (inactive_unit()) {
+			registro_dice(LOG_SESSION,
+			              "there was no session to stop: no session name on the bus and no unit or "
+			              "process of the desktop left — the desktop is already gone, the close is done");
+			return true;
+		}
+		registro_dice(LOG_SESSION,
+		              "⚠ the session name is not on the bus but the desktop's units or processes are "
+		              "still there: not claimed as closed, closing it the normal way");
 	}
 
 	if (e_xfce()) {
@@ -5976,6 +6041,12 @@ static void xfce_migrate_old(void)
  *     every request (even the dialog, even `--lockscreen`) into `--logout`;
  *   · `lxqt-powermanagement` does not run: the autostart entries launch it by NAME, and
  *     the same folder holds a `lxqt-powermanagement` that does nothing;
+ *   · an X11 composition manager (`LXQT_X11_COMPOSITORS`) does not run either: a picom/compton
+ *     entry is a MODULE (`X-LXQt-Module=true`) with no `X-LXQt-X11-Only`, and the
+ *     remote session has no X server it can compose (labwc is the compositor): `picom` dies, `lxqt-session` restarts it until the limit
+ *     (`lxqtmodman.cpp`, `MAX_CRASHES_PER_APP`) and then shows «X Compositor crashed too
+ *     many times».  The same folder holds a `picom` that exits 0 (a module that exits 0 is
+ *     NOT restarted), and the compositor the session has — labwc — is already there;
  *   · the six «Leave» menu entries stay hidden, in the session data folder
  *     (`settings_lxqt()`), because a «Suspend» that logs out would be a lie.
  *   [M] tried on the lxqt-panel 2.1.4 box: the button and the entries go through
@@ -6035,7 +6106,9 @@ static gboolean read_ini_qt(GKeyFile *keys, const char *file, GError **mistake)
  * by name: it would call itself.
  * `lxqt-powermanagement`: exits 0 and writes a line in the system log, if
  * `logger` is there.
- * ⭐ 14 Nov 2026: both do so ONLY inside the remote session (`LXQT_SCRIPT_HEAD`); anywhere
+ * The X11 composition managers (`LXQT_X11_COMPOSITORS`): same as `lxqt-powermanagement`, and
+ * a line on stderr for whoever starts one by hand.
+ * ⭐ 14 Nov 2026: all of them do so ONLY inside the remote session (`LXQT_SCRIPT_HEAD`); anywhere
  * else they `exec` the real program with the arguments they were given.
  * The scripts are rewritten at every birth (atomic), mode 0755, in a folder 0700 of
  * `XDG_RUNTIME_DIR`: nothing of the user's is touched.
@@ -6058,7 +6131,7 @@ static gboolean write_session_script(const char *folder, const char *name, const
 }
 
 /*
- * The head of the two scripts: `%s` = what the script is for (a comment), the real program
+ * The head of the session's scripts: `%s` = what the script is for (a comment), the real program
  * (shell-quoted), the `loginctl` command (shell-quoted, with `timeout 3` in front if there
  * is one: a logind that does not answer must not hang «Leave»; a timeout = not remote = the
  * real program).  After it, the script is INSIDE the remote session.
@@ -6128,6 +6201,13 @@ static void lxqt_user_autostart_warn(void)
 	}
 }
 
+/* ⭐ The ONE place that names programs: the X11 composition managers.  Neither the desktop's
+ *   keys nor the program can tell us «this needs X»: `lxqt-session` skips only entries marked
+ *   `X-LXQt-X11-Only`, and a picom module is not marked.  A composition manager has one
+ *   role, which cannot exist in the remote session (there is no X server it can compose:
+ *   labwc is the compositor): a short list of that ROLE, kept here and nowhere else. */
+static const char *const LXQT_X11_COMPOSITORS[] = { "picom", "compton", "xcompmgr", NULL };
+
 static void lxqt_session_commands(void)
 {
 	g_autofree char *bin = lxqt_session_bin_folder();
@@ -6147,7 +6227,8 @@ static void lxqt_session_commands(void)
 	g_autofree char *quoted_loginctl = NULL;
 	g_autofree char *timeout = g_find_program_in_path("timeout");
 	g_autoptr(GError) mistake = NULL;
-	gboolean ok_leave, ok_power, ok_startup;
+	gboolean ok_leave, ok_power, ok_startup, ok_compositors = TRUE;
+	int compositors = 0;
 
 	if (!bin || !autostart_dir) {
 		registro_dice(LOG_SESSION,
@@ -6191,6 +6272,37 @@ static void lxqt_session_commands(void)
 	}
 	ok_leave = write_session_script(bin, "lxqt-leave", leave);
 	ok_power = write_session_script(bin, "lxqt-powermanagement", power);
+	/* ⭐ 18 Nov 2026: the X11 composition managers that are installed — same recipe */
+	for (int i = 0; LXQT_X11_COMPOSITORS[i]; i++) {
+		g_autofree char *its = lxqt_real_program(LXQT_X11_COMPOSITORS[i], bin);
+		g_autofree char *quoted_its = NULL;
+		g_autofree char *shim = NULL;
+
+		if (!g_file_test(its, G_FILE_TEST_IS_EXECUTABLE)) {
+			/* not (or no longer) installed: OUR script of an earlier birth must not
+			 * stay, or outside the remote session the name would be «not found» */
+			g_autofree char *ours = g_build_filename(bin, LXQT_X11_COMPOSITORS[i], NULL);
+
+			if (g_file_test(ours, G_FILE_TEST_EXISTS))
+				g_unlink(ours);
+			continue;
+		}
+		quoted_its = g_shell_quote(its);
+		shim = g_strdup_printf(LXQT_SCRIPT_HEAD
+		                       "command -v logger >/dev/null 2>&1 &&\n"
+		                       "\tlogger -t remotix \"%s: an X11 composition manager, not "
+		                       "started in the remote session (labwc composes)\"\n"
+		                       "echo \"%s: not started in the remote session (REMOTIX: labwc "
+		                       "is the compositor)\" >&2\n"
+		                       "exit 0\n",
+		                       "no X11 composition manager in the remote session", quoted_its,
+		                       quoted_loginctl, LXQT_X11_COMPOSITORS[i],
+		                       LXQT_X11_COMPOSITORS[i]);
+		if (write_session_script(bin, LXQT_X11_COMPOSITORS[i], shim))
+			compositors++;
+		else
+			ok_compositors = FALSE;
+	}
 	/* ⭐ 13 Nov 2026: the 1.5.0 leftover — `xdg-lxqt/autostart/lxqt-panel.desktop` with our
 	 *   `--configfile` — would start the OLD session panel: it is overwritten with the normal
 	 *   start (the system's own file, or the plain command if there is none) */
@@ -6246,20 +6358,21 @@ static void lxqt_session_commands(void)
 		              "real programs: «Leave» offers everything (suspend, reboot and power "
 		              "off stay forbidden by polkit)");
 	lxqt_user_autostart_warn();
-	if (ok_leave && ok_power && ok_startup)
+	if (ok_leave && ok_power && ok_startup && ok_compositors)
 		registro_dice(LOG_SESSION,
-		              "⭐ LXQt: %s: lxqt-leave (→ %s --logout) and lxqt-powermanagement "
-		              "(does nothing; the real one is %s) at the head of the session's PATH — "
+		              "⭐ LXQt: %s: lxqt-leave (→ %s --logout), lxqt-powermanagement "
+		              "(does nothing; the real one is %s) and %d X11 composition manager(s) "
+		              "(do nothing) at the head of the session's PATH — "
 		              "ONLY inside a logind session of the PAM service «" LXQT_PAM_SERVICE
 		              "», anywhere else they are the real programs; no session autostart; "
 		              "the user's files are not touched",
-		              bin, real, real_power);
+		              bin, real, real_power, compositors);
 	else
 		registro_dice(LOG_SESSION,
 		              "⛔ LXQt: session commands NOT all in place (lxqt-leave %s, "
-		              "lxqt-powermanagement %s, old autostart %s)",
+		              "lxqt-powermanagement %s, old autostart %s, composition managers %s)",
 		              ok_leave ? "ok" : "KO", ok_power ? "ok" : "KO",
-		              ok_startup ? "removed" : "NOT removed");
+		              ok_startup ? "removed" : "NOT removed", ok_compositors ? "ok" : "KO");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -7458,6 +7571,22 @@ bool session_spawn(uint32_t width, uint32_t height)
 		              "two different faults and this is the second",
 		              session_desktop_explain());
 		return false;
+	}
+
+	/* ⭐ 18 Nov 2026: and neither if the desktop's compositor is not installed — the parent
+	 *    refuses before the birth (`main.c`), this is the same fact seen from here (an
+	 *    old child, a rebirth), said where this tenant's slice of the log is read */
+	{
+		const char *missing = session_missing_component();
+
+		if (missing) {
+			registro_dice(LOG_SESSION,
+			              "⛔ I am not making anything be born: %s needs `%s` and it is NOT "
+			              "installed on this server — the administrator must install the "
+			              "package `%s`",
+			              desktop_name(), missing, missing);
+			return false;
+		}
 	}
 
 	state = session_state(width, height, NULL);

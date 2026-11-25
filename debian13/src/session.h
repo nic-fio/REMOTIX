@@ -404,6 +404,10 @@ const char *session_desktop_explain(void);
 /* ⭐ 1.5: «XFCE», «LXQt», «Plasma», «GNOME» — for the log */
 const char *session_desktop_name(void);
 
+/* ⭐ 18 Nov 2026: the program the chosen desktop needs and this machine lacks (`labwc` for
+ * XFCE and LXQt), or NULL when nothing is missing.  Looked up at every call. */
+const char *session_missing_component(void);
+
 /*
  * ⭐ PHASE 14 — THE FAMILY, not the desktop: true on XFCE **and** on LXQt.
  *
@@ -574,6 +578,11 @@ int session_clear_out_light(const char *why);
  *   capture calls `session_state()`.
  */
 bool session_alive(void);
+
+/* ⭐ 19 Nov 2026: the same question with THREE answers.  DEAD only when the bus ANSWERED and the compositor's name
+ * has no owner; UNKNOWN when I could not look (no bus, slow or failed call).  Whoever acts on «dead» uses this. */
+typedef enum { SESSION_LIFE_ALIVE = 0, SESSION_LIFE_DEAD = 1, SESSION_LIFE_UNKNOWN = 2 } SessionLife;
+SessionLife session_life(void);
 
 /*
  * What state the session is in, with the REQUESTED size next to it.
