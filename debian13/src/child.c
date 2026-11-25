@@ -5769,6 +5769,12 @@ static bool finished_told;
  * the LIGHT close (`local_light_close()`), then exits.
  */
 static bool local_found;
+
+/* ⭐⭐ 19 Nov 2026: the stage was refused for the SCALE (guard 2) and the parent was told `fatal`: the loop closes the
+ * session (`scale_close_done`; retried every 10 s if it fails) — nothing is left alive, and the user got the 0x0E, not a black page. */
+static bool scale_refused;
+static bool scale_close_done;      /* the close WORKED: not asked again */
+static uint64_t scale_close_ms;    /* when it was last tried: a failed close is retried, at most once every 10 s */
 /* ⭐ one connection to logind for the whole life of the child: `sentinel_open()` writes
  *    «local session guardian ready» every time, and the guard runs at every attempt */
 static sentinel *local_sentinel;
@@ -8874,6 +8880,11 @@ static bool take_stage(uint32_t canvas_w, uint32_t canvas_h,
 		} else if (p.state_session == SESSION_DEAD && vista_viva) {
 			vista_viva = false;
 			session_closed_by_user = true;
+			/* ⭐ 19 Nov 2026: the line below says «the user logged out»: after a SCALE refusal it is our own close */
+			if (scale_refused)
+				registro_dice(LOG_CHILD,
+				              "⭐ this end FOLLOWS THE SCALE REFUSAL (our own close), not a logout "
+				              "from the desktop menu");
 			registro_dice(LOG_CHILD,
 			              "⭐ §7.6: the graphical session WAS THERE and now is NO "
 			              "LONGER — the user logged out from the "
@@ -9284,15 +9295,32 @@ remount_capture:
 		 *
 		 * ⛔ And it FAILS instead of serving: a desktop that is seen and driven
 		 *    WRONG is worse than a desktop that does not start, because the
-		 *    second has a line explaining it and the first does not.  ⚠ And it
-		 *    is not a death: the stage is remounted with the growing wait, so as
-		 *    soon as the user changes the setting the session restarts by
-		 *    itself.
+		 *    second has a line explaining it and the first does not.  ⭐ 19 Nov 2026: and
+		 *    the user is TOLD (0x0E) and the session closed, instead of the stage being
+		 *    remounted for ever in front of a black page.  This is the net: the
+		 *    scale is IGNORED where it can be (below), refused where it cannot.
 		 *
 		 * ⛔ "I don't know" is NOT "fine": if the scale could not be read we go
 		 *    on declaring it, because refusing on an absence of data would shut
 		 *    down the service on a machine that has no defect. */
 		scale_factor = mutter_our_scale(mut);
+		/* ⭐⭐ 19 Nov 2026: the user's own scale (settings, or Settings → Displays saved in their `monitors.xml`) is
+		 *    IGNORED in the remote session: ONE temporary attempt to bring OUR monitor back to 1, never persistent,
+		 *    nothing of the user's files touched.  If the scale re-read is 1 the stage goes on; if not, the refusal
+		 *    below stays (0x0E and the session closed).  ⚠ Only for a scale that was READ and is not 1. */
+		if (scale_factor > 0 && scale_factor != 1.0) {
+			registro_dice(LOG_CHILD,
+			              "⭐ the user's scale %.3f on «%s» is NOT served: I try ONCE to bring our monitor "
+			              "back to 1 (temporary, the user's settings untouched)",
+			              scale_factor, p.monitor);
+			if (mutter_scale_to_one(mut)) {
+				registro_dice(LOG_CHILD,
+				              "⭐ the user's scale %.3f is IGNORED in the remote session: our monitor "
+				              "is at 1.000 (their own settings and monitors.xml untouched)",
+				              scale_factor);
+				scale_factor = 1.0;
+			}
+		}
 		/* ⛔ AND THE GOOD CASE IS WRITTEN, not left to silence: "the guard looked
 		 *    and the scale is 1.0" and "the guard was not run" would have the
 		 *    same face — which is the error form this project pays for most
@@ -9314,17 +9342,21 @@ remount_capture:
 			              "the input's coordinate space does not coincide with "
 			              "the stream's pixels, and the pointer would go elsewhere "
 			              "without anything saying so.  ⇒ I am NOT taking the stage "
-			              "(guard 2 of DECISIONS.md §5.0-sexies).  The cure is "
-			              "a single line, on this user's session: "
-			              "`gsettings set org.gnome.desktop.interface "
-			              "scaling-factor 0` — then the session restarts by itself, "
-			              "without restarting anything",
+			              "(guard 2 of DECISIONS.md §5.0-sexies).  ⭐ 19 Nov 2026: "
+			              "the likely causes: the monitor's scale changed from "
+			              "Settings → Displays (and saved in ~/.config/monitors.xml) "
+			              "or a MANDATORY dconf profile of the administrator "
+			              "(/run/dconf/user/<uid>).  The user gets the 0x0E "
+			              "and the session is closed (nothing stays alive)",
 			              scale_factor, p.monitor);
 			p.state_session = 0;
 			snprintf(p.fault, sizeof p.fault,
 			         "scale %.3f instead of 1.0 on monitor «%s»: the pointer "
 			         "would go elsewhere (guard 2, DECISIONS.md §5.0-sexies)",
 			         scale_factor, p.monitor);
+			/* ⭐ 19 Nov 2026: THE ONLY PLACE that says «fatal»: no retry cures a scale */
+			p.fatal = 1;
+			scale_refused = true;
 			capture_stopped_free(&fo);
 			send_msg(MSG_STAGE, &p, sizeof p, NULL, 0);
 			return false;
@@ -10638,6 +10670,26 @@ void child_alive(int argc, char **argv)
 			local_light_close(&mut, &cat, "guard in the child");
 			break;
 		}
+		/* ⭐⭐ 19 Nov 2026: the stage was refused for the SCALE: the parent has already sent the 0x0E to the clients
+		 *    (`fatal` in `MSG_STAGE`); the graphical session is closed here (retried every 10 s if it fails), by the road of the user's
+		 *    logout (defence 3 first: with a local session it is the light close, never the Logout).  Once the
+		 *    session is gone the child sees it over and leaves (§7.6): no process stays. */
+		if (scale_refused && !scale_close_done && !close_only &&
+		    (scale_close_ms == 0 || log_now_ms() >= scale_close_ms + 10000)) {
+			scale_close_ms = log_now_ms() ? log_now_ms() : 1;
+			if (local_guard("before the closing for the scale"))
+				continue; /* `local_found` is set: the top of the loop does the light close and exits */
+			session_force_unless_orphaned(false);
+			if (!terminate_and_clear())
+				registro_dice(LOG_CHILD,
+				              "⛔ the graphical session did NOT end after the scale refusal: "
+				              "retried in 10 s");
+			else {
+				scale_close_done = true;
+				registro_dice(LOG_CHILD,
+				              "⭐ the stage was refused for the scale: the graphical session is closed");
+			}
+		}
 		/* ⛔ The close-only child's own end (box at `close_only`). */
 		if (close_only && log_now_ms() >= close_only_since_ms + CLOSE_ONLY_LIFE_MS) {
 			registro_dice(LOG_CHILD,
@@ -11862,6 +11914,7 @@ void child_alive(int argc, char **argv)
 			              "(logout, or the compositor died).  Dismantling the "
 			              "stage, and the next attempt will be able to say whether the "
 			              "session is closed");
+			/* ⭐ 19 Nov 2026: NO early farewell here: KDE waits for a proof on a live machine (see `session_over_early()`) */
 			unmount_stage(&mut, &cat);
 			stage_wait_ms = STAGE_RETRY_MIN_MS;
 			stage_retry_ms = log_now_ms() + stage_wait_ms;

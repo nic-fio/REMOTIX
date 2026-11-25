@@ -1692,6 +1692,12 @@ static const struct dconf_key DCONF_KEYS[] = {
 	  "sleep-inactive-battery-type", "'nothing'" },
 	{ "org.gnome.desktop.session", "/org/gnome/desktop/session/", "idle-delay", "uint32 0" },
 	{ "org.gnome.desktop.screensaver", "/org/gnome/desktop/screensaver/", "lock-enabled", "false" },
+	/* ⭐ 19 Nov 2026: the INTEGER scale of the desktop is 1 in the remote session.  The
+	 *    stage refuses a scale other than 1 (guard 2 of §5.0-sexies: the input's coordinate space would not coincide
+	 *    with the stream's pixels) and the user, with `scaling-factor` = 2 in their own settings, stayed in front of a
+	 *    black page and could not even enter to put it back.  Value + lock here, as the keys above: the user's file is
+	 *    never touched, and at a local login the user finds their 2 again. */
+	{ "org.gnome.desktop.interface", "/org/gnome/desktop/interface/", "scaling-factor", "uint32 1" },
 	/* the layout: lock only, the value is in `shm` (`input.c`) */
 	{ "org.gnome.desktop.input-sources", "/org/gnome/desktop/input-sources/", "sources", NULL },
 	{ "org.gnome.desktop.input-sources", "/org/gnome/desktop/input-sources/", "current", NULL },
@@ -6228,6 +6234,7 @@ static void lxqt_session_commands(void)
 	g_autofree char *timeout = g_find_program_in_path("timeout");
 	g_autoptr(GError) mistake = NULL;
 	gboolean ok_leave, ok_power, ok_startup, ok_compositors = TRUE;
+	gboolean ok_cover;
 	int compositors = 0;
 
 	if (!bin || !autostart_dir) {
@@ -6303,6 +6310,8 @@ static void lxqt_session_commands(void)
 		else
 			ok_compositors = FALSE;
 	}
+	/* ⭐ 19 Nov 2026: the system's autostart entries a remote session must not start (blueman) */
+	ok_cover = session_autostart_cover(autostart_dir, "LXQt");
 	/* ⭐ 13 Nov 2026: the 1.5.0 leftover — `xdg-lxqt/autostart/lxqt-panel.desktop` with our
 	 *   `--configfile` — would start the OLD session panel: it is overwritten with the normal
 	 *   start (the system's own file, or the plain command if there is none) */
@@ -6358,7 +6367,7 @@ static void lxqt_session_commands(void)
 		              "real programs: «Leave» offers everything (suspend, reboot and power "
 		              "off stay forbidden by polkit)");
 	lxqt_user_autostart_warn();
-	if (ok_leave && ok_power && ok_startup && ok_compositors)
+	if (ok_leave && ok_power && ok_startup && ok_compositors && ok_cover)
 		registro_dice(LOG_SESSION,
 		              "⭐ LXQt: %s: lxqt-leave (→ %s --logout), lxqt-powermanagement "
 		              "(does nothing; the real one is %s) and %d X11 composition manager(s) "
@@ -6370,9 +6379,11 @@ static void lxqt_session_commands(void)
 	else
 		registro_dice(LOG_SESSION,
 		              "⛔ LXQt: session commands NOT all in place (lxqt-leave %s, "
-		              "lxqt-powermanagement %s, old autostart %s, composition managers %s)",
+		              "lxqt-powermanagement %s, old autostart %s, composition managers %s, "
+		              "autostart cover %s)",
 		              ok_leave ? "ok" : "KO", ok_power ? "ok" : "KO",
-		              ok_startup ? "removed" : "NOT removed", ok_compositors ? "ok" : "KO");
+		              ok_startup ? "removed" : "NOT removed", ok_compositors ? "ok" : "KO",
+		              ok_cover ? "ok" : "KO");
 }
 
 /* ------------------------------------------------------------------------- */
