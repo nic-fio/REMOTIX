@@ -2408,9 +2408,93 @@ static char **session_config_dirs_strv(void)
 	return g_strsplit(list, ":", -1);
 }
 
+/* (shared by LXQt and XFCE) a system autostart entry of that file name exists in the config
+ * folders the session will have (`session_config_dirs()`: the manager's and the session's own, e.g. `/etc/xdg/xdg-lxqt`) */
+static gboolean system_autostart_exists(const char *file)
+{
+	g_auto(GStrv) dirs = session_config_dirs_strv();
+
+	for (int i = 0; dirs && dirs[i]; i++) {
+		g_autofree char *path = g_build_filename(dirs[i], "autostart", file, NULL);
+
+		if (g_file_test(path, G_FILE_TEST_EXISTS))
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/* ⭐ 19 Nov 2026 — XFCE and LXQt: the programs of the SYSTEM's autostart that a remote session
+ *   must not start.  `blueman-applet` (`blueman.desktop`, where it is installed): Bluetooth is a
+ *   device of the machine, not of the remote user, and the applet crashes now and then (a race
+ *   with `obexd`, 5 sessions in 90) and covers the screen with apport's «internal error»
+ *   window.  An entry of the same file name with `Hidden=true` in the session's autostart
+ *   folder, which is first in `XDG_CONFIG_DIRS`.
+ * ⭐ NOT the recipe of LXQt's `LXQT_SHARED_SERVER_PROGRAMS` (a script that checks where it
+ *   runs): `Hidden=true` WITHOUT a check is fine here — there is no program to replace, the
+ *   folder is under `/run/user` and only the remote session reads it; in the worst case
+ *   the Bluetooth icon is missing.
+ * ⚠ DECLARED: the code does not remove the file at the end of the session: it goes when logind
+ *   removes `/run/user/<uid>`; with another session of the same user alive (ssh, linger) it
+ *   stays (harmless: no non-remote session reads that folder).
+ * ⚠ [M] XFCE (`xfce4-session`, measured on another distribution): a `Hidden=true` entry hides the file name
+ *   whichever folder it is in, so the user's own VISIBLE `~/.config/autostart/<same name>`
+ *   is not started either (a differently named user entry is).  LXQt: not measured; the
+ *   user's folder comes first, so the user's own entry should win. */
+static const char *const SESSION_NOT_IN_REMOTE_AUTOSTART[] = { "blueman.desktop", NULL };
+
+/* `dir` is the `autostart` folder of the session folder that is first in `XDG_CONFIG_DIRS`
+ * (XFCE: `labwc-xfce`, LXQt: `xdg-lxqt`); `desktop` is only for the log.  Returns FALSE if a
+ * cover could not be written. */
+static gboolean session_autostart_cover(const char *dir, const char *desktop)
+{
+	g_autoptr(GString) done = g_string_new(NULL);
+	g_autoptr(GError) mistake = NULL;
+	int covered = 0;
+	gboolean ok = TRUE;
+
+	for (int i = 0; SESSION_NOT_IN_REMOTE_AUTOSTART[i]; i++) {
+		const char *file = SESSION_NOT_IN_REMOTE_AUTOSTART[i];
+		g_autofree char *entry = g_build_filename(dir, file, NULL);
+		g_autofree char *old = NULL;
+
+		if (!system_autostart_exists(file)) {
+			/* not (or no longer) installed: only OURS of an earlier birth goes */
+			if (g_file_get_contents(entry, &old, NULL, NULL) && strstr(old, "X-REMOTIX"))
+				g_unlink(entry);
+			continue;
+		}
+		g_clear_error(&mistake);
+		if (g_mkdir_with_parents(dir, 0700) == 0 &&
+		    g_file_set_contents(entry,
+		                        "[Desktop Entry]\nType=Application\nName=REMOTIX cover\n"
+		                        "Hidden=true\n"
+		                        "# X-REMOTIX: covers the system's entry of the same name\n",
+		                        -1, &mistake)) {
+			covered++;
+			g_string_append_printf(done, "%s%s", done->len ? " " : "", file);
+		} else {
+			ok = FALSE;
+			registro_dice(LOG_SESSION, "⛔ %s: the cover for %s is NOT in place (%s)", desktop, file,
+			              mistake ? mistake->message : g_strerror(errno));
+		}
+	}
+	if (covered && ok)
+		registro_dice(LOG_SESSION,
+		              "⭐ %s: %d system autostart entr%s not started in the remote session "
+		              "(%s: Hidden=true in %s, first in XDG_CONFIG_DIRS) — shared server, the "
+		              "machine's Bluetooth is not the remote user's; %s; "
+		              "the user's files are not touched",
+		              desktop, covered, covered == 1 ? "y is" : "ies are", done->str, dir,
+		              strcmp(desktop, "XFCE") == 0
+		                      ? "a user's own ~/.config/autostart entry of the same name "
+		                        "is hidden too (measured)"
+		                      : "the user's own entry of the same name wins (not measured)");
+	return ok;
+}
+
 /* The session names and the data folder, for the desktops that do not compose them in their
  * own way: `DESKTOP_SESSION` (what `60x11-common_xdg_path` keys on, and what the session's
- * programs read), `XDG_SESSION_DESKTOP` (the session name, as the display managers set it;
+ * programs read), `XDG_SESSION_DESKTOP` (as the display managers set it;
  * `fallback` when none is known, NULL = not set here: KDE leaves it to `startplasma`) and, with `with_data`, `XDG_DATA_DIRS`
  * when the manager has one or the session has a data folder. */
 static void add_session_names(GPtrArray *environment, const char *fallback, gboolean with_data)
@@ -2544,6 +2628,11 @@ static char **compose_environment(void)
 				g_autofree char *labwc_cfg = write_config_labwc_xfce(runtime);
 				g_autofree char *system_dirs = session_config_dirs();
 
+				if (labwc_cfg) {
+					g_autofree char *dir = g_build_filename(labwc_cfg, "autostart", NULL);
+
+					session_autostart_cover(dir, "XFCE");
+				}
 				if (labwc_cfg || session_config_given())
 					g_ptr_array_add(environment,
 					                g_strdup_printf("XDG_CONFIG_DIRS=%s%s%s",
@@ -5077,6 +5166,11 @@ static char **actions_without_power(const char *const *from)
 	return (char **) g_ptr_array_free(g_steal_pointer(&out), FALSE);
 }
 
+/* The plugin types REMOTIX puts in the panel lock file (`xfce_panel_xml()`): the only
+ * ones its lock can have damaged, hence the only ones the integrity check repairs. */
+#define PLUGIN_ACTIONS "actions"
+#define PLUGIN_WHISKER "whiskermenu"
+
 /* The `actions` plugins of the USER's panel channel: `/plugins/plugin-<N>`.
  * `*any_plugin` is TRUE if the channel has at least one plugin of any kind (a
  * user who never opened XFCE has none: the channel is empty until the panel is
@@ -5108,53 +5202,82 @@ static GPtrArray *panel_plugins(const char *type, gboolean *any_plugin)
 
 static GPtrArray *panel_action_plugins(gboolean *any_plugin)
 {
-	return panel_plugins("actions", any_plugin);
+	return panel_plugins(PLUGIN_ACTIONS, any_plugin);
 }
 
-/* The `actions` plugins of the STANDARD layout, for the user whose panel
- * channel is still empty: `xfce4/panel/default.xml` looked up along
- * `XDG_CONFIG_DIRS` (`STUDIES.md` §xfce §9; the first file found is the
- * one the panel migrates).  `/plugins/plugin-<N>` as above. */
-static GPtrArray *default_plugins(const char *type)
+/* The text of the STANDARD layout, `xfce4/panel/default.xml` looked up along
+ * `XDG_CONFIG_DIRS` (`STUDIES.md` §xfce §9; the first file found is the one the
+ * panel migrates).  NULL if there is none. */
+static char *default_panel_text(void)
 {
-	GPtrArray *found = g_ptr_array_new_with_free_func(g_free);
 	g_auto(GStrv) dirs = session_config_dirs_strv();
-	g_autofree char *wanted_value = g_strdup_printf("value=\"%s\"", type);
 
 	for (int i = 0; dirs && dirs[i]; i++) {
 		g_autofree char *file = g_build_filename(dirs[i], "xfce4", "panel", "default.xml",
 		                                           NULL);
-		g_autofree char *text = NULL;
-		const char *p;
+		char *text = NULL;
 
-		if (!g_file_get_contents(file, &text, NULL, NULL))
+		if (g_file_get_contents(file, &text, NULL, NULL))
+			return text;
+	}
+	return NULL;
+}
+
+/* The plugins of `type` in the STANDARD layout, for the user whose panel channel is
+ * still empty: `/plugins/plugin-<N>` as above. */
+static GPtrArray *default_plugins(const char *type)
+{
+	GPtrArray *found = g_ptr_array_new_with_free_func(g_free);
+	g_autofree char *wanted_value = g_strdup_printf("value=\"%s\"", type);
+	g_autofree char *text = default_panel_text();
+
+	/* every `<property …>` tag with value="actions" and name="plugin-N" */
+	for (const char *p = text; p && (p = strstr(p, "<property ")); p++) {
+		const char *end = strchr(p, '>');
+		g_autofree char *tag = end ? g_strndup(p, end - p) : NULL;
+		const char *name;
+
+		if (!tag)
+			break;
+		name = strstr(tag, "name=\"plugin-");
+
+		if (!name || !strstr(tag, wanted_value))
 			continue;
-		/* every `<property …>` tag with value="actions" and name="plugin-N" */
-		for (p = text; (p = strstr(p, "<property ")); p++) {
-			const char *end = strchr(p, '>');
-			g_autofree char *tag = end ? g_strndup(p, end - p) : NULL;
-			const char *name;
-
-			if (!tag)
-				break;
-			name = strstr(tag, "name=\"plugin-");
-
-			if (!name || !strstr(tag, wanted_value))
-				continue;
-			name += strlen("name=\"plugin-");
-			if (strspn(name, "0123456789") > 0)
-				g_ptr_array_add(found,
-				                g_strdup_printf("/plugins/plugin-%.*s",
-				                                (int) strspn(name, "0123456789"), name));
-		}
-		break;
+		name += strlen("name=\"plugin-");
+		if (strspn(name, "0123456789") > 0)
+			g_ptr_array_add(found,
+			                g_strdup_printf("/plugins/plugin-%.*s",
+			                                (int) strspn(name, "0123456789"), name));
 	}
 	return found;
 }
 
+/* The type the STANDARD layout gives to `key` (`/plugins/plugin-<N>`), or NULL. */
+static char *default_plugin_type(const char *key)
+{
+	g_autofree char *text = default_panel_text();
+	g_autofree char *wanted_name = g_strdup_printf("name=\"plugin-%s\"",
+	                                                 key + strlen("/plugins/plugin-"));
+
+	for (const char *p = text; p && (p = strstr(p, "<property ")); p++) {
+		const char *end = strchr(p, '>');
+		g_autofree char *tag = end ? g_strndup(p, end - p) : NULL;
+		const char *value;
+
+		if (!tag)
+			break;
+		value = strstr(tag, "value=\"");
+		if (strstr(tag, wanted_name) && value) {
+			value += strlen("value=\"");
+			return g_strndup(value, strcspn(value, "\""));
+		}
+	}
+	return NULL;
+}
+
 static GPtrArray *default_action_plugins(void)
 {
-	return default_plugins("actions");
+	return default_plugins(PLUGIN_ACTIONS);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -5343,6 +5466,17 @@ static int xfce_copy_keep_pending(GKeyFile *copy, int *count)
 	return kept;
 }
 
+/* The plugin type a `kind=plugin` group of a copy stands for: the user's own value, else the
+ * plugin noted (whisker), else `actions` (the only other one REMOTIX locks). */
+static char *xfce_copy_group_type(GKeyFile *copy, const char *group)
+{
+	char *type = g_key_file_get_string(copy, group, "value", NULL);
+
+	if (!type)
+		type = g_key_file_get_string(copy, group, "plugin", NULL);
+	return type ? type : g_strdup(PLUGIN_ACTIONS);
+}
+
 /* Puts back the user's values from ONE copy, if it is there and not yet restored.
  * TRUE if nothing is left to restore in it. */
 static gboolean xfce_restore_copy(const char *fpath)
@@ -5375,11 +5509,12 @@ static gboolean xfce_restore_copy(const char *fpath)
 		total++;
 		absent = g_key_file_get_boolean(copy, groups[i], "absent", NULL);
 		if (g_strcmp0(kind, "plugin") == 0) {
-			/* ⭐ The `actions` plugin's own value (`/plugins/plugin-N` = actions): while
-			 *   the lock lived, the standard layout was in the SESSION folder and the
-			 *   panel never wrote it in the user's file, which kept `type="empty"` —
-			 *   and an `actions` button that is not typed is a button that disappears
-			 *   from the user's panel in local.  ⇒ If the user had it, it goes back;
+			/* ⭐ The plugin's own value (`/plugins/plugin-N` = actions or whiskermenu).
+			 *   The lock files no longer define it (D-X3), so the panel writes it in the
+			 *   user's file; the copies made before that change may still have been
+			 *   taken with the old lock, whose type the panel never wrote — and a plugin
+			 *   that is not typed disappears from the user's panel in local.
+			 *   ⇒ If the user had it, it goes back;
 			 *   if not, and the panel has since filled the channel with its layout, it is
 			 *   written as the panel would have — unless the system files already say
 			 *   it (then taking the key away is enough); if the channel is still empty,
@@ -5388,11 +5523,9 @@ static gboolean xfce_restore_copy(const char *fpath)
 			g_autoptr(GPtrArray) plugins = panel_action_plugins(&any);
 
 			if (!absent || (any && !xfce_system_value(channel, key, FALSE, NULL, NULL))) {
-				g_autofree char *value = g_key_file_get_string(copy, groups[i], "value", NULL);
-				g_autofree char *type = g_key_file_get_string(copy, groups[i], "plugin", NULL);
+				g_autofree char *type = xfce_copy_group_type(copy, groups[i]);
 
-				ok = xfconf_set(channel, key, "string",
-				                value ? value : (type ? type : "actions"));
+				ok = xfconf_set(channel, key, "string", type);
 			} else {
 				ok = xfconf_unset(channel, key);
 			}
@@ -5464,6 +5597,131 @@ static gboolean xfce_restore_keys(void)
 	gboolean disk_done = xfce_restore_copy(disk);
 
 	return ram_done && disk_done;
+}
+
+/* TRUE if the `xfconfd` that runs still has OUR lock files in memory: it read them when
+ * it opened the channel, and a light close removes the drop-in without restarting it.
+ * ⛔ Also TRUE when it cannot be told: never write on a guess. */
+static gboolean xfconfd_holds_lock(void)
+{
+	char *show[] = { "systemctl", "--user", "show", "-p", "MainPID", "--value",
+		           "xfconfd.service", NULL };
+	g_autofree char *answer = ask(show);
+	int pid;
+	g_autofree char *path = NULL;
+	g_autofree char *environ_text = NULL;
+	gsize len = 0;
+
+	if (!answer || !*g_strstrip(answer))
+		return TRUE;
+	if (strcmp(answer, "0") == 0)
+		return FALSE; /* not running: the next one starts with the drop-in as it is */
+	pid = atoi(answer);
+	if (pid <= 0)
+		return TRUE;
+	path = g_strdup_printf("/proc/%d/environ", pid);
+	if (!g_file_get_contents(path, &environ_text, &len, NULL))
+		return TRUE;
+	for (const char *e = environ_text; e < environ_text + len; e += strlen(e) + 1)
+		if (strstr(e, "/remotix/xdg-xfce"))
+			return TRUE;
+	return FALSE;
+}
+
+/* The type of `key` (`/plugins/plugin-<N>`) from a copy not yet restored, or NULL. */
+static char *xfce_copy_plugin_type(const char *key)
+{
+	for (int ram = 0; ram < 2; ram++) {
+		g_autofree char *fpath = xfce_copy_path(ram);
+		g_autoptr(GKeyFile) copy = g_key_file_new();
+		g_auto(GStrv) groups = NULL;
+
+		if (!fpath || !g_key_file_load_from_file(copy, fpath, G_KEY_FILE_NONE, NULL) ||
+		    g_key_file_get_boolean(copy, "stato", "ripristinato", NULL))
+			continue;
+		groups = g_key_file_get_groups(copy, NULL);
+		for (int i = 0; groups[i]; i++) {
+			g_autofree char *path = g_key_file_get_string(copy, groups[i], "path", NULL);
+			g_autofree char *kind = g_key_file_get_string(copy, groups[i], "kind", NULL);
+
+			if (g_strcmp0(path, key) == 0 && g_strcmp0(kind, "plugin") == 0)
+				return xfce_copy_group_type(copy, groups[i]);
+		}
+	}
+	return NULL;
+}
+
+/* ⭐ D-X3 — every id in a panel's `plugin-ids` must have its `/plugins/plugin-<id>`
+ * type: without it the panel asks to remove the plugin and the plugin is gone.  Only what
+ * OUR lock can have damaged is repaired: a missing type is written back from a pending
+ * copy, else from the standard layout but ONLY if it is a type REMOTIX locks
+ * (PLUGIN_ACTIONS, PLUGIN_WHISKER: the number may be another plugin by now); for any other
+ * it is NOT guessed.  Never while the lock is in `xfconfd`'s memory (the value would be
+ * «equal to the system's» and not written): it waits for the next birth.  Silent when all
+ * is well.  One read of the channel (`-l -v`: a plugin with a type has a line, an array
+ * is `[1,2,3]`). */
+static void xfce_panel_integrity(void)
+{
+	char *list_cmd[] = { "xfconf-query", "-c", "xfce4-panel", "-l", "-v", NULL };
+	g_autofree char *listing = ask(list_cmd);
+	g_auto(GStrv) lines = g_strsplit(listing ? listing : "", "\n", -1);
+	g_autoptr(GHashTable) typed = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GPtrArray) ids = g_ptr_array_new_with_free_func(g_free);
+	int held = -1;
+
+	for (int i = 0; lines[i]; i++) {
+		g_auto(GStrv) parts = g_strsplit_set(g_strstrip(lines[i]), " \t", 2);
+		const char *value = parts[0] && parts[1] ? g_strstrip(parts[1]) : "";
+
+		if (!parts[0])
+			continue;
+		if (g_str_has_prefix(parts[0], "/plugins/plugin-") && *value)
+			g_hash_table_add(typed, g_strdup(parts[0]));
+		else if (g_str_has_prefix(parts[0], "/panels/panel-") &&
+		         g_str_has_suffix(parts[0], "/plugin-ids") && value[0] == '[') {
+			g_auto(GStrv) items = g_strsplit_set(value, "[,]", -1);
+
+			for (int j = 0; items[j]; j++)
+				if (*items[j])
+					g_ptr_array_add(ids, g_strdup(items[j]));
+		}
+	}
+	for (guint i = 0; i < ids->len; i++) {
+		g_autofree char *key = g_strdup_printf("/plugins/plugin-%s",
+		                                        (char *) g_ptr_array_index(ids, i));
+		g_autofree char *type = NULL;
+
+		if (strspn(key + strlen("/plugins/plugin-"), "0123456789") !=
+		        strlen(key + strlen("/plugins/plugin-")) ||
+		    g_hash_table_contains(typed, key))
+			continue;
+		if (held < 0)
+			held = xfconfd_holds_lock();
+		if (held) {
+			registro_dice(LOG_SESSION,
+			              "⚠ XFCE: %s has no type but the lock is still in xfconfd's "
+			              "memory — not repaired now, at the next birth without it", key);
+			continue;
+		}
+		type = xfce_copy_plugin_type(key);
+		if (!type) {
+			type = default_plugin_type(key);
+			if (type && strcmp(type, PLUGIN_ACTIONS) != 0 && strcmp(type, PLUGIN_WHISKER) != 0)
+				g_clear_pointer(&type, g_free);
+		}
+		if (!type)
+			registro_dice(LOG_SESSION,
+			              "⛔ XFCE: %s has no type and neither the copy nor the standard "
+			              "layout (for the types we lock) knows it — NOT repaired (not "
+			              "guessed)", key);
+		else if (xfconf_set("xfce4-panel", key, "string", type))
+			registro_dice(LOG_SESSION, "⭐ XFCE: %s had no type: put back as «%s»",
+			              key, type);
+		else
+			registro_dice(LOG_SESSION, "⛔ XFCE: %s had no type and «%s» could NOT "
+			              "be written back", key, type);
+		g_hash_table_add(typed, g_strdup(key));
+	}
 }
 
 /*
@@ -6428,7 +6686,13 @@ static const char *WHISKER_HIDE[] = { "show-command-lockscreen", "show-command-s
 /* The panel's XML: `items` of the `actions` plugins and the exit buttons of the
  * `whiskermenu` plugins, locked; the user's values noted in the copy.  NULL if there is
  * no plugin to lock.  `wanted` gets {key, entries} pairs for the final re-read, `flags`
- * the keys of the whisker menu (all expected `false`). */
+ * the keys of the whisker menu (all expected `false`).
+ * ⛔ RULE of the lock files: only the LEAF keys we lock are defined there; a node that
+ *    is only the parent of a lock (`plugin-N`, `plugins`) is `type="empty"`, never a
+ *    value the user must own.  `xfconfd` does not write in the user's file a value
+ *    equal to the system's: with `plugin-N = whiskermenu` in the lock the user's file
+ *    kept `type="empty"` and, once the lock was gone, the plugin had no type and was
+ *    lost (D-X3). */
 static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrArray *wanted,
                               GPtrArray *flags)
 {
@@ -6439,11 +6703,11 @@ static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrAr
 	gboolean any = FALSE;
 
 	plugins = panel_action_plugins(&any);
-	whiskers = panel_plugins("whiskermenu", &any);
+	whiskers = panel_plugins(PLUGIN_WHISKER, &any);
 	if (!any) {
 		/* a user who never opened XFCE: the panel will migrate `default.xml` */
 		g_ptr_array_extend_and_steal(plugins, default_action_plugins());
-		g_ptr_array_extend_and_steal(whiskers, default_plugins("whiskermenu"));
+		g_ptr_array_extend_and_steal(whiskers, default_plugins(PLUGIN_WHISKER));
 	}
 	if (!plugins->len && !whiskers->len)
 		return NULL;
@@ -6466,7 +6730,7 @@ static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrAr
 		want = actions_without_power(user_items ? (const char *const *) user_items
 		                                        : (const char *const *) DEFAULT_ACTIONS);
 		g_string_append_printf(xml,
-		                       "    <property name=\"%s\" type=\"string\" value=\"actions\">\n"
+		                       "    <property name=\"%s\" type=\"empty\">\n"
 		                       "      <property name=\"items\" type=\"array\" locked=\"%s\">\n",
 		                       base + strlen("/plugins/"), who);
 		for (int j = 0; want[j]; j++) {
@@ -6485,9 +6749,8 @@ static char *xfce_panel_xml(const char *user, GKeyFile *copy, int *count, GPtrAr
 		/* the plugin's own value too, as for `actions`; and WHICH plugin it is (restore) */
 		xfce_copy_note(copy, count, "xfce4-panel", base, "plugin");
 		group = g_strdup_printf("k%d", *count - 1);
-		g_key_file_set_string(copy, group, "plugin", "whiskermenu");
-		g_string_append_printf(xml, "    <property name=\"%s\" type=\"string\" "
-		                            "value=\"whiskermenu\">\n",
+		g_key_file_set_string(copy, group, "plugin", PLUGIN_WHISKER);
+		g_string_append_printf(xml, "    <property name=\"%s\" type=\"empty\">\n",
 		                       base + strlen("/plugins/"));
 		for (int j = 0; WHISKER_HIDE[j]; j++) {
 			char *key = g_strdup_printf("%s/%s", base, WHISKER_HIDE[j]);
@@ -6540,6 +6803,12 @@ static void xfce_session_xfconf(void)
 	 *    old 1.5.0 values are taken away ONCE, BEFORE the new copy.  ⚠ The keys that
 	 *    do not go back even now stay PENDING: step 2 keeps their originals. */
 	no_pending = xfce_restore_keys();
+	/* ⭐ D-X3: the repair is here, at the BIRTH of the session, not at the end of a
+	 *   restore: at the birth the lock of the last session is already gone from
+	 *   xfconfd (or the check says it is not and waits), and with the plugin's type no
+	 *   longer in the lock files (`xfce_panel_xml()`) nothing creates the damage anew —
+	 *   this only heals a user damaged before, once. */
+	xfce_panel_integrity();
 	xfce_migrate_old();
 
 	/* 2. THE COPY, before any lock: the user's value of each key we lock */
