@@ -1,0 +1,36 @@
+#!/bin/sh
+# remotix-pam-hook — checks, at every start of remotix.service, that REMOTIX's line of the local-login hook is in
+# /etc/pam.d/common-session, and puts it back if it is not (Debian: the line comes from the pam-auth-update profile
+# /usr/share/pam-configs/remotix).
+#
+#     remotix-pam-hook check      the line is there: nothing is touched; it is not: `pam-auth-update --package` (the call of the postinst)
+#                                 puts it back; ONE summary line is written either way (the journal of the service)
+#
+# ⛔ Never `--force` and never `--enable`: a common-session edited by hand, or a profile the administrator switched off in
+#    pam-auth-update, stay as they are — pam-auth-update refuses by itself — and the summary line says so.
+# ⛔ The service runs this as `ExecStartPre=-`: the exit status is always 0, it must never prevent the start.
+set -u
+
+PAMFILE=/etc/pam.d/common-session
+MARK=remotix-local-login
+
+case "${1:-}" in
+check) ;;
+*) echo "usage: remotix-pam-hook check" >&2; exit 2 ;;
+esac
+
+if grep -qs "$MARK" "$PAMFILE"; then
+	echo "remotix: the local-login hook is in place in $PAMFILE"
+	exit 0
+fi
+
+if command -v pam-auth-update >/dev/null 2>&1; then
+	pam-auth-update --package >/dev/null 2>&1 || :
+fi
+
+if grep -qs "$MARK" "$PAMFILE"; then
+	echo "remotix: the local-login hook was missing from $PAMFILE and has been put back (pam-auth-update --package)"
+else
+	echo "remotix: ⚠ the local-login hook is NOT in $PAMFILE and could not be put back (file edited by hand or profile switched off): a local login will not close the user's remote desktop first (see: sudo pam-auth-update)"
+fi
+exit 0

@@ -81,6 +81,7 @@ override_dh_auto_install:
 	#    puts it into /etc/pam.d/common-session (postinst runs pam-auth-update --package; prerm removes it on `remove`).
 	install -D -m 0755 src/remotix-local-login $(B)/usr/libexec/remotix/remotix-local-login
 	install -D -m 0644 debian/remotix.pam-config $(B)/usr/share/pam-configs/remotix
+	install -D -m 0755 src/remotix-pam-hook    $(B)/usr/libexec/remotix/remotix-pam-hook
 	install -D -m 0644 src/remotix-power-keys.conf \
 	  $(B)/usr/share/remotix/belts/remotix-power-keys.conf
 	install -D -m 0644 debian/remotix-no-suspend.conf \

@@ -33,6 +33,13 @@ EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
 #    `--no-split` is the way back to the single process of 1.0).  Exit 78 is left for a REAL configuration error (e.g. the user
 #    `remotix` missing): RestartPreventExitStatus=78 below stops the restart loop.
 WorkingDirectory=/
+# ⭐ The codec probe of the root side makes Mesa open its shader cache in /root/.cache (and ~/.cache/radv_builtin_shaders);
+#    the cache is useless to a probe that runs once.  Only the service's own environment: the users'
+#    desktops get theirs from PAM (clearenv in rootside.c) and keep the cache.
+Environment=MESA_SHADER_CACHE_DISABLE=true
+# ⭐ At every start the line of the local-login hook is checked in /etc/pam.d/common-session and, if it is missing (an update, a hand
+#    edit), put back with pam-auth-update --package; it is written in the service's log.  `-`: never prevents the start.
+ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check
 # ⚠ `sh` only to expand the EnvironmentFile variables, then `exec`: the
 #   server stays the main process.  `$$` = one `$` for the shell.
 ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port "$${REMOTIX_PORT}" --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --split --journal $${REMOTIX_OPTIONS}'

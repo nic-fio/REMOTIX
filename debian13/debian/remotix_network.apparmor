@@ -93,5 +93,13 @@ profile remotix_network flags=(complain,attach_disconnected) {
   # none of these is listed, and `deny` says so out loud for the abstract ones.
   deny ptrace,
   deny mount,
-  deny unix addr=@*,
+  # ⚠ The two lines name the operations.  A bare `deny unix addr=@*,` also carries `create`, which has no
+  #   address to compare: on a kernel that mediates unix sockets it forbids EVERY unix socket,
+  #   and a `deny` holds in complain mode too — no D-Bus, no logind, every sign-in refused.
+  #   `@**` and not `@*`: one star stops at `/`, and the names to close contain it (`@/tmp/.X11-unix/X0`).
+  deny unix (bind, listen) addr=@**,
+  deny unix (connect, send, receive) peer=(addr=@**),
+
+  # The administrator's additions (dh_apparmor creates the empty file /etc/apparmor.d/local/remotix_network).
+  include if exists <local/remotix_network>
 }
