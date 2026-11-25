@@ -48,7 +48,16 @@ Allineare Debian vuol dire prima portarla al livello di Ubuntu, poi aggiungere c
 4. GNOME, XFCE e LXQt restano senza «ultima difesa», come su Fedora? **Sì**, ma con la prova a programmi aperti anche
    su di loro; si interviene solo se fallisce.
 
-## Ordine di lavoro proposto
+## Ordine di lavoro: DECISO dal proprietario (25 nov, notte)
+
+**La prossima sessione si occupa di riallineare Debian** (parole sue: «la prossima sessione si occuperà di riallineare
+debian»). Quindi si comincia da Debian 13, non da Ubuntu come proponevo qui sotto. Per Debian è già pronto il banco
+(quattro macchine virtuali pulite); mancano la macchina di costruzione dei `.deb` e lo script per le chiavette.
+Primo passo della sessione: leggere `STUDIO-1.2.0-differenze.md` (le 13 voci «Ubuntu le ha, Debian no» e le voci A/B
+che vengono da Fedora), portare al proprietario le quattro domande qui sopra, scrivere il piano in `debian13/PIANO.md`
+e aspettare il suo OK.
+
+## Ordine di lavoro proposto (superato da quanto sopra per l'ordine fra le due distribuzioni)
 
 Prima Ubuntu (più vicina a Fedora), poi Debian. I due banchi si preparano in parallelo; le prove con la Radeon vanno
 in fila (una sola scheda). Per ogni distribuzione: piano nel suo `PIANO.md` → OK del proprietario → codice →
