@@ -22,7 +22,7 @@
 #
 # Environment (all optional):
 #   OUTPUT        results folder on the server           (default /media/REMOTIX-DEBIAN/pacchetti/<label>)
-#   RX_VERSION    upstream version                       (default 1.0.1~dev)      RX_REVISION  Debian revision (default 1)
+#   RX_VERSION    upstream version                       (default 1.2.0~dev)      RX_REVISION  Debian revision (default 1)
 #   SOURCE_DATE_EPOCH  build date, for a reproducible .deb (default: the newest mtime in src/ and debian/)
 #   TWICE=1       second build + byte comparison         KEEP_VM=1  do not turn the VM off at the end
 #   RX_SERVER     (default nicfio@192.168.0.2)           RX_GUEST_PORT  the guest's ssh port on the server (default 2365)
@@ -40,7 +40,7 @@ SERVER=${RX_SERVER:-nicfio@192.168.0.2}
 GUESTPORT=${RX_GUEST_PORT:-2365}
 VMSCRIPT=${RX_VMSCRIPT:-/media/REMOTIX-DEBIAN/vm-radeon/vm-radeon-1.2.0.sh}
 OUTDIR=${OUTPUT:-/media/REMOTIX-DEBIAN/pacchetti/$LABEL}
-VERSION_UP=${RX_VERSION:-1.0.1~dev}
+VERSION_UP=${RX_VERSION:-1.2.0~dev}
 REVISION=${RX_REVISION:-1}
 VERSION="$VERSION_UP-$REVISION+deb13"
 SSHOPT=(-o BatchMode=yes -o StrictHostKeyChecking=no)
