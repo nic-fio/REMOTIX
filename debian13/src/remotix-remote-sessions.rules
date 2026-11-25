@@ -73,7 +73,10 @@ polkit.addRule(function (action, subject) {
     var refresh = [
         "org.freedesktop.Flatpak.metadata-update",
         "org.freedesktop.Flatpak.appstream-update",
-        "org.freedesktop.packagekit.system-sources-refresh"
+        "org.freedesktop.packagekit.system-sources-refresh",
+        // Fedora 45 (21 Nov 2026, `[M]` on the GNOME VM): gnome-software refreshes the firmware metadata at login; a seated user gets
+        // `yes` (implicit active), a remote session `auth_admin` and met a password window of «prova» on top of the desktop
+        "org.freedesktop.fwupd.refresh-remote"
     ];
     var machine = [
         "org.freedesktop.NetworkManager.network-control",

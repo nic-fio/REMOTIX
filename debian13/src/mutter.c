@@ -392,9 +392,9 @@ gboolean mutter_find_monitor(MutterSession *session)
 			registro_dice(AREA,
 			              "⛔ SCALE %.3f instead of 1.0 — the input coordinate space "
 			              "does NOT match the stream's pixels, and the pointer "
-			              "will go elsewhere with nothing saying so.  Cure: "
-			              "`gsettings set org.gnome.desktop.interface scaling-factor 0` "
-			              "(`DECISIONS.md` §5.0-sexies, guard 2)",
+			              "will go elsewhere with nothing saying so.  ⭐ 19 Nov 2026: "
+			              "the stage brings OUR monitor back to 1 (`mutter_scale_to_one()`) "
+			              "or refuses it (`DECISIONS.md` §5.0-sexies, guard 2)",
 			              scale_factor);
 	}
 
@@ -969,6 +969,136 @@ double mutter_our_scale(const MutterSession *session)
 	if (!session || !session->bus || !session->monitor || !session->monitor[0])
 		return -1.0;
 	return our_scale(session->bus, session->monitor);
+}
+
+/* ⭐⭐ 19 Nov 2026 — see `mutter.h`.  `GetCurrentState` is
+ *    `(ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})`: serial, monitors (with their modes: `is-current` in the
+ *    properties of the mode), logical monitors (x, y, scale, transform, primary, monitors, properties), properties.
+ *    `ApplyMonitorsConfig` takes `(uua(iiduba(ssa{sv}))a{sv})`: serial, method (1 = temporary), logical monitors with
+ *    (connector, mode id, properties) for each monitor, and properties (`layout-mode` is passed on only if
+ *    `supports-changing-layout-mode` is true). */
+gboolean mutter_scale_to_one(MutterSession *session)
+{
+	g_autoptr(GError) mistake = NULL;
+	g_autoptr(GVariant) state = NULL;
+	g_autoptr(GVariant) monitors = NULL;
+	g_autoptr(GVariant) logicals = NULL;
+	g_autoptr(GVariant) props = NULL;
+	g_autoptr(GVariant) logical = NULL;
+	g_autoptr(GVariant) lmons = NULL;
+	g_autoptr(GVariant) lmon = NULL;
+	g_autoptr(GVariant) layout = NULL;
+	g_autoptr(GVariant) reply = NULL;
+	g_autofree char *mode_id = NULL;
+	const char *connector = NULL;
+	guint32 serial = 0, transform = 0;
+	gint32 x = 0, y = 0;
+	gboolean primary = FALSE;
+	double scale = 0;
+	GVariantIter iter;
+	GVariant *entry;
+	GVariantBuilder lb, pb;
+
+	if (!session || !session->bus || !session->monitor || !session->monitor[0])
+		return FALSE;
+	state = g_dbus_connection_call_sync(session->bus, DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY,
+	                                    "GetCurrentState", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+	                                    WAIT_CALL_MS, NULL, &mistake);
+	if (!state) {
+		registro_dice(AREA, "⚠ scale back to 1: GetCurrentState does not answer (%s)",
+		              mistake ? mistake->message : "no reason");
+		return FALSE;
+	}
+	g_variant_get_child(state, 0, "u", &serial);
+	monitors = g_variant_get_child_value(state, 1);
+	logicals = g_variant_get_child_value(state, 2);
+	props = g_variant_get_child_value(state, 3);
+	if (g_variant_n_children(logicals) != 1) {
+		registro_dice(AREA, "⚠ scale back to 1: %zu logical monitors, not the plain case (one, ours): "
+		                    "I do not touch the layout", g_variant_n_children(logicals));
+		return FALSE;
+	}
+	logical = g_variant_get_child_value(logicals, 0);
+	g_variant_get_child(logical, 0, "i", &x);
+	g_variant_get_child(logical, 1, "i", &y);
+	g_variant_get_child(logical, 2, "d", &scale);
+	g_variant_get_child(logical, 3, "u", &transform);
+	g_variant_get_child(logical, 4, "b", &primary);
+	lmons = g_variant_get_child_value(logical, 5);
+	if (g_variant_n_children(lmons) != 1) {
+		registro_dice(AREA, "⚠ scale back to 1: the logical monitor has %zu monitors, not one: nothing touched",
+		              g_variant_n_children(lmons));
+		return FALSE;
+	}
+	lmon = g_variant_get_child_value(lmons, 0);
+	g_variant_get(lmon, "(&s&s&s&s)", &connector, NULL, NULL, NULL);
+	if (!connector || strcmp(connector, session->monitor) != 0) {
+		registro_dice(AREA, "⚠ scale back to 1: the only logical monitor is «%s», not ours «%s»: nothing touched",
+		              connector ? connector : "?", session->monitor);
+		return FALSE;
+	}
+	/* the id of the CURRENT mode of our monitor: the resolution is kept */
+	g_variant_iter_init(&iter, monitors);
+	while (!mode_id && (entry = g_variant_iter_next_value(&iter))) {
+		g_autoptr(GVariant) e = entry;
+		g_autoptr(GVariant) spec = g_variant_get_child_value(e, 0);
+		g_autoptr(GVariant) modes = g_variant_get_child_value(e, 1);
+		const char *c = NULL;
+		GVariantIter mi;
+		GVariant *m;
+
+		g_variant_get(spec, "(&s&s&s&s)", &c, NULL, NULL, NULL);
+		if (!c || strcmp(c, connector) != 0)
+			continue;
+		g_variant_iter_init(&mi, modes);
+		while ((m = g_variant_iter_next_value(&mi))) {
+			g_autoptr(GVariant) mm = m;
+			g_autoptr(GVariant) mp = g_variant_get_child_value(mm, 6);
+			gboolean current = FALSE;
+			const char *id = NULL;
+
+			if (g_variant_lookup(mp, "is-current", "b", &current) && current) {
+				g_variant_get_child(mm, 0, "&s", &id);
+				mode_id = g_strdup(id);
+				break;
+			}
+		}
+	}
+	if (!mode_id) {
+		registro_dice(AREA, "⚠ scale back to 1: the current mode of «%s» was not found: nothing touched", connector);
+		return FALSE;
+	}
+	g_variant_builder_init(&lb, G_VARIANT_TYPE("a(iiduba(ssa{sv}))"));
+	g_variant_builder_add(&lb, "(iidub@a(ssa{sv}))", x, y, 1.0, transform, primary,
+	                      g_variant_new_array(G_VARIANT_TYPE("(ssa{sv})"),
+	                                          (GVariant *[]){ g_variant_new("(ss@a{sv})", connector, mode_id,
+	                                                          g_variant_new_array(G_VARIANT_TYPE("{sv}"), NULL, 0)) },
+	                                          1));
+	g_variant_builder_init(&pb, G_VARIANT_TYPE("a{sv}"));
+	/* `layout-mode` is passed on ONLY if Mutter says it can change it (`supports-changing-layout-mode`), as `gdctl`
+	 * does: otherwise Mutter refuses the call (no `scale-monitor-framebuffer` experimental feature) */
+	{
+		gboolean can_change = FALSE;
+
+		if (g_variant_lookup(props, "supports-changing-layout-mode", "b", &can_change) && can_change)
+			layout = g_variant_lookup_value(props, "layout-mode", NULL);
+	}
+	if (layout)
+		g_variant_builder_add(&pb, "{sv}", "layout-mode", layout);
+	reply = g_dbus_connection_call_sync(session->bus, DISPLAY_NAME, DISPLAY_PATH, IFACE_DISPLAY,
+	                                    "ApplyMonitorsConfig",
+	                                    g_variant_new("(uu@a(iiduba(ssa{sv}))a{sv})", serial, 1u,
+	                                                  g_variant_builder_end(&lb), &pb),
+	                                    NULL, G_DBUS_CALL_FLAGS_NONE, WAIT_CALL_MS, NULL, &mistake);
+	if (!reply) {
+		registro_dice(AREA, "⚠ scale back to 1: ApplyMonitorsConfig (temporary) refused: %s",
+		              mistake ? mistake->message : "no reason");
+		return FALSE;
+	}
+	scale = our_scale(session->bus, session->monitor);
+	registro_dice(AREA, "%s scale back to 1 (temporary, the user's monitors.xml untouched): «%s» now reads %.3f",
+	              scale == 1.0 ? "⭐" : "⛔", session->monitor, scale);
+	return scale == 1.0;
 }
 
 const char *mutter_monitor_product(const MutterSession *session)
