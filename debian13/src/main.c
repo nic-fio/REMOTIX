@@ -436,15 +436,11 @@ static void help(const char *name)
  *
  *     `SPECS.md` §4.2 wants the `remotix` service.  If the file is not
  *     there, Linux-PAM falls back to the `other` service, and neither outcome
- *     is acceptable: on Fedora and Arch `other` is `pam_deny` (**every** right
- *     password refused, and the user reads «user or password not correct» — a
- *     diagnosis pointing at the password while the defect is a missing file);
- *     on Debian it includes the common stacks, that is a stack that is not
- *     ours and without the exclusion of root (`src/remotix.pam`).
+ *     is acceptable: on Debian `other` includes the common stacks, that is a
+ *     stack that is not ours and without the exclusion of root (`src/remotix.pam`).
  *
  * ⭐ PHASE 17 (`phases/17-the-installer.md` §4.3-§4.4): the file is looked for
- *    where Linux-PAM looks for it — first `/etc/pam.d`, then `/usr/lib/pam.d`,
- *    where the openSUSE package puts it.
+ *    where Linux-PAM looks for it — first `/etc/pam.d`, then `/usr/lib/pam.d`.
  *
  * ⚠ It does NOT refuse to start: without PAM the server is useless, but the
  *   ban of §4.4-bis, the page and the certificates work anyway, and turning
@@ -466,11 +462,10 @@ static void look_pam_service(void)
 	registro_dice(LOG_STARTUP,
 	              "⛔ the PAM service «remotix» DOES NOT EXIST (neither %s nor %s): PAM "
 	              "will fall back to the «other» service, which is NOT the "
-	              "REMOTIX stack — on Fedora and Arch it is pam_deny (EVERY right "
-	              "password refused, and the user will read «user or password "
-	              "not correct»), on Debian the common stacks without "
-	              "the exclusion of root.  Install the file of the family: "
-	              "src/remotix.pam (Debian/Ubuntu), .fedora, .suse, .arch.",
+	              "REMOTIX stack (on Debian it includes the common stacks, without "
+	              "the exclusion of root, and every login of the system would be "
+	              "judged by it).  The package installs that file: "
+	              "reinstall the package from its file (sudo apt install --reinstall ./remotix_<version>_amd64.deb).",
 	              dove[0], dove[1]);
 }
 

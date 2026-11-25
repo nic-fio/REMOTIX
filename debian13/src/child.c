@@ -5834,6 +5834,9 @@ static uint64_t enc_wait_ms[CODEC_MAX];
 static uint64_t wakeup_ms;
 /* ⭐ The last restart asked by a stale «unchanged» card frame (`unchanged.h`). */
 static uint64_t uc_wake_ms;
+/* ⭐ The last time a poke of KWin was written in the log (`capture_frame_lost()`). */
+static uint64_t lost_said_ms;
+static bool lost_unsent_said;
 #define WAKEUP_MS 400u
 /* ⛔ Cure "A" (21 Aug 2026, 🔸 derived) skips the wake-up when something is
  *    held down.  ⚠ This flag serves only NOT to repeat the log line every
@@ -8980,6 +8983,8 @@ remount_capture:
 		/* ⭐ 15 Oct 2026 — `[M]` KWin sends ~50 frames/s where 5 change
 		 *    (`unchanged.h`): the copies of the same picture are not encoded. */
 		capture_skip_unchanged(cat, "KWin: whole frames and exact damage");
+		/* ⭐ 19 Nov 2026 — and KWin numbers its buffers: a hole is a lost one. */
+		capture_watch_sequence(cat);
 	}
 	*out_m = mut;
 	*out_c = cat;
@@ -9630,6 +9635,8 @@ static bool remount_only_capture(MutterSession *m, Capture **c, uint32_t l,
 		capture_cursor_never_hide(new_one, "KWin --virtual: the session's cursor "
 		                                      "theme is invisible");
 		capture_skip_unchanged(new_one, "KWin: whole frames and exact damage");
+		/* ⭐ 19 Nov 2026 — and KWin numbers its buffers: a hole is a lost one. */
+		capture_watch_sequence(new_one);
 	}
 	if (!new_one) {
 		registro_dice(LOG_CHILD,
@@ -10403,8 +10410,21 @@ void child_alive(int argc, char **argv)
 		 *    its own frequency, and with nothing due it is one comparison */
 		session_clear_out_retry();
 		/* ⭐ 17 Nov 2026: KDE only — a Plasma logout refused halfway by systemd is finished (`session.c`) */
-		if (!close_only)
-			session_kde_logout_watch();
+		if (!close_only && session_kde_logout_watch()) {
+			/* ⭐ 18 Nov 2026: systemd refused the stop for as long as the watch tried (`session.c`): the session is closed by
+			 *    the product's own road, as for the user's Logout above — guard first, then `terminate_and_clear()`; once
+			 *    KWin is gone §7.6 warns the client and ends the child. */
+			registro_dice(LOG_CHILD,
+			              "⛔ KDE: the user's logout could not be completed by systemd — closing the "
+			              "graphical session by force");
+			if (local_guard("before the forced KDE logout"))
+				continue; /* `local_found` is set: the top of the loop does the light close and exits */
+			session_force_unless_orphaned(false); /* as for the user's Logout: this is not a PRELOCAL close */
+			if (!terminate_and_clear())
+				registro_dice(LOG_CHILD,
+				              "⛔ the graphical session did NOT end: the user asked to log out and "
+				              "the desktop is still there");
+		}
 		if (!cat && !close_only) {
 			static uint64_t heartbeat_ms;
 			uint64_t t_now = log_now_ms();
@@ -11562,6 +11582,32 @@ void child_alive(int argc, char **argv)
 			}
 		}
 
+		/* ⛔⭐ PHASE 12 — ON PLASMA THE SESSION DIES SILENTLY.  `[M]` 19
+		 *    Sep 2026, the user's logout: KWin goes away, and the grab
+		 *    returns "zero" forever — the child woke up the stream every
+		 *    400 ms and the page stayed frozen on the last image instead of
+		 *    going back to the login form (`DECISIONS.md` §4.1-quater).
+		 *    ⇒ The connection to KWin is checked, and if it has fallen the
+		 *    same road as "the stage has gone" is taken: dismantled, the
+		 *    remount asks `session_state()`, which says DEAD.
+		 * ⭐⭐ 18 Nov 2026 — IT SITS HERE, BEFORE THE «NOBODY IS WATCHING» `continue` OF THE FRAME (point 2),
+		 *    and not after the grab: `[M]` Kubuntu, «Log Out» from the Plasma menu with the browser
+		 *    closed — KWin was gone and the child stayed alive for good (11 processes, 2 logind sessions),
+		 *    the next login was admitted as «resumed» on an empty screen and a few seconds later heard «the
+		 *    session has ended».  With no client `requested_codec` is 0, the round never reached the
+		 *    check, and §7.6 ran only when a login asked for the stage.  Here it is every round, with or
+		 *    without a client; the dismantling and the remount (§7.6: `raise(SIGTERM)`) are the same. */
+		if (cat && stage_kwin && kwin_closed(stage_kwin)) {
+			registro_dice(LOG_CHILD,
+			              "⚠ KWIN IS GONE: the Plasma session is over "
+			              "(logout, or the compositor died).  Dismantling the "
+			              "stage, and the next attempt will be able to say whether the "
+			              "session is closed");
+			unmount_stage(&mut, &cat);
+			stage_wait_ms = STAGE_RETRY_MIN_MS;
+			stage_retry_ms = log_now_ms() + stage_wait_ms;
+		}
+
 		/* ── 1-ter. the stage that is not there: it is REMOUNTED ─────────── */
 		/* ⛔⭐ THE TWO TWIN DEFECTS ARE CURED HERE, AND IT IS THE SAME PLACE
 		 *     BECAUSE THEY ARE THE SAME FACT: *the child does not know its
@@ -12020,27 +12066,44 @@ void child_alive(int argc, char **argv)
 				}
 			}
 
-			/* ⛔⭐ PHASE 12 — ON PLASMA THE SESSION DIES SILENTLY.  `[M]` 19
-			 *    Sep 2026, the user's logout: KWin goes away, and the grab
-			 *    returns "zero" forever — the child woke up the stream every
-			 *    400 ms and the page stayed frozen on the last image instead of
-			 *    going back to the login form (`DECISIONS.md` §4.1-quater).
-			 *    ⇒ The connection to KWin is checked, and if it has fallen the
-			 *    same road as "the stage has gone" is taken: dismantled, the
-			 *    remount asks `session_state()`, which says DEAD. */
-			if (stage_kwin && kwin_closed(stage_kwin)) {
-				registro_dice(LOG_CHILD,
-				              "⚠ KWIN IS GONE: the Plasma session is over "
-				              "(logout, or the compositor died).  Dismantling the "
-				              "stage, and the next attempt will be able to say whether the "
-				              "session is closed");
-				g_clear_error(&mistake);
-				capture_stopped_free(&fo);
-				unmount_stage(&mut, &cat);
-				stage_wait_ms = STAGE_RETRY_MIN_MS;
-				stage_retry_ms = log_now_ms() + stage_wait_ms;
-				continue;
+			/* ⭐ 19 Nov 2026 — KDE: a buffer KWin sent never arrived (a hole in
+			 *    the buffers' numbers) and no picture has come since: the one
+			 *    lost may have been the last of an animation, and then nothing
+			 *    comes by itself (`capture.h`, `capture_frame_lost()`).  ⇒ Our
+			 *    pixel on top is committed again and KWin draws a frame.
+			 *    ⚠ NOT a restart: the stream and the libei devices stay as
+			 *    they are, so no guard on keys or buttons held down is needed.
+			 *    Said at most once a second, with the counts. */
+			if (stage_kwin) {
+				guint gaps = 0, buffers = 0, pokes = 0;
+
+				if (capture_frame_lost(cat, &gaps, &buffers, &pokes)) {
+					uint64_t current_ms = log_now_ms();
+					bool sent = kwin_poke(stage_kwin);
+
+					if (!sent) {
+						/* ⛔ Once, not at every try: a connection that
+						 *    dropped refuses them all. */
+						if (!lost_unsent_said)
+							registro_dice(LOG_CHILD,
+							              "⚠ a buffer of KWin never arrived, and the "
+							              "pixel on top could NOT be committed again "
+							              "(no pixel, or no connection to KWin): the "
+							              "picture may be stale until the scene changes");
+						lost_unsent_said = true;
+					} else if (lost_unsent_said || current_ms - lost_said_ms >= 1000u) {
+						lost_unsent_said = false;
+						lost_said_ms = current_ms;
+						registro_dice(LOG_CHILD,
+						              "⭐ a buffer of KWin never arrived and no "
+						              "picture came after it: pixel on top committed "
+						              "again to have one drawn (so far: %u holes in "
+						              "the numbers, %u buffers missing, %u pokes)",
+						              gaps, buffers, pokes);
+					}
+				}
 			}
+
 			if (take == CAPTURE_TAKE_ZERO) {
 				/* ⛔ ZERO AND FAILURE ARE TWO DIFFERENT THINGS, and this is the
 				 *    zero: the stream was active for the whole wait and nothing

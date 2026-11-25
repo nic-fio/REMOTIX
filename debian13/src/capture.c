@@ -55,6 +55,19 @@ static uint64_t now_us(void)
 
 #define FD_MAX 8
 
+/* ⭐ [M] 19 Nov 2026 — the lost frame (`capture_frame_lost()`, the story is in `capture.h`).
+ *    QUIET: how long the stream must have given no picture before the caller is told to
+ *    poke.  An animation delivers a picture every 16 ms, so 200 ms of nothing is not «the
+ *    next frame is coming»; and it is short enough that a window left half open is
+ *    completed before the eye settles on it.
+ *    POKES_MAX: pokes in a row that no picture answered; then we stop, and say so once,
+ *    until a PICTURE arrives (a KWin that does not answer ten times will not answer the
+ *    eleventh; a cursor-only buffer does not start the pokes again).
+ *    SEQ_WINDOW: the buffers over which the safety switch of the count looks. */
+#define LOST_QUIET_MS 200u
+#define LOST_POKES_MAX 10
+#define SEQ_WINDOW 600u
+
 /*
  * ⭐⭐ HOW OFTEN WE LOOK AT THE PIXELS — the biggest cure of phase 8 on the
  *     `capture → first byte` segment, and it lives in a constant.
@@ -195,6 +208,20 @@ struct Capture
 	 *    declared EMPTY: armed at every (re)negotiated format and at every
 	 *    `capture_resize()`, cleared at the first delivery.  See `on_process`. */
 	gint deliver_next; /* atomic: written by `capture_resize()` (loop lock), read by the RT `on_process` */
+
+	/* ⭐ [M] 19 Nov 2026 — THE LOST FRAME (KWin; the whole story at `capture_frame_lost()` in
+	 *    `capture.h`).  `seq_*` live on the RT thread alone.  The `lost_*` are atomic:
+	 *    written by the RT `on_process`, read and written by the caller's thread.  Times are
+	 *    milliseconds of `now_us()` cut to 32 bits: only differences are used. */
+	gint seq_watch;      /* atomic: `capture_watch_sequence()` switched it on            */
+	gboolean seq_known;  /* a buffer with a header was seen                              */
+	guint64 seq_last;    /* its `seq`                                                    */
+	guint seq_window_n, seq_window_gaps; /* the safety switch: buffers and holes of this window */
+	gint lost_quit_said; /* the line «ten pokes, no answer» was written for this episode */
+	gint lost_need;      /* a buffer never arrived and no picture has come since         */
+	gint lost_mark_ms;   /* the last picture, or the last poke: the quiet is counted from here */
+	gint lost_row;       /* pokes in a row that no picture answered                      */
+	gint lost_gaps, lost_buffers, lost_pokes; /* the counts, for the log                 */
 
 	/* --- the counters, which run on the real-time thread ---------------- *
 	 * ⚠ THEY ARE COUNTED, NOT PRINTED: one log line per frame
@@ -993,6 +1020,59 @@ static void on_process(void *data)
 	/* ⛔ BEFORE ANY DISCARD: see the box of `look_cursor`. */
 	look_cursor(capture, bundle);
 
+	/* ⭐ [M] 19 Nov 2026 — THE BUFFERS ARE COUNTED BY THEIR PRODUCER, AND A HOLE IN THE COUNT
+	 *    IS A BUFFER THAT NEVER ARRIVED (`capture.h`, `capture_frame_lost()`).  KWin numbers
+	 *    every buffer it queues, cursor-only ones included (`screencaststream.cpp`,
+	 *    `addHeader()`: `seq = m_sequential++`).  ⇒ Read on EVERY buffer, before any discard.
+	 * ⛔ A lost buffer may have been a picture, and its damage went with it: `damage_lost`
+	 *    (the next picture goes out «all changed») and `lost_need` (if none comes by itself,
+	 *    the caller asks KWin for one).
+	 * ⚠ A header marked CORRUPTED is KWin giving back a buffer it could not use
+	 *   (`corruptHeader()`): its number is stale, and it is not looked at.
+	 * ⚠ A number not above the last one is the count starting again, not a hole.
+	 * ⛔ THE SAFETY SWITCH.  All this rests on «one number per buffer».  A producer that
+	 *    counted otherwise would show a hole at every buffer, and every frame would go out
+	 *    «all changed» with nobody told.  ⇒ Holes in more than half of `SEQ_WINDOW` buffers
+	 *    in a row switch the count off, and it is said once.  (Measured, KWin 6.6.7: at most
+	 *    30 holes in the ~200 buffers of a session being born.) */
+	if (g_atomic_int_get(&capture->seq_watch))
+	{
+		struct spa_meta_header *number =
+		    spa_buffer_find_meta_data(bundle->buffer, SPA_META_Header, sizeof *number);
+
+		if (number && !(number->flags & SPA_META_HEADER_FLAG_CORRUPTED))
+		{
+			if (capture->seq_known && number->seq > capture->seq_last + 1)
+			{
+				guint64 missing = number->seq - capture->seq_last - 1;
+
+				capture->damage_lost = TRUE;
+				g_atomic_int_set(&capture->lost_need, TRUE);
+				g_atomic_int_inc(&capture->lost_gaps);
+				g_atomic_int_add(&capture->lost_buffers, (gint) MIN(missing, 1000u));
+				capture->seq_window_gaps++;
+			}
+			capture->seq_known = TRUE;
+			capture->seq_last = number->seq;
+			if (++capture->seq_window_n >= SEQ_WINDOW)
+			{
+				if (capture->seq_window_gaps > SEQ_WINDOW / 2)
+				{
+					g_atomic_int_set(&capture->seq_watch, FALSE);
+					g_atomic_int_set(&capture->lost_need, FALSE);
+					registro_dice(AREA,
+					              "⛔ %u holes in the numbers of the last %u buffers: this "
+					              "producer does not number them one by one, or nearly "
+					              "every buffer is being lost.  The count is switched OFF "
+					              "for this capture: no frame is asked again, and a lost "
+					              "one may leave the picture stale until the scene changes",
+					              capture->seq_window_gaps, (guint) SEQ_WINDOW);
+				}
+				capture->seq_window_n = capture->seq_window_gaps = 0;
+			}
+		}
+	}
+
 	if (bundle->buffer->n_datas == 0)
 		goto requeue;
 	piano = &bundle->buffer->datas[0];
@@ -1067,6 +1147,18 @@ static void on_process(void *data)
 		goto requeue;
 	}
 
+	/* ⭐ [M] 19 Nov 2026 — a buffer WITH a picture, and KWin's buffers are whole frames:
+	 *    whatever was lost before it (`capture_frame_lost()`) is inside.  `damage_lost`, set
+	 *    when the gap was seen, makes it go out as «all changed» further down — even if its
+	 *    own damage is declared empty.  The time first, the flag after: whoever reads between
+	 *    the two sees the old flag with the new time, and waits. */
+	if (g_atomic_int_get(&capture->seq_watch))
+	{
+		g_atomic_int_set(&capture->lost_mark_ms, (gint) (guint) (now_us() / 1000));
+		g_atomic_int_set(&capture->lost_need, FALSE);
+		g_atomic_int_set(&capture->lost_row, 0);
+	}
+
 	declared_damage = look_damage(capture, bundle, regions, &how_many, &covers_all,
 	                              &empty_damage);
 	/* ⛔⭐ [M] 28 Oct 2026 — damage DECLARED empty (see `damage_classify`): nothing
@@ -1075,7 +1167,8 @@ static void on_process(void *data)
 	 *    client must get a picture of the new canvas even if the producer says
 	 *    «unchanged».  CORRUPTED / cursor-only were handled above, untouched.
 	 * ⛔ Also except when `damage_lost`: a frame WITH changes was thrown away for a
-	 *    technical defect (no chunk, stride 0, bad geometry, DMA-BUF unusable), its
+	 *    technical defect (no chunk, stride 0, bad geometry, DMA-BUF unusable) or never
+	 *    arrived (19 Nov 2026, the hole in the numbers above), its
 	 *    damage is gone, and the «empty» frames that follow must be encoded (they
 	 *    become «all changed» through `damage_lost`).  Read without lock: written
 	 *    only here, on the same RT thread. */
@@ -2854,6 +2947,50 @@ void capture_unchanged_forget(Capture *capture)
 gboolean capture_unchanged_stale(Capture *capture)
 {
 	return capture && capture->uc_stale;
+}
+
+void capture_watch_sequence(Capture *capture)
+{
+	if (!capture || capture->wlr)
+		return;
+	g_atomic_int_set(&capture->seq_watch, TRUE);
+	registro_dice(AREA, "⭐ the buffers' numbers are watched: a hole in them is a buffer that "
+	                    "never arrived, and the picture it may have carried is asked again "
+	                    "(`capture_frame_lost()`)");
+}
+
+gboolean capture_frame_lost(Capture *capture, guint *gaps, guint *buffers, guint *pokes)
+{
+	guint now;
+
+	if (!capture || !g_atomic_int_get(&capture->lost_need))
+		return FALSE;
+	if (g_atomic_int_get(&capture->lost_row) >= LOST_POKES_MAX)
+	{
+		if (g_atomic_int_compare_and_exchange(&capture->lost_quit_said, FALSE, TRUE))
+			registro_dice(AREA,
+			              "⚠ %d pokes in a row and no picture from KWin: I stop asking until "
+			              "one arrives by itself.  Until then the picture may be stale",
+			              LOST_POKES_MAX);
+		return FALSE;
+	}
+	g_atomic_int_set(&capture->lost_quit_said, FALSE);
+	now = (guint) (now_us() / 1000);
+	if (now - (guint) g_atomic_int_get(&capture->lost_mark_ms) < LOST_QUIET_MS)
+		return FALSE;
+	/* ⚠ `lost_need` stays: the answer too can be lost on the way, and then the next poke
+	 *   is due after another `LOST_QUIET_MS`.  It is the picture arriving that clears it. */
+	g_atomic_int_set(&capture->lost_mark_ms, (gint) now);
+	g_atomic_int_inc(&capture->lost_row);
+	if (gaps)
+		*gaps = (guint) g_atomic_int_get(&capture->lost_gaps);
+	if (buffers)
+		*buffers = (guint) g_atomic_int_get(&capture->lost_buffers);
+	if (pokes)
+		*pokes = (guint) g_atomic_int_add(&capture->lost_pokes, 1) + 1;
+	else
+		g_atomic_int_inc(&capture->lost_pokes);
+	return TRUE;
 }
 
 CaptureTake capture_take(Capture *capture, double wait_s, CaptureStopped *report,
