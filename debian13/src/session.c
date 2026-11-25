@@ -2788,6 +2788,11 @@ queue:
 			              "is born without `SHELL`, and qterminal will fall back to /bin/sh");
 	}
 	g_ptr_array_add(environment, g_strdup_printf("LANG=%s", local_utf8()));
+	/* ⭐ Fedora, F4: the other locale variables of the system (`LC_*`, `LANGUAGE`, from `/etc/default/locale`) as `child.c` took and validated them:
+	 *    a local login has them too.  Only those, and only the names `child.c` lets through. */
+	for (char **e = environ; e && *e; e++)
+		if ((g_str_has_prefix(*e, "LC_") || g_str_has_prefix(*e, "LANGUAGE=")) && strchr(*e, '='))
+			g_ptr_array_add(environment, g_strdup(*e));
 	g_ptr_array_add(environment, g_strdup_printf("HOME=%s", g_get_home_dir()));
 	g_ptr_array_add(environment, g_strdup_printf("USER=%s", g_get_user_name()));
 	{
@@ -3844,6 +3849,8 @@ static const char *const OUR_VARIABLES[] = {
 	"DCONF_PROFILE", "XDG_CONFIG_DIRS", "XDG_DATA_DIRS", "XDG_MENU_PREFIX", "DESKTOP_SESSION",
 	"XCURSOR_THEME", "XCURSOR_SIZE", "XCURSOR_PATH", "XDG_CURRENT_DESKTOP",
 	"XDG_SESSION_DESKTOP", "XDG_SESSION_TYPE", "SHELL", "LANG", "PATH",
+	"LANGUAGE", "LC_CTYPE", "LC_NUMERIC", "LC_TIME", "LC_COLLATE", "LC_MONETARY", "LC_MESSAGES", "LC_PAPER", "LC_NAME", "LC_ADDRESS",
+	"LC_TELEPHONE", "LC_MEASUREMENT", "LC_IDENTIFICATION", "LC_ALL",
 	"QT_QPA_PLATFORM", "QT_QPA_PLATFORMTHEME", "GDK_BACKEND", "XFCE4_SESSION_COMPOSITOR",
 	"WLR_BACKENDS", "WLR_LIBINPUT_NO_DEVICES", "WLR_RENDER_DRM_DEVICE",
 	"LABWC_UPDATE_ACTIVATION_ENV", "WAYLAND_DISPLAY", "DISPLAY",

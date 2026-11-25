@@ -245,6 +245,19 @@ void mutter_monitor_counts(const MutterSession *session, guint *before, guint *a
  * ⛔ `-1` = it could not be read, and it does NOT mean 1.0. */
 double mutter_our_scale(const MutterSession *session);
 
+/* ⭐⭐ 19 Nov 2026 — BRINGS OUR LOGICAL MONITOR BACK TO SCALE 1, TEMPORARILY.
+ *
+ * The user's own scale (`scaling-factor` 2 in the settings, or a 200% chosen in Settings → Displays and saved in
+ * `~/.config/monitors.xml`) must not shut them out of the remote session: it is IGNORED here.  One call of
+ * `org.gnome.Mutter.DisplayConfig.ApplyMonitorsConfig` with method 1 = TEMPORARY (never persistent: the user's
+ * `monitors.xml` is not touched), the monitor's current mode kept, the serial of `GetCurrentState`; then the scale is
+ * read again.  Only for the plain case: ONE logical monitor, which is ours, with ONE monitor — otherwise nothing is
+ * attempted (the other monitors' layout is not ours to move).  ONE attempt, nothing repeated; time limits: three
+ * synchronous D-Bus calls (`GetCurrentState`, `ApplyMonitorsConfig`, `GetCurrentState` again), each up to
+ * `WAIT_CALL_MS` (15 s), so at worst about 45 s of the child's loop — not short, but only in a broken Mutter.
+ * Returns TRUE only if the scale re-read is exactly 1.0; FALSE = it did not work (and the caller keeps the refusal). */
+gboolean mutter_scale_to_one(MutterSession *session);
+
 /* Stops the CONTROL — and with it the capture — and frees everything.  ⛔ Every virtual
  * monitor not unmounted stays attached to Mutter. */
 void mutter_close(MutterSession *session);
