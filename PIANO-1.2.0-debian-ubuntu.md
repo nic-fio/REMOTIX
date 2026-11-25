@@ -69,3 +69,5 @@ revisore → pacchetto → banco → chiavetta → manuali → sito.
 - **NVIDIA**: i manuali pubblicati di Debian e Ubuntu (e `docs/SPECS.md`, `DECISIONS.md`) dicono ancora che NVIDIA non
   è mai stata provata. È falso: è stata misurata su una RTX 4090 il 5-6 ott 2026 su Ubuntu 26.04 (commenti `[M]` nel
   codice). Da correggere come nei manuali di Fedora; Vulkan Video va descritta come strada generale, non «di NVIDIA».
+- **Rimandato a dopo Arch** (proprietario, 25 nov): come chiamare nei manuali chi ha fatto le prove a mano («the owner»
+  oggi). Resta così in tutti i manuali; la decisione si prende quando anche Arch è finita.
