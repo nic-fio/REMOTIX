@@ -1,0 +1,112 @@
+/*
+ * remotix-remote-sessions.rules — what a REMOTIX remote session may do that the
+ * distribution grants WITHOUT a password only to whoever sits at the machine.
+ *
+ * Installed by the package as
+ * /usr/share/polkit-1/rules.d/40-remotix-remote-sessions.rules (the package owns
+ * it; removing the package removes it).  polkit reads /etc/polkit-1/rules.d/ AND
+ * that folder; a same-name file in /etc does not replace this one.  An administrator
+ * who wants another behaviour writes their own rule in /etc/polkit-1/rules.d/ with a
+ * LOWER number (e.g. 30-…) that returns its own decision: polkit stops at the first
+ * rule that decides.  Removing this file is undone by the next package update.
+ * DECISIONS.md §10.55.
+ *
+ * ---------------------------------------------------------------------------
+ * ⭐ WHY — [M] 14 November 2026, census on Debian 13, Ubuntu 26.04, Fedora 44,
+ *   Alma 10, openSUSE Tumbleweed (logs: /media/REMOTIX-16/misure/polkit-censimento/)
+ *
+ * polkit gives an action's `allow_active` answer only to a subject whose session
+ * has a SEAT (`local`).  A remote session has none — REMOTIX, ssh, any remote
+ * desktop — so it always gets `allow_any`, usually `auth_admin`.  Three actions
+ * that the distributions grant to the seated user without a password are asked
+ * by programs ON THEIR OWN at login, and the remote user met a password window
+ * nobody asked for:
+ *   · the software centre refreshing its catalogue (GNOME Software, Discover);
+ *   · the KDE panel asking to control the network;
+ *   · the software centre adding a system-wide repository (Flathub).
+ *
+ * ⭐ THE DECISION (the user, 14 Nov 2026): administrative actions keep asking for
+ *   a password, seated or remote, exactly like sudo — that is not touched.  Only
+ *   these unrequested windows are settled:
+ *   · catalogue refresh: YES for every REMOTIX user (it only reads what is new);
+ *   · network control and system repositories: they change the machine for every
+ *     user of a shared server ⇒ an administrator gets them as when seated (YES);
+ *     an ordinary user gets NO, silently, instead of a window they cannot use.
+ *   Everything else: NOT_HANDLED, the distribution decides as always.
+ *   Power off, reboot, suspend: 50-remotix-no-poweroff.rules, untouched.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ NUMBER 40, NOT 50 OR 99: openSUSE's polkit-default-privs writes
+ *   90-default-privs.rules, which answers these actions itself; a rule after it
+ *   is never reached.
+ *
+ * ⛔ NEVER MORE THAN THE SEATED USER: [M] openSUSE asks a password even of the
+ *   seated user for Flatpak.metadata-update (its privilege table, `auth_admin_keep`).
+ *   ⇒ The rule grants YES only where this machine gives the seated user `yes`
+ *   for that action; otherwise NOT_HANDLED, the distribution decides.  The value
+ *   is read by the helper (the privilege table if there is one, else the
+ *   action's <allow_active>).
+ *
+ * ⛔ HOW A REMOTIX SESSION IS RECOGNISED — not from the subject's fields:
+ *   `local` and `seat` are the same for ssh; the programs that ask
+ *   (gnome-software, plasmashell, DiscoverNotifier) run under user@UID.service
+ *   and polkit hands the rule `session = null`.  ⇒ The helper
+ *   /usr/libexec/remotix/remotix-polkit-seated looks in logind's state files
+ *   for a session of this USER whose PAM service is `remotix` (set by
+ *   remotix-child's pam_start; only root opens logind sessions, and every
+ *   program that does has its own fixed service name).  The user's name travels
+ *   as an ARGUMENT, never inside a script text.
+ * ⛔ NOT over D-Bus, not loginctl: logind's Can* checks call polkitd
+ *   SYNCHRONOUSLY; with polkitd waiting for a loginctl that waits for logind,
+ *   [M] both stall 10 s (`Timed out after 10 seconds` in the census) and every
+ *   login and authorization of the server waits.  Not pkaction/pkcheck either:
+ *   they ask polkitd itself.  And the helper runs ONLY for the five actions.
+ * ⚠ Declared: a REMOTIX user who is also logged in by ssh gets the same answers
+ *   there — same person; a REMOTIX session still «closing» counts too.
+ * ⚠ «Administrator» = member of `wheel`, `sudo` or `admin`, the groups the
+ *   distributions' polkit admin rules name.  Where polkit's own admin is
+ *   root only (openSUSE's default), a `wheel` member gets for these two
+ *   actions what ANY seated user already gets there (`yes`) — never more;
+ *   an administrator known only to sudoers gets the silent NO and keeps sudo.
+ */
+polkit.addRule(function (action, subject) {
+    var refresh = [
+        "org.freedesktop.Flatpak.metadata-update",
+        "org.freedesktop.Flatpak.appstream-update",
+        "org.freedesktop.packagekit.system-sources-refresh",
+        // Fedora 45 (21 Nov 2026, `[M]` on the GNOME VM): gnome-software refreshes the firmware metadata at login; a seated user gets
+        // `yes` (implicit active), a remote session `auth_admin` and met a password window of «prova» on top of the desktop
+        "org.freedesktop.fwupd.refresh-remote"
+    ];
+    var machine = [
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.Flatpak.modify-repo"
+    ];
+    var is_refresh = refresh.indexOf(action.id) >= 0;
+    var is_machine = machine.indexOf(action.id) >= 0;
+
+    if (!is_refresh && !is_machine)
+        return polkit.Result.NOT_HANDLED;
+    /* whoever sits at the machine: the distribution decides */
+    if (subject.local)
+        return polkit.Result.NOT_HANDLED;
+
+    var answer;
+    try {
+        answer = polkit.spawn(["/usr/libexec/remotix/remotix-polkit-seated",
+                               subject.user, action.id]);
+    } catch (helper_failed) {
+        return polkit.Result.NOT_HANDLED;
+    }
+    var words = String(answer).replace(/\s+$/, "").split(" ");
+    if (words[0] != "remotix")
+        return polkit.Result.NOT_HANDLED;
+    var seated_yes = (words[1] == "yes");
+
+    if (is_refresh)
+        return seated_yes ? polkit.Result.YES : polkit.Result.NOT_HANDLED;
+    if (subject.isInGroup("wheel") || subject.isInGroup("sudo") ||
+        subject.isInGroup("admin"))
+        return seated_yes ? polkit.Result.YES : polkit.Result.NOT_HANDLED;
+    return polkit.Result.NO;
+});

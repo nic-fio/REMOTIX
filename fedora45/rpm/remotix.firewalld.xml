@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- REMOTIX service definition for firewalld (the equivalent of Ubuntu's /etc/ufw/applications.d/remotix).
+     It only DEFINES the service; it opens nothing: adding the service to a zone (firewall-cmd, option add-service) is the administrator's. -->
+<service>
+  <short>REMOTIX</short>
+  <description>This machine's desktop in the browser (HTTPS and QUIC/WebTransport)</description>
+  <port protocol="tcp" port="7447"/>
+  <port protocol="udp" port="7447"/>
+</service>

@@ -1,0 +1,91 @@
+#version 450
+/*
+ * vulkanvideo_rgb_nv12.comp — RGB → NV12 / P010, BT.709 limited range, on the
+ * card.  It is `colors709.c` rewritten as a compute shader: the SAME 15-bit
+ * fixed-point coefficients, the same chroma filter (sum of the horizontal
+ * pairs, 1-3-3-1 tent over four rows), the same roundings ⇒ the same bytes,
+ * bit for bit (`[M]` in bench 19).
+ *
+ * Each invocation does one 2x2 block of pixels: four luma samples and one
+ * chroma sample.  The source is a sampled image (`texelFetch`, never
+ * interpolated): the Vulkan format of the image (B8G8R8A8 for XRGB8888,
+ * R8G8B8A8 for XBGR8888) already puts the channels in R, G, B order — the
+ * shader does not know in which order they were in memory.
+ *
+ * The output planes have no format qualifier (it needs the
+ * `shaderStorageImageWriteWithoutFormat` feature): the same SPIR-V writes
+ * R8/R8G8 (NV12) and R16/R16G16 (P010, ten bits at the TOP).
+ *
+ * Compiled with `glslc -O -mfmt=c` into `vulkanvideo_rgb_nv12_spv.h`
+ * (`benches/19-vulkan/19-shader.sh`); the generated header is kept in the
+ * repository, so the product does not need the shader compiler.
+ */
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(binding = 0) uniform sampler2D source;
+layout(binding = 1) uniform writeonly image2D piano_y;
+layout(binding = 2) uniform writeonly image2D piano_uv;
+
+layout(push_constant) uniform Parameters {
+	uint width;   /* the canvas (the real pixels of the source) */
+	uint height;
+	uint encoded_width; /* the input image, aligned to the block */
+	uint encoded_height;
+	uint prof10;      /* 0 = NV12, 1 = P010 */
+} p;
+
+/* The coefficients of `colors709.c`, SCALE 15: luma sums to 28142 = 219/255 ·
+ * 32768 (white → 235), the two chroma triples sum to 0 (grey → 128). */
+const ivec3 CY = ivec3(5983, 20127, 2032);
+const ivec3 CU = ivec3(-3298, -11094, 14392);
+const ivec3 CV = ivec3(14392, -13072, -1320);
+
+/* One pixel as integers 0..255, with replicated edges: past the canvas the
+ * last pixel is read again (the band up to the block is not garbage). */
+ivec3 pixel(int x, int y)
+{
+	x = clamp(x, 0, int(p.width) - 1);
+	y = clamp(y, 0, int(p.height) - 1);
+	vec3 c = texelFetch(source, ivec2(x, y), 0).rgb;
+	return ivec3(round(c * 255.0));
+}
+
+/* `line()`: Y = (k·Σc·byte + (16k << 15) + (1 << 14)) >> 15. */
+void luma(int x, int y, int k)
+{
+	ivec3 c = pixel(x, y);
+	int s = CY.r * c.r + CY.g * c.g + CY.b * c.b; /* in INTEGERS: the product exceeds the 24 bits of a float */
+	int Y = (k * s + ((16 * k) << 15) + (1 << 14)) >> 15;
+	float v = (p.prof10 != 0u) ? float(Y * 64) / 65535.0 : float(Y) / 255.0;
+	imageStore(piano_y, ivec2(x, y), vec4(v, 0.0, 0.0, 0.0));
+}
+
+void main()
+{
+	int cx = int(gl_GlobalInvocationID.x);
+	int cy = int(gl_GlobalInvocationID.y);
+	if (cx >= int(p.encoded_width) / 2 || cy >= int(p.encoded_height) / 2)
+		return;
+	int k = (p.prof10 != 0u) ? 4 : 1;
+	int x = 2 * cx, y = 2 * cy;
+
+	luma(x, y, k);
+	luma(x + 1, y, k);
+	luma(x, y + 1, k);
+	luma(x + 1, y + 1, k);
+
+	/* `chroma()`: rows 2cy-1 … 2cy+2 (clamped at the edges), weights 1 3 3 1,
+	 * and in each row the sum of the pixel pair; then the matrix.  The
+	 * shift is SCALE + 4 = 19: 2 pixels · (1+3+3+1) = 16. */
+	ivec3 w = ivec3(0);
+	for (int j = 0; j < 4; j++) {
+		int r = y - 1 + j;
+		int weight = (j == 0 || j == 3) ? 1 : 3;
+		w += weight * (pixel(x, r) + pixel(x + 1, r));
+	}
+	int off = ((128 * k) << 19) + (1 << 18);
+	int U = (k * (CU.r * w.r + CU.g * w.g + CU.b * w.b) + off) >> 19;
+	int V = (k * (CV.r * w.r + CV.g * w.g + CV.b * w.b) + off) >> 19;
+	vec2 uv = (p.prof10 != 0u) ? vec2(U * 64, V * 64) / 65535.0 : vec2(U, V) / 255.0;
+	imageStore(piano_uv, ivec2(cx, cy), vec4(uv, 0.0, 0.0));
+}

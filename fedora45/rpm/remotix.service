@@ -1,0 +1,58 @@
+# remotix.service — the REMOTIX server.
+#
+# ⛔ It runs as ROOT, and not for convenience: as root PAM verifies anyone's
+#    password and the server drops to each user's uid for their child
+#    (provision.sh, «the three multi-tenant requirements», 27 Aug 2026).
+# ⭐ 1.5, DECISIONS-11.md §11.50 — THE SPLIT IS ON BY DEFAULT (decided 25 Oct 2026; `--without split` / REMOTIX_SPLIT=0 builds the single-process unit):
+#    the process systemd starts is the ROOT side (PAM, the desktops' birth); it forks the NETWORK side, which drops itself to the
+#    system user `remotix` (remotix.sysusers) and keeps its files in /var/lib/remotix/net.  ⛔ No `User=` and no hardening here:
+#    whatever this unit restricts, every desktop born from it inherits (§11.11); the network side's walls are in the program (walls.c).
+# ⭐ The certificate: if it is not in /var/lib/remotix/net/certificates, the program
+#    generates it by itself at startup (certificates_prepare(), certificates.c:302); if
+#    the administrator puts their own there (without the «.ours» mark) that one is used.
+# ⭐ The name in the certificate is the machine's name (%H).  Whoever connects with an
+#    IP address declares it in /etc/remotix/remotix.conf.d/<something>.conf:
+#        REMOTIX_OPTIONS=--name 192.168.1.10
+#    (the last --name wins).  ⚠ PROVISIONAL format, environment variables: the
+#    configuration is these two files («defaults in /usr, choices in /etc»).
+# ⛔ No bench options (--survey, --command-socket, --audio-test,
+#    --verbose): R13.
+#    (`--command-socket` is a test option only: since 17 Nov 2026 there is no administrator unblock.)
+# ⛔ The package does NOT enable and does NOT start this unit: the administrator does
+#    (`systemctl enable --now remotix`).
+[Unit]
+Description=REMOTIX, the desktop in the browser
+After=network.target systemd-logind.service
+Wants=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/usr/share/remotix/remotix.conf
+EnvironmentFile=-/etc/remotix/remotix.conf.d/*.conf
+# ⭐ 1.5 (§11.50, D6): the TWO-PROCESS server: `--split` in ExecStart says it out loud (it is also the default when started as root;
+#    `--no-split` is the way back to the single process of 1.0).  Exit 78 is left for a REAL configuration error (e.g. the user
+#    `remotix` missing): RestartPreventExitStatus=78 below stops the restart loop.
+WorkingDirectory=/
+# ⭐ Fedora, step 5 (SELinux wall): the codec probe of the root side makes Mesa open its shader cache in /root/.cache (and ~/.cache/radv_builtin_shaders);
+#    the cache is useless to a probe that runs once, and remotix_t is not given the cache type.  Only the service's own environment: the users'
+#    desktops get theirs from PAM (clearenv in rootside.c) and keep the cache.
+Environment=MESA_SHADER_CACHE_DISABLE=true
+# ⭐ Fedora, step 4: at every start the line of the local-login hook is checked in the PAM stacks of the login screens and, if it is
+#    missing (an update, a hand edit), applied again; it is written in the service's log.  `-`: never prevents the start.
+ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check
+# ⚠ `sh` only to expand the EnvironmentFile variables, then `exec`: the
+#   server stays the main process.  `$$` = one `$` for the shell.
+ExecStart=/bin/sh -c 'exec /usr/libexec/remotix/remotix --address 0.0.0.0 --name %H --port "$${REMOTIX_PORT}" --certificates /var/lib/remotix/net/certificates --page /usr/share/remotix/page.html --ban-file /var/lib/remotix/net/ban --split --journal $${REMOTIX_OPTIONS}'
+# ⭐ `mixed`: SIGTERM to the parent only, then SIGKILL to whatever is left of the unit.
+#    The desktops live OUTSIDE the unit (setsid --fork) and survive
+#    the stop: measured in T2 (phases/17 §5.2), 10 runs out of 10.
+KillMode=mixed
+# The priority of audio and video (like the bench units since phase 9).
+LimitRTPRIO=20
+LimitNICE=-11
+Restart=on-failure
+RestartPreventExitStatus=78
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+/usr/libexec/remotix/remotix	--	gen_context(system_u:object_r:remotix_exec_t,s0)
+/usr/libexec/remotix/remotix-local-login	--	gen_context(system_u:object_r:remotix_hook_exec_t,s0)
+/run/remotix(/.*)?			gen_context(system_u:object_r:remotix_var_run_t,s0)
+/run/remotix/prelocal(/.*)?		gen_context(system_u:object_r:remotix_prelocal_t,s0)
+/run/remotix/net(/.*)?			gen_context(system_u:object_r:remotix_net_run_t,s0)
+/var/lib/remotix(/.*)?			gen_context(system_u:object_r:remotix_var_lib_t,s0)
+/var/lib/remotix/net(/.*)?		gen_context(system_u:object_r:remotix_net_state_t,s0)
+/etc/dconf/db/remotix(\.new)?	--	gen_context(system_u:object_r:remotix_dconf_db_t,s0)

@@ -1,0 +1,5 @@
+## <summary>REMOTIX, the desktop in the browser (remote desktop server for several users).</summary>
+## <desc>
+##	<p>Nothing is exported for other modules: the three domains (remotix_t, remotix_net_t, remotix_hook_t) and their file types
+##	are described in remotix.te.  The file exists so that the structure (.te, .fc, .if) stays the same.</p>
+## </desc>

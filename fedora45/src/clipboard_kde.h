@@ -1,0 +1,37 @@
+/*
+ * appunti_kde — the clipboard on KDE Plasma, behind the same door as
+ * `clipboard.h`.  Clipboard users do not call it: they call `clipboard_*()`, and
+ * `clipboard.c` passes here when the stage is KWin's (`clipboard_open_kde()`).
+ *
+ * ⛔ CARRIED OVER FROM v1's `fondamenta/remotix-c/src/appunti_wlr.c` (796 lines),
+ *    green on 8 August 2026 in both directions with «àèìòù» (`STUDIES.md` §kde): the
+ *    Wayland protocol `zwlr_data_control_manager_v1` (KWin 6.3.6 does not have
+ *    `ext_data_control_v1`), which KWin does **not** put behind the
+ *    `.desktop` gate (`wayland_server.cpp:386`).
+ * ⭐ The shape is that of `clipboard.c` and NOT that of v1: TEXT ONLY
+ *    (`DECISIONS.md` §5-ter.1), read here and handed over already read, the same
+ *    ceiling (`CLIPBOARD_CAP`), the same row of types, the same memory
+ *    of the last text.
+ */
+#ifndef REMOTIX_CLIPBOARD_KDE_H
+#define REMOTIX_CLIPBOARD_KDE_H
+
+#include "clipboard.h"
+
+typedef struct ClipboardKde ClipboardKde;
+
+ClipboardKde *clipboard_kde_open(GError **mistake);
+/* ⭐ PHASE 13 — the same protocol on labwc (XFCE): `zwlr_data_control_manager_v1`
+ *    belongs to wlroots, and there we are in its home (`STUDIES.md` §xfce §8).  Only
+ *    the compositor's name in the log lines changes. */
+ClipboardKde *clipboard_kde_open_wlroots(GError **mistake);
+void clipboard_kde_close(ClipboardKde *clipboard);
+void clipboard_kde_listen(ClipboardKde *clipboard, ClipboardOnText on_text,
+                         ClipboardOnRequest on_request, void *data);
+char *clipboard_kde_last_text(ClipboardKde *clipboard, size_t *byte);
+void clipboard_kde_read_now(ClipboardKde *clipboard);
+gboolean clipboard_kde_offer(ClipboardKde *clipboard, GError **mistake);
+void clipboard_kde_reply(ClipboardKde *clipboard, uint32_t serial, const char *text,
+                          size_t byte);
+
+#endif
