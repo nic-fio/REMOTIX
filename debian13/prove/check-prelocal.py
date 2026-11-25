@@ -188,6 +188,23 @@ def unit_ids_of(box, user):
     return [" ".join(l.split()) for l in box.run(UNIT_IDS % {"u": user})[1].splitlines() if l.strip()]
 
 
+def unit_residue(box, user, units):
+    """(real, ignored): of the units that are still active with the same invocation, the ones that hold a process (or are not slices/sockets) and the
+    ones that do not (a `.slice` whose cgroup is empty; a `.socket`, which only listens: GNOME's keyring socket is shared by the remote and the local session)."""
+    real, ignored = [], []
+    for ul in units:
+        un = ul.split()[0]
+        if un.endswith(".socket"):
+            ignored.append(ul); continue
+        if un.endswith(".slice"):
+            n = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
+                        "[ -n \"$cg\" ] && cat /sys/fs/cgroup$cg/cgroup.procs 2>/dev/null | wc -l || echo 0" % (user, un))[1].strip().split()[-1:]
+            if n and n[0] == "0":
+                ignored.append(ul); continue
+        real.append(ul)
+    return real, ignored
+
+
 def pic_changed(a, b, thr=0.3):
     """True when two PNG pictures differ (mean grey difference on a 160x120 reduction above thr): a new window is on the canvas."""
     from PIL import Image, ImageChops, ImageStat
@@ -316,10 +333,13 @@ def busy_case(box_name, user, kind):
                 arrived, loc["sess"][0].split()[0], loc["shell"][0][2], loc["comp"][0][2]))
         # -- the remote desktop is gone (GONE_CAP s after the local desktop; from the cap when the local one never came)
         end = time.time() + GONE_CAP
+        empty_left = []
         while True:
             now = {(p, st, c) for p, s_, st, c in procs_of(box, user) if s_ != "Z"}
             procs_left = [x for x in remote_procs if x in now]
             units_left = [u for u in unit_ids_of(box, user) if u in units_before]
+            if units_left:   # an EMPTY slice or a socket-activation socket left behind in the shared user manager is not a piece of the desktop (found on Debian 13, 26 Nov 2026)
+                units_left, empty_left = unit_residue(box, user, units_left)
             rsess = ctx.remote_sessions(user)
             marks = box.run(KDE_MARKS % {"u": user})[1].strip()
             if not (procs_left or units_left or rsess or marks) or time.time() > end:
@@ -329,12 +349,20 @@ def busy_case(box_name, user, kind):
             bad.append("%d process(es) of the remote desktop still alive %d s after the local desktop: %s" % (len(procs_left), GONE_CAP, [x[2] + ":" + x[0] for x in procs_left][:12]))
         if units_left:
             bad.append("desktop unit(s) of the remote desktop still active (same invocation): %s" % units_left[:10])
+            for ul in units_left[:6]:   # evidence for whoever reads the failure: since when the unit is active, and who is inside its cgroup
+                un = ul.split()[0]
+                dt = box.run("systemctl --user -M %s@ show -p ActiveEnterTimestamp -p ControlGroup -- '%s' 2>&1 | tr '\\n' ' '; echo; "
+                             "cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
+                             "for p in $(cat /sys/fs/cgroup$cg/cgroup.procs 2>/dev/null); do echo \"  member $p $(cat /proc/$p/comm 2>/dev/null)\"; done; true" % (user, un, user, un))[1]
+                print("unit-detail %s: %s" % (ul, " | ".join(x.strip() for x in dt.splitlines() if x.strip())[:400]), flush=True)
         if rsess:
             bad.append("logind session(s) of the service still there: %s" % rsess)
         if marks:
             bad.append("KWin --virtual / REMOTIX_KDE_HOST=1 still there: %s" % marks.replace("\n", " | ")[:300])
         if not (procs_left or units_left or rsess or marks):
             ok_.append("remote desktop gone (no process, no desktop unit of it, no remotix session, no KWin --virtual / REMOTIX_KDE_HOST=1)")
+            if empty_left:
+                ok_.append("not counted as left-overs: %d empty slice(s)/socket(s) still active in the user manager (%s)" % (len(empty_left), ", ".join(u.split()[0] for u in empty_left)[:200]))
         # -- no core dump since the start of the case (coredumpctl is not installed in the Debian VMs: then it is said, not claimed)
         have_cd = box.run("command -v coredumpctl >/dev/null && echo yes")[1].strip() == "yes"
         cores = box.run("command -v coredumpctl >/dev/null || exit 0; "
