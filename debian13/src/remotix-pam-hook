@@ -12,23 +12,24 @@
 set -u
 
 PAMFILE=/etc/pam.d/common-session
-MARK=remotix-local-login
+# the line itself, not a commented one: `session ... pam_exec.so ... remotix-local-login`
+MARK='^[[:space:]]*session[[:space:]].*pam_exec\.so.*remotix-local-login'
 
 case "${1:-}" in
 check) ;;
 *) echo "usage: remotix-pam-hook check" >&2; exit 2 ;;
 esac
 
-if grep -qs "$MARK" "$PAMFILE"; then
+if grep -Eqs "$MARK" "$PAMFILE"; then
 	echo "remotix: the local-login hook is in place in $PAMFILE"
 	exit 0
 fi
 
 if command -v pam-auth-update >/dev/null 2>&1; then
-	pam-auth-update --package >/dev/null 2>&1 || :
+	DEBIAN_FRONTEND=noninteractive pam-auth-update --package </dev/null >/dev/null 2>&1 || :
 fi
 
-if grep -qs "$MARK" "$PAMFILE"; then
+if grep -Eqs "$MARK" "$PAMFILE"; then
 	echo "remotix: the local-login hook was missing from $PAMFILE and has been put back (pam-auth-update --package)"
 else
 	echo "remotix: ⚠ the local-login hook is NOT in $PAMFILE and could not be put back (file edited by hand or profile switched off): a local login will not close the user's remote desktop first (see: sudo pam-auth-update)"

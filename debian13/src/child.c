@@ -1931,6 +1931,7 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 			    child_path_ok(pam_environment[i] + 5))
 				path = pam_environment[i] + 5;
 		snprintf(e_path, sizeof e_path, "PATH=%s", path);
+	}
 	snprintf(e_shell, sizeof e_shell, "SHELL=");
 	snprintf(e_runtime, sizeof e_runtime, "XDG_RUNTIME_DIR=/run/user/%ld",
 	         (long)pw->pw_uid);
