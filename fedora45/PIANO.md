@@ -638,3 +638,8 @@ NVIDIA; «up to 8 users». Finché non risponde, questi punti restano com'erano 
   `~/remotix-1.2.0-fedora/sito-prima/` (per tornare indietro: ricopiarle sul server).
   NON fatto (serve un suo ordine): rilascio GitHub `fedora45-1.2.0`, commit di `fedora45/` e dei file nuovi.
   Il repository pubblico NON contiene ancora Fedora: la pagina dei documenti/licenza rimanda a GitHub.
+- 25 nov, 21:50 — GITHUB ALLINEATO su ordine del proprietario («allinea github»): commit `75b2939` «1.2.0: REMOTIX
+  for Fedora 45» (cartella `fedora45/`, script del banco di Debian, piano e studio della 1.2.0 di Debian/Ubuntu) e
+  `e78452d` (README, nota di radice), spinti su `main`; rilascio `fedora45-1.2.0` con pacchetto, impronta e i due
+  manuali (gli stessi file del sito); descrizione del repository aggiornata. FEDORA 1.2.0 È PUBBLICATA.
+  Restano per dopo: Debian e Ubuntu 1.2.0 (`../PIANO-1.2.0-debian-ubuntu.md`); le cose «messe da parte» elencate sopra.
