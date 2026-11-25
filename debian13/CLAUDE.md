@@ -6,10 +6,10 @@ Plan and steps: `PIANO.md`. Specs: `docs/SPECS.md`, `docs/RCP.md`, `docs/DECISIO
 ## Layout
 - Since 20 Nov 2026 this directory is `debian13/` inside the single `main` branch of the repo (one self-contained directory per distribution: `debian13/`, `ubuntu26.04/`). Work inside it; paths below are relative to it.
 - `src/` product (C, Makefile, page.html, PAM file, polkit rules); `debian/` packaging (control, rules, maintainer scripts);
-  `build/` container build (`build-deb.sh`, `Containerfile`, `quic-static.sh`); `docs/` specs and the non-Debian inventory
+  `build/` package build (`build-deb-vm.sh`, `quic-static.sh`; old podman flow: `build-deb.sh`, `Containerfile`); `docs/` specs and the non-Debian inventory
   (`docs/INVENTARIO-non-debian.md`: code still to remove, later and reviewed); `server/` the dev-server set-up scripts.
 ## Build and test
-- `build/build-deb.sh` builds the .deb in a `debian:trixie` podman container; output in `$OUTPUT` (default `/media/REMOTIX-DEBIAN/pacchetti`).
+- `build/build-deb-vm.sh [label]` builds the .deb on the server's `costruzione` VM (no containers; turns it on and off); output in `/media/REMOTIX-DEBIAN/pacchetti/<label>/`. The old podman flow (`build/build-deb.sh`, `Containerfile`) is kept but no longer used.
 - Never compile or run heavy work on the CHUWI tablet. Build and test on the server `nicfio@192.168.0.2`, work dir `/media/REMOTIX-DEBIAN`.
 - The owner decides how and when tests run. Licences: only `LICENSE.md` (installed as the package's `copyright`) and `THIRD-PARTY-LICENSES` ship in the package; `licenses/` does NOT.
 ## Conventions

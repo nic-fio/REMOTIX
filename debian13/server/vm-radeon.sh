@@ -1,6 +1,6 @@
 #!/bin/bash
 # vm-radeon.sh - real-system test VMs for Debian 13 "trixie" (the live ISO's system installed "for real" on a virtual disk, UEFI, KVM), the server's Radeon passed through (vfio-pci) on demand.
-# Usage: vm-radeon.sh crea|accendi|spegni|ssh|stato|prova-avvio <gnome|kde|xfce|lxqt> [cmd...]
+# Usage: vm-radeon.sh crea|accendi|spegni|ssh|stato|prova-avvio <gnome|kde|xfce|lxqt|costruzione> [cmd...]   (costruzione: .deb build VM, virtual only, ssh 2365)
 #        vm-radeon.sh accendi <name> virtuale              (no Radeon: virtual video card, same ports)
 #        vm-radeon.sh schermo <name> <file.png>            (screendump of a VM started with "virtuale")
 #        vm-radeon.sh tasti <name> <key> [key...]          (QEMU sendkey names: ret, tab, ctrl-alt-f2, shift-a ...)
@@ -31,7 +31,7 @@ ISODIR=/media/DOWNLOAD
 GPU=0000:03:00.0 GPUA=0000:03:00.1
 CPUS=4 MEM=${RX_VM_MEM:-5G} DISKSZ=40G
 CODE=/usr/share/OVMF/OVMF_CODE_4M.fd VARS0=/usr/share/OVMF/OVMF_VARS_4M.fd
-USAGE="usage: $0 crea|accendi|spegni|ssh|stato|prova-avvio gnome|kde|xfce|lxqt [cmd|virtuale]; $0 schermo <name> <file.png>; $0 tasti <name> <key>...; $0 scrivi <name> <text>; $0 istantanea|ripristina <name> <label>"
+USAGE="usage: $0 crea|accendi|spegni|ssh|stato|prova-avvio gnome|kde|xfce|lxqt|costruzione [cmd|virtuale]; $0 schermo <name> <file.png>; $0 tasti <name> <key>...; $0 scrivi <name> <text>; $0 istantanea|ripristina <name> <label>"
 
 # desktop table: iso, ssh port, REMOTIX port, expected display manager (only reported, never configured)
 case "${2:-}" in
@@ -39,6 +39,8 @@ gnome) ISO=$ISODIR/debian-live-13.8.0-amd64-gnome.iso SSHP=2361 RXP=8861 DM=gdm3
 kde)   ISO=$ISODIR/debian-live-13.8.0-amd64-kde.iso   SSHP=2362 RXP=8862 DM=sddm;;
 xfce)  ISO=$ISODIR/debian-live-13.8.0-amd64-xfce.iso  SSHP=2363 RXP=8863 DM=lightdm;;
 lxqt)  ISO=$ISODIR/debian-live-13.8.0-amd64-lxqt.iso  SSHP=2364 RXP=8864 DM=sddm;;
+# costruzione: the fifth VM, only to build REMOTIX's .deb (Xfce image, same build as the others); never with the Radeon, no REMOTIX port forward, 8 CPUs, 6G
+costruzione) ISO=$ISODIR/debian-live-13.8.0-amd64-xfce.iso SSHP=2365 RXP=0 DM=lightdm FWD="" CPUS=8 MEM=${RX_VM_MEM:-6G};;
 *) echo "$USAGE"; exit 2;;
 esac
 NAME=$2
@@ -337,6 +339,7 @@ accendi)
     wait_ssh 120 && { echo "up, virtual video (ssh -p $SSHP; REMOTIX https://<server>:$RXP)"; exit 0; }
     echo "started but ssh not answering yet (see $SER)"; exit 1
   fi
+  [ "$NAME" != costruzione ] || die "costruzione is the .deb build VM: it never gets the Radeon (use: accendi costruzione virtuale)"
   OWN=$(gpu_owner)
   [ -z "$OWN" ] || die "Radeon in use by VM $OWN: stop it first (or start this one with: $0 accendi $NAME virtuale)"
   [ -d /sys/bus/pci/devices/$GPU ] || die "$GPU not present"

@@ -16,6 +16,11 @@ Dopo un riavvio del server (il sistema gira in RAM) prima si lancia `prepara-ser
 
 Una sola VM in tutto il server può avere la Radeon; al massimo due VM accese insieme è una regola d'uso (memoria del server), lo script non la impone.
 
+## La quinta VM: `costruzione`
+Serve SOLO a costruire il `.deb` (niente contenitori). Immagine Xfce, 8 CPU, 6 GB, solo `virtuale` (lo script rifiuta la Radeon), nessuna porta REMOTIX. Dentro ci sono le dipendenze di costruzione e ngtcp2/nghttp3 statici; istantanea `pronta` (VM spenta). Nome e hostname `rx-deb-costruzione`. Qui `apt install` e permesso: e lo scopo della macchina.
+Script per la versione 1.2.0: `/media/REMOTIX-DEBIAN/vm-radeon/vm-radeon-1.2.0.sh` (accanto al vecchio `vm-radeon.sh`, che non e stato toccato; ha in piu `costruzione`).
+Si costruisce dal tablet con un solo comando: `debian13/build/build-deb-vm.sh [etichetta]` (accende la VM se spenta, costruisce, la spegne; risultati in `/media/REMOTIX-DEBIAN/pacchetti/<etichetta>/`).
+
 ## Porte, utenti, cartelle
 | VM | ssh | REMOTIX (tcp+udp, verso 7447 della VM) | display manager |
 |---|---|---|---|
@@ -23,6 +28,7 @@ Una sola VM in tutto il server può avere la Radeon; al massimo due VM accese in
 | kde | 2362 | 8862 | sddm |
 | xfce | 2363 | 8863 | lightdm |
 | lxqt | 2364 | 8864 | sddm |
+| costruzione | 2365 | nessuna | lightdm |
 
 Utenti: `prova` (password `prova2026`, gruppo `sudo`) e `prova2` (stessa password, senza sudo); ssh anche con la chiave `vmkey` di ogni VM. Hostname `rx-deb-<nome>` (es. `rx-deb-gnome`). Lingua `en_US.UTF-8`, tastiera `us` pc105, fuso Europe/Rome, come le VM di Fedora. Nessun autologin.
 Dati di ogni VM: `/media/REMOTIX-DEBIAN/vm-radeon/<vm>/` (`disk.qcow2`, `OVMF_VARS.fd`, `vmkey`, `serial.log`). Istantanea `pulito` su tutte e quattro.
