@@ -106,6 +106,11 @@
  */
 #define WAIT_POLL_MS 400
 #define WAIT_EXIT_MS 10000
+/* ⭐ 25 Nov 2026 (owner's decision, a trial) — KDE, PRELOCAL close only (a local login of the user is held in PAM): the orderly
+ *    step waits 5 s instead of 10 before the forced one.  Plasma waits WITHOUT LIMIT for a program that does not close by itself
+ *    (a «save?» dialog; on the real machine a Konsole running `top` too) and nobody is there to answer: the 10 s were only a delay
+ *    of the local login.  Every other close, and every other desktop, keeps WAIT_EXIT_MS. */
+#define KDE_PRELOCAL_ORDERLY_MS 5000
 
 /*
  * ⚠ THE GRACE — how long the MONITOR is waited for after the compositor answers.
@@ -3712,9 +3717,9 @@ static gboolean inactive_unit(void)
 	return unit_stopped(gnome_session()->handler) && unit_stopped(SESSION_UNIT_DBUS);
 }
 
-static gboolean wait_until_done(void)
+static gboolean wait_until_done_ms(gint64 ms)
 {
-	gint64 expiry = g_get_monotonic_time() + (gint64) WAIT_EXIT_MS * 1000;
+	gint64 expiry = g_get_monotonic_time() + ms * 1000;
 
 	while (g_get_monotonic_time() < expiry) {
 		g_usleep(CHECK_INTERVAL_MS * 1000);
@@ -3728,14 +3733,25 @@ static gboolean wait_until_done(void)
 	return FALSE;
 }
 
+static gboolean wait_until_done(void)
+{
+	return wait_until_done_ms(WAIT_EXIT_MS);
+}
+
 /*
  * ⭐ PHASE 12 — the Plasma exit, brought over from v1 (`fondamenta/remotix-c/src/sessione.c`
  * 725-770) and measured there on 8 August 2026 (`STUDIES.md` §kde §6.5, M9).
  *
  *   orderly    `org.kde.Shutdown.logout()` — ⛔ not `LogoutPrompt`, which asks
  *              for a confirmation nobody gives in an unattended session
- *   forced     `StopUnit("plasma-workspace.target", "fail")` — ⛔ `Logout(2)`
+ *   forced     `StopUnit("graphical-session.target", "fail")` — ⛔ `Logout(2)`
  *              does not exist on KDE; it is what `plasma-shutdown` does at the end
+ * ⭐ 25 Nov 2026 — it was `plasma-workspace.target`, and on Plasma 6.8 that is NOT enough in time: kwin, ksmserver and
+ *   plasmashell are `PartOf=graphical-session.target`, which after the stop of plasma-workspace.target goes away only
+ *   ~4.5 s later (StopWhenUnneeded) — past the root side's deadline when the forced step comes after the 10 s of the
+ *   orderly one.  `[M]` real machine (Fedora 45 KDE live, a program asking «save?» in the remote desktop): the local
+ *   login went on with the remote KWin alive.  `[M]` VM `kde`: the stop of graphical-session.target takes everything
+ *   down in < 0.6 s, plasma-workspace.target included (it is `BindsTo` it).
  */
 static gboolean exit_kde(gboolean a_force)
 {
@@ -3749,7 +3765,7 @@ static gboolean exit_kde(gboolean a_force)
 		response = g_dbus_connection_call_sync(
 			bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
 			"org.freedesktop.systemd1.Manager", "StopUnit",
-			g_variant_new("(ss)", SESSION_UNIT_PLASMA, "fail"), NULL,
+			g_variant_new("(ss)", SESSION_UNIT_GRAPHICAL, "fail"), NULL,
 			G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, &mistake);
 	else
 		response = g_dbus_connection_call_sync(
@@ -4284,14 +4300,39 @@ void session_clear_out_retry(void)
  *    (or an administrator) stops that target; a detach, a resize, a reattach, a service restart (the child
  *    dies with it) or a crash of plasmashell alone never touch it.  ⚠ «Seen active first» keeps it silent
  *    at birth, before the target is reached.
+ * ⭐⭐ 18 Nov 2026 — THE SAME SIGNAL IS NOT THERE ON PLASMA 6.6 (`[M]` rx-kde, Log Out asked in the first
+ *    seconds of the desktop): `plasma-shutdown` calls `ksmserver.closeSession`, `KWin.closeWaylandWindows`,
+ *    asks the stop of `graphical-session.target` (`StopUnit ... "fail"`, the answer is not looked at) and
+ *    exits — and `plasma-workspace.target` is NEVER stopped by it (`startplasma` does that only after the
+ *    target stop is accepted), so the signal above never fires and the logout is lost.
+ * ⭐ What exists in the lost case AND in the good one: `plasma-shutdown` owns the bus name `org.kde.Shutdown`
+ *    for the whole of its run and RELEASES it when it exits (`NameOwnerChanged`, subscribed on a private
+ *    main context turned at each round of this watch; a poll would miss a short run).  ⛔ But the name
+ *    alone is not a logout: `plasma-shutdown` is also started by `saveSession`, it holds the name for as
+ *    long as an application asks «save changes?» (KWin waits, then «Cancel Logout / Log Out Anyway»), and if
+ *    the user cancels it calls `resetLogout` and exits without stopping anything.  ⇒ The trigger is the
+ *    RELEASE of the name and, right after, the answer of `ksmserver.isShuttingDown()`: `true` = the logout
+ *    was done by plasma-shutdown and not undone (measured: `true` in the lost case, it stays so until
+ *    `resetLogout`) ⇒ same grace and same retry as below; `false` = cancelled or never a logout ⇒ nothing
+ *    is forced, one line.  ⚠ ksmserver not answering (seen once: `NoReply`) ⇒ CHOICE: nothing is forced,
+ *    one line — a logout that cannot be confirmed is not worth the user's unsaved work.
+ *    The older fact (the target seen active and then not) stays as a second road and is not asked.
+ * ⚠ KNOWN LIMITS, accepted: (1) `logoutAndShutdown` / `logoutAndReboot`: in 6.6.7 `plasma-shutdown` does not exit after asking
+ *    the power-off, so the name is not released and, if the stop is refused in the first seconds, that exit stays lost; it
+ *    is reachable only without the menu entries (which REMOTIX removes).  (2) A restart of KWin by its wrapper during the
+ *    wait resets the request (KWin leaves the bus): rare.
  * ⭐ After a grace (`KDE_LOGOUT_GRACE_MS`) in which the normal road wins when it works (KWin leaves, §7.6),
  *    the stop of `graphical-session.target` is asked again — mode `fail`, as plasma-shutdown does, so a
- *    refusal is just retried every `KDE_LOGOUT_RETRY_MS`, at most `KDE_LOGOUT_TRIES` times.  One line each.
+ *    refusal is just retried every `KDE_LOGOUT_RETRY_MS`; after `KDE_LOGOUT_TRIES` refusals the mode is
+ *    `replace`, and after as many more the watch returns TRUE: the child closes the session by the product's own
+ *    road (`session_terminate()`), which forces and, KWin gone, §7.6 warns the client.  One line each.
  *    The normal §7.6 road follows (KWin leaves the bus).
  * Called at every round of the child's loop; it limits its own frequency (one comparison when idle).
  */
 #define KDE_LOGOUT_GRACE_MS 4000
 #define KDE_LOGOUT_RETRY_MS 3000
+/* `KDE_LOGOUT_TRIES` attempts in mode `fail`, then as many in mode `replace` (about a minute with the retry above);
+ * if the stop is still refused the watch gives up and says «to be closed» (see the return value). */
 #define KDE_LOGOUT_TRIES 10
 
 static const char *unit_active_state(GDBusConnection *bus, const char *unit, char *out, size_t size)
@@ -4319,7 +4360,93 @@ static const char *unit_active_state(GDBusConnection *bus, const char *unit, cha
 	return out;
 }
 
-void session_kde_logout_watch(void)
+/* `plasma-shutdown` released the name `org.kde.Shutdown`: to be asked of ksmserver at the next round */
+static gboolean shutdown_released;
+/* ksmserver confirmed that a logout is under way (`isShuttingDown`): the watch is armed */
+static gboolean logout_asked;
+
+static void on_shutdown_name(GDBusConnection *bus, const char *sender, const char *path,
+                             const char *interface, const char *signal, GVariant *parameters,
+                             gpointer data)
+{
+	const char *name = NULL, *before = NULL, *after = NULL;
+
+	(void)bus; (void)sender; (void)path; (void)interface; (void)signal; (void)data;
+	g_variant_get(parameters, "(&s&s&s)", &name, &before, &after);
+	(void)name;
+	if (*before && !*after)
+		shutdown_released = TRUE;
+}
+
+/* The subscription follows the connection: a new bus (the old one closed) is subscribed again. */
+static void shutdown_name_listen(GDBusConnection *bus)
+{
+	static GMainContext *context;
+	static GDBusConnection *listening;
+	static guint subscription;
+
+	if (!context)
+		context = g_main_context_new();
+	if (listening != bus) {
+		if (listening) {
+			g_dbus_connection_signal_unsubscribe(listening, subscription);
+			g_clear_object(&listening);
+		}
+		g_main_context_push_thread_default(context);
+		subscription = g_dbus_connection_signal_subscribe(
+			bus, "org.freedesktop.DBus", "org.freedesktop.DBus", "NameOwnerChanged",
+			"/org/freedesktop/DBus", "org.kde.Shutdown", G_DBUS_SIGNAL_FLAGS_NONE,
+			on_shutdown_name, NULL, NULL);
+		g_main_context_pop_thread_default(context);
+		listening = g_object_ref(bus);
+	}
+	while (g_main_context_iteration(context, FALSE))
+		;
+}
+
+/* 1 = the name has an owner, 0 = it has none, -1 = the bus did not answer (NOT the same as 0) */
+static int name_owner_state(GDBusConnection *bus, const char *name)
+{
+	g_autoptr(GVariant) response = g_dbus_connection_call_sync(
+		bus, "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus",
+		"NameHasOwner", g_variant_new("(s)", name), G_VARIANT_TYPE("(b)"),
+		G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_NAME_MS, NULL, NULL);
+	gboolean has = FALSE;
+
+	if (!response)
+		return -1;
+	g_variant_get(response, "(b)", &has);
+	return has ? 1 : 0;
+}
+
+/* plasma-shutdown is gone: did it leave a logout under way?  Arms the watch only on a `true`. */
+static void shutdown_released_judge(GDBusConnection *bus)
+{
+	g_autoptr(GError) mistake = NULL;
+	g_autoptr(GVariant) answer = g_dbus_connection_call_sync(
+		bus, "org.kde.ksmserver", "/KSMServer", "org.kde.KSMServerInterface", "isShuttingDown", NULL,
+		G_VARIANT_TYPE("(b)"), G_DBUS_CALL_FLAGS_NO_AUTO_START, WAIT_RESPONSE_MS, NULL, &mistake);
+	gboolean shutting = FALSE;
+
+	shutdown_released = FALSE;
+	if (!answer) {
+		registro_dice(LOG_SESSION,
+		              "⚠ Plasma: plasma-shutdown ended and ksmserver does not say whether a logout is "
+		              "under way (%s) — nothing is forced",
+		              mistake ? mistake->message : "no reason given");
+		return;
+	}
+	g_variant_get(answer, "(b)", &shutting);
+	if (!shutting) {
+		registro_dice(LOG_SESSION,
+		              "Plasma: plasma-shutdown ended and ksmserver is not shutting down (logout "
+		              "cancelled, or not a logout) — nothing is forced");
+		return;
+	}
+	logout_asked = TRUE;
+}
+
+bool session_kde_logout_watch(void)
 {
 	static gint64 last_look, inactive_since, last_try;
 	static gboolean seen_active, finished;
@@ -4329,64 +4456,84 @@ void session_kde_logout_watch(void)
 	gint64 now = g_get_monotonic_time();
 
 	if (finished || !e_kde() || now - last_look < 1000 * 1000)
-		return;
+		return FALSE;
 	last_look = now;
 	bus = sess_bus(NULL);
 	if (!bus)
-		return;
-	if (!name_has_owner(bus, "org.kde.KWin")) {
+		return FALSE;
+	shutdown_name_listen(bus);
+	switch (name_owner_state(bus, "org.kde.KWin")) {
+	case -1: /* the bus did not answer: nothing is learned, nothing is forgotten */
+		return FALSE;
+	case 0:
 		/* the normal road (or no desktop yet): nothing to help; a new desktop starts the watch again */
 		seen_active = FALSE;
+		shutdown_released = FALSE;
+		logout_asked = FALSE;
 		inactive_since = 0;
 		tries = 0;
-		return;
+		return FALSE;
 	}
+	if (shutdown_released)
+		shutdown_released_judge(bus);
 	unit_active_state(bus, SESSION_UNIT_PLASMA, state, sizeof state);
-	if (g_strcmp0(state, "active") == 0) {
+	if (g_strcmp0(state, "active") == 0)
 		seen_active = TRUE;
-		inactive_since = 0;
-		tries = 0;
-		return;
+	if (!logout_asked) {
+		if (g_strcmp0(state, "active") == 0) {
+			inactive_since = 0;
+			tries = 0;
+			return FALSE;
+		}
+		if (!seen_active || g_strcmp0(state, "activating") == 0)
+			return FALSE;
 	}
-	if (!seen_active || g_strcmp0(state, "activating") == 0)
-		return;
 	if (!inactive_since) {
 		inactive_since = now;
 		registro_dice(LOG_SESSION,
-		              "⭐ Plasma: %s is %s while KWin is still up — the user logged out; waiting %d s for "
-		              "plasma-shutdown to finish by itself",
+		              "⭐ Plasma: a logout is under way and KWin is still up (%s) — %s is %s; giving it "
+		              "%d s to finish by itself, then it is completed",
+		              logout_asked ? "plasma-shutdown ended, ksmserver is shutting down"
+		                           : "the workspace target stopped",
 		              SESSION_UNIT_PLASMA, state, KDE_LOGOUT_GRACE_MS / 1000);
-		return;
+		return FALSE;
 	}
 	if (now - inactive_since < (gint64)KDE_LOGOUT_GRACE_MS * 1000 ||
 	    (last_try && now - last_try < (gint64)KDE_LOGOUT_RETRY_MS * 1000))
-		return;
+		return FALSE;
 	last_try = now;
 	{
+		/* ⭐ After the «fail» attempts the mode is `replace`: a queued start job (a slow unit can
+		 *    hold one for 90 s) replaces nothing of the user's work, and `fail` would be refused as
+		 *    long as it lasts.  `finished` only once the stop is accepted. */
+		const char *mode = tries < KDE_LOGOUT_TRIES ? "fail" : "replace";
 		g_autoptr(GError) mistake = NULL;
 		g_autoptr(GVariant) response = g_dbus_connection_call_sync(
 			bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
 			"org.freedesktop.systemd1.Manager", "StopUnit",
-			g_variant_new("(ss)", "graphical-session.target", "fail"), NULL,
+			g_variant_new("(ss)", "graphical-session.target", mode), NULL,
 			G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, &mistake);
 
 		tries++;
 		if (response) {
 			registro_dice(LOG_SESSION,
 			              "⭐ Plasma logout stopped halfway: stop of graphical-session.target accepted "
-			              "(attempt %d) — the normal end follows", tries);
+			              "(attempt %d, mode %s) — the normal end follows", tries, mode);
 			finished = TRUE;
-		} else if (tries >= KDE_LOGOUT_TRIES) {
+		} else if (tries >= 2 * KDE_LOGOUT_TRIES) {
 			registro_dice(LOG_SESSION,
 			              "⛔ Plasma logout stopped halfway: stop of graphical-session.target refused "
-			              "%d times, giving up (last: %s)", tries, mistake ? mistake->message : "no reason");
+			              "%d times (last: %s) — giving up on it: the session is to be closed by the "
+			              "product's own road", tries, mistake ? mistake->message : "no reason");
 			finished = TRUE;
+			return TRUE;
 		} else
 			registro_dice(LOG_SESSION,
 			              "⚠ Plasma logout stopped halfway: stop of graphical-session.target refused "
-			              "(attempt %d of %d): %s — retrying in %d s", tries, KDE_LOGOUT_TRIES,
+			              "(attempt %d, mode %s): %s — retrying in %d s", tries, mode,
 			              mistake ? mistake->message : "no reason", KDE_LOGOUT_RETRY_MS / 1000);
 	}
+	return FALSE;
 }
 
 /* ⭐ When the child exits: the last moment someone can do it.  If the clear-out was still
@@ -4624,7 +4771,7 @@ static bool really_terminate(void)
 	if (e_kde()) {
 		registro_dice(LOG_SESSION,
 		              "asking the Plasma session to exit (org.kde.Shutdown.logout)");
-		if (exit_kde(FALSE) && wait_until_done()) {
+		if (exit_kde(FALSE) && wait_until_done_ms(force_guard_on ? KDE_PRELOCAL_ORDERLY_MS : WAIT_EXIT_MS)) {
 			registro_dice(LOG_SESSION, "the graphical session has exited");
 			return true;
 		}
@@ -4633,7 +4780,7 @@ static bool really_terminate(void)
 		registro_dice(LOG_SESSION,
 		              "⚠ the session does not exit: I close it by force (StopUnit %s), whatever "
 		              "was not saved is lost",
-		              SESSION_UNIT_PLASMA);
+		              SESSION_UNIT_GRAPHICAL);
 		if (exit_kde(TRUE) && wait_until_done()) {
 			registro_dice(LOG_SESSION, "the graphical session has exited, by force");
 			return true;

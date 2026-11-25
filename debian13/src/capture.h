@@ -825,6 +825,67 @@ void capture_unchanged_forget(Capture *capture);
  * (`UcStaleGate`, `unchanged.h`). */
 gboolean capture_unchanged_stale(Capture *capture);
 
+/*
+ * ⭐ [M] 19 Nov 2026 — THE LOST FRAME: a buffer KWin sent and PipeWire never delivered.
+ *
+ * ⛔ The defect (Kubuntu 26.04, KWin 6.6.7, PipeWire 1.6.2): a window opened and stayed in
+ *    the browser half way through its opening animation — translucent, smaller — for
+ *    18-26 s, while KWin's own output had the whole window from the first second.
+ *
+ * `[M]` KWin numbers its buffers (`spa_meta_header.seq`), and in every stalled run the
+ *    numbers that reached `on_process` had HOLES: 198, 200, 202, 204 — all cursor-only —
+ *    and never 199, 201, 203, the pictures.  KWin drew them and queued them; they were
+ *    lost on the way.
+ * `[R]` Why two buffers come so close.  `screencaststream.cpp` (KWin 6.6.7): the timer runs
+ *    `record(m_pendingContents); m_pendingContents = Contents();`.  While `record()` draws,
+ *    an effect still animating schedules the next repaint, and that calls
+ *    `scheduleRecord()` again from INSIDE `record()`: the timer is started once more (at
+ *    0 ms) and the line after `record()` wipes what was asked.  The timer fires with
+ *    nothing to record, which with the cursor as metadata is a cursor-only buffer.  ⇒ During
+ *    an animation every picture is followed, some tens of microseconds later, by a
+ *    cursor-only buffer.
+ * `[R]` Why the first of the two is lost.  KWin's stream is the DRIVER of the graph and every
+ *    `pw_stream_queue_buffer()` starts a cycle (`stream.c`, `do_trigger_deprecated`).  A
+ *    cycle hands the buffer over by plain assignment (`impl-port.c`, `tee_process()`:
+ *    `*mix->io[cycle] = *io`), and a cycle started before the reader ran for the one before
+ *    is started all the same (`impl-node.c`, `node_ready()`): the buffer not yet read is
+ *    overwritten.  PipeWire calls it an xrun; for a video stream it is a frame gone.  Our
+ *    reader is a real-time callback that returns in microseconds — but it must be woken
+ *    first, and on a busy machine (a session just born) it wakes after the second cycle.
+ *    ⚠ Nothing to tune on our side: the number of buffers and the rate do not enter.
+ *      The transport that waits for the reader (`node.reliable`, PipeWire 1.6) is chosen
+ *      by the producer.
+ *
+ * ⛔ What a lost picture costs.  Its damage is lost with it: the next picture declares only
+ *    what changed after, so part of the screen stays old.  And if it was the LAST picture
+ *    of an animation nothing comes after: the stream stands at the frame before, until
+ *    something else on the desktop changes.  A pointer move does not help: it brings a
+ *    cursor-only buffer.
+ *
+ * ⭐ The cure, two halves.
+ *    1. `capture_watch_sequence()` switches on the count (only for a producer that numbers
+ *       its buffers one by one: KWin).  A hole ⇒ the next picture goes out as «all changed»
+ *       (KWin's buffers are whole frames: everything lost is inside it).
+ *    2. If no picture comes by itself within `LOST_QUIET_MS`, `capture_frame_lost()` returns
+ *       TRUE and the caller makes KWin draw one: it commits our pixel on top again
+ *       (`kwin_poke()`).  No stream restart, so no input device is recreated; no input is
+ *       sent.  The answer can be lost too (if the animation still runs it is followed by
+ *       its own cursor-only buffer): the request stays up, at most one poke every
+ *       `LOST_QUIET_MS`, until a picture arrives.
+ *       `[M]` What KWin answers to a poke: one whole frame with its damage declared EMPTY
+ *       (68 pokes on a still desktop, 68 such frames) — the pixel is transparent and KWin
+ *       knows it.  After a hole that frame goes out as «all changed»; without one
+ *       (`damage_lost` already taken by a picture that arrived meanwhile) it is dropped
+ *       like every frame that declares no damage: nothing is encoded, nothing is sent.
+ *
+ * ⛔ It never runs on a still desktop, and it is not a guess: it takes a hole in the numbers.
+ *
+ * `gaps`, `buffers` and `pokes` (may be NULL) receive the counts so far: holes seen, buffers
+ * missing in them, pokes asked (this one included).
+ */
+void capture_watch_sequence(Capture *capture);
+gboolean capture_frame_lost(Capture *capture, guint *gaps, guint *buffers, guint *pokes);
+
 void capture_stop(Capture *capture);
 
 /* --- the allowed size: it is NOT here, and the reason must be told ---- *

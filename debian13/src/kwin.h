@@ -46,6 +46,12 @@ const char *kwin_output_name(const KwinSession *session);
 unsigned kwin_output_count(const KwinSession *session);
 bool kwin_closed(const KwinSession *session);
 
+/* ⭐ 19 Nov 2026 — commits the pixel on top again, with damage: for KWin a surface that
+ * changed, so it draws a frame into the stream — a whole one, like all its frames
+ * (`capture.h`, `capture_frame_lost()`).  Nothing changes on the screen: the pixel is
+ * transparent and takes no input.  false if there is no pixel or the connection is gone. */
+bool kwin_poke(KwinSession *session);
+
 /* The input channel: KWin's EIS descriptor, requested the first time it is
  * needed and then kept here (like `mutter_eis_fd()`: whoever uses it `dup`s it).
  * -1 with `mistake` set. */

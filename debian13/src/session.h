@@ -134,6 +134,8 @@
 #define SESSION_COMMAND_KDE "exec startplasma-wayland"
 #define SESSION_UNIT_KWIN "plasma-kwin_wayland.service"
 #define SESSION_UNIT_PLASMA "plasma-workspace.target"
+/* ⭐ 25 Nov 2026: the forced KDE close stops this target (see `exit_kde()`) */
+#define SESSION_UNIT_GRAPHICAL "graphical-session.target"
 
 /*
  * ⭐ PHASE 13 — THE THIRD DESKTOP: XFCE.  `phases/13-xfce.md`, increment 1.
@@ -558,7 +560,8 @@ void session_clear_out_handler(const char *why);
 int session_clear_out_handler_due(const char *why);
 void session_clear_out_retry(void);
 /* ⭐ 17 Nov 2026: KDE only — finishes a Plasma logout that stopped halfway; own frequency limit, see `session.c` */
-void session_kde_logout_watch(void);
+/* TRUE: the stop kept being refused, the child must close the session by the product's own road */
+bool session_kde_logout_watch(void);
 int session_clear_out_handler_exit(const char *why);
 /* ⭐ 1.5.4: clear-out for the light close, also while the user's LOCAL session answers; 0 done, 2 partial */
 int session_clear_out_light(const char *why);

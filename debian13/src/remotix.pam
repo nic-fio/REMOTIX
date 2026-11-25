@@ -3,7 +3,7 @@
 #   installed in /etc/pam.d/remotix   (by debian/rules; a conffile)
 #
 # ⭐ `@include` below is a Debian modification to Linux-PAM (the files of the old
-#    other-distribution family — Fedora, openSUSE, Arch — are not part of this tree).
+#    other distributions are not part of this tree).
 #
 # -----------------------------------------------------------------------------
 # ⛔ WHY IT EXISTS, AND WHY `login` IS NOT USED
@@ -27,16 +27,13 @@
 # ⛔ IF THIS FILE IS NOT THERE, EVERY RIGHT PASSWORD IS REFUSED
 #
 # Linux-PAM, when the requested service has no file, falls back to the service
-# `other`.  ⛔ What `other` does depends on the distribution: on Fedora and
-# Arch it is `pam_deny` (the symptom would be "wrong user or
-# password" for anyone, that is a diagnosis pointing at the password
-# while the defect is a missing file); on Debian it includes the common stacks —
-# and it is not better: it is a stack that is not ours (see §session below,
-# 15 August 2026, and the exclusion of root that is not there).  Hence the two
+# `other`.  ⛔ On Debian `other` includes the common stacks: it is a stack
+# that is not ours (see §session below, 15 August 2026, and the exclusion of
+# root that is not there).  Hence the two
 # protections, which live in the program (invariant I7):
 #
-#   1. `main.c` looks at /etc/pam.d/remotix (and /usr/lib/pam.d/remotix, where
-#      openSUSE puts it) at startup and SAYS so if it is not there;
+#   1. `main.c` looks at /etc/pam.d/remotix (and /usr/lib/pam.d/remotix) at
+#      startup and SAYS so if it is not there;
 #   2. `authentication.c` tells apart in the log "PAM refused" from "PAM could not
 #      judge", and names this file in the second.
 #
