@@ -295,3 +295,91 @@ Sul sito: pagine di Debian 13 e Ubuntu 26.04 alla 1.0.1 con la voce «1.0.1 — 
 nuovi (quelli della 1.0.0 restano scaricabili). Su GitHub: rilasci `debian13-1.0.1` e `ubuntu26.04-1.0.1`.
 Per la 1.0.1 non è stato fatto un giro completo di prove automatiche: valgono il confronto sulle 98 tastiere e le prove
 a mano del proprietario. Prossimo lavoro: Fedora, che parte da questo codice.
+
+## PIANO — Versione 1.2.0: Debian 13 allineata a Fedora 45 (25 nov 2026) — IN ATTESA DELL'OK DEL PROPRIETARIO
+
+### Obiettivo
+Portare REMOTIX per Debian 13 alla 1.2.0, il più vicino possibile al codice e al comportamento di Fedora 45 1.2.0.
+**Regola unica (proprietario, 25 nov): dove Fedora fa una cosa e su Debian si può fare, si fa come Fedora, senza
+varianti di Debian.** Resta diverso solo ciò che non si può portare, e viene dichiarato (elenco più sotto).
+
+### Da dove si parte
+Analisi del 25 nov, un agente per desktop, con misure sulle quattro macchine virtuali: `studio/analisi-1.2.0/`
+(quattro rapporti). Risultato: quasi tutto si porta. Metodo obbligato: **si lavora a blocchi sui file di Debian**,
+mai copiando interi i file grandi di Ubuntu o Fedora (`child.c`, `session.c`, `session.h`, `main.c`, `kwin.c`,
+`input.c`, `Makefile`): riporterebbero codice tolto apposta e romperebbero il meccanismo che su Debian tiene viva la
+sessione dell'utente. I file piccoli e solo «in aggiunta» si prendono interi.
+
+### Che cosa entra (come su Fedora)
+1. **Lingua del desktop remoto**: quella scelta dall'utente nelle Impostazioni, altrimenti quella di sistema, con i
+   formati (date, numeri). Oggi su Debian è sempre inglese.
+2. **`PATH` del desktop remoto** con la stessa regola di Fedora (quello dato dal sistema all'accesso; se manca, il
+   ripiego di Fedora con `~/.local/bin` e `~/bin`).
+3. **Fine della sessione detta subito** al browser, prima di smontare tutto; un nuovo accesso non si aggancia a un
+   desktop che sta morendo.
+4. **Messaggio chiaro «il compositor non è installato»** al posto dello schermo nero (XFCE, LXQt senza labwc).
+5. **GNOME**: primo movimento del puntatore inviato due volte; controllo della scala dello schermo (scala diversa da
+   1 → sessione chiusa con messaggio).
+6. **KDE**: nella chiusura per accesso locale attesa di 5 secondi e chiusura forzata che ferma tutto il desktop;
+   recupero del fotogramma perso; Ctrl+Alt+Canc; riconoscimento del Log Out anche senza nessuno collegato.
+7. **XFCE**: il pulsante «azioni» del pannello non sparisce più in locale; programmi nascosti all'avvio (Bluetooth).
+   **LXQt**: protezione generale dai compositori X11 (senza i nomi di Lubuntu).
+8. **Registro**: riga «chi ha chiuso la connessione e perché»; errori della sentinella leggibili («non disponibile»
+   non è più un allarme).
+9. **Aggancio «il locale chiude il remoto» controllato e rimesso a posto a ogni avvio del servizio**, con una riga
+   nel registro (come Fedora; su Debian attraverso `pam-auth-update`; se il file è stato modificato a mano
+   dall'amministratore lo strumento di Debian rifiuta, e allora resta solo la riga di avviso).
+10. **Pacchetto**: correzione AppArmor per i kernel nuovi, regola `needrestart` (il servizio non viene riavviato da
+    solo dopo un aggiornamento), niente cache grafica nella cartella di root, regola polkit di Fedora per gli
+    aggiornamenti firmware, avviso «labwc non installato» all'installazione.
+11. **Testi**: messaggi «reinstalla il pacchetto» col comando giusto per un `.deb`; via i riferimenti a Fedora, Arch,
+    SUSE dai messaggi.
+12. **Licenze**: via ogni riferimento a materiale che il pacchetto non contiene (installatore, moduli Go, labwc e
+    wlroots, file `.run`). Sono testi legali: la proposta riga per riga viene mostrata prima di scrivere.
+13. **Versione 1.2.0**, registro dei problemi aggiornato (anche con le voci di Ubuntu che mancano).
+
+### Differenze che restano, dichiarate
+- KDE con KWin da solo e cambio di risoluzione a caldo: servono a KWin 6.8, Debian ha 6.3.6 (misurato: il protocollo
+  è alla versione 12, ne serve 22). KDE resta dentro il labwc di Debian. Il codice di Fedora non viene toccato né portato.
+- Database delle impostazioni «di sistema» alla maniera di Ubuntu: **non si porta** (decisione del proprietario,
+  25 nov); Debian tiene il suo meccanismo, che funziona.
+- SELinux, RPM, firewalld, aggancio dei display manager uno per uno: Debian ha AppArmor, `.deb`, `ufw`,
+  `pam-auth-update` (una riga copre gdm3, sddm e lightdm: verificato).
+- Meccanismo che tiene viva la sessione (systemd 257 di Debian) e avvio della Shell di GNOME 48: restano quelli di Debian.
+- «Ultima difesa» su GNOME, XFCE, LXQt: non c'è nemmeno su Fedora; su Debian le misure dicono che non serve.
+
+### Passi
+I passi sul prodotto toccano gli stessi file: vanno in fila, un solo `programmatore` (Sonnet), `revisore` (Fable)
+dopo ogni passo. I passi A e B non toccano il prodotto e partono in parallelo.
+- **A. Costruzione senza contenitori** (in parallelo): macchina virtuale «costruzione» per Debian e `build-deb.sh`
+  rifatto sul modello di `fedora45/build/build-rpm.sh`. I file dei contenitori restano dove sono.
+- **B. Strumenti di prova per le macchine virtuali** (in parallelo): `prove/` adattato al banco a VM (porte
+  8861-8864), prove «il locale chiude il remoto» con programmi aperti prese da Fedora e adattate a Debian.
+- **1. File piccoli presi interi**: registro delle connessioni, sentinella, messaggi di fine sessione (parti
+  piccole), cattura, mutter, AppArmor, `needrestart`, unità del servizio, polkit.
+- **2. Fine della sessione, compositor mancante, scala di GNOME** (blocchi in `session.c`, `child.c`, `main.c`).
+- **3. Lingua e `PATH`** (blocchi di Fedora in `child.c`, `session.c`, file PAM).
+- **4. KDE** (chiusura per accesso locale, fotogramma perso, Ctrl+Alt+Canc, Log Out) e testi dei messaggi.
+- **5. XFCE, LXQt, puntatore di GNOME.**
+- **6. Controllo dell'aggancio a ogni avvio.**
+- **7. Versione, licenze (dopo l'OK sui testi), registro dei problemi.**
+- **8. Pacchetto 1.2.0 costruito nella macchina «costruzione»** e installato sulle quattro VM.
+- **9. Prove**: come e quando le decide il proprietario. Proposta: prove di base sui quattro desktop, «il locale
+  chiude il remoto» con programmi aperti sui quattro, giro completo su GNOME e KDE, aggiornamento dalla 1.0.1,
+  rimozione pulita; poi le prove del proprietario da chiavetta.
+- **10. Manuali** (con la sezione «Requirements» come su Fedora e la correzione su NVIDIA) e **sito**: dopo, su ordine.
+
+### Rischi
+- I blocchi presi da Ubuntu/Fedora sono intrecciati fra loro nello stesso file: un blocco portato a metà può
+  rompere l'accesso. Per questo passi piccoli e revisore a ogni passo.
+- Il meccanismo che tiene viva la sessione su Debian non deve essere toccato: è il rischio numero uno.
+- KDE, XFCE e LXQt dentro il labwc 0.8.3 di Debian non sono stati misurati nell'analisi (labwc non è nelle VM
+  pulite): lo dirà il banco al passo 8-9.
+- Alcune protezioni nate su versioni più nuove (GNOME 50, KWin 6.6) su Debian potrebbero non scattare mai: sono
+  innocue, ma vanno dichiarate «non viste scattare su Debian».
+- Una sola Radeon: le prove con la scheda vanno in fila.
+
+### Fatto quando
+Il pacchetto `remotix_1.2.0` per Debian 13 si costruisce senza contenitori; il revisore ha approvato ogni passo; le
+prove decise dal proprietario sono passate sui quattro desktop; l'elenco delle differenze da Fedora è quello scritto
+qui sopra e nient'altro; il proprietario ha fatto le sue prove.
