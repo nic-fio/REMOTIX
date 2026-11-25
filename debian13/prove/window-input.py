@@ -8,7 +8,8 @@ One JSON line per event, appended to LOGFILE:
   ready   w,h                                   the window is up
   motion  fx,fy,w,h                             pointer position as a fraction of the window, and the window size (via=enter: the pointer came in)
   leave                                         the pointer left the window
-  press / release  button(1 left,2 middle,3 right), n (1 single, 2 double...), fx,fy,w,h
+  press   button(1 left,2 middle,3 right), n (1 single, 2 double...), fx,fy,w,h
+  release button, fx,fy,w,h                     taken from the raw GDK event (see below), so n is not given
   scroll  dx,dy (GTK: up is negative, down positive), fx,fy
   key     name,code(hardware),char,mods(list),down(true/false)     every key the application receives, captured before the entry
   text    text                                  the entry content
@@ -73,8 +74,25 @@ def on_activate(app):
     clk.set_button(0)  # every button
     clk.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
     clk.connect("pressed", lambda g, n, x, y: say(ev="press", button=g.get_current_button(), n=n, **where(x, y)))
-    clk.connect("released", lambda g, n, x, y: say(ev="release", button=g.get_current_button(), n=n, **where(x, y)))
     win.add_controller(clk)
+
+    # The release is NOT taken from the gesture: with GTK 4.22 the entry claims the sequence (text selection by dragging) and the
+    # claim denies this capture gesture on the window, which then never emits "released" (GTK 4.18 did not deny ancestors). A legacy
+    # controller sees every raw button event, whoever claims the sequence, so a release that really reached the client is always logged.
+    def raw_release(c, _ev):
+        e = c.get_current_event()
+        if e is None or e.get_event_type() != Gdk.EventType.BUTTON_RELEASE:
+            return False
+        ok, sx, sy = e.get_position()
+        if not ok:
+            return False
+        tx, ty = win.get_surface_transform()  # the event is in surface coordinates, `where` wants window ones
+        say(ev="release", button=e.get_button(), **where(sx - tx, sy - ty))
+        return False
+    raw = Gtk.EventControllerLegacy()
+    raw.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+    raw.connect("event", raw_release)
+    win.add_controller(raw)
 
     sc = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.BOTH_AXES)
     sc.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)

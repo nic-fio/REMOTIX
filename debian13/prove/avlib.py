@@ -69,6 +69,8 @@ def ensure_pulse(boxes):
     """Firefox needs a sound server to start any AudioContext, and the dev server has none: a private PipeWire+pulse with a
     null sink, run by user `acs` inside the lxqt box, reachable on tcp 127.0.0.1:4713 (boxes share the host network).
     Uses only what the box image already has; idempotent."""
+    if os.environ.get("RX_BANCO") == "vm":  # the private pulse server lives in the lxqt box on the host's tcp 4713: a VM does not share the host network
+        return False, "SKIP on the VMs: the private PulseAudio of the lxqt box (127.0.0.1:4713) does not exist there (use check-audio.py, which uses the host's PipeWire)"
     c, t = Box("lxqt", boxes).run("bash -s", stdin=PULSE_SCRIPT, timeout=60)
     return "pulse-ok" in t, t[-150:]
 

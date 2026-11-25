@@ -40,7 +40,7 @@ import lib  # noqa: E402
 from lib import PASS, FAIL, BLOCKED, Fail, ToolError  # noqa: E402
 
 PW = "bn-pass-2026"
-ADDR = "127.0.0.1"
+ADDR = os.environ.get("RX_BAN_ADDR") or ("10.0.2.2" if os.environ.get("RX_BANCO") == "vm" else "127.0.0.1")  # VM: QEMU's user network shows every client as 10.0.2.2
 SOCK = "/run/remotix/net/ban.sock"  # the network side (the one that serves the command) may write only in its run dir
 DROPIN = "/etc/remotix/remotix.conf.d/91-ban-command.conf"
 WRONG = "not-the-password-1"
@@ -403,7 +403,7 @@ def main():
         try:
             cleanup(a, box, b, resc)
         except BaseException as e:  # noqa: BLE001
-            print("NOTE cleanup - ##### CLEANUP DID NOT RUN (%s): UNBLOCK %s BY HAND AND REMOVE %s #####" % (e, ADDR, DROPIN), flush=True)
+            print("NOTE cleanup - ##### CLEANUP DID NOT RUN (%s): UNBLOCK %s BY HAND AND REMOVE %s (on the VMs: `all.sh <de> --clean` or banco-vm/fresh-vm.sh <de>: it renames the ban file and restarts the service) #####" % (e, ADDR, DROPIN), flush=True)
             resc.say(FAIL, "cleanup", "did not run: %s" % e)
         b.rig.stop()
     return 0 if res.code() == 0 and resc.code() == 0 else 1
