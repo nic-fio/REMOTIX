@@ -8,7 +8,7 @@
 # Environment (all optional):
 #   OUTPUT        where the results go                     (default /media/REMOTIX-UBUNTU/pacchetti)
 #   WORK          scratch space (copies of the tree)       (default $OUTPUT/.work)
-#   RX_VERSION    upstream version                         (default 1.0.1~dev)
+#   RX_VERSION    upstream version                         (default 1.2.0~dev)
 #   RX_REVISION   Package revision                        (default 1)
 #   SOURCE_DATE_EPOCH  build date, for a reproducible .deb (default: the newest mtime in src/ and debian/)
 #   TWICE=1       second build + byte comparison
@@ -39,7 +39,7 @@ TREE=$(cd "$HERE/.." && pwd)
 OUTPUT=${OUTPUT:-/media/REMOTIX-UBUNTU/pacchetti}
 WORK=${WORK:-$OUTPUT/.work}
 IMAGE=${IMAGE:-localhost/remotix-ubuntu-build}
-VERSION_UP=${RX_VERSION:-1.0.1~dev}
+VERSION_UP=${RX_VERSION:-1.2.0~dev}
 REVISION=${RX_REVISION:-1}
 
 command -v podman >/dev/null 2>&1 || { echo "podman is not there" >&2; exit 2; }
