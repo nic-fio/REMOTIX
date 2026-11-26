@@ -254,6 +254,7 @@ struct input
 	struct ei_device *pointer;
 	struct ei_device *keyboard_dev;
 	gboolean pointer_active;
+	gboolean pointer_primed;      /* the first absolute motion after the device (re)start has been sent twice (see input_pointer) */
 	gboolean keyboard_active;
 	uint32_t sequence;
 
@@ -1326,6 +1327,7 @@ static void handle_event(Input *in, struct ei_event *event)
 			if (device == in->pointer)
 			{
 				in->pointer_active = TRUE;
+				in->pointer_primed = FALSE;
 				/* ⛔ And it is reread HERE TOO: between `DEVICE_ADDED` and the resume the
 				 *    compositor may have redone the viewports. */
 				read_region(in, device);
@@ -1935,6 +1937,18 @@ int input_pointer(Input *in, uint32_t x, uint32_t y)
 
 	ei_device_pointer_motion_absolute(in->pointer, fx, fy);
 	beat_border(in, in->pointer);
+	/* ⚠ mutter 51 (measured 23 Nov 2026, Fedora 45 GNOME, one user too): the FIRST absolute motion that
+	 *    follows the (re)start of the pointer device reaches the windows with one of the two coordinates at 0
+	 *    (the other one right) — a click made at once (a tap from a phone) then lands on the edge of the screen.
+	 *    The following motions are exact; the same position sent a second time right after the first one
+	 *    is too.  So the first one is sent twice.  Compositors that need no such thing ignore the repeat.
+	 *    TO BE REMOVED WHEN MUTTER IS FIXED (the repeat is harmless meanwhile; check with `check-multiuser` one-user). */
+	if (!in->pointer_primed)
+	{
+		in->pointer_primed = TRUE;
+		ei_device_pointer_motion_absolute(in->pointer, fx, fy);
+		beat_border(in, in->pointer);
+	}
 	return 0;
 }
 

@@ -1592,6 +1592,107 @@ static bool child_path_ok(const char *v)
 	return !start;
 }
 
+/* ⭐ Fedora, F4 (the language of the remote desktop = the one of a local login of the same user).  A local graphical login gives the session the
+ *    user's own language if they chose one in the desktop settings (AccountsService, `Language=` in `/var/lib/AccountsService/users/<name>`: what
+ *    gdm and lightdm read), else the system one (`/etc/default/locale`, which our PAM stack's second `pam_env` line puts in the PAM environment).
+ *    Until now neither was passed on, and `session.c` fell back to `C.UTF-8`: an Italian user got an English desktop.  Only the value of LANG
+ *    is taken, and only if it is made of plain locale characters (it is written into an `execve` environment); `session.c` still checks that
+ *    the locale exists and is UTF-8.  Returns true and fills `out` ("LANG=...") if there is one. */
+/* The locale words of the session: LANG (the user's choice, else the system's), and the system's `LC_*` / `LANGUAGE` as `pam_env` read them from
+ * `/etc/default/locale` (measured: a local gdm login has them too, `LC_TIME` set with `localectl` reaches `gnome-shell` and the user manager).
+ * They are decided AS ROOT, before the identity changes (`child_locale_read()`), because `/var/lib/AccountsService/users/` is `root:root 0700`:
+ * after `setuid()` the user's choice could not be read.  The strings are already validated, they are only copied into `envp[]` later. */
+#define CHILD_LOCALE_MAX 12
+struct child_locale {
+	char lang[96];                          /* "LANG=..." or "" */
+	char extra[CHILD_LOCALE_MAX][96];       /* "LC_TIME=...", "LANGUAGE=..." */
+	int n_extra;
+};
+
+static bool child_locale_name_ok(const char *e)   /* e = "NAME=value": NAME is LC_<capitals/_> or LANGUAGE */
+{
+	const char *eq = strchr(e, '=');
+
+	if (!eq || eq == e || (size_t)(eq - e) > 24)
+		return false;
+	if (strncmp(e, "LANGUAGE=", 9) == 0)
+		return true;
+	if (strncmp(e, "LC_", 3) != 0 || eq - e <= 3)
+		return false;
+	for (const char *c = e + 3; c < eq; c++)
+		if (!((*c >= 'A' && *c <= 'Z') || *c == '_'))
+			return false;
+	return true;
+}
+
+static bool child_locale_value_ok(const char *v)   /* LANGUAGE is a list "it:en": the colon is allowed there only */
+{
+	if (!v || strlen(v) > 64)
+		return false;
+	for (const char *c = v; *c; c++)
+		if (!((*c >= 'a' && *c <= 'z') || (*c >= 'A' && *c <= 'Z') || (*c >= '0' && *c <= '9') || *c == '_' || *c == '.' ||
+		      *c == '-' || *c == '@' || *c == ':'))
+			return false;
+	return true;
+}
+
+/* The user's own choice (Settings → Language → AccountsService): `Languages=it_IT.UTF-8;` (the current key; the first item counts) or
+ * `Language=it_IT.UTF-8` (the older one).  The file is opened without following links, must be a small regular file. */
+static bool child_accounts_language(const char *user, char *out, size_t out_size)
+{
+	char file[256], buf[4096], *line, *save = NULL;
+	struct stat st;
+	ssize_t n;
+	int fd;
+
+	if (strchr(user, '/') || snprintf(file, sizeof file, "/var/lib/AccountsService/users/%s", user) >= (int) sizeof file)
+		return false;
+	fd = open(file, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd < 0)
+		return false;
+	if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_size > (off_t) (sizeof buf - 1)) {
+		close(fd);
+		return false;
+	}
+	n = read(fd, buf, sizeof buf - 1);
+	close(fd);
+	if (n <= 0)
+		return false;
+	buf[n] = 0;
+	for (line = strtok_r(buf, "\n", &save); line; line = strtok_r(NULL, "\n", &save)) {
+		const char *v = NULL;
+		char *semi;
+
+		if (strncmp(line, "Languages=", 10) == 0)
+			v = line + 10;
+		else if (strncmp(line, "Language=", 9) == 0)
+			v = line + 9;
+		if (!v)
+			continue;
+		if ((semi = strchr(v, ';')) != NULL)
+			*semi = 0;
+		if (v[0] && !strchr(v, ':') && child_locale_value_ok(v)) {
+			snprintf(out, out_size, "LANG=%s", v);
+			return true;
+		}
+	}
+	return false;
+}
+
+static void child_locale_read(const char *user, char **pam_environment, struct child_locale *l)
+{
+	memset(l, 0, sizeof *l);
+	if (!child_accounts_language(user, l->lang, sizeof l->lang))
+		for (int i = 0; pam_environment && pam_environment[i]; i++)
+			if (strncmp(pam_environment[i], "LANG=", 5) == 0 && pam_environment[i][5] && child_locale_value_ok(pam_environment[i] + 5) &&
+			    !strchr(pam_environment[i], ':') && snprintf(l->lang, sizeof l->lang, "%s", pam_environment[i]) < (int) sizeof l->lang)
+				break;
+	for (int i = 0; pam_environment && pam_environment[i] && l->n_extra < CHILD_LOCALE_MAX; i++)
+		if (child_locale_name_ok(pam_environment[i]) && child_locale_value_ok(strchr(pam_environment[i], '=') + 1) &&
+		    snprintf(l->extra[l->n_extra], sizeof l->extra[0], "%s", pam_environment[i]) < (int) sizeof l->extra[0])
+			l->n_extra++;
+}
+
 /* ⛔ What is done AFTER the `fork` and BEFORE the `exec`, and in this order.
  *    Every permutation is punished with a different defect, and none of the
  *    three says "you got the order wrong" (error form E4):
@@ -1613,6 +1714,7 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 	char a_cap[32], a_parent[32];
 	char e_home[512], e_user[96], e_log[96], e_path[512], e_runtime[160],
 		e_bus[224], e_shell[16];
+	struct child_locale locale;
 	/* ⚠ Twenty: the nine fixed ones, the NULL, and the TEN optional words
 	 *   at the end — `--verbose`, `--journal`, `--quality-recovery`,
 	 *   `--bandwidth-cap-mbit` and its number, `--no-audio-silence`,
@@ -1625,7 +1727,7 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 	/* ⚠ 16 and not 9: to the seven we compose ourselves are added those that
 	 *   `pam_systemd` puts in the session's environment — `XDG_SESSION_ID`
 	 *   first, which is what Mutter was missing. */
-	char *envp[16];
+	char *envp[32];
 	char **pam_environment = NULL;
 	int na = 0, ne = 0;
 	uid_t r, e, s;
@@ -1749,6 +1851,9 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 		}
 	}
 
+	/* ⭐ Fedora, F4: the locale of the session, decided NOW, still as root (see `child_locale_read()`). */
+	child_locale_read(pw->pw_name, pam_environment, &locale);
+
 	/* 3. the groups, then the gid, then the uid — and never the other way round. */
 	if (setgroups((size_t)ngroups, groups) != 0)
 		_exit(31);
@@ -1823,6 +1928,10 @@ static void become_and_exec(const struct birth_opts *b, uint64_t serial,
 	for (int i = 0; pam_environment && pam_environment[i] && ne < 14; i++)
 		if (strncmp(pam_environment[i], "XDG_SESSION_ID=", 15) == 0)
 			envp[ne++] = pam_environment[i];
+	if (locale.lang[0])
+		envp[ne++] = locale.lang;
+	for (int i = 0; i < locale.n_extra; i++)
+		envp[ne++] = locale.extra[i];
 	envp[ne] = NULL;
 
 	/* 6. the child's command line, which is what the bench will read in
