@@ -124,3 +124,136 @@ Sul sito: pagine di Debian 13 e Ubuntu 26.04 alla 1.0.1 con la voce «1.0.1 — 
 nuovi (quelli della 1.0.0 restano scaricabili). Su GitHub: rilasci `debian13-1.0.1` e `ubuntu26.04-1.0.1`.
 Per la 1.0.1 non è stato fatto un giro completo di prove automatiche: valgono il confronto sulle 98 tastiere e le prove
 a mano del proprietario. Prossimo lavoro: Fedora, che parte da questo codice.
+
+---
+
+## PIANO — Versione 1.2.0 per Ubuntu 26.04 (26 nov 2026) — IN ATTESA DELL'OK DEL PROPRIETARIO
+
+### Obiettivo
+Portare REMOTIX per Ubuntu 26.04 (Ubuntu, Kubuntu, Xubuntu, Lubuntu) alla 1.2.0, il più vicino possibile al codice e
+al comportamento di Fedora 45 1.2.0, come già fatto per Debian 13. Regola: dove Fedora fa una cosa e su Ubuntu si può
+fare, si fa come Fedora. Resta diverso solo ciò che non si può portare, e viene dichiarato.
+
+### Da dove si parte
+Analisi del 26 nov, cinque rapporti in `studio/analisi-1.2.0/` (uno per desktop più le parti comuni), fatti sul codice
+di oggi confrontando Ubuntu con Fedora e con Debian 1.2.0. Risultato: **Ubuntu è già vicina alla 1.2.0**, perché
+gran parte di ciò che Debian ha dovuto recuperare era nato proprio su Ubuntu. Il codice che manca è poco e quasi
+tutto già scritto e rivisto per Debian; **il grosso del lavoro sono il banco, la costruzione senza contenitori e le
+prove**. Tutto ciò che i rapporti segnano «non verificato» si misura sulle macchine virtuali prima di scrivere codice.
+
+Metodo obbligato: si lavora **a blocchi sui file di Ubuntu**, mai copiando interi i file grandi di Fedora o Debian
+(`child.c`, `session.c`, `main.c`, `kwin.c`): porterebbero via le parti proprie di Ubuntu elencate più sotto.
+L'unico file che si prende intero è `transport.c` (identico in Fedora e Debian, solo registro).
+
+### Che cosa entra
+Parti comuni ai quattro desktop:
+1. **Lingua del desktop remoto**: quella scelta dall'utente nelle Impostazioni, altrimenti quella di sistema, con i
+   formati di date e numeri. Oggi è sempre inglese. È la voce più grande e più delicata.
+2. **Aggancio «il locale chiude il remoto» controllato e rimesso a posto a ogni avvio del servizio**, con una riga
+   nel registro (oggi lo fa solo l'installazione).
+3. **Registro**: riga «chi ha chiuso la connessione e perché».
+4. **Regola per gli aggiornamenti firmware** (come Fedora).
+5. **Niente cache grafica nella cartella di root.** I file lasciati lì dalla 1.0.1 non vengono toccati (come su Debian).
+6. **Testi**: messaggio «reinstalla il pacchetto» col comando giusto; via i residui (Debian trixie, Fedora, Arch, SUSE).
+7. **Pacchetto**: una riga in più nel profilo AppArmor, ordine corretto alla disinstallazione, controllo più preciso
+   all'installazione.
+8. **Licenze**: via installatore, file `.run` e moduli Go (circa 510 righe che non corrispondono a nulla nel
+   pacchetto). labwc e wlroots **restano**, perché nel pacchetto Ubuntu ci sono davvero. Sono testi legali: la
+   proposta riga per riga viene mostrata prima di scrivere.
+9. **Versione 1.2.0**, registro dei problemi, `CLAUDE.md` di questa cartella (parla ancora di Debian e di podman).
+
+Per desktop:
+- **GNOME**: primo movimento del puntatore inviato due volte (il primo clic non cade più sul bordo).
+- **KDE**: nella chiusura per accesso locale attesa di 5 secondi invece di 10, e chiusura forzata che ferma tutto il
+  desktop. Lingua portata anche dentro Plasma (serve un pezzo in più, quello di Debian).
+- **XFCE**: `xiccd` (profili colore) non parte nel desktop remoto, come su Debian — **solo se** sulla macchina
+  virtuale risulta che dà fastidio (su Debian apriva una finestra di password).
+- **LXQt**: nessun codice proprio; solo le parti comuni.
+
+### Differenze che restano, dichiarate
+- **KDE con KWin da solo e cambio di risoluzione a caldo**: servono a KWin 6.8, Kubuntu ha 6.6. KDE resta dentro il
+  nostro labwc contenuto nel pacchetto (misura di un minuto sulla macchina virtuale per conferma).
+- **`PATH`**: su Ubuntu il sistema ne dà già uno all'accesso, quindi il ripiego di Fedora non avrebbe effetto e non
+  si porta. Misuro sui quattro desktop se il `PATH` remoto coincide con quello locale; se non coincide lo porto al
+  proprietario.
+- **Niente SELinux, RPM, firewalld**; niente del meccanismo che su Debian tiene viva la sessione (a Ubuntu non serve).
+- **Restano proprie di Ubuntu**: database delle impostazioni «di sistema» (per i programmi snap), labwc nostro,
+  avvio di GNOME 50, AppArmor per il kernel nuovo, particolarità di Xubuntu e Lubuntu (sfondo e icone che
+  funzionano, pannello, `lubuntu-update`), snap.
+- **«Ultima difesa» alla chiusura** su GNOME, XFCE, LXQt: non si costruisce, come su Fedora e Debian; si prova con
+  programmi aperti e si interviene solo se fallisce.
+
+### Banco e protezione della Radeon (strutturale)
+Su Debian il server è caduto quattro volte perché la macchina virtuale metteva a riposo la Radeon. Da ora:
+1. **Alla creazione** di ogni macchina virtuale lo script mette da solo il blocco del risparmio energetico della
+   scheda (`amdgpu.runpm=0`), anche su Ubuntu, che finora non ha mai dato il problema.
+2. **All'accensione con la Radeon** lo script controlla che il blocco sia attivo nella macchina; se non lo è,
+   **rifiuta** di darle la scheda. Lo stesso controllo vale dopo il ripristino di un'istantanea.
+3. **Sul server**, a ogni preparazione: registro del kernel copiato su disco da solo, e blocco del riposo della
+   scheda anche dal lato server (senza toccare la riga di avvio). Questo terzo livello non è dimostrabile senza
+   provocare un blocco: la garanzia sono i primi due.
+4. Debian e Fedora non si toccano (proprietario, 26 nov: i blocchi venivano dai driver vecchi delle macchine Debian;
+   «non tocchiamo più debian»). La protezione resta solo negli script del banco di Ubuntu.
+
+Macchine: `ubuntu`, `kubuntu`, `xubuntu`, `lubuntu` dalle ISO 26.04.1 in `/media/DOWNLOAD` (utente `prova`,
+password di prova solita, gruppo `sudo`), istantanea `pulito`; più una quinta, `costruzione`, che non riceve mai la
+Radeon. Cartella `/media/REMOTIX-UBUNTU`. Lo script acquista il modo «senza Radeon» (più macchine accese insieme
+per i lavori che non richiedono video). Nessun contenitore, nemmeno per preparare il server.
+
+### Costruzione senza contenitori
+Nuovo `build/build-deb-vm.sh` sul modello di Debian, con in più ciò che è solo di Ubuntu: costruzione del nostro
+labwc/wlroots, controlli sul labwc, archivio del sorgente da pubblicare accanto al pacchetto. Il vecchio
+`build-deb.sh` resta com'è (non si cancella), aggiornato solo nel numero di versione.
+
+### Passi
+1. **Banco** (script con la protezione Radeon, revisore) → creazione delle cinque macchine → istantanee `pulito`.
+   In parallelo: script di costruzione.
+2. **Misure** sulle macchine dei punti «non verificati»: `PATH` locale e remoto, lingua, `xiccd` su Xubuntu,
+   firmware, versione del protocollo di KWin, programmi presenti per le prove (`kwrite` su Kubuntu).
+3. **Codice**, un desktop alla volta nell'ordine GNOME → KDE → XFCE → LXQt, partendo dalle parti comuni
+   (`programmatore`, poi `revisore` su Fable). I punti della lingua fra avvio e cambio d'identità li guarda il
+   revisore uno per uno.
+4. **Pacchetto** costruito nella macchina `costruzione`.
+5. **Prove automatiche**, una macchina alla volta con la Radeon: giro completo sui quattro desktop; aggiornamento
+   dalla 1.0.1 pubblicata alla 1.2.0; disinstallazione che non lascia nulla; chiusura forzata di KDE su un desktop
+   appena nato; «il locale chiude il remoto» con programmi aperti (anche un Firefox snap) — vedi decisione 1.
+6. **Prove del proprietario** sulle quattro macchine virtuali (consegnate pulite, solo da aprire nel browser).
+7. **Prove del proprietario sulle quattro live** su macchina vera (`server/live-installa.sh` aggiornato alla 1.2.0,
+   fa tutto da solo).
+8. Poi, su suo ordine: manuali, sito, GitHub.
+
+### File toccati
+- Prodotto: `src/child.c`, `src/session.c`, `src/main.c`, `src/input.c`, `src/kwin.c`, `src/transport.c`,
+  `src/rootside.c`, regole polkit, nuovo `src/remotix-pam-hook`.
+- Pacchetto: `debian/remotix.service`, `rules`, `remotix.postinst`, `remotix.prerm`, `remotix_network.apparmor`.
+- Costruzione: nuovo `build/build-deb-vm.sh`; `build/build-deb.sh` (solo versione).
+- Banco: `server/vm-radeon.sh`, nuovo `server/prepara-server-vm.sh`, `server/live-installa.sh`; `prove/` (casi
+  «il locale chiude il remoto», controlli di uscita, controllo AppArmor, adattati alle schermate di accesso di
+  Ubuntu).
+- Testi: `LICENSE.md`, `THIRD-PARTY-LICENSES`, `CLAUDE.md`, `docs/REGISTRO-problemi.md`.
+
+### Rischi
+- **Lingua**: codice delicato, eseguito al momento dell'accesso; un errore lì impedisce di entrare. Si prova su
+  tutti e quattro i desktop, con lingua scelta, lingua di sistema e lingua non installata (ripiego sull'inglese).
+- **Chiusura forzata di KDE su un desktop appena nato**: su Kubuntu il sistema ha già rifiutato quel comando nei
+  primi ~25 secondi di vita del desktop. Se la prova fallisce, la cura (un secondo tentativo) è un cambio di
+  comportamento: si ferma e si porta al proprietario.
+- **Costruzione nella macchina virtuale**: prima volta per Ubuntu, con il labwc dentro; possibile qualche giro a vuoto.
+- **«Il locale chiude il remoto» su Xubuntu e Lubuntu**: mai provato su macchina vera con programmi aperti.
+- **Blocco del server**: coperto dalla protezione sopra; se accade comunque, il registro su disco dice perché.
+
+### Decisioni del proprietario
+1. Le prove «il locale chiude il remoto» che riavviano la schermata di accesso dentro la macchina virtuale (vietate
+   sul banco di Debian): sul banco di Ubuntu **si fanno** (26 nov: il rischio riguardava solo le macchine Debian;
+   proposto al proprietario, nessuna obiezione), poi lui le ripete sulle live.
+2. Se le misure mostrano un `PATH` remoto diverso da quello locale: come allinearlo (si porta quando c'è il dato).
+3. Finestra del portafoglio di KDE: mai decisa su nessuna distribuzione; resta com'è.
+4. Manuali (sezione «Requirements», NVIDIA misurata e non «mai provata»): dopo il codice, come su Debian.
+
+### Fatto quando
+- Giro automatico verde sui quattro desktop (a parte le righe note e dichiarate), aggiornamento dalla 1.0.1 e
+  disinstallazione puliti.
+- Desktop remoto nella lingua dell'utente sui quattro desktop.
+- «Il locale chiude il remoto» riuscito con programmi aperti sulle quattro schermate di accesso.
+- Revisore APPROVATO; prove del proprietario riuscite sulle macchine virtuali e sulle quattro live.
+- Nessun blocco del server causato dalla Radeon.
