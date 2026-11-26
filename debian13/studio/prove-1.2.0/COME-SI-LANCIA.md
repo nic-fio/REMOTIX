@@ -1,3 +1,10 @@
+# CAUSA DELLE CADUTE DEL SERVER E RIMEDIO (26 nov 2026): `amdgpu.runpm=0` OBBLIGATORIO
+Il server cadeva (quattro volte) perche' la Radeon passata alla VM, senza monitor, veniva messa a dormire e risvegliata di continuo dal driver della VM
+(`amdgpu: SMU is resuming...`, 19 volte in 9 minuti), con errori PCIe (`CmpltTO`, `vfio_bar_restore`) sul server subito prima del blocco.
+Rimedio: ogni VM Debian del banco deve avere, PRIMA di ricevere la Radeon, `amdgpu.runpm=0` in `GRUB_CMDLINE_LINUX` (`/etc/default/grub`, poi `update-grub`;
+copia di prima in `/etc/default/grub.prima-runpm`). Controlli: `cat /proc/cmdline` contiene `amdgpu.runpm=0`, `cat /sys/module/amdgpu/parameters/runpm` = 0,
+`journalctl -k -b | grep -c "SMU is resuming"` = 0 (da ricontrollare durante il lavoro). Se non e' cosi': spegnere subito.
+
 # DIVIETO: P7 e P8 e il riavvio del display manager fanno CADERE IL SERVER (26 nov 2026)
 Due volte (01:17 e 08:26) il server intero si e' bloccato, nello stesso passo sulla VM `kde`: `check-prelocal.py`, P1-P6 passati, poi P7
 (accesso locale vero: autologin di sddm + `systemctl restart sddm` DENTRO la VM con la Radeon passata). Un minuto dopo il server e' morto

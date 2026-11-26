@@ -1,4 +1,4 @@
-# Giro 5, VM xfce (26 nov 2026) - INTERROTTO: il server e' caduto la quarta volta
+# Giro 5, VM xfce (26 nov 2026) - parte 1 INTERROTTA (quarta caduta); parte 2 COMPLETATA (sezione in fondo, con `amdgpu.runpm=0`)
 
 ## Cronologia (ore del server)
 - 09:49 server su da 30 min, `pgrep -c qemu`=0, Radeon libera. 09:50 `xfce` accesa con la Radeon. Registratore: `log/memoria-xfce2.log`.
@@ -42,3 +42,56 @@ Il `pkexec` della prova `users-shell-and-environment` viene dopo (stesso utente,
 | xfconfd | **en_US.UTF-8** |
 | `systemctl --user show-environment` (gestore utente) | **en_US.UTF-8** |
 Nessun `LANGUAGE`/`LC_*`. Nessun processo `light-locker` nella lista dei processi di `xl1`. Chiusura normale (`hold.py` stopped).
+
+---
+# PARTE 2 (10:34-11:14, server su da 12 minuti, rimedio `amdgpu.runpm=0` attivo): pacchetto giro5, giro completo
+Passo 0: `/proc/cmdline` con `amdgpu.runpm=0`, `runpm`=0, "SMU is resuming" = 0 (e restato 0 fino alla fine, ricontrollato dopo ogni voce), `pgrep -c qemu`=1, registratore `memoria-xfce3.log`,
+orari in `passi-xfce.log`. Passo 1: giro5 installato (`dpkg --audit` vuoto), servizio attivo, `remotix-pam-hook ... in place in /etc/pam.d/common-session`.
+
+## Lingua (giro5, utente nuovo `xl2`, `it_IT.UTF-8` in AccountsService prima del primo accesso)
+| processo | LANG |
+|---|---|
+| remotix (child), labwc, xfce4-session, xfce4-panel, xfdesktop | it_IT.UTF-8 |
+| gestore utente (`systemctl --user show-environment`) | **it_IT.UTF-8** (con giro2: en_US) |
+| xfconfd (pid 2612, nato PRIMA di labwc) | **en_US.UTF-8** (ancora; con giro5 non e' cambiato) |
+Nessun LANGUAGE/LC_*. Dopo la chiusura normale il gestore e' sparito; `show-environment` lo riavvia e da' `en_US.UTF-8` (com'era). Lingue di `xl1` e `xl2` rimesse vuote (`Languages=;`).
+
+## Voci di `all.sh` (TAG `xfce-giro5-<voce>`, log in `prove-run/prove/log/`)
+| voce | esito |
+|---|---|
+| base-chrome / base-firefox | page, login, desktop PASS; **FAIL mouse, FAIL keyboard** (vedi sotto: causa = finestra di password) |
+| media | PASS (screen-updates, video, codec, two-sessions-budget) |
+| resilience | PASS service-restart, network-drop, simultaneous-first-login, login-after-other-logout; **FAIL clocks** ("base failed: typed idle, the window holds empty": stessa causa) |
+| audio-chrome, audio-firefox | PASS |
+| clipboard | PASS (due direzioni) |
+| input-chrome (25 PASS) / input-firefox (26 PASS) | tutto PASS (clic, doppio clic, rotella, trascinamento, tastiera completa) tranne **FAIL mouse-coordinates** (angolo in alto a destra: sotto c'e' il pannello XFCE, vedi sotto) |
+| phone | PASS (tutte) |
+| ban | PASS (tutte) |
+| apparmor | PASS |
+| check-prelocal P1-P6 | PASS tutti |
+Non lanciate (vietate/escluse): desktop, lifecycle, multiuser, prelocal di `all.sh`, package, P7/P8.
+
+## Mouse e tastiera: PRODOTTO o STRUMENTO? Causa trovata
+La foto della pagina (`shots/base-xfce-chrome-20261126-103938-page.png`) mostra al posto della finestra di prova una finestra «Authenticate - Authentication is required to create a color managed device»
+con il campo password GIA' riempito con 8 puntini (= "remotix2" scritto dalla prova): tastiera e mouse arrivano al desktop, ma vanno alla finestra di password che ha preso il fuoco.
+Dal registro della VM: `10:35:32 dbus-daemon: Activating ... org.freedesktop.ColorManager ... requested by :1.176 (uid=1010 comm="xiccd")` poi
+`polkitd: Operator of unix-session:35 FAILED to authenticate to gain authorization for action org.freedesktop.color-manager.create-device ... (owned by unix-user:xl2)` (alla chiusura, 10:38:02; stesso per `bc1`, sessione 68).
+Quindi la finestra c'e' in OGNI sessione remota XFCE (anche quella di `xl2`). Quando la finestra di prova viene creata, la finestra di password ha il fuoco. In `input-*`/`clipboard`/`multiuser` passano perche' le loro finestre nascono dopo/riprendono il fuoco.
+Verdetto: ne' bug dello strumento ne' trasporto input rotto (`input-chrome` lo prova a fondo): e' un difetto del PRODOTTO nel senso del `40-remotix-remote-sessions.rules`
+(sessione remota senza seat => `allow_any` = `auth_admin` per `org.freedesktop.color-manager.create-device`, chiesta da sola da `xiccd`, autostart di Debian `/etc/xdg/autostart/xiccd.desktop`, pacchetto xiccd).
+La regola polkit del pacchetto non copre questa azione (copre solo catalogo software, rete KDE, repository). Non toccato (decisione del proprietario).
+
+## Finestra di password (passo 4)
+Azione: `org.freedesktop.color-manager.create-device`; programma: `xiccd` (colord); agente: `polkit-mate-authentication-agent-1` (autostart XFCE); si VEDE nel desktop remoto (foto sopra, centrata, in primo piano, con la barra «Authenticate» nel pannello).
+(La voce `desktop` NON e' stata lanciata, ma `no-password-windows` fallito nel giro interrotto era certamente questa.) `busctl monitor` con filtro sull'interfaccia dell'agente non ha catturato nulla
+(le chiamate `BeginAuthentication` non sono passate dal bus di sistema visibile in 40 s); il nome dell'azione viene dal registro di polkitd. In un utente nuovo con sessione di soli 15 s (`xl3`) la finestra non era ancora comparsa.
+
+## Pannello (passo 5)
+`xfce4-panel.xml` di `xl2` e `bc1`: nessun `plugin-N` con `type="empty"` (le uniche righe `empty` sono i contenitori `plugins`, `items`, `panel-1`, `panel-2`, normali). `xfce_panel_integrity` (src/session.c:5927) non scrive righe nel registro del servizio.
+
+## mouse-coordinates (input-*)
+`top-right`: `[1339,3]`, il puntatore e' fuori dalla finestra applicativa: nell'angolo in alto a destra c'e' il plugin utente («in1») del pannello XFCE, sopra la finestra a tutto schermo. Altri quattro punti esatti (0-0,9 px). Limite della prova su XFCE (pannello sempre in primo piano), non del trasporto.
+
+## Chiusura
+`apt purge remotix`: pacchetto `no packages found`, nessun file in `/etc /usr /var /root /home /opt /run` con nome remotix, nessun utente `remotix`, nessun riferimento in `pam.d`/`apparmor.d`/`polkit-1`. Reinstallato giro5, servizio abilitato e attivo.
+VM spenta (11:14), Radeon libera ("Radeon held by VM: none"), `pgrep -c qemu`=0, istantanea `giro5` creata, registratore fermo. "SMU is resuming" = 0 per tutta la durata.
