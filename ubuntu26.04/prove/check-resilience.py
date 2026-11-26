@@ -182,9 +182,12 @@ def check_restart(a, box, tag):
     try:
         ctx, text0, pid0 = bring_up(a, box, rig, "rs1", "resil")
         t0 = time.time()
-        c, t = box.run("systemctl restart remotix 2>/dev/null; sleep 2; systemctl is-active remotix 2>/dev/null", timeout=90)
-        if t.strip().splitlines()[-1:] != ["active"]:
-            raise Fail("the service is not active after the restart: %s" % t[-150:])
+        # the restart's own stderr is kept apart (RXERR) so that a FAIL can show it; only systemd's «changed on disk» warning is taken out of the text
+        c, t = box.run("systemctl restart remotix 2>/tmp/rx-restart.err; sleep 2; echo RXERR; grep -v 'changed on disk' /tmp/rx-restart.err; rm -f /tmp/rx-restart.err; "
+                       "echo RXSTATE; systemctl is-active remotix 2>/dev/null", timeout=90)
+        state = t.split("RXSTATE")[-1].strip().splitlines()[-1:]
+        if state != ["active"]:
+            raise Fail("the service is not active after the restart: state %s; restart error: %s" % (state, " ".join(t.split("RXERR")[-1].split("RXSTATE")[0].split())[:200] or "(none)"))
         told = page_told(rig, 45)
         up = wait_port(a.box)
         if not told:

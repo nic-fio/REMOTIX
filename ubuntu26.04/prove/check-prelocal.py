@@ -192,9 +192,13 @@ def unit_ids_of(box, user):
     return [" ".join(l.split()) for l in box.run(UNIT_IDS % {"u": user})[1].splitlines() if l.strip()]
 
 
-def unit_residue(box, user, units, remote_procs=None):
-    """(real, ignored): of the units that are still active with the same invocation, the ones that hold a process (or are not slices/sockets) and the
-    ones that do not (a `.slice` holding no process of the REMOTE desktop: empty, or with the same name in the local session of the user; a `.socket` or `.timer`, shared by the remote and the local session)."""
+def unit_residue(box, user, units, t_dm, remote_procs):
+    """(real, ignored): of the units that are still active with the same invocation, the ones that are a residue of the remote desktop (real) and the ones
+    that are not (ignored): a `.socket` or `.timer`, `gnome-keyring-daemon.service` (shared by the remote and the local session), and a `.slice` that
+    holds only processes of the LOCAL session. `t_dm` = the BOX epoch (seconds) of the display-manager restart.
+    A `.slice` is ignored ONLY if the command in the box finished (sentinel RXOK, the cgroup was readable) and EVERY process in its subtree (the processes of
+    a slice live in its CHILD units, so the whole subtree is read) was born after t_dm (a 2 s tolerance) or is a tolerated helper, and none of them is in
+    `remote_procs`. Anything else, including «could not look» (no sentinel, `?`), keeps the slice as a residue: never «could not look» = «empty»."""
     real, ignored = [], []
     for ul in units:
         un = ul.split()[0]
@@ -202,21 +206,24 @@ def unit_residue(box, user, units, remote_procs=None):
             # gnome-keyring-daemon.service: socket-activated by the user manager and also started by the LOCAL session alone (pam_gnome_keyring auto_start in /etc/pam.d/lightdm, measured 26 Nov 2026 on
             # Xubuntu: a local autologin of a fresh user has it active) - one daemon per user, shared by the remote and the local session
             ignored.append(ul); continue
-        if un.endswith(".slice") and remote_procs is not None:
-            rows = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
-                           "if [ -n \"$cg\" ] && [ -d \"/sys/fs/cgroup$cg\" ]; then for p in $(find \"/sys/fs/cgroup$cg\" -name cgroup.procs -exec cat {} + 2>/dev/null); do "
-                           "[ -r /proc/$p/stat ] && echo \"$p $(sed 's/.*) //' /proc/$p/stat | awk '{print $20}') $(cat /proc/$p/comm)\"; done; else echo '?'; fi; true" % (user, un))[1].split("\n")
-            if "?" not in [r.strip() for r in rows] and not any(tuple(r.split(None, 2)) in {(a, b, c) for a, b, c in remote_procs} for r in rows if r.strip()):
-                ignored.append(ul); continue
-            real.append(ul); continue
         if un.endswith(".slice"):
-            # the processes of a slice live in its CHILD units: `cgroup.procs` of the slice alone is always empty, so the whole subtree is
-            # counted; a cgroup that cannot be read answers `?` and the slice stays a real residue (never «could not look» = «empty»)
-            n = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
-                        "if [ -n \"$cg\" ] && [ -d \"/sys/fs/cgroup$cg\" ]; then find \"/sys/fs/cgroup$cg\" -name cgroup.procs -exec cat {} + 2>/dev/null | wc -l; "
-                        "else echo '?'; fi" % (user, un))[1].strip().split()[-1:]
-            if n and n[0] == "0":
-                ignored.append(ul); continue
+            rows = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
+                           "if [ -n \"$cg\" ] && [ -d \"/sys/fs/cgroup$cg\" ]; then bt=$(awk '/^btime/{print $2}' /proc/stat); hz=$(getconf CLK_TCK); "
+                           "for p in $(find \"/sys/fs/cgroup$cg\" -name cgroup.procs -exec cat {} + 2>/dev/null); do "
+                           "[ -r /proc/$p/stat ] || continue; st=$(sed 's/.*) //' /proc/$p/stat | awk '{print $20}'); "
+                           "echo \"$p $st $((bt + st / hz)) $(cat /proc/$p/comm)\"; done; echo RXOK; else echo '?'; fi; true" % (user, un))[1].splitlines()
+            rows = [r.strip() for r in rows if r.strip()]
+            remote = {(a, b, c) for a, b, c in remote_procs}
+            if rows and rows[-1] == "RXOK" and "?" not in rows:
+                old = []
+                for r in rows[:-1]:
+                    f = r.split(None, 3)
+                    if len(f) != 4 or not f[2].isdigit():
+                        old.append(r); continue     # a row that cannot be read is not «local»
+                    if (f[0], f[1], f[3]) in remote or (int(f[2]) < t_dm - 2 and not is_helper(f[3])):
+                        old.append(r)
+                if not old:
+                    ignored.append(ul); continue
         real.append(ul)
     return real, ignored
 
@@ -327,6 +334,7 @@ def busy_case(box_name, user, kind):
         autologin(box, de, user, True)
         bench_on = True
         t_dm = time.time()
+        t_dm_box = int(box.run("date +%s")[1].split()[-1])     # the same instant on the BOX clock (unit_residue compares process start times)
         dm_restart(box, de)
         loc, arrived = {}, None
         while time.time() < t_dm + LOCAL_CAP:
@@ -362,7 +370,7 @@ def busy_case(box_name, user, kind):
             procs_left = [x for x in remote_procs if x in now]
             units_left = [u for u in unit_ids_of(box, user) if u in units_before]
             if units_left:   # an EMPTY slice or a socket-activation socket left behind in the shared user manager is not a piece of the desktop (found on Debian 13, 26 Nov 2026)
-                units_left, empty_left = unit_residue(box, user, units_left, remote_procs)
+                units_left, empty_left = unit_residue(box, user, units_left, t_dm_box, remote_procs)
             rsess = ctx.remote_sessions(user)
             marks = box.run(KDE_MARKS % {"u": user})[1].strip()
             if not (procs_left or units_left or rsess or marks) or time.time() > end:
