@@ -4424,7 +4424,7 @@ static gboolean start(uint32_t width, uint32_t height)
 	environment = compose_environment();
 	if (!environment)
 		return FALSE;
-	if (e_kde())
+	if (e_kde() || e_xfce() || e_lxqt())
 		manager_set_locale(environment);
 
 	/*

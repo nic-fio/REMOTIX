@@ -760,9 +760,8 @@ void kwin_close(KwinSession *session)
 /*
  * ⭐ PHASE 17 (§6.5-bis) — the PACKAGE ships the file, REMOTIX CHECKS it.
  *    Until phase 16 the server wrote it as root at every start; now it is a
- *    package file (`packaging/{debian,rpm,arch}`, identical byte for
- *    byte), and a program that rewrites a package file creates TWO truths
- *    about what is installed (`dpkg -V`, `rpm -V` would flag it).
+ *    package file (`debian/`), and a program that rewrites a package file
+ *    creates TWO truths about what is installed (`dpkg -V` would flag it).
  *    ⇒ Here it is only looked at, and if it is wrong the code and the remedy are given.
  *
  * The model of the file is still `org.kde.krdpserver.desktop` (KDE's RDP server):
@@ -770,8 +769,7 @@ void kwin_close(KwinSession *session)
  * (`executable_path_proc.cpp:11-14`).  Three checks, one code each:
  *   RX-KDE-001  the file is missing or cannot be read;
  *   RX-KDE-002  `Exec=` does not lead to the running binary (the real path:
- *               `/usr/libexec/remotix/remotix` on deb and rpm,
- *               `/usr/lib/remotix/remotix` on Arch, something else in a bench);
+ *               `/usr/libexec/remotix/remotix` in the package, something else in a bench);
  *   RX-KDE-003  `zkde_screencast_unstable_v1` is missing from X-KDE-Wayland-Interfaces.
  */
 static bool exec_leads_to(const char *exec, const char *canonical, char **seen)
@@ -809,7 +807,7 @@ bool kwin_check_permission(char *why, size_t how_much)
 	}
 	if (!g_key_file_load_from_file(keys, PERMISSION_DESKTOP_FILE, G_KEY_FILE_NONE, &mistake)) {
 		snprintf(why, how_much,
-		         "RX-KDE-001: %s %s (%s). Remedy: reinstall the package (apt install --reinstall remotix)",
+		         "RX-KDE-001: %s %s (%s). Remedy: reinstall the package from its file (sudo apt install --reinstall ./remotix_<version>_amd64.deb)",
 		         PERMISSION_DESKTOP_FILE,
 		         g_error_matches(mistake, G_FILE_ERROR, G_FILE_ERROR_NOENT) ? "is missing"
 		                                                                  : "cannot be read",
@@ -820,7 +818,7 @@ bool kwin_check_permission(char *why, size_t how_much)
 	if (!exec || !exec_leads_to(exec, canonical, &seen)) {
 		snprintf(why, how_much,
 		         "RX-KDE-002: in %s Exec=%s, but the running binary is %s. Remedy: "
-		         "reinstall the package (apt install --reinstall remotix)",
+		         "reinstall the package from its file (sudo apt install --reinstall ./remotix_<version>_amd64.deb)",
 		         PERMISSION_DESKTOP_FILE, seen ? seen : "(missing)", canonical);
 		goto fine;
 	}
@@ -837,7 +835,7 @@ bool kwin_check_permission(char *why, size_t how_much)
 	if (!va) {
 		snprintf(why, how_much,
 		         "RX-KDE-003: in %s X-KDE-Wayland-Interfaces=%s, without "
-		         "zkde_screencast_unstable_v1. Remedy: reinstall the package (apt install --reinstall remotix)",
+		         "zkde_screencast_unstable_v1. Remedy: reinstall the package from its file (sudo apt install --reinstall ./remotix_<version>_amd64.deb)",
 		         PERMISSION_DESKTOP_FILE, interfaces ? interfaces : "(missing)");
 		goto fine;
 	}
