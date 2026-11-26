@@ -1,3 +1,11 @@
+# DIVIETO: P7 e P8 e il riavvio del display manager fanno CADERE IL SERVER (26 nov 2026)
+Due volte (01:17 e 08:26) il server intero si e' bloccato, nello stesso passo sulla VM `kde`: `check-prelocal.py`, P1-P6 passati, poi P7
+(accesso locale vero: autologin di sddm + `systemctl restart sddm` DENTRO la VM con la Radeon passata). Un minuto dopo il server e' morto
+(memoria libera 11 GB, swap non usato: non e' la memoria). Ogni caduta richiede il ripristino a mano del proprietario.
+Con la Radeon passata e' VIETATO: `check-prelocal.py` senza `--only P1,P2,P3,P4,P5,P6` (P7/P8), `prelocal.sh`, `banco-vm/autologin-*.sh` con riavvio,
+`systemctl restart|stop gdm3|sddm|lightdm` nella VM, accessi locali grafici, `reboot` dall'interno della VM, `all.sh` senza escludere `prelocal`
+(usare `--only` con le altre voci: `LABELS` in `all.sh`). Prima di lanciare uno strumento che non si conosce, leggerne il codice.
+
 # Come si lanciano le prove sul banco a VM (scritto dal giro GNOME, 25 nov 2026)
 
 Tutto gira SUL SERVER (`nicfio@192.168.0.2`); dal tablet si comanda solo via ssh. Il tablet NON ha `rsync` (si usa `tar` via ssh).
