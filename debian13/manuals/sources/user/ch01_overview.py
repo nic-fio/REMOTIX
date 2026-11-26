@@ -43,6 +43,38 @@ S_WHAT = p("<b>REMOTIX</b> shows the desktop of a Linux machine inside a browser
          "REMOTIX is supported for up to 8 people at the same time. The program's default ceiling is 10 sessions "
          "(the administrator can change it); a machine may well serve fewer.", "How many people?")
 
+S_REQ = p("REMOTIX works only if five conditions are met. Read them <b>before</b> you install.", lead=True) + \
+    table(["", "Requirement", "Where to read more"], [
+        ["1", "<b>Debian 13 with one of the four desktops</b> (GNOME, KDE Plasma, XFCE or LXQt), on an ordinary PC "
+              "(<i>amd64</i>). REMOTIX does not install a desktop.",
+         rif("The desktops")],
+        ["2", "<b>A video card that encodes H.264</b>, Intel or AMD (or NVIDIA with its own driver). REMOTIX encodes "
+              "the desktop only on the video card and there is no encoding on the processor. On Debian the Mesa "
+              "drivers already do it: " + c("va-driver-all") + " and " + c("mesa-vulkan-drivers") + " are installed "
+              "with REMOTIX as recommended packages, and no other repository is needed.",
+         rif("Debian 13: installing")],
+        ["3", "<b>Port 7447, TCP and UDP, open between the device and the machine.</b> If the machine has a "
+              "firewall (Debian has none by default), the administrator opens the port; with ufw the package brings "
+              "an application profile called REMOTIX, which is defined but never opened: " + c("sudo ufw allow REMOTIX") + ".",
+         rif("Debian 13: the firewall")],
+        ["4", "<b>A recent browser</b>: Chrome, Edge or another Chromium browser, or Firefox on Linux.",
+         rif("What you need")],
+        ["5", "<b>The right date and time on the device you connect from.</b> The certificate of the video "
+              "connection is short-lived, made by the machine itself, and counts as valid from one hour before it "
+              "was made: a device whose clock is far wrong may fail to connect (the browser says “Opening "
+              "handshake failed”; setting the right time cures it).",
+         rif("When something does not work")],
+    ], "«TAB» — The five requirements") + \
+    p("<b>Limits that are declared, not defects.</b> These are known and were decided:") + \
+    ul([
+        "<b>A sign-in at the machine's own screen with the same user closes that user's remote desktop</b> "
+        "with its programs: unsaved work is lost (see " + rif("Leaving and coming back") + ").",
+        "<b>No unlocked keyring.</b> A program that asks for the user's keyring (the stored passwords of the "
+        "desktop) finds it locked in a remote session and asks for the password on the remote screen.",
+        "<b>No power off, restart, suspend or hibernate</b> from any desktop, for any user (see "
+        + rif("What REMOTIX is not") + ").",
+    ])
+
 S_NEED = p("Five things have to be in place.", lead=True) + \
     table(["What", "What it has to be"], [
         ["The machine",
@@ -52,15 +84,18 @@ S_NEED = p("Five things have to be in place.", lead=True) + \
          "a Wayland session; older programs made for X11 still run in it."],
         ["The video card",
          "A video card that can encode video in hardware: <b>Intel or AMD</b>, with the Mesa drivers that Debian "
-         "brings (VA-API, and Vulkan Video on AMD). REMOTIX encodes the desktop <b>only on the video card</b>: there "
+         "brings (VA-API, and Vulkan Video): Debian's Mesa already encodes H.264 and HEVC, so no extra "
+         "repository is needed. REMOTIX encodes the desktop <b>only on the video card</b>: there "
          "is no encoding on the processor. A machine with no video card at all (a virtual machine without a card "
          "passed to it, for example) is refused when you install REMOTIX."],
         ["NVIDIA cards",
-         "The program has a route for NVIDIA cards with NVIDIA's own driver (Vulkan Video), but nobody has seen it "
-         "work on a real NVIDIA card: <b>not yet verified</b>. Do not rely on it."],
+         "An NVIDIA card needs NVIDIA's own (proprietary) driver. REMOTIX then uses the card through Vulkan Video. "
+         "This worked on a real NVIDIA card (an RTX 4090) in October 2026, on Ubuntu 26.04; it has not been run "
+         "again on Debian 13 with an NVIDIA card."],
         ["The network",
          "Port <b>7447</b>, both <b>TCP</b> (the page) and <b>UDP</b> (the video and the keys). Both must be open "
-         "between the device and the machine. A network that blocks UDP, as some company networks do, cannot be "
+         "between the device and the machine; if the machine has a firewall, the administrator opens them (see "
+         + rif("Debian 13: the firewall") + "). A network that blocks UDP, as some company networks do, cannot be "
          "used."],
         ["The browser",
          "Chrome, Edge or another Chromium browser, or Firefox (the second table below)."],
@@ -80,7 +115,8 @@ S_NEED = p("Five things have to be in place.", lead=True) + \
       "what the design says, not something tried again for this release.") + \
     note("a computer, a tablet or a phone; no app or plug-in. The device only has to decode video, which every "
          "recent browser does. If your device decodes HEVC, REMOTIX uses it; otherwise it uses H.264. Firefox on "
-         "Linux uses H.264.", "What the device needs.")
+         "Linux uses H.264. The clock of the device has to be right (see " + rif("Requirements") + ").",
+         "What the device needs.")
 
 S_NOT = p("What REMOTIX deliberately does not do:", lead=True) + \
     ul([
@@ -92,7 +128,11 @@ S_NOT = p("What REMOTIX deliberately does not do:", lead=True) + \
         "is used (see " + rif("The desktops") + ").",
         "<b>No file transfer</b>, and no images or files in the clipboard: text only.",
         "<b>No microphone</b>: sound goes from the desktop to you, not back.",
-        "<b>No power off, restart, suspend or hibernate</b> from a remote desktop; and no screen lock inside it.",
+        "<b>No power off, restart, suspend or hibernate</b> from any desktop, remote or at the machine itself, "
+        "for any user: it is wanted, because other people may be working on the machine (an administrator "
+        "still can, with " + c("sudo") + " in a terminal). And no screen lock inside a remote desktop.",
+        "<b>No unlocked keyring in a remote session</b>: a program that asks for the keyring finds it locked and "
+        "asks for the password on the remote screen. This is declared and was decided.",
         "<b>No several monitors</b>, no session recording, no X11 desktop sessions (X11 programs run through "
         "XWayland), no connections from RDP, VNC or SPICE programs.",
     ])
@@ -105,8 +145,15 @@ S_DESKTOPS = p("REMOTIX works with <b>GNOME</b>, <b>KDE Plasma</b>, <b>XFCE</b> 
         "KDE Plasma, then XFCE, then LXQt. The choice is written in the service's journal at start-up, on the "
         "line “the desktop of this machine”.",
         "<b>XFCE: background.</b> On XFCE the background of the remote desktop may be black instead of your wallpaper. It is a known cosmetic defect, seen only on XFCE so far; its cause is not yet established. It does not affect the programs.",
-        "<b>XFCE, LXQt and KDE Plasma</b> run on a small compositor called labwc, which the installation brings "
-        "along (it is among the packages apt installs with REMOTIX).",
+        "<b>GNOME</b> uses its own compositor (Mutter). <b>XFCE and LXQt</b> run on a small compositor called "
+        "<i>labwc</i>, the one of Debian's own repositories. <b>KDE Plasma</b> runs inside that same labwc: it "
+        "is the labwc of the distribution that hosts KWin, and KWin does not run alone. labwc is a recommended "
+        "package, so apt installs it with REMOTIX unless recommended packages are switched off (see "
+        + rif("Debian 13: installing") + ").",
+        "<b>If labwc is missing</b> on a machine whose desktop is XFCE or LXQt, nobody can be shown a desktop: "
+        "the package says so when it is installed, the journal names the package, and a user who signs in gets "
+        "the sentence “could not open your session” instead of a black screen (see "
+        + rif("When something does not work") + ").",
         "<b>No desktop at all</b> on the machine: the service says so at start-up and no desktop can be shown.",
     ]) + \
     note("REMOTIX applies a few rules to the desktop while a remote session lasts (the shut down, restart, suspend "
@@ -125,6 +172,7 @@ S_LICENCE = p("REMOTIX is free for personal use and for non-profit associations,
 
 CHAPTER = ("What REMOTIX is", [
     ("REMOTIX in short", S_WHAT),
+    ("Requirements", S_REQ),
     ("What you need", S_NEED),
     ("What REMOTIX is not", S_NOT),
     ("The desktops", S_DESKTOPS),

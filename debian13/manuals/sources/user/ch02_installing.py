@@ -4,7 +4,7 @@ src/remotix.pam, src/certificates.c, src/main.c (options), docs/SPECS.md §4.1."
 from build import c, note, p, rif, steps, sysf, table, term, ui, ul, warn
 
 S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. There is no installer program. These "
-             "are the steps; the commands are in the sections below. REMOTIX 1.0.1 is for Debian 13 (trixie).", lead=True) + \
+             "are the steps; the commands are in the sections below. REMOTIX 1.2.0 is for Debian 13 (trixie).", lead=True) + \
     steps([
         "<b>Check the machine</b>: one of the four desktops installed, a video card that encodes (see "
         + rif("What you need") + "), and a way to reach it on the network.",
@@ -22,9 +22,9 @@ S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. Th
       "(see " + rif("Users, groups and what REMOTIX changes") + ").")
 
 S_DEB_INSTALL = p("This section is for <b>Debian 13 (trixie)</b>. The package is a single file named like "
-                  + c("remotix_1.0.1-1+deb13_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
+                  + c("remotix_1.2.0-1+deb13_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
                   "an ordinary PC). Put it on the machine and, in the folder where it is, run:", lead=True) + \
-    term("$ sudo apt install ./remotix_1.0.1-1+deb13_amd64.deb\n"
+    term("$ sudo apt install ./remotix_1.2.0-1+deb13_amd64.deb\n"
          "$ sudo systemctl enable --now remotix\n"
          "$ systemctl status remotix", "Install and start") + \
     p("The first command installs REMOTIX and what it needs. The second makes the service start with the machine "
@@ -42,16 +42,19 @@ S_DEB_INSTALL = p("This section is for <b>Debian 13 (trixie)</b>. The package is
                                                           "GNOME and KDE Plasma"],
         ["Recommended (installed by default)", c("va-driver-all") + ", " + c("mesa-vulkan-drivers"),
          "the video card's drivers: <b>without them nothing can be encoded</b>"],
-        ["Recommended", c("labwc") + ", " + c("wlr-randr") + ", " + c("xwayland"), "XFCE, LXQt and KDE Plasma "
-                                                                              "run on labwc; older X11 programs "
-                                                                              "need XWayland"],
+        ["Recommended", c("labwc") + ", " + c("wlr-randr") + ", " + c("xwayland"), "XFCE and LXQt run on labwc "
+                                                                              "(KDE Plasma runs inside it); older "
+                                                                              "X11 programs need XWayland"],
         ["Recommended", c("dconf-cli"), "GNOME: keeps the rules of the remote session apart from the user's "
                                         "own settings"],
         ["Recommended", c("fonts-dejavu-core"), "a font, so that the desktop's compositor can draw text"],
     ], "«TAB» — What apt installs with REMOTIX") + \
     warn("if you install with " + c("--no-install-recommends") + " you lose the recommended packages, among them the "
-         "video card's drivers: the installation succeeds, but the desktop cannot be shown until they are "
-         "installed.", "Do not skip the recommended packages.") + \
+         "video card's drivers and, on XFCE and LXQt, labwc: the installation succeeds, but the desktop cannot be "
+         "shown until they are installed. When labwc is missing on a machine whose desktop is XFCE or LXQt the "
+         "installation prints a warning (" + c("sudo apt install labwc") + "), and a user who signs in gets the "
+         "generic “could not open your session” sentence, with the missing package named in the journal.",
+         "Do not skip the recommended packages.") + \
     p("<b>No desktop is installed by REMOTIX.</b> If the machine has none of the four, the service starts but says "
       "in its journal that it has found no desktop.") + \
     note("from the moment REMOTIX is installed, nobody can power off, restart, suspend or hibernate the machine from "
@@ -101,7 +104,7 @@ S_DEB_FIREWALL = p("REMOTIX never changes the firewall: the package only <i>desc
     term("$ sudo ufw app info REMOTIX\n"
          "$ sudo ufw allow REMOTIX", "Open the port with ufw") + \
     p("To let only your own network in, give the port with an address instead of the profile (adapt the address):") + \
-    term("$ sudo ufw allow from 192.168.1.0/24 to any port 7447", "Only the local network") + \
+    term("$ sudo ufw allow from 192.0.2.0/24 to any port 7447", "Only the local network") + \
     p("<b>With another firewall</b>, open 7447 for TCP and for UDP by hand.") + \
     note("if you change the port (see " + rif("Debian 13: port, name and other settings") + "), the ufw profile "
          "still says 7447. Open the new port instead, for TCP and for UDP.", "A different port.")
@@ -171,7 +174,7 @@ S_DEB_SETTINGS = p("The settings are a few lines in a small file. REMOTIX's defa
     p("A file that changes the port, names the machine by its IP address and lowers the ceiling to six sessions "
       "looks like this:") + \
     term("REMOTIX_PORT=7500\n"
-         "REMOTIX_OPTIONS=--name 192.168.1.10 --session-cap 6", "/etc/remotix/remotix.conf.d/local.conf") + \
+         "REMOTIX_OPTIONS=--name 192.0.2.10 --session-cap 6", "/etc/remotix/remotix.conf.d/local.conf") + \
     p("Then restart the service for the change to take effect:") + \
     term("$ sudo systemctl restart remotix", "Apply") + \
     p("The two lines are " + c("REMOTIX_PORT") + " (the port, for TCP and UDP; default 7447) and "
@@ -212,9 +215,14 @@ S_DEB_UPGRADE = p("<b>Upgrading.</b> Install the newer file in the same way. If 
     ul([
         "The restart closes every remote desktop with its programs: unsaved work is lost. At the next sign-in "
         "people get a new desktop.",
+        "If the machine has <code class=\"sys\">needrestart</code>, the package tells it not to restart "
+        "REMOTIX by itself after a library update: the service is only listed for a manual restart, which you "
+        "do when nobody is working.",
         "If you changed a file that the package also ships (for example " + sysf("/etc/pam.d/remotix")
         + "), apt asks which version to keep.",
         "An upgrade is never refused because of the video card.",
+        "If the journal ever tells you to <i>reinstall the package from its file</i> (a file of REMOTIX is missing "
+        "or damaged), run " + c("sudo apt install --reinstall ./remotix_" + "1.2.0-1+deb13" + "_amd64.deb") + " from the folder of the file.",
     ]) + \
     p("<b>Removing.</b> There are two ways, and the difference is what stays behind. <b>Warn the people connected "
       "first</b>: both close the remote desktops and everything running in them, and unsaved work is lost.") + \
@@ -225,7 +233,7 @@ S_DEB_UPGRADE = p("<b>Upgrading.</b> Install the newer file in the same way. If 
         "The users that REMOTIX had added to a group for the video card are taken out of it again, and the "
         "permissions it gave on the card are taken back.",
         "The line REMOTIX had added to " + sysf("/etc/pam.d/common-session") + " (see "
-        + rif("Users, groups and what REMOTIX changes") + ") is taken out again.",
+        + rif("Users, groups and what REMOTIX changes") + ") is taken out again, once the service has stopped.",
         "Your settings stay: " + sysf("/etc/remotix/") + ", " + sysf("/etc/pam.d/remotix") + ", the AppArmor "
         "profile, and the data folder " + sysf("/var/lib/remotix/") + " (certificates, ban list).",
     ]) + \

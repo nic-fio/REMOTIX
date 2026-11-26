@@ -195,6 +195,12 @@ S4 = p("The login form has two fields and a button — " + c("#username") + ", "
       + " is at or below zero, a " + c("POINTER") + " is held aside and replaced by the next one, and any key or "
       "button pushes it out first (measured from Samsung DeX on 14 Aug 2026: median round trip 135 ms but worst 2161 ms, "
       "a queue rather than a slow network). Keys and buttons are never dropped.") + \
+    p("<b>Why a connection closed.</b> When a QUIC connection ends, the server writes in its log who closed it and why (" + c("close_why()") + " in " + c("transport.c") + "; see " + rif("Quality, degradation and budget") + "): "
+      "the peer or the server, the QUIC error, «idle timeout (silence)» for a silent line, and for a CRYPTO error the name of the TLS alert (42 bad_certificate, 45 certificate_expired, 46 certificate_unknown, 48 unknown_ca) "
+      "with «TLS handshake COMPLETED» or «NOT completed».") + \
+    warn("the certificate the server makes for the session is valid from one hour <i>before</i> it was made (" + c("notBefore") + " = now − 3600 s, " + c("certificates.c") + "). The browser checks it against the clock of "
+         "<i>its own device</i>: a device whose clock is more than an hour <i>behind</i> the server's gets «Opening handshake failed» and nothing else. "
+         "The cure is to set the clock of the device; the log line above should then name a TLS alert (45, 46 or 42). The user manual lists the clock among the requirements.", "The client's clock.") + \
     p("The page does not store the user name, the password or any session token: the only thing it keeps on the device is the keyboard choice "
       "(" + rif("What the page stores and what it declares") + ").")
 
@@ -594,6 +600,20 @@ S15 = p("A session ends for one of four reasons — a " + c("FAREWELL") + " from
       "way — after a logout or a reboot the graphical session is born from scratch, measured 9 s and about 32 s — and "
       "after " + c("FIRST_FRAME_WAIT_S") + " = 6 s without a frame it explains with numbers: if the granted "
       "canvas differs from the requested one, that is the likely cause; otherwise the server log has it.") + \
+    p("<b>When the server ends the session.</b> The " + c("FAREWELL") + " 0x10 (" + c("TERMINATED") + ", «the graphical session has ended») is sent by "
+      "the parent when its child reports " + c("MSG_SESSION_FINISHED") + ". Since 19 Nov 2026 the child sends that message <i>before</i> it dismantles the "
+      "stage (" + c("session_over_early()") + " in " + c("child.c") + "), not at the next remount: dismantling the stage waits for PipeWire, and PipeWire's "
+      "real-time module can stay in a D-Bus call to RealtimeKit for up to 25 s where " + c("rtkit-daemon") + " is installed but does not start. Before the "
+      "change the page stood on its last image, with no word, for up to 17 s (the comments record it as measured on Ubuntu 26.04, 18 Nov 2026). The early farewell "
+      "is sent only on a certain death, " + c("session_life()") + " = dead (the session bus answered and the compositor's name has no owner), never on «unknown»; KDE is "
+      "excluded, because a KWin restarted by systemd leaves its name without an owner for a moment, and waits for a proof on a real machine. The parent "
+      "then counts the child as closing, so a login in the meantime gets the true 0x0E «still closing». A login of the same name that is still waiting for PAM, or "
+      "whose refusal is being kept for the fixed second, does not receive the farewell (" + c("wt_dismiss_user_session_over()") + "), so it is never told «the session has "
+      "ended» in place of its own answer. The roads and the other reasons are in " + rif("When the session ends before the stage is gone") + " and " + rif("The RCP/1 protocol") + ". "
+      "On KDE with a local login the close of the remote desktop is forced through " + c("graphical-session.target") + " after at most " + c("KDE_PRELOCAL_ORDERLY_MS") + " = 5000 ms of waiting (that is the root side, " + rif("When the session ends before the stage is gone") + "; the page sees only the farewell).") + \
+    p("The page's sentence for 0x0E stays generic. The code of the page counts six roads to that reason (an unknown layout, a full slot register, a canvas that cannot "
+      "be granted under " + c("video.max_size") + ", memory exhausted on the control channel, all stages busy, and «the desktop's compositor is not "
+      "installed»). Four more uses of 0x0E are not in that count: the previous desktop still closing, logind unable to say whether a local session exists, a failed birth, and the refusal for a scale that is not 1 (" + rif("Screen capture") + "); see " + rif("Admission: the session cap and the budget") + ".") + \
     p("<b>Logging out.</b> The page keeps no key combination for itself: every combination "
       "reaches the remote desktop, and the user leaves from the desktop's own menu, which REMOTIX keeps available "
       "(" + rif("The four desktops") + "). There was once an exit shortcut, " + c("Ctrl+Alt+End") + ", and it was removed because the "

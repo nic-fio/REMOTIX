@@ -163,6 +163,10 @@ S4 = p("In the classic layout (" + c("cl_*") + " functions, for “classic”, i
       + c("both") + ", both arrows overlaid, kept for comparison. In the touch layout the drawn arrow stays, because a finger has no cursor to restyle. "
       "A zero-by-zero shape (RCP §5.5) means “hidden” and is applied in both modes. The cursor "
       "shape itself comes from the capture (" + rif("Screen capture") + ").") + \
+    p("<b>Mutter and the first movement.</b> The comment of " + c("input.c") + " records that on Mutter 51 (Fedora 45 GNOME, measured on 23 Nov 2026, with one user and with a phone) the <i>first</i> absolute movement after the pointer device starts or restarts reaches the windows with one of its two "
+      "coordinates at 0 and the other right, so a click made at once, such as the tap of a phone, lands on the edge of the screen. The movements that follow are exact, and so is the same position sent a second time right after the first. "
+      "The cure is in " + c("input.c") + ": the field " + c("pointer_primed") + " is cleared at every " + c("DEVICE_RESUMED") + " of the pointer, and the first absolute movement is sent <i>twice</i>. It touches only the libei path (GNOME), "
+      "not the wlroots one, the comment in the code says it is to be removed when Mutter is fixed, and the repeat is harmless on compositors that do not need it. The Debian 13 GNOME is Mutter 48: the defect was not measured there, and the repeat runs all the same.") + \
     p("<b>Pointer Lock only where hover is missing.</b> The lock is requested at the first click (the gesture "
       "it requires) only if, before that click, no move with buttons up arrived, or the last one is "
       + c("CL_JUMP_PX") + " = 8 px or more from the click point. On a computer the last move falls on the "
@@ -303,8 +307,13 @@ S7 = p("Some combinations never reach the page, and some reach it while the brow
          "both are hidden by the style sheet unless the page is in diagnostics mode (" + c("body:not(.diagnostics)") + ", " + rif("Measurements and the diagnostics mode") + "): the bar was covering the bottom of the desktop and "
          "the corner button was pressed by mistake while aiming at the desktop's own controls. The consequence, and the sentence that " + c("SPECS.md") + " §7.3-bis would require "
          "(“the page declares which shortcuts it cannot deliver”), is that the notice is written in the page log at session start and is visible only with " + c("?logbook") + ". A user "
-         "whose own computer keeps Ctrl+Alt+Del and who has no way to open the bar cannot send it. The final run of " + c("prove/all.sh") + " on 17 Nov 2026 lists this check as not green for exactly this reason; "
-         "the specification text is still to be aligned (" + rif("Appendix C — Known issues and open points") + ").", "Hidden by design, not yet reconciled with the specification.") + \
+         "whose own computer keeps Ctrl+Alt+Del and who has no way to open the bar cannot send it. The button is hidden by decision (" + c("DECISIONS-11.md") + " §11.54), and the checks follow it: "
+         + c("page-cad-hidden") + " passes when, outside diagnostics, the page shows neither the bar nor the button (" + c("check-input.py") + "), "
+         "and " + c("page-ctrl-alt-end-passes") + " passes when Ctrl+Alt+End reaches the desktop like any other combination. The text of " + c("SPECS.md") + " §7.3-bis is still to be aligned (" + rif("Appendix C — Known issues and open points") + ").", "Hidden by design, not yet reconciled with the specification.") + \
+    p("<b>Ctrl+Alt+Del on KDE.</b> On Plasma 6.4 and later the shortcut did not open the logout screen: the prompt first asks " + c("org.freedesktop.ScreenSaver.GetActive") + " and nobody owned that name "
+      "(measured on Kubuntu with Plasma 6.6.7, 18 Nov 2026). The cure is the sidecar of " + c("kwin.c") + " "
+      "described in " + rif("KDE: the KWin screencast protocol and the nested KWin") + " (on Debian it is started by " + c("kwin_nested_alive()") + "). It was measured with a stand-in on the Kubuntu generation (the prompt appears within 1 s). "
+      "On Debian the sidecar is the same code and KWin is 6.3.6; the Ctrl+Alt+Del path on Debian's KDE was not measured by hand for this manual.") + \
     p("There is no page-side exit shortcut: " + c("Ctrl+Alt+End") + " was removed because the user's own desktop takes it before the browser, so every key combination "
       "the browser lets through reaches the remote desktop, and the way out is the desktop's own " + ui("Log Out…") + " (which " + c("session.c") + " keeps available, see " + rif("The four desktops") + "). "
       "The page says so in its log at the start of each session.")
@@ -522,7 +531,9 @@ S12 = p("On GNOME and KDE the child is a " + c("libei") + " sender on a socket t
       "the single-process server and the child) stops it when the session is over, <b>only if</b> a process of the unit's own cgroup is recognised as ours: its command line carries the folder "
       + c("remotix-kwin-host") + " or the option " + c("--kwin-nested") + " (" + c("KDEHOST_MARK") + ", " + c("KDEHOST_OPTION") + "). A service with the same name and no mark is a local desktop's, and is said in the "
       "log and never touched. The process is recognised from " + c("/proc") + " and its cgroup, never by name and never with " + c("kill") + "; the stop is " + c("systemctl --user stop") + " run as the user. In split mode "
-      "the root side does the periodic sweep (" + c("kdehost_sweep()") + " in " + c("rootside.c") + "), since the network-facing user can do neither.") + \
+      "the root side does the periodic sweep (" + c("kdehost_sweep()") + " in " + c("rootside.c") + "), since the network-facing user can do neither. "
+      "When a <i>local</i> login is held back, the child waits up to " + c("KDE_PRELOCAL_ORDERLY_MS") + " = 5000 ms for the orderly close of the KDE session and then forces it by stopping " + c("graphical-session.target")
+      + " (" + c("StopUnit") + " in " + c("session.c") + "), which takes with it KWin, plasmashell and the rest of the desktop (" + rif("When the session ends before the stage is gone") + ").") + \
     warn("until 25 Aug 2026 " + c("input_close()") + " called " + c("ei_disconnect()") + " and "
          + c("ei_unref()") + " unconditionally, and a channel opened 33 ms earlier killed the child with "
          "SIGSEGV before the first frame. In libei 1.3.901, a context whose handshake was requested but not "
@@ -567,6 +578,11 @@ S13 = p("Input keeps a ledger of everything pressed (RCP §11), because a modifi
       "descriptor, that triggers it (both verified with injected faults). Releasing before a resize and cure A close "
       "the doors that REMOTIX controls; cure C repairs the doors it does not control (" + c("monitors-changed") + ", keymap changes, "
       "and whatever GNOME adds: " + c("meta_eis_viewport_notify_changed()") + " is new in GNOME 48.5).") + \
+    p("<b>Healing for the other desktops.</b> " + c("input_dropped()") + " says whether the compositor has hung up the input channel. For libei it reads the flag of the channel; since 19 Nov 2026 it also answers for "
+      "wlroots (it asks " + c("wlr_input_dropped()") + " on the virtual keyboard and pointer). Before, it always said no there, and the child of an XFCE session did not notice the Log Out. The child looks at it at most once a second, "
+      "and only for GNOME and the wlroots desktops (KDE has its own check of the connection to KWin), together with " + c("session_life()") + ", which answers <i>alive</i>, <i>dead</i> or <i>unknown</i>: "
+      "the stage is dismantled at <i>dead</i>, and at <i>unknown</i> (the user's bus itself disappears for a moment at a logout) the child asks again after a second, up to " + c("EIS_UNKNOWN_ROUNDS") + " = 3 rounds, "
+      "before taking the old road. A <i>dead</i> answer also sets off the early farewell (" + rif("End of session in the page") + ").") + \
     p("Keyboard devices are not recreated by geometry changes (measured: zero keyboard swaps out of fifteen "
       "pointer swaps) but they are by keymap changes, which is why every layout change starts with "
       + c("input_release_all()") + ".")
@@ -631,9 +647,9 @@ S16 = p("What the checks of " + c("prove/") + " exercise for input, and what the
         ["Keyboard", c("kbd-text") + ", " + c("kbd-ctrl-clipboard") + ", " + c("kbd-shift-arrows") + ", " + c("kbd-alt-tab") + ", " + c("kbd-super") + ", " + c("kbd-function-keys") + ", " + c("kbd-repeat")
          + ", " + c("kbd-accents") + ", " + c("kbd-altgr") + ", " + c("kbd-not-producible") + ", " + c("kbd-capslock"),
          "green, except on KDE a held Delete key that the desktop keeps (seen only in diagnostics mode)"],
-        ["Page declarations", c("page-shortcuts-declared") + ", " + c("page-cad-button") + ", " + c("page-cad-chain") + ", " + c("page-keyboard-lock") + " (Chrome)",
-         c("page-cad-button") + " is the check that fails by design: the button is hidden unless diagnostics are on; " + c("page-cad-chain") + " proves that with diagnostics on it sends the three keys"],
-        ["Exit shortcut", c("page-ctrl-alt-end"), "does not pass, as expected: the combination was removed"],
+        ["Page declarations", c("page-shortcuts-declared") + ", " + c("page-cad-hidden") + ", " + c("page-cad-chain") + ", " + c("page-keyboard-lock") + " (Chrome)",
+         c("page-cad-hidden") + " passes when, outside diagnostics, the page shows no Ctrl+Alt+Del button; " + c("page-cad-chain") + " proves that with diagnostics on it sends the three keys"],
+        ["Exit shortcut", c("page-ctrl-alt-end-passes"), "passes when Ctrl+Alt+End reaches the desktop like any other combination (the exit shortcut was removed)"],
         ["Phone", c("check-phone.py"), "Chrome device emulation only; GNOME 18 of 19, the missing one being the first tap after login (" + rif("The touch pointer is announced to the server") + "); a real phone was not used"],
     ], "«TAB» — Input checks and their state") + \
     p("The final run of " + c("prove/all.sh") + " gave XFCE 111 of 118, LXQt 112, KDE 111 and GNOME 104; every non-green item is explained in " + c("PIANO.md") + " and the input ones are in the table above "

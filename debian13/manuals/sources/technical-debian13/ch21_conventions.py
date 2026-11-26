@@ -1,5 +1,5 @@
 """Chapter 21 — Conventions. Sources: CLAUDE.md, and what is observed in src/ (log.h, log.c, rcp.h, session.h, cid.h, msgrate.h,
-Makefile), debian/, build/, prove/, boxes/, docs/. Counts were taken from the tree on 17 Nov 2026."""
+Makefile), debian/, build/, prove/, boxes/ (older), server/, docs/. Counts were taken from the tree on 17 Nov 2026; the rows on build/, prove/, server/ and boxes/ were brought to 1.2.0 on 26 Nov 2026."""
 from build import c, h4, note, p, rif, sysf, table, tip, ul, warn
 
 # ── 21.1 ─────────────────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ S1 = p("The rules that are written are in " + c("CLAUDE.md") + ", seven lines of
         ["the service is installed disabled and not started; the administrator enables it",
          c("debian/rules") + " passes " + c("--no-enable --no-start") + " to " + c("dh_installsystemd")],
         ["the owner decides how and when tests run", "the checks of " + c("prove/") + " are started by hand; nothing in the package or the build runs them"],
-        ["licences ship in the package", c("LICENSE.md") + " is appended to " + c("debian/copyright") + " by " + c("build/build-deb.sh") + "; "
+        ["licences ship in the package", c("LICENSE.md") + " is appended to " + c("debian/copyright") + " by " + c("build/build-deb-vm.sh") + " (and by the older " + c("build/build-deb.sh") + "); "
          + c("THIRD-PARTY-LICENSES") + " is installed under " + c("/usr/share/doc/remotix")],
     ], "«TAB» — The written rules and what the tree does with them")
 
@@ -42,7 +42,7 @@ S2 = p("The text of the project is English: comments, log lines, messages, docum
         ["RCP message and reason names", "UPPER_SNAKE words of the protocol", c("HERE_I_AM") + ", " + c("TERMINATE_SESSION") + ", " + c("ALREADY_ACTIVE_REMOTELY")],
         "Other languages",
         ["page", "one file, " + c("src/page.html") + ", with the script inside; constants UPPER, functions mostly snake_case", c("AUDIO_BUFFER_MS") + ", " + c("CODEC_RCP")],
-        ["shell", "tabs for indentation; " + c("set -uo pipefail") + " in the build script (no " + c("-e") + ": it tests each step itself) and " + c("set -euo pipefail") + " in the server script; one status line per step", c("build/build-deb.sh") + ", " + c("server/prepara-server.sh")],
+        ["shell", "tabs for indentation; " + c("set -uo pipefail") + " in the build script and in the server preparation script (no " + c("-e") + ": they test each step themselves) and " + c("set -euo pipefail") + " in the live-USB installer; one status line per step", c("build/build-deb-vm.sh") + ", " + c("server/prepara-server-vm.sh") + ", " + c("server/live-installa.sh")],
         ["python (prove/)", "four spaces, a docstring that says what the check proves and how to run it, verdict lines", c("prove/check-base.py")],
     ], "«TAB» — Naming as observed") + \
     h4("Italian that remains in identifiers") + \
@@ -136,21 +136,21 @@ S5 = p("Logging has one funnel, " + c("src/log.c") + ", so that rules about what
 S6 = p("The tree has a few fixed places and a few habits that follow from where a thing runs.", lead=True) + \
     table(["Folder", "Holds", "Note"], [
         [c("src/"), "the product: C sources and headers, " + c("Makefile") + ", " + c("page.html") + ", the PAM file, the polkit rules and helper, " + c("protocols/") + " (XML), "
-         + c("opus-wasm/") + " (the audio decoder module)", "built only by " + c("debian/rules") + " in the build image"],
+         + c("opus-wasm/") + " (the audio decoder module)", "built only by " + c("debian/rules") + " on the build VM"],
         [c("debian/"), "packaging: control, rules, maintainer scripts, unit, tmpfiles, sysusers, AppArmor profile, ufw profile, KWin permission file, conf defaults", "the changelog and the licence text are added by the build script"],
-        [c("build/"), "the build image and the build script", "see " + rif("Build and release")],
-        [c("boxes/"), "the four test boxes", "see " + rif("Testing")],
-        [c("prove/"), "the checks and their libraries", "run on the dev server"],
-        [c("server/"), "dev server set-up and the virtual machine", "paths under " + sysf("/media/REMOTIX-DEBIAN")],
+        [c("build/"), "the build script for the build VM, the static-library script, and the older container script and image", "see " + rif("Build and release")],
+        [c("boxes/"), "the older container test boxes (not used by the VM bench)", "see " + rif("Testing")],
+        [c("prove/"), "the checks and their libraries, and " + c("banco-vm/") + " (the face the checks use for the virtual machines)", "run on the dev server"],
+        [c("server/"), "dev server set-up, the virtual machine bench (" + c("vm-radeon.sh") + ", " + c("prepara-server-vm.sh") + "), the live-USB installer and the older single-VM and container files", "paths under " + sysf("/media/REMOTIX-DEBIAN")],
         [c("docs/"), "specification, protocol, decisions, lessons, inventories", "the common reference; not copied into this manual"],
         [c("manuals/"), "this manual and the user manual, generated from " + c("manuals/sources/"), "regenerated by " + c("manuals/sources/build.py") + ", checked with " + c("--check")],
         [c("LICENSE.md") + ", " + c("THIRD-PARTY-LICENSES") + ", " + c("licenses/"), "the two files are the licence texts that ship in the package; " + c("licenses/") + " holds one page (" + c("how-it-works.html") + ") that the build script does not copy into the package", "see " + rif("The package")],
     ], "«TAB» — The layout of the tree") + \
     ul([
-        "<b>Temporary files never go to " + c("/tmp") + " on the dev server:</b> its root file system is in RAM. The build script sets " + c("TMPDIR") + " under its work folder.",
+        "<b>Temporary files never go to " + c("/tmp") + " on the dev server:</b> its root file system is in RAM. The checks keep their work folders in the folder the tree was copied to, on the persistent disk (the older build script set " + c("TMPDIR") + " under its work folder).",
         "<b>Nothing is deleted, moved or overwritten without the owner asking.</b> This binds the scripts too: the build script copies the tree and never edits the working tree.",
         "<b>Scripts print one status line per step</b> (" + c("OK") + " or " + c("FAIL") + ") and keep going where the next step is independent; destructive operations are named in the header "
-        "(" + c("check-package.py") + " resets the box, " + c("check-ban.py") + " bans an address and always unblocks).",
+        "(" + c("check-package.py") + " resets the box, " + c("fresh-vm.sh") + " removes the test users, " + c("check-ban.py") + " bans an address and always unblocks).",
         "<b>Generated files are marked.</b> " + c("vulkanvideo_rgb_nv12_spv.h") + " says in its first line that it is generated and not to be edited by hand.",
         "<b>The manual checks itself against the tree.</b> " + c("python3 manuals/sources/build.py --check") + " verifies that every function, file and " + c("REMOTIX_*") + " variable cited in code form exists, "
         "and flags Italian sentences.",

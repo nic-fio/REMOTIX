@@ -3,26 +3,35 @@ from build import c, note, p, rif, table, ul, warn
 def items(rows, cap):
     return table(["Item", "State"], rows, cap)
 
-S_INTRO = p("This appendix lists what is known to be open, unverified or inconsistent in 1.0.1, area by area. It is "
+S_INTRO = p("This appendix lists what is known to be open, unverified or inconsistent in 1.2.0, area by area. It is "
             "meant to be complete rather than flattering. An item is here because a source file, a check or "
             "<code>PIANO.md</code> says so; where something was read only in a comment and not observed, it is said. "
             "The last two sections list the places where code, comments and documents disagree: in every case the code "
             "was taken as the truth and the chapters describe the code.", lead=True) + \
-    note("The package has been run through <code>prove/all.sh</code> on four desktops on 17 Nov 2026 (see the chapter on "
-         "testing), on the code of 1.0.0. Release 1.0.1 changed only the choice of key positions in <code>keyboard.c</code> and the Keyboard menu of the page; "
-         "the key-position change was compared with the old rule on 98 layouts, and no full round of <code>prove/all.sh</code> on 1.0.1 is recorded in the sources read for this manual. "
-         "Nothing in this appendix is a failure of that run unless it is stated so.", "Scope.")
+    note("The package is checked with <code>prove/all.sh</code> on virtual machines, one per desktop (GNOME, KDE Plasma, XFCE, LXQt), with the "
+         "video card passed through; the reports are in <code>studio/prove-1.2.0/</code>. The checks passed on the four desktops except the items "
+         "listed below (<code>media/screen-updates</code> a little over its threshold on GNOME, KDE and LXQt, <code>pkexec</code> on GNOME, "
+         "<code>kbd-not-producible</code> with Firefox on LXQt). The checks of the local login with programs open in the remote desktop "
+         "(P7, P8 of <code>prove/check-prelocal.py</code>) were run on the bench on GNOME only; the owner tried them by hand on the four live "
+         "systems. Nothing in this appendix is a failure of those rounds unless it is stated so.", "Scope.")
 
 S_UNVERIFIED = items([
-    ["AppArmor in a session", "The profile <code>remotix_network</code> is in complain mode. It was loaded on a Debian 13 VM "
-     "(complain and enforce, no denial up to the connection) but the VM has no video card, so no session was observed. "
-     "Do not switch it to enforce before a session has been observed on a machine with a card."],
+    ["AppArmor in a session", "The profile <code>remotix_network</code> is in complain mode on purpose. With sessions on the four desktops "
+     "<code>prove/check-apparmor.py</code> (journal of the kernel since the start of the round) found no <code>ALLOWED</code> or "
+     "<code>DENIED</code> line of the profile after the 1.2.0 corrections (reading of <code>org.kde.remotix.desktop</code>, the "
+     "<code>deny unix … addr=@**</code> rule, <code>include if exists</code> of the local override). Enforce mode was not tried: do not switch it "
+     "before a wider run on machines of the administrator's kind."],
     ["A real phone", "Touch behaviour is proven only by emulation in <code>prove/check-phone.py</code>. The owner tried a "
      "Samsung DeX on GNOME (clipboard, audio and video, window resize: regular). A real touch phone, Safari and iOS were never tested."],
     ["GNOME, first tap after login", "The first touch tap can land on the initial point if the pointer position arrives before "
      "Mutter is ready (<code>touch_announce_pointer</code>). 1 case in 13; not proven; low priority."],
-    ["NVIDIA", "No NVIDIA card was used on Debian 13. Comments cite measurements on a rented RTX 4090 of an earlier build; "
-     "the group of <code>/dev/nvidia*</code> is not handled by the grants."],
+    ["GNOME, first pointer movement after login", "A recent Mutter delivers the first absolute pointer movement after the pointer device starts "
+     "with one coordinate at 0, so a click made at once lands on the edge of the screen (measured on Fedora 45, Mutter 51, with one user). "
+     "<code>input.c</code> sends that first movement twice (<code>pointer_primed</code>; the comment says it is to be removed when Mutter is fixed); "
+     "it is in the Debian code too, but the effect was not measured on Debian's GNOME 48. The wlroots path (XFCE, LXQt) does not pass there."],
+    ["NVIDIA", "No NVIDIA card was used with this tree. NVIDIA was measured on an RTX 4090 on Ubuntu 26.04 on 5-6 Oct 2026, with an earlier "
+     "version of the code (the <code>[M]</code> comments of the sources); the group of <code>/dev/nvidia*</code> is not handled by the grants. "
+     "More than one video card cannot be tried on the bench, which has one Radeon."],
     ["4096×2304", "Not verified end to end. The page's size ladder stops at 3840×2160, so <code>canvas-limits</code> fails on all four "
      "desktops; whether the limit is the right one is to be judged. The <b>declared</b> limit of the product is 3K (the size actually "
      "used depends on the client), so 4096×2304 is a technical bound, not a promise."],
@@ -54,8 +63,10 @@ S_LIMITS = items([
      "(SDDM), XFCE and LXQt on Debian 13 live systems started on the server, as <b>reported by the owner</b> (the remote desktop was disconnected and the "
      "local login entered at the first try; the logs were not read). In the automatic checks the local login is <b>simulated</b> by calling the hook "
      "by hand (<code>check-prelocal.py</code>): the boxes have no real login screen and no local session is registered. The interplay "
-     "with the periodic sweeps, and the hook's skipping of the guard in the child, are exercised only by a real local login."],
-    ["GNOME, graphical password window (<code>pkexec</code>)", "The automated check (<code>users-shell-and-environment</code>) does not pass in the test containers. <code>SHELL</code> is empty in every GNOME remote session, "
+     "with the periodic sweeps, and the hook's skipping of the guard in the child, are exercised only by a real local login. "
+     "With programs open in the remote desktop (P7 a terminal running a program, P8 an editor with unsaved text) the close is slower: on KDE "
+     "the orderly step waits 5 s before the forced one (" + rif("Ending a session and tidying up") + "); the bench ran these cases on GNOME only."],
+    ["GNOME, graphical password window (<code>pkexec</code>)", "The automated check (<code>users-shell-and-environment</code>) does not pass on the test machines. <code>SHELL</code> is empty in every GNOME remote session, "
      "by design of the composed environment (<code>session.c</code>). Whether the password window appears on a real machine was not verified; if it does not, use <code>sudo</code> in the terminal."],
     ["RealtimeKit in the containers", "In the test containers RealtimeKit does not start and holds the exit of a young child for 25 s (the check waits 31 s). "
      "It is an artefact of the test boxes; it does not happen on the tablet."],
@@ -95,7 +106,7 @@ S_VIDEO = items([
     ["Shader header", "<code>vulkanvideo_rgb_nv12_spv.h</code> cannot be regenerated from the tree (the generator script is not in it)."],
     ["Budget, cap, quality rise, decoder pace", "All off and uncalibrated. <code>BUDGET_MAX_FPS</code> and <code>BUDGET_STRAIN_DELAY_MS</code> come from one GNOME/Intel UHD 770 machine; <code>WT_RATE_SLOTS</code> = 2 is uncalibrated."],
     ["No card or card that does not encode", "The error repeats every 2 s in the log. A new installation without a card is refused; with a card that does not encode it only says so."],
-    ["KDE and labwc", "KDE depends on the system <code>labwc</code>, which is only a Recommends; the fallback that starts KWin with <code>--virtual</code> when labwc is missing was not re-tested. Only Plasma 6.3 behaviour is described."],
+    ["KDE and labwc", "KDE stays inside the system <code>labwc</code> (not KWin alone: the KWin of trixie, 6.3.6, cannot resize its output), and <code>labwc</code> is only a Recommends; the fallback that starts KWin with <code>--virtual</code> when labwc is missing was not re-tested. On XFCE and LXQt a missing <code>labwc</code> is refused with a clear message (0x0E) and a warning at installation. Only Plasma 6.3 behaviour is described."],
     ["Startup codec probe", "Uses the default <code>renderD128</code>; on two cards the encoding node is re-tested per session only when the nodes differ."],
     ["Encoded cursor theme", "Depends on a real cursor theme being installed; its effect on screen is unjudged."],
     ["HEVC", "Never reached the pixel on the test browsers: in the final round the page's probe refused every HEVC string on Chrome and Firefox and every run negotiated H.264 (server logs <code>prove/log/v160-&lt;de&gt;/media.out</code>)."],
@@ -115,7 +126,14 @@ S_PAGE = items([
 S_DESK = items([
     ["XFCE", "Ignores a Log Out requested while the desktop is still starting (no retry in the code); a corner covered by the panel; the state file <code>xfce-chiavi</code> is not removed after the restore; an action button added by hand during a session is not locked until the next birth."],
     ["GNOME", "Starts in the Overview and REMOTIX does not leave it; the Overview holds touches. The <code>SHELL</code> variable is deliberately empty in the composed environment (a trap of gnome-session's login shell, <code>session.c</code>); see the known limit on <code>pkexec</code>."],
-    ["KDE", "Only KDE has the watch that finishes a Log Out systemd refused; whether other desktops can hit the same refusal was not investigated."],
+    ["KDE", "Only KDE has the watch that finishes a Log Out systemd refused; whether other desktops can hit the same refusal was not investigated. "
+     "Not covered by the watch: <code>logoutAndShutdown</code> and <code>logoutAndReboot</code> (reachable only through menu entries that REMOTIX removes)."],
+    ["KDE: language", "The desktop's language follows the user's own <code>~/.config/plasma-localerc</code>, as at a local login: where that file holds "
+     "another language it wins over the one REMOTIX hands to the session. The user changes it from KDE's Settings; REMOTIX does not write that file. Not a defect."],
+    ["KDE: a lost frame", "KWin can lose a buffer and leave part of the picture stale; the cure (<code>kwin_poke()</code>) draws a new frame after 200 ms, at most ten times in a row; "
+     "after that the picture may stay old until the scene changes."],
+    ["XFCE and LXQt: programs of the system's autostart", "Only <code>blueman</code> (both) and <code>xiccd</code> (XFCE; the list is the same on LXQt) are kept out of the remote session. "
+     "Other autostart programs of the machine are not covered."],
     ["LXQt", "Whether <code>lxqt-session</code> logout without force works within 10 s is marked «[?]» in a comment."],
     ["Settings left behind", "Two exceptions to «nothing permanent in the user's settings»: the XFCE copy and restore of locked keys and the LXQt one-time restore. One-time cleanup marks (<code>gnome-ripristinato</code>, <code>lxqt-restored</code>, <code>xfce-vecchi-ripristinati</code>) remain for values of earlier versions."],
     ["Environment variables", "<code>REMOTIX_VPP_PADDING</code> and <code>REMOTIX_VULKAN_CONVERSION</code> never reach a real session (the child environment is composed from scratch); they reach only the startup probe and <code>--encoding-test</code>."],
@@ -143,7 +161,7 @@ CONTRA = [
     ["/proc", "walls.h:45", "Says /proc is not hidden. The network side has its own /proc (main.c, rediscover_refuse_here)."],
     ["AppArmor", "remotix_network.apparmor:57", "The profile allows <code>network netlink raw</code> (marked «remove when proven unused») while seccomp refuses AF_NETLINK. The header now reports the VM run (corrected on 17 Nov 2026)."],
     ["Stale installer text", "main.c:445-473; authentication.c:94; remotix.service:6; LICENSE.md:13", "Mention other distributions' PAM files (<code>.fedora</code>, <code>.suse</code>, <code>.arch</code>), «phases/17-the-installer.md», <code>--without split</code> / REMOTIX_SPLIT, and «the installer» (<code>remotix-*.run</code>). "
-     "The text at main.c:466-473 is a <b>run-time log message</b> (" + "the PAM service «remotix» DOES NOT EXIST" + "): it should tell the administrator <code>apt install --reinstall remotix</code>; to be corrected at the next build."],
+     "The reinstall messages of the run-time texts (<code>main.c</code>, <code>kwin.c</code>) were corrected in 1.2.0: they now say «reinstall the package from its file (sudo apt install --reinstall ./remotix_&lt;version&gt;_amd64.deb)»."],
     ["Desktops survive the stop", "debian/rules:103; debian/remotix.postinst:11; debian/remotix.service:40; debian/remotix.prerm:11; main.c:3918-3923", "Comments (and, in main.c, the log message «the network side stops — systemd restarts the unit, the desktops stay alive») say that the desktops stay alive "
      "when the service stops. Since 17 Nov 2026 (DECISIONS-11 §11.56) an orderly stop closes them, and after a fall of the root side the restarted root side ends them unless their user returns within about 10 s. To be corrected at the next build."],
     ["Paths", "debian/control; src/Makefile; build/quic-static.sh", "Name src/build-targets/quic-static.sh (now build/quic-static.sh), a <code>dipendenze</code> target (it is <code>deps</code>), benches scripts and provision.sh."],

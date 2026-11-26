@@ -6,7 +6,9 @@ S1 = p("The server is one executable, " + c("/usr/libexec/remotix/remotix") + ",
        "certificate or socket is touched, so that each role starts from a fresh memory image: a child must not hold the "
        "server's TLS key, and the PAM dispatcher must not hold any password or secret. The package ships one more, very "
        "small program, " + c("/usr/libexec/remotix/remotix-local-login") + " (" + c("local_login.c") + ", libc only): it is "
-       "not a role of the server but a hook that PAM runs at a local login (" + rif("The local-login hold") + ").", lead=True) + \
+       "not a role of the server but a hook that PAM runs at a local login (" + rif("The local-login hold") + "); the line that starts it is put into "
+       + sysf("/etc/pam.d/common-session") + " by " + c("pam-auth-update") + " (the profile " + c("debian/remotix.pam-config") + "), and the shell script "
+       + c("/usr/libexec/remotix/remotix-pam-hook") + " (" + c("src/remotix-pam-hook") + ") checks at every start of the service that it is still there.", lead=True) + \
     table(["First argument", "Role", "Runs as", "Entry point", "Started by"], [
         ["(none)", "<b>Root side</b>: the process systemd starts; the main PID of the unit. Parses the options, binds the "
          "UDP and TCP port, then hands everything to " + c("rootside_main()") + " and never comes back",
@@ -289,7 +291,18 @@ S7 = p("For every admitted user the root side forks one child that becomes that 
          + c("getresgid()") + " read back; any difference exits with 34-36"],
         ["6", "The environment is composed from scratch (" + c("HOME") + ", " + c("USER") + ", " + c("LOGNAME") + ", "
          + c("PATH") + ", an empty " + c("SHELL") + ", " + c("XDG_RUNTIME_DIR") + ", " + c("DBUS_SESSION_BUS_ADDRESS")
-         + "), every signal back to default, and " + c("execve()") + " of " + c("remotix-child --internal-child") + " with "
+         + "). <b>" + c("PATH") + "</b> is the one that PAM composed, if there is one: the session's PAM stack runs " + c("pam_env") + ", which reads "
+         + sysf("/etc/environment") + ", and what it composed is taken as it is. A " + c("PATH") + " from PAM is "
+         "accepted only if it is a list of absolute folders with no " + c("..") + " component, made of plain characters and at most "
+         "400 long (" + c("child_path_ok()") + "). On Debian " + sysf("/etc/environment") + " is empty by default, so the usual case is the fallback, " + sysf("~/.local/bin") + ":" + sysf("~/bin") + ":" + sysf("/usr/local/bin") + ":" + sysf("/usr/bin")
+         + ", which is what a local graphical login has in front of the system folders; the shorter list " + c("/usr/local/bin:/usr/bin:/bin") + " is used only if the user's home has a colon in it. "
+         "The " + c("remotix.pam") + " stack has no " + c("user_readenv") + " on purpose: the user would choose the " + c("PATH") + " of their own session from " + sysf("~/.pam_environment") + ". "
+         "<b>Language.</b> " + c("LANG") + " is the user's own choice (" + c("Languages=") + " or the older " + c("Language=") + " in AccountsService, the first item counting), else the system's ("
+         + sysf("/etc/default/locale") + ", which the second " + c("pam_env") + " line of " + c("remotix.pam") + " puts in the PAM environment), plus the system's " + c("LC_*") + " and "
+         + c("LANGUAGE") + " (up to " + c("CHILD_LOCALE_MAX") + " = 12 words). The AccountsService file belongs to root and is read <i>before</i> the "
+         "change of identity (" + c("child_locale_read()") + "); every value is checked for plain characters, and " + c("session.c") + " still checks that the "
+         "locale exists and is UTF-8, otherwise it falls back to " + c("C.UTF-8") + ". Before 1.2.0 the language was always " + c("C.UTF-8") + ". "
+         "Every signal goes back to default, and " + c("execve()") + " of " + c("remotix-child --internal-child") + " with "
          "the user, uid, gid, canvas, serial and switches on the command line"],
     ], "«TAB» — The birth of a child") + \
     p("The new image runs " + c("child_alive()") + ": it logs its identity, re-checks " + c("getresuid()") + " (a mismatch "
@@ -298,7 +311,17 @@ S7 = p("For every admitted user the root side forks one child that becomes that 
       "(" + c("take_stage()") + "). The parent gives it " + c("SHOW_UP_DEADLINE_MS") + " (15 s) to introduce itself; after that "
       "there is no deadline, because a stage that is silent because nobody asks it anything is doing its job (invariant I4). "
       "Every minute the parent asks “who are you” again (" + c("RECHECK_MS") + ", " + c("MSG_CHI_SEI") + "), and a child that "
-      "has sent nothing for " + c("WHOAMI_DEADLINE_MS") + " (600 s) after the question is killed.") + \
+      "has sent nothing for " + c("WHOAMI_DEADLINE_MS") + " (600 s) after the question is killed. A child may also tell the parent "
+      "that the graphical session is over <i>before</i> it dismantles its stage (" + c("session_over_early()") + "); the parent "
+      "then keeps it as “closing” for " + c("CLOSING_GRACE_MS") + " (30 s) so that a login in the meantime is refused with the "
+      "truth (" + rif("When the session ends before the stage is gone") + ").") + \
+    p("<b>A stage the child refuses.</b> " + c("MSG_STAGE") + " ends with a " + c("fatal") + " field (" + c("struct body_stage")
+      + "; a parent also accepts the older, shorter body, " + c("STAGE_MIN") + ", and reads it as “not fatal”). Only the refusal "
+      "for the screen scale (guard 2: on Mutter, the scale of the stage's monitor is not 1 and one temporary attempt to bring it "
+      "back with " + c("mutter_scale_to_one()") + " failed) sets it. The hook " + c("children_hook_stage_refused()") + " then reaches "
+      + c("stage_refused_by_child()") + " in " + c("main.c") + ", which sends " + c("0x0E") + " to the clients "
+      "(" + c("wt_dismiss_user_session_over()") + "), and the child closes the session (" + rif("When the session ends before the stage is gone")
+      + ").") + \
     p("<b>The close-only child.</b> A desktop found again may have no client and no password to start a child with. "
       "The root side then starts a child with " + c("--close-only") + " (a " + c("RXR_CLOSE_ORPHAN") + " birth): no stage, no "
       "frame, no input; it obeys only “end the session” and leaves after " + c("CLOSE_ONLY_LIFE_MS") + " (30 s) if none "
@@ -347,7 +370,9 @@ S9 = p("The sentinel answers questions for which logind is the authority, throug
         ["Is my session without a seat?", c("sentinel_without_seat()"), "the child, after startup",
          "proving the session is headless; also the proof that the child's scope is not the local desktop's"],
         ["Is power-off really forbidden?", c("sentinel_shutdown_forbidden()"), "the child",
-         c("CanPowerOff") + ", " + c("CanReboot") + ", " + c("CanSuspend") + ", " + c("CanHibernate") + " must all say " + c("no")],
+         c("CanPowerOff") + ", " + c("CanReboot") + ", " + c("CanSuspend") + ", " + c("CanHibernate") + " must all say " + c("no")
+         + " or " + c("na") + " (“not available on this machine”, as on a virtual machine or a server). Any error is “not "
+         "safe”, and the detail names the call and the error"],
         ["Close one remote session", c("sentinel_terminate_remote_session()"), "only the single-process mode, for a "
          "desktop found again whose user has a local session (" + c("found_again_close_for_local()") + " in " + c("main.c") + ")",
          "logind " + c("TerminateSession") + ", only for a session that is certainly REMOTIX's. In the split server the "

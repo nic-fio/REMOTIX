@@ -57,13 +57,23 @@ S_DESKTOP = p("Once signed in you have your own desktop — GNOME, KDE Plasma, X
          "because other people may be working on the same machine."],
         ["XFCE: the background",
          "On XFCE the background of the remote desktop may be black instead of your wallpaper. It is a known cosmetic defect, seen only on XFCE so far; its cause is not yet established. It does not affect the programs."],
+        ["The language of the desktop",
+         "The remote desktop uses the language the user chose in the desktop settings (the one the login screen "
+         "stores); if there is none, the language of the machine. Dates, numbers and the like follow the machine's "
+         "settings too. <b>On KDE Plasma</b> the language of the desktop follows the <b>KDE Settings</b> of the "
+         "user (the file <code class=\"sys\">~/.config/plasma-localerc</code>), exactly as at a local sign-in: a "
+         "user who has already used KDE in one language changes it from the KDE Settings, not from the login screen."],
+        ["The programs you start",
+         "The search path for programs is the one a local sign-in gives; a program kept in "
+         "<code class=\"sys\">~/.local/bin</code> or <code class=\"sys\">~/bin</code> starts from the remote "
+         "desktop as it does from the local one."],
         ["A background tab",
          "A browser may freeze a tab left in the background for a few minutes. REMOTIX then sees silence, detaches "
          "you, and keeps the desktop waiting: come back and sign in again."],
     ], "«TAB» — The desktop in the browser") + \
     note("an administrator action inside the desktop (installing a program, for example) asks for a "
          "password, as at the machine. On GNOME the password window of graphical programs was not verified for this "
-         "release: if it does not appear, do the same action with sudo in a terminal. Three requests that a desktop makes on its own at "
+         "release: if it does not appear, do the same action with sudo in a terminal. A few requests that a desktop makes on its own at "
          "sign-in, and that would only confuse, are settled quietly (see "
          + rif("Users, groups and what REMOTIX changes") + ").", "Passwords inside the desktop.")
 
@@ -181,7 +191,10 @@ S_LEAVE = p("Your desktop belongs to <i>you</i>, not to the browser tab. Closing
          "Your remote desktop is closed at once, with all its programs: unsaved work is lost. The page says "
          + ui("the local session on that machine took precedence") + ". While that person is signed in at the "
          "machine you cannot sign in from the browser (the page says " + ui("that user is already signed in locally")
-         + "); after they sign out you can, and you get a new desktop."],
+         + "); after they sign out you can, and you get a new desktop. On KDE Plasma, if a program in your desktop "
+         "does not close by itself (for example one that asks “save?”), REMOTIX gives the KDE desktop 5 seconds to "
+         "close by itself and then closes everything by force, so the person at the machine waits about six "
+         "seconds."],
     ], "«TAB» — Leaving and coming back") + \
     warn("only your own input — keys, mouse, touch — counts as touching the desktop. A desktop left for an hour "
          "without any input is closed even if a video is playing in it.", "The one-hour clock.")
@@ -219,7 +232,9 @@ S_TOUCH = p("On a phone or a tablet, REMOTIX works like on a PC if you have a mo
         "mouse and keyboard, is more comfortable.",
     ]) + \
     note("the touch layout has been exercised on a simulated phone for this release, <b>not yet on a real phone</b>. "
-         "On GNOME, in one case out of thirteen, the first touch after signing in was lost: touch again.",
+         "On GNOME the first pointer movement after signing in used to arrive with one coordinate at zero, so that a "
+         "first tap could land on the edge of the screen: REMOTIX now sends the first movement twice. Should the "
+         "first touch after signing in still land in the wrong place, touch again.",
          "Not yet verified on a real phone.")
 
 S_DEX = p("<b>Samsung DeX</b> (a phone or tablet connected to a screen, with a mouse and keyboard) is used as a PC: "

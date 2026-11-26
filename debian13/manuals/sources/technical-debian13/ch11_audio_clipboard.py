@@ -130,7 +130,9 @@ A4 = p("Between PipeWire's real-time thread and the child's loop sits a lock-fre
          + c("SCHED_FIFO") + " is refused to any process outside the root cgroup, so the "
          + c("LimitRTPRIO") + " of the service is inert, and audio crackles when the desktop works. An "
          "independent " + c("pw-record") + " on the same monitor hears the same crackles: the fault is born "
-         "in the session's audio graph, not in the transport.", "Real-time priority is declared, not assumed.")
+         "in the session's audio graph, not in the transport. " + c("rtkit-daemon") + " matters in a second way: the real-time "
+         "module of both PipeWire contexts (" + c("sound.c") + ", " + c("capture.c") + ") can stay in a D-Bus call to RealtimeKit for up to 25 s where the daemon is installed but does not start; "
+         "that delays the dismantling of the stage and is the reason the end of a session is announced before it (" + rif("End of session in the page") + ").", "Real-time priority is declared, not assumed.")
 
 A5 = p(c("audio.c") + " encodes with libopus directly since 30 Sep 2026: ffmpeg left the product for "
        "licence reasons (" + c("DECISIONS.md") + " §10.22, §10.25), and libavcodec was only a wrapper around the same "

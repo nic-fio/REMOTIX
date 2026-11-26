@@ -9,7 +9,8 @@ S1 = p("A number in this chapter is one of three kinds, and each is labelled. <b
        + c("docs/DECISIONS.md") + " from an earlier campaign on an earlier build; it is quoted with its date and is NOT a measurement "
        "of this tree. <b>Coded</b>: a constant or default in the source, cited by name; it is a limit or a target, not an "
        "observation.", lead=True) + \
-    p("Nothing here was measured while writing the manual, and no figure is derived or extrapolated. Where a figure that a reader "
+    p("Nothing here was measured while writing the manual, and no figure is derived or extrapolated. The figures are those of the 1.0.0 rounds on the container boxes: "
+      "none was measured again on 1.2.0 or on the virtual machines of " + rif("The VM bench") + ", where the rounds of 1.2.0 were made (their one timing remark, " + c("screen-updates") + " a little over its limit on three desktops, is in " + rif("What was verified, and what was not") + "). Where a figure that a reader "
       "would expect does not exist, the section says so (" + rif("Where no measurement exists") + ").") + \
     note("A measurement made by a check that drives a browser through its debugging interface includes the check's own cost. "
          "The tool's limits are given in " + rif("Testing") + ". The figures below are evidence that a property holds under the "
@@ -22,7 +23,7 @@ S2 = p("All figures of the round of 17 November come from one machine, the dev s
         "<b>Machine.</b> A single server with an integrated Intel card (the UHD 770, per " + c("docs/DECISIONS-11.md") + " §11.21) and an "
         "AMD Radeon RX 6800 (" + c("docs/SPECS.md") + " §11.4, measured 1 Oct 2026). The logs name the encoder node as "
         + c("/dev/dri/renderD128") + " and do not say which of the two cards that is.",
-        "<b>Boxes.</b> Four systemd containers on the host network (" + rif("The four test boxes") + "). The four desktops ran at the same "
+        "<b>Boxes.</b> Four systemd containers on the host network, the bench of that round (the older container files of " + rif("The VM bench") + "). The four desktops ran at the same "
         "time on the one machine; the " + c("media") + " check reports the host load average at the moment: 3.89 and 5.32 (XFCE), 4.05 and "
         "4.13 (LXQt), 4.63 and 5.12 (GNOME), 5.14 and 6.21 (KDE), for its two measuring phases.",
         "<b>Client.</b> A real browser on the same machine, on 127.0.0.1, with a headless software-rendering compositor (Chrome "
@@ -159,7 +160,7 @@ S7 = p("This list is deliberate: a manual that stays silent about a missing meas
          "now. No run that fills the default cap of 10 and no search for the point where service degrades"],
         ["a card by vendor and model", "the log shows " + c("/dev/dri/renderD128") + " and not the card; no per-card table exists. Intel and AMD are the first-version targets "
          "(PIANO.md)"],
-        ["NVIDIA", "no run recorded; the first version targets Intel and AMD, NVIDIA later (PIANO.md)"],
+        ["NVIDIA", "no performance figure of the current build exists; NVIDIA was measured on an RTX 4090 on Ubuntu 26.04 on 5 and 6 October 2026, with an earlier version of the code (the comments marked " + c("[M]") + " in the sources, " + rif("What only a real machine or a real phone can prove") + "); Vulkan Video is a general road, chosen by capability"],
         ["4096x2304 and larger canvases", "the declared limit is 3K; the coded limit is 4096x2304; the largest canvas obtained is 3840x2160, the last rung of the page's own size ladder "
          "(" + c("MEASURE_PROBES") + " in " + c("page.html") + ": the page never declares a larger " + c("video.max_size") + ", with any browser; " + c("canvas-limits") + " is not PASS on any desktop for this reason). No frame rate or quality figure at 4096x2304 exists"],
         ["bitrate of the current build", "none printed by the final round. The only bitrate figures in the files read are the phase 9 ones above"],

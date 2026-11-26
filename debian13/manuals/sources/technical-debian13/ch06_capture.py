@@ -168,8 +168,19 @@ S3 = p("On GNOME REMOTIX talks to Mutter's direct D-Bus interfaces, " + c("org.g
     warn("with " + c("org.gnome.desktop.interface scaling-factor") + " set to 2 the stream keeps the requested pixels "
          "but the logical monitor gets scale 2.0, and its layout is the coordinate space of input: the pointer would "
          "land elsewhere with no log line. " + c("mutter_our_scale()") + " reads the scale of <i>our</i> monitor; the "
-         "child refuses the stage when it is not 1.0 and logs the one-line cure. A scale that cannot be read (−1) is "
-         "declared and the session proceeds.", "Scale guard.") + \
+         "child does not take the stage while it is not 1.0. Since 19 Nov 2026 the session first makes the case rare and then "
+         "tries to repair it. (1) " + c("session.c") + " writes " + c("org.gnome.desktop.interface scaling-factor") + " = 1 into the "
+         "session's dconf database and locks it (" + rif("GNOME: headless Shell and session dconf") + "). (2) If the scale read is not 1, the child tries "
+         "<i>once</i> " + c("mutter_scale_to_one()") + ": " + c("GetCurrentState") + " then " + c("ApplyMonitorsConfig") + " with "
+         "method 1 (temporary), keeping the current mode, passing " + c("layout-mode") + " only when the compositor reports "
+         + c("supports-changing-layout-mode") + ", and only in the simple case of one logical monitor, which is ours. The user's "
+         + c("monitors.xml") + " is not touched, so a local login finds the user's own scale again. Each of the three synchronous "
+         "calls may wait up to " + c("WAIT_CALL_MS") + " = 15 s. (3) If the scale is still not 1, the child sets " + c("p.fatal") + ", "
+         "the parent answers the clients with 0x0E (" + c("stage_refused_by_child()") + " in " + c("main.c") + ") and the graphical "
+         "session is closed, retried every 10 s if the closing fails. The log lines are «scale back to 1 (temporary, the user's "
+         "monitors.xml untouched)» and «the user's scale … is IGNORED in the remote session». The old one-line cure "
+         "(" + c("gsettings set … scaling-factor 0") + ") is gone. A scale that cannot be read (−1) is declared and the session "
+         "proceeds.", "Scale guard.") + \
     p("The bus connection belongs to the " + c("MutterSession") + " and is lent out by " + c("mutter_bus()") + ": the "
       "clipboard uses the same " + c("RemoteDesktop") + " session, because a second connection would be a second sender "
       "that Mutter does not recognise as the owner. The input channel opened here with " + c("ConnectToEIS") + " and its "
@@ -238,12 +249,28 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
         [c("KWIN_FORCE_SW_CURSOR=1"), "Nested KWin has a cursor layer that goes to labwc's screen; the software cursor puts "
          "the pointer back into the stream."],
         ["One transparent pixel on top, on the capture's own connection", "Without any window above it, a full-screen "
-         "window with the pointer hidden is handed to labwc directly and the picture freezes (comment of " + c("kwin.c") + ")."],
+         "window with the pointer hidden is handed to labwc directly and the picture freezes (comment of " + c("kwin.c") + "). "
+         "The same pixel is what " + c("kwin_poke()") + " commits again to obtain one frame (" + rif("The lost frame (KWin)") + ")."],
+        ["A sidecar that owns " + c("org.freedesktop.ScreenSaver") + " on the user's bus, started with the unit",
+         "From Plasma 6.4 the Ctrl+Alt+Del shortcut asks " + c("GetActive") + " of that name first (" + rif("Shortcuts the browser keeps")
+         + "). KWin runs with " + c("--no-lockscreen") + ", so nobody owned it, the call failed with " + c("ServiceUnknown") + " and "
+         "the failure was read as «the screen is locked»."],
     ], "«TAB» — The nested KWin: what REMOTIX sets, and the reason behind each line") + \
     p("<b>Without labwc.</b> When " + c("labwc") + " is not in " + c("PATH") + ", " + c("kwin_nested_alive()") + " execs KWin "
       "with " + c("--virtual") + " and prints a declared fallback: the output keeps the size it was born with, "
       + c("stage_size()") + " captures the size KWin reports (" + c("kwin_measure()") + "), and a reattach at another size "
       "no longer changes the desktop. " + c("kwin_host_exists()") + " is how the child tells the two cases apart.") + \
+    p("<b>The ScreenSaver sidecar.</b> " + c("screensaver_alive()") + " in " + c("kwin.c") + " is a process of its own, forked by "
+      + c("kwin_nested_alive()") + " in the same double fork as the ticker, so that the process that becomes the KWin wrapper never waits for it. It owns the name "
+      + c("org.freedesktop.ScreenSaver") + " on both object paths in use (" + c("/ScreenSaver") + " and "
+      + c("/org/freedesktop/ScreenSaver") + ") and never locks anything. " + c("GetActive") + ", the time queries and "
+      + c("SimulateUserActivity") + " get a harmless answer; " + c("Lock") + ", " + c("Throttle") + " and " + c("UnThrottle") + " get "
+      "the standard error " + c("NotSupported") + "; " + c("Inhibit") + " is forwarded to the same powerdevil call the application "
+      "would have made, with the same arguments and cookie, and given back when the caller leaves the bus or calls "
+      + c("UnInhibit") + " (the comments record that, with the name present, VLC asks the ScreenSaver first and would not go on after an "
+      "error). The name is asked for with DO_NOT_QUEUE: if a real owner is ever there first, the sidecar ends and says so. It dies "
+      "with the unit's cgroup at the end of the session and writes nothing in the user's files. The comments record that with a stand-in "
+      "answering «not locked» the logout prompt appeared within 1 s (Plasma 6.6.7).") + \
     p("<b>The «unchanged» filter.</b> The header " + c("unchanged.h") + " records that KWin delivered about 50 buffers a "
       "second for five real changes (3776×2016, Firefox client), roughly 45 of them the same picture. A KWin frame whose "
       "damaged rectangles hold the same bytes as the last frame that went out is not encoded. The filter is switched on "
@@ -274,6 +301,89 @@ S4 = p("On Plasma the capture is a Wayland request to KWin: the private protocol
       + c("capture_cursor_never_hide()") + " so that an empty metadata image is never forwarded as «hidden». The declared "
       "price: on Plasma an application that hides the pointer does not hide it for the viewer.")
 
+# ── 4b ──────────────────────────────────────────────────────────────────────
+LOSTSEQ = fig(
+    zone(20, 12, 860, 70, "KWin (nested in labwc)")
+    + box(40, 36, 250, 36, "numbers every buffer", "spa_meta_header.seq", "navy")
+    + box(325, 36, 250, 36, "picture 199, cursor-only 200", "tens of microseconds apart", "navy")
+    + zone(20, 104, 860, 70, "PipeWire graph (KWin's stream is the driver)")
+    + box(325, 128, 250, 36, "buffer 199 overwritten", "reader not yet woken: an xrun", "dark")
+    + zone(20, 196, 860, 150, "capture.c and child.c (REMOTIX)")
+    + box(40, 226, 250, 52, "capture_watch_sequence()", "hole 198 → 200: damage_lost, lost_need", "blue")
+    + box(325, 226, 250, 52, "capture_frame_lost()", "TRUE after 200 ms of silence", "blue")
+    + box(610, 226, 250, 52, "kwin_poke()", "attach, damage 1×1, commit", "light")
+    + arrow(450, 74, 450, 102) + arrow(450, 166, 165, 224) + arrow(292, 252, 323, 252) + arrow(577, 252, 608, 252)
+    + path([(735, 280), (735, 320), (450, 320), (450, 74)], "#d97706", True, label="KWin draws one frame: the picture arrives", lx=590, ly=312),
+    900, 360, "«FIG» — The lost frame: a hole in KWin's buffer numbers, and the request that answers it")
+
+S4B = p("The comments of the code record a defect measured on KWin 6.6.7 nested in labwc with PipeWire 1.6.2 (Kubuntu 26.04): a window that had just been opened could stay in the browser half way "
+        "through its opening animation, translucent and smaller, for 18 to 26 s, while KWin's own output showed the whole window "
+        "from the first second. The cause is a buffer that KWin queued and PipeWire never delivered to REMOTIX. The cure is in "
+        + c("capture.c") + ", " + c("child.c") + " and " + c("kwin.c") + ". The reasoning and the measurements are recorded only in "
+        "the comments of the code (the end of " + c("capture.h") + ", the head of " + c("capture.c") + ", the call sites in "
+        + c("child.c") + "); this section is their documentation.", lead=True) + LOSTSEQ + \
+    h4("What was measured") + \
+    p("KWin numbers every buffer it queues in the " + c("seq") + " field of " + c("spa_meta_header") + ", cursor-only buffers "
+      "included. In every stalled run the numbers that reached " + c("on_process") + " had holes: 198, 200, 202, 204, all "
+      "cursor-only buffers, and never 199, 201, 203, which were the pictures. The comments mark this as measured (19 Nov 2026), "
+      "and the explanation below as read in the sources of KWin 6.6.7 and PipeWire (" + c("[R]") + " in the comments), not "
+      "reproduced in isolation.") + \
+    h4("Why the buffers are lost") + \
+    ul(["<b>Two buffers come close together.</b> In KWin's " + c("screencaststream.cpp") + " the record timer runs "
+        + c("record(m_pendingContents)") + " and then clears the pending contents. While " + c("record()") + " draws, an effect that "
+        "is still animating schedules the next repaint, which calls " + c("scheduleRecord()") + " again from inside "
+        + c("record()") + ": the timer is started at 0 ms and the line after " + c("record()") + " wipes what was asked. The timer "
+        "fires with nothing to record, which with the cursor as metadata is a cursor-only buffer. During an animation every picture "
+        "is followed, some tens of microseconds later, by a cursor-only buffer.",
+        "<b>The first of the two is overwritten.</b> KWin's stream is the <i>driver</i> of the PipeWire graph and every "
+        + c("pw_stream_queue_buffer()") + " starts a cycle. A cycle hands the buffer over by plain assignment (" + c("tee_process()")
+        + " in " + "<i>impl-port.c</i>" + "), and a cycle started before the reader has run for the previous one is started all the "
+        "same (" + c("node_ready()") + " in " + "<i>impl-node.c</i>" + "): the buffer not yet read is overwritten. PipeWire calls it an "
+        "xrun; for a video stream it is a frame gone. REMOTIX's reader is a real-time callback that returns in microseconds, but "
+        "it must be woken first, and on a busy machine (a session just born) it wakes after the second cycle.",
+        "<b>Nothing to tune on the REMOTIX side.</b> The number of buffers and the frame rate do not enter; the transport that "
+        "waits for the reader (" + c("node.reliable") + ", PipeWire 1.6) is chosen by the producer."]) + \
+    h4("What a lost picture costs") + \
+    p("Its damage is lost with it: the next picture declares only what changed after it, so part of the screen stays old. If it "
+      "was the last picture of an animation nothing comes after it, and the stream stands at the previous frame until something "
+      "else on the desktop changes. A pointer movement does not help, because it brings a cursor-only buffer.") + \
+    h4("The cure, in two halves") + \
+    table(["Piece", "What it does"], [
+        [c("capture_watch_sequence()"), "Called by the child for KWin only (when the stage is mounted, and again in " + c("remount_only_capture()")
+         + "); it does nothing on a wlroots capture. It switches on the count: " + c("on_process") + " reads the number of every "
+         "buffer before any discard. A number above the last one plus one is a hole: " + c("damage_lost") + " is set, so the next "
+         "picture goes out as «all changed» (KWin's buffers are whole frames, so everything lost is inside the next one), and "
+         + c("lost_need") + " is set. A header flagged corrupted is KWin giving a buffer back and is not looked at; a number not "
+         "above the last is the count starting again, not a hole."],
+        [c("capture_frame_lost()"), "Polled by the child's loop. It returns TRUE when " + c("lost_need") + " is set and "
+         + c("LOST_QUIET_MS") + " = 200 ms have passed since the last picture or the last poke. Then the child calls "
+         + c("kwin_poke()") + ". The request stays up after a poke, because the answer can be lost too: at most one poke every "
+         "200 ms until a picture arrives, and a picture arriving clears it. After " + c("LOST_POKES_MAX") + " = 10 pokes in a row "
+         "with no picture it stops and says so once, until a picture arrives by itself."],
+        [c("kwin_poke()"), "Attaches the 1×1 transparent buffer to the surface REMOTIX keeps on top of KWin's output again, damages "
+         "it (a damage with no buffer is not a change) and commits it, under " + c("pixel_lock") + ", then flushes the connection. "
+         "KWin answers with one frame. The stream is not restarted, so no input device is recreated, and no input is sent: the guards "
+         "on keys or buttons held, needed by " + c("capture_wake()") + ", do not apply."],
+    ], "«TAB» — The two halves of the cure") + \
+    note("the count rests on «one number per buffer». A producer that counted otherwise would show a hole at every buffer and every "
+         "frame would go out as «all changed» with nobody told. If holes are seen in more than half of " + c("SEQ_WINDOW") + " = 600 "
+         "buffers (a window of 600, checked at its end), the count is switched off for that capture and the log says so. Measured on "
+         "KWin 6.6.7: at most 30 holes in the roughly 200 buffers of a session being born. The mechanism never runs on a still "
+         "desktop, because it needs a hole in the numbers to start.", "Safety switch.") + \
+    h4("What the log says") + \
+    ul(["«the buffers' numbers are watched: a hole in them is a buffer that never arrived…» (area " + c("capture") + ") when the count is switched on;",
+        "«a buffer of KWin never arrived and no picture came after it: pixel on top committed again to have one drawn (so far: N holes in "
+        "the numbers, N buffers missing, N pokes)», at most once a second;",
+        "«a buffer of KWin never arrived, and the pixel on top could NOT be committed again (no pixel, or no connection to KWin)», once "
+        "until a poke succeeds again;",
+        "«" + "N pokes in a row and no picture from KWin: I stop asking until one arrives by itself»;",
+        "«N holes in the numbers of the last 600 buffers … The count is switched OFF for this capture»."]) + \
+    h4("What was verified, and what was not") + \
+    p("Measured and recorded in the comments (19 Nov 2026, KWin 6.6.7): the holes in the numbers, the 68 pokes on a still desktop answered by "
+      "68 frames with empty damage, and the bound of 30 holes per ~200 buffers at session birth. <b>Not verified for Debian 13:</b> that the "
+      "defect itself appears with the KWin 6.3.6 of Debian (the mechanism was read in the sources of 6.6.7), its frequency after the cure, "
+      "and a machine with a real seat for the capture of KWin.")
+
 # ── 5 ───────────────────────────────────────────────────────────────────────
 S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("capture_start()") + " on the node the "
        "compositor announced. Everything is declared in the format proposal (" + c("proposal()") + ") and in the "
@@ -295,7 +405,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
          "damaged regions (6)»: those are region slots, and when they run out the whole frame is declared damaged."],
         ["Cursor metadata", "Up to " + c("CURSOR_META_BYTE(384, 384)"), "Mutter allocates 384×384; the wire limit of 256 is enforced in " + c("cursor.c") + "."],
     ], "«TAB» — The PipeWire negotiation, " + c("capture.c")) + \
-    note("when the card refuses a linear render buffer (the comments record NVIDIA with GNOME 50), the proposal LINEAR + INVALID "
+    note("when the card refuses a linear render buffer (the comments record NVIDIA with GNOME 50 on Ubuntu 26.04, measured on 6 Oct 2026 on an earlier tree; on Debian 13 this was not tried with NVIDIA), the proposal LINEAR + INVALID "
          "ended in «no more input formats». " + c("modifiers_per_route()") + " in " + c("child.c") + " asks "
          + c("vulkanvideo_card_rejects_linear()") + " and only then passes the modifiers the Vulkan encoder can import to "
          + c("capture_modifiers_card()"), "The card that refuses linear.") + \
@@ -536,6 +646,9 @@ S11 = p("The constants of the capture, where they live.", lead=True) + \
         [c("HOST_MHZ"), "240000", c("kwin.c"), "Refresh of the labwc that hosts KWin"],
         [c("TICKER_MS"), "16 ms", c("kwin.c"), "Damage interval of the 1×1 ticker surface"],
         [c("HOST_BIRTH_MS"), "10000 ms", c("kwin.c"), "Wait for the socket of KWin's labwc at session birth"],
+        [c("LOST_QUIET_MS"), "200 ms", c("capture.c"), "Silence after which a lost frame is asked again"],
+        [c("LOST_POKES_MAX"), "10", c("capture.c"), "Pokes in a row without a picture before it stops"],
+        [c("SEQ_WINDOW"), "600", c("capture.c"), "Buffers in the window of the safety switch (switch off above half holes)"],
         [c("WLR_SLABS"), "3", c("wlroots.c"), "Slabs"],
         [c("WLR_CARD_FAILED_MAX"), "3", c("wlroots.c"), "Consecutive failures before the GPU path is switched off"],
         [c("WLR_SLAB_W") + " × " + c("WLR_SLAB_H"), "4096 × 2304", c("wlroots.c"), "Slab size with Vulkan encoding"],
@@ -554,7 +667,7 @@ S11 = p("The constants of the capture, where they live.", lead=True) + \
         "them but no check isolates the capture alone (" + rif("Testing") + ").",
         "The owner's own test with Samsung DeX on GNOME (17 Nov) found video, audio and window resizing regular.",
         "Not verified: the nested KWin without labwc (" + c("--virtual") + " fallback) on Debian 13; the shape probe and the encoded "
-        "theme by eye; NVIDIA with GNOME (the modifier path of " + c("capture_modifiers_card()") + "); a canvas of 4096×2304 end to end "
+        "theme by eye; NVIDIA with GNOME on Debian 13 (the modifier path of " + c("capture_modifiers_card()") + "; measured on Ubuntu 26.04); a canvas of 4096×2304 end to end "
         "(the test browser's decoder stops at 3840×2160); the GNOME touch first tap (" + c("PIANO.md") + ")."])
 
 CHAPTER = ("Screen capture", [
@@ -562,6 +675,7 @@ CHAPTER = ("Screen capture", [
     ("The capture contract", S2),
     ("GNOME: the Mutter D-Bus sequence", S3),
     ("KDE: the KWin screencast protocol and the nested KWin", S4),
+    ("The lost frame (KWin)", S4B),
     ("PipeWire negotiation, resize and wake-up", S5),
     ("XFCE and LXQt: wlroots screencopy", S6),
     ("Slabs: zero copy on labwc", S7),

@@ -48,11 +48,14 @@ S_SIGNIN = p("These are the sentences the page shows when you sign in or when th
             "happens again ask whoever administers the server — the precise reason is in its log"),
          "The server could not give you a desktop. This one sentence covers several different causes, on "
          "purpose: <b>the server is full</b> (the number of sessions has reached the ceiling, 10 by default), the "
-         "desktop could not be created, the keyboard layout chosen in the Keyboard menu was not known to the machine (try another one), memory ran out, or the window is larger "
-         "than the browser can decode.",
+         "desktop could not be created, the keyboard layout chosen in the Keyboard menu was not known to the machine (try another one), memory ran out, the window is larger "
+         "than the browser can decode, a piece the desktop needs is missing (labwc on XFCE and LXQt: "
+         "<code class=\"sys\">sudo apt install labwc</code>, and the journal names the package), or, on GNOME, "
+         "your own settings ask for a screen scale other than 1 and REMOTIX could not bring it back to 1.",
          "Try again in a moment. If it keeps happening, ask the administrator.",
          "Look in the journal at the time of the attempt (see " + rif("Where the administrator looks") + "). If the "
-         "cause is the ceiling, count the sessions and see " + rif("Settings you can change") + "."],
+         "cause is the ceiling, count the sessions and see " + rif("Settings you can change") + "; for the other "
+         "causes the line of the journal names the reason."],
         [ui("the server could not check your password just now, and it is not your mistake: try again in a moment, "
             "and if it happens again ask whoever administers the server"),
          "The machine's password checker did not answer, so your password was not judged at all.",
@@ -71,7 +74,9 @@ S_SIGNIN = p("These are the sentences the page shows when you sign in or when th
          "encode video</b> (no video card that encodes, or its driver is missing).",
          "Tell the administrator.",
          "Run " + c("sudo /usr/libexec/remotix/remotix --encoding-test h264") + " and look for “THIS SERVER CANNOT "
-         "ENCODE VIDEO” in the journal. Install the driver (" + c("va-driver-all") + " for Intel and AMD)."],
+         "ENCODE VIDEO” in the journal. Install the driver (" + c("va-driver-all") + " and " + c("mesa-vulkan-drivers")
+         + " for Intel and AMD, NVIDIA's own driver for NVIDIA). A virtual machine with only the emulated card "
+         "cannot encode: pass a real card to it."],
         [ui("incompatible protocol version") + "<br>" + ui("the server and this page misunderstood each other: "
                                                            "reload the page and try again"),
          "The page in your browser and the server are not the same version, typically because the server was "
@@ -186,11 +191,19 @@ S_ADMIN = p("The administrator has three places to look, and three quick checks.
       + c("sudo journalctl -t remotix REMOTIX_TENANT=anna") + ".") + \
     p("At every start the service writes a report. Useful lines: “the desktop of this machine: …” (which desktop it "
       "found), “video.codec offered …” (the video card encodes) or “THIS SERVER CANNOT ENCODE VIDEO” (it does not), "
-      "and the PAM service line (the sign-in file is there).") + \
+      "and the PAM service line (the sign-in file is there). Every connection that closes is written with the "
+      "reason: whether the browser closed it (and with which error) or the server did, or the connection went "
+      "silent, in one phrase after the dash. A device with a wrong clock shows up here, as a certificate "
+      "error sent by the browser. The sentinel's line about the power-off rules shows the answer of the system for each "
+      "action (" + c("no") + " or " + c("na") + ", “not available on this machine”, are both fine) and, when the system "
+      "could not answer, the name of the call and the error.") + \
     p("<b>2. The user's own session log.</b> Each desktop writes its own output to "
       + sysf("~/.local/state/remotix/session.log") + " in the user's home (if that folder cannot be used, to "
       + sysf("remotix-session.log") + " in the user's runtime folder, which disappears with the session). Useful "
       "when the desktop is born but something in it does not start.") + \
+    p("<b>The sign-in hook of the login screens.</b> At every start the service checks that the line which makes a "
+      "local sign-in close a remote desktop is in " + sysf("/etc/pam.d/common-session") + ", puts it back if it is "
+      "not, and writes one summary line (see it with " + c("sudo journalctl -u remotix") + ").") + \
     p("<b>3. Three quick checks:</b>") + \
     term("$ systemctl status remotix                      # running?\n"
          "$ sudo ss -ltnup | grep 7447                    # listening on TCP and UDP?\n"
@@ -210,9 +223,59 @@ S_KEYBOARD = p("The page cannot see what keyboard you have in front of you. It g
         "layout with dead keys) are not in the menu: see " + rif("The keyboard") + ".",
     ])
 
+S_KNOWN = p("These are the limits and open points known on Debian 13 that a user or an administrator may meet. What "
+            "is not listed here was not seen, which is not the same as proved absent.", lead=True) + \
+    table(["What you may see", "What is known"], [
+        ["<b>No desktop at all</b> on XFCE or LXQt",
+         "The package labwc is missing (it is only recommended: " + c("--no-install-recommends") + " leaves it out). "
+         "Install it with " + c("sudo apt install labwc") + ". The package prints a warning at installation, and a "
+         "user who signs in gets the generic “could not open your session” sentence."],
+        ["<b>XFCE</b>: black background",
+         "On XFCE the background of the remote desktop may be black instead of your wallpaper (see "
+         + rif("The desktop in the browser") + ")."],
+        ["<b>XFCE</b>: no colour-profile or Bluetooth programs",
+         "Two programs that XFCE would start at sign-in are not started in a remote session: the Bluetooth "
+         "applet (<code class=\"sys\">blueman</code>) and the colour-profile daemon "
+         "(<code class=\"sys\">xiccd</code>, which asked for an administrator password in the middle of the "
+         "desktop). Nothing else is changed."],
+        ["<b>LXQt</b>: no X11 compositor",
+         "A compositing program made for X11 (picom and the like) does not run in a remote session, because the "
+         "remote desktop has no X server for it to compose: it is left out so that LXQt does not restart it "
+         "again and again."],
+        ["<b>KDE Plasma</b>: the person at the machine waits to sign in",
+         "If somebody signs in at the machine's own screen while your remote desktop is open, and a program of "
+         "your desktop does not close by itself (for example one that asks “save?”), REMOTIX gives the KDE desktop "
+         "5 seconds to close by itself and then closes it by force: the person at the machine waits about six "
+         "seconds. Unsaved work in that program is lost."],
+        ["<b>KDE Plasma</b>: the language",
+         "The language of the KDE desktop follows the <b>KDE Settings</b> of the user "
+         "(<code class=\"sys\">~/.config/plasma-localerc</code>), as at a local sign-in. A user who has already "
+         "used KDE in a language changes it from the KDE Settings."],
+        ["A <b>password window</b> that does not appear (GNOME)",
+         "A program started with <code class=\"sys\">pkexec</code> may not start in a remote GNOME session. Use "
+         "<code class=\"sys\">sudo</code> in a terminal."],
+        ["The first click after signing in (GNOME)",
+         "The first pointer movement after signing in used to arrive with one coordinate at zero, so that the "
+         "first click could land on the edge of the screen. REMOTIX cures it in software: the first movement is "
+         "sent twice. If the first click still lands in the wrong place, click again."],
+        ["A <b>password window for the keyring</b> in a program",
+         "The keyring of the user is locked in a remote session (declared, see " + rif("What REMOTIX is not")
+         + "). Type the password in the window, or work without the stored passwords."],
+        ["The language of the desktop",
+         "The remote desktop uses the language the user chose in the desktop settings, otherwise the system's "
+         "language (" + sysf("/etc/default/locale") + "), with the formats (dates, numbers). At the end of a normal "
+         "session the user's own language settings are as they were."],
+        ["A user with a screen scale other than 1 (GNOME)",
+         "The scale of the remote desktop is always 1. REMOTIX tries once to bring it back; if it cannot, the "
+         "session is refused and the page gives the generic “could not open your session” sentence."],
+        ["Still open and declared",
+         "Safari and Firefox on Windows were not tried; NVIDIA cards have "
+         "not been run again on Debian 13 (they worked on Ubuntu 26.04 in October 2026)."],
+    ], "«TAB» — Known problems on Debian 13")
+
 S_DESIGN = p("Some things REMOTIX does not offer, deliberately. They are not defects.", lead=True) + \
     ul([
-        "<b>No power off, restart, suspend or hibernate</b> from a remote desktop. The entries are not in the "
+        "<b>No power off, restart, suspend or hibernate</b> from any desktop, remote or at the machine. The entries are not in the "
         "menus, and the machine refuses the request from any user, at the machine or remote. "
         + c("sudo systemctl poweroff") + " as the administrator still works.",
         "<b>No unblocking of a ban by the administrator.</b> A ban ends with time (see " + rif("The login defences")
@@ -231,4 +294,5 @@ CHAPTER = ("When something does not work", [
     ("Where the administrator looks", S_ADMIN),
     ("Wrong characters or keys", S_KEYBOARD),
     ("What cannot be done, by design", S_DESIGN),
+    ("Known problems on Debian 13", S_KNOWN),
 ])

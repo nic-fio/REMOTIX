@@ -31,7 +31,7 @@ S1 = p("REMOTIX serves four Wayland desktops that belong to three compositor fam
         ["«Alive» means", c("DisplayConfig.GetCurrentState") + " answers", c("org.kde.KWin") + " owns its bus name",
          c("org.xfce.SessionManager") + " owns its bus name", c("org.lxqt.session") + " owns its bus name"],
         ["Log Out", c("Logout(1)") + ", then " + c("Logout(2)"), c("org.kde.Shutdown.logout") + ", then "
-         + c("StopUnit") + " of " + c("plasma-workspace.target"), c("org.xfce.Session.Manager.Logout") + ", then SIGTERM to labwc",
+         + c("StopUnit") + " of " + c("graphical-session.target"), c("org.xfce.Session.Manager.Logout") + ", then SIGTERM to labwc",
          c("logout()") + " without waiting for a reply, then SIGTERM to labwc"],
     ], "«TAB» — The four desktops side by side") + \
     p("<b>Versions.</b> The facts read on the four Debian 13 test containers on 17 Nov 2026 are recorded in "
@@ -134,9 +134,43 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
         [c("XFCE4_SESSION_COMPOSITOR"), "—", "—", c("labwc -m --session xfce4-session"), "—"],
         [c("SHELL"), "empty", "the user's login shell from passwd", "same", "same (qterminal falls back to /bin/sh without it)"],
         [c("DCONF_PROFILE"), "the session profile", "—", "—", "—"],
-        [c("LANG") + " (a UTF-8 locale that exists), " + c("HOME") + ", " + c("USER") + ", " + c("PATH"), "yes", "yes", "yes",
+        [c("LANG") + " (a UTF-8 locale that exists), " + c("LANGUAGE") + ", " + c("LC_*") + " (the language of the user, see below)",
+         "yes", "yes", "yes", "yes"],
+        [c("HOME") + ", " + c("USER") + ", " + c("PATH"), "yes", "yes", "yes",
          "yes, with REMOTIX's " + c("bin-lxqt") + " folder at the head of " + c("PATH")],
     ], "«TAB» — The composed environment") + \
+    p("<b>The language.</b> A local graphical login gives the session the language the user chose in the desktop settings and "
+      "otherwise the system's one; the remote session does the same (" + c("child_locale_read()") + " in " + c("child.c") + "). "
+      + c("LANG") + " is the first item of " + c("Languages=") + " (or the value of the older " + c("Language=")
+      + ") in " + sysf("/var/lib/AccountsService/users/<name>") + ", read by the child <b>as root before it changes identity</b>, because that "
+      "folder is " + c("root:root 0700") + "; with no such choice it is the " + c("LANG") + " that " + c("pam_env") + " put in the PAM "
+      "environment from " + sysf("/etc/default/locale") + " (the second " + c("pam_env") + " line of " + c("src/remotix.pam") + "). The system's "
+      + c("LC_*") + " and " + c("LANGUAGE") + " come from the same PAM environment (at most " + c("CHILD_LOCALE_MAX") + " = 12 of them). "
+      "Every value is checked for plain characters before it is written into an " + c("execve") + " environment, and " + c("local_utf8()")
+      + " in " + c("session.c") + " still checks that the locale exists and is UTF-8, falling back to " + c("C.UTF-8")
+      + " with a log line (until 1.0.1 the language was always " + c("C.UTF-8") + "). All these names are in " + c("OUR_VARIABLES")
+      + " (" + rif("Ending a session and tidying up") + ").") + \
+    p("<b>The language in the user manager (KDE, XFCE, LXQt).</b> On these three desktops the units of the session (KWin and its labwc, "
+      "labwc, the panel) are born with the environment of the user's systemd manager, which " + c("pam_systemd") + " made with the system's "
+      "language, not with the one composed for the start command. " + c("manager_set_locale()") + " (" + c("session.c") + ") therefore "
+      "puts the " + c("LANG") + ", " + c("LC_*") + " and " + c("LANGUAGE") + " words of the composed environment into the manager with "
+      + c("SetEnvironment") + " before the session starts; if the bus does not answer a ⚠ line says the desktop's units may get the system's. "
+      "At the end of a normal session the values go back as they were (they are in " + c("OUR_VARIABLES") + ", so the snapshot of birth "
+      "restores them); in the close for a local login (" + c("session_clear_out_light()") + ") they stay in the manager <b>on purpose</b>: it is the "
+      "language chosen by that same user, the one the local desktop now coming in uses too, and taking it away could take it from under "
+      "that desktop. They are put right at the next remote birth, or go away with the manager. GNOME needs none of this: " + c("gnome-session")
+      + " exports its whole environment.") + \
+    note("on <b>KDE</b> the language of the desktop follows the user's own " + sysf("~/.config/plasma-localerc") + ", as at a local login. "
+         "REMOTIX hands the right language to the session (the processes of the desktop carry it), but Plasma reads that file, which it "
+         "creates at its first start, and where it holds another language it wins. A user who has already used KDE in one language changes "
+         "it from KDE's own Settings; REMOTIX does not write that file.", "Language on KDE.") + \
+    p("<b>The PATH is the one PAM gives to a login.</b> The child opens a PAM session with the service " + c("remotix")
+      + " (" + rif("How a session is born") + ") and takes the " + c("PATH") + " that " + c("pam_env") + " composed from "
+      + sysf("/etc/environment") + ". If PAM gives none, or one that is not a list of absolute folders without a " + c("..")
+      + " component, of plain characters and at most 400 long (" + c("child_path_ok()") + "), the fallback of " + c("become_and_exec()")
+      + " in " + c("child.c") + " applies: " + c("~/.local/bin:~/bin:/usr/local/bin:/usr/bin") + " with the user's real home (not for a home "
+      "that holds a colon). On LXQt REMOTIX's " + c("bin-lxqt") + " folder goes in front. " + c("src/remotix.pam") + " warns not to add "
+      + c("user_readenv=1") + ": the user would then choose the session's " + c("PATH") + " from " + sysf("~/.pam_environment") + ".") + \
     p("<b>The session's own folders.</b> On a machine where a local login runs " + sysf("/etc/X11/Xsession.d/60x11-common_xdg_path")
       + ", the session's folders " + sysf("/etc/xdg/xdg-<session>") + " and " + sysf("/usr/share/<session>") + " would come "
       "in front of " + c("XDG_CONFIG_DIRS") + " and " + c("XDG_DATA_DIRS") + ". On Debian 13 that script does not exist "
@@ -187,6 +221,19 @@ S4 = p("The server never starts a desktop itself. The per-user child (" + rif("S
       "to, clears " + c("CLOEXEC") + ", hands it to the new image with " + c("--session-fd") + ", and the new image sets "
       + c("CLOEXEC") + " again so that only the session's leader holds it. The measurement is recorded as made on the four "
       "boxes.") + \
+    h4("A compositor that is not installed") + \
+    p("On XFCE and LXQt the compositor is " + c("labwc") + ", a Recommends of the package, so " + c("apt install --no-install-recommends")
+      + " leaves it out. " + c("session_missing_component()") + " (" + c("session.c") + ") answers it at <b>every</b> login (an administrator "
+      "who installs the package while the server runs is believed at the next one): for XFCE and LXQt it looks for " + c("labwc")
+      + " in the " + c("PATH") + " of the service and returns its name if it is missing; GNOME has its own compositor and KDE has the KWin "
+      "fallback of " + rif("KDE Plasma: KWin nested in labwc") + ". " + c("main.c") + " asks it <b>before</b> the child is spawned, like "
+      "the caps: no process and no logind session are made, the client gets " + c("0x0E") + " (" + rif("ATTACH and SESSION as implemented") + ") with the "
+      "sentence «the desktop (XFCE) cannot start: `labwc` is not installed on this server», and the log names the package to install. "
+      "Before this the user was admitted and looked at an empty canvas, and the cause sat in " + sysf("session.log")
+      + ". " + c("session_spawn()") + " asks the same question and refuses with the same words in the tenant's slice of the log (an old "
+      "child, a rebirth). The package's " + c("postinst") + " warns at installation if " + c("labwc") + " is missing "
+      "(" + c("debian/remotix.postinst") + "). Declared limit (comment): the parent searches the " + c("PATH") + " of the service, the "
+      "session starts with the one of the PAM login; they agree for " + c("/usr/bin") + ", where " + c("labwc") + " is packaged.") + \
     h4("The steps of " + c("session_spawn()")) + BIRTH + \
     steps([
         "<b>Clear-out and snapshot.</b> " + c("session_clear_out_handler()") + " removes what a session that ended badly left "
@@ -256,6 +303,17 @@ S5 = p("A session ends in three ways: the user chooses «Log Out» in the deskto
       "and the next login resumed it. Now the child dies of the signal on every desktop, its lifeline fifo closes and "
       "logind closes the session (the scope has already been emptied). A compositor that dies by itself looks the same "
       "from outside and is treated the same way.") + \
+    p("<b>The farewell is said before the stage is taken down.</b> Dismantling the stage (capture, input, clipboard) waits for "
+      "PipeWire, and PipeWire's real-time module can wait up to 25 s on RealtimeKit where " + c("rtkit-daemon") + " is installed but "
+      "cannot start (containers, hardened machines): the page used to stay on the last image, without a word, for that long. "
+      + c("session_over_early()") + " (" + c("child.c") + ") therefore sends " + c("MSG_SESSION_FINISHED") + " <b>first</b>, and the "
+      "parent counts the child as «closing» from then on, so a login in the meantime gets the true " + c("0x0E") + " «still closing», "
+      "never a desktop that is going away, and does not attach to it. It acts only on a <b>certain</b> death: " + c("session_life()")
+      + " answers one of three, " + c("SESSION_LIFE_ALIVE") + ", " + c("SESSION_LIFE_DEAD") + " (the session bus answered and the "
+      "compositor's name has no owner) or " + c("SESSION_LIFE_UNKNOWN") + " (a slow Mutter, a busy bus); only «dead» says the farewell, "
+      "because the farewell cannot be taken back, and in doubt the old road holds (the remount asks again a second later). "
+      "<b>KDE stays out</b>: with KWin's stage mounted, a KWin restarted by systemd leaves its name without an owner for a moment, "
+      "so «no owner» is not certain there. The message is said once.") + \
     h4("The product ends it") + \
     p(c("session_terminate()") + " calls " + c("really_terminate()") + ", which asks politely, waits, and then forces. The "
       "wait is " + c("wait_until_done()") + ": up to " + c("WAIT_EXIT_MS") + " = 10 s, polling every " + c("CHECK_INTERVAL_MS")
@@ -265,7 +323,8 @@ S5 = p("A session ends in three ways: the user chooses «Log Out» in the deskto
         ["GNOME", c("org.gnome.SessionManager.Logout(1)") + " (no confirmation)", c("Logout(2)") + " (forced)",
          sysf("gnome-session-manager@gnome.service") + " inactive and " + sysf("gnome-session-restart-dbus.service") + " inactive"],
         ["KDE", c("org.kde.Shutdown.logout()") + " (not " + c("LogoutPrompt") + ", which asks for a confirmation nobody gives)",
-         c("StopUnit(plasma-workspace.target, fail)") + " (there is no " + c("Logout(2)") + " on KDE)",
+         c("StopUnit(graphical-session.target, fail)") + " (there is no " + c("Logout(2)") + " on KDE; it was " + c("plasma-workspace.target")
+         + " until 1.0.1, which is not enough in time: KWin, ksmserver and plasmashell are " + c("PartOf") + " the graphical target)",
          sysf("plasma-kwin_wayland.service") + " and " + sysf("plasma-workspace.target") + " inactive"],
         ["XFCE", c("org.xfce.Session.Manager.Logout(false, false)") + "", "SIGTERM to every " + c("labwc") + " of the user (" + c("kill_xfce()") + ")",
          "no " + c("labwc") + " process of the user is left (" + c("my_processes()") + ")"],
@@ -279,6 +338,14 @@ S5 = p("A session ends in three ways: the user chooses «Log Out» in the deskto
          "no unit to ask, so " + c("inactive_unit()") + " looks at processes: " + c("systemctl --user is-active") + " on a "
          "unit that does not exist answers «inactive», which would make the guard against a second session vanish "
          "silently (the comment in " + c("inactive_unit()") + ").", "XFCE names, and why XFCE and LXQt are checked by process.") + \
+    p("<b>The close for a local login.</b> When a local login of the same user is held in PAM and the remote desktop must go first "
+      "(" + rif("Local excludes remote and the session cap") + "), the orderly step on KDE waits " + c("KDE_PRELOCAL_ORDERLY_MS") + " = 5 s "
+      "instead of 10 before the forced one. Plasma waits without limit for a program that does not close by itself (a «save changes?» "
+      "dialog, a terminal running a program) and nobody is there to answer, so the ten seconds were only a delay of the local login. Every "
+      "other close and every other desktop keeps " + c("WAIT_EXIT_MS") + ". The forced step is " + c("StopUnit") + " of "
+      + c("graphical-session.target") + ", which takes the whole desktop down. If the parent that asked for the close is gone by then (the "
+      "root side released its hold and the local desktop may be starting), the forced step is <b>not</b> taken and a line says so "
+      "(" + c("force_refused()") + ").") + \
     h4("What is left in the user manager") + \
     p("What the product puts into the user's systemd manager outlives the session if the manager does (the test containers "
       "and any user with lingering enabled): the drop-ins under " + sysf("user.control") + " and the variables that "
@@ -306,17 +373,26 @@ S5 = p("A session ends in three ways: the user chooses «Log Out» in the deskto
         + " and geoclue's agent stayed in the scope.",
     ]) + \
     h4("KDE: a Log Out that stops halfway") + \
-    p("Corrected on 17 Nov 2026 (the box above " + c("session_kde_logout_watch()") + "). «Log Out» calls " + c("plasma-shutdown")
-      + ", which stops " + c("plasma-workspace.target") + " and then asks the user manager to stop "
+    p("«Log Out» calls " + c("plasma-shutdown") + ", which asks ksmserver and KWin to close their windows and then asks the user manager to stop "
       + sysf("graphical-session.target") + ", which is what really stops KWin, plasmashell and the rest. If any unit has a "
       "start job queued at that moment (the comment names " + c("xdg-desktop-portal") + " in its first seconds), systemd "
       "refuses the stop («Transaction … is destructive»), plasma-shutdown ignores the refusal and exits, and the desktop "
-      "stays up. The signal REMOTIX uses is " + c("plasma-workspace.target") + " seen <b>active</b> in this child's life and "
-      "then not active while " + c("org.kde.KWin") + " is still on the bus. After a grace of " + c("KDE_LOGOUT_GRACE_MS")
-      + " = 4 s, in which the normal road wins if it works, the stop of " + c("graphical-session.target") + " is asked again "
-      "with mode " + c("fail") + " (as plasma-shutdown does), every " + c("KDE_LOGOUT_RETRY_MS") + " = 3 s and at most "
-      + c("KDE_LOGOUT_TRIES") + " = 10 times, one log line per attempt. The function runs at every round of the child's loop "
-      "and limits its own frequency to one look per second.") + \
+      "stays up. " + c("session_kde_logout_watch()") + " (called at every round of the child's loop, one look per second) has two signals, "
+      "and either starts the same grace. <b>First</b>: " + c("plasma-shutdown") + " owns the bus name " + c("org.kde.Shutdown") + " for its whole run "
+      "and releases it when it exits (" + c("NameOwnerChanged") + ", followed on a private main context turned at each round, because a "
+      "poll would miss a short run); the release alone is not a logout (the same program runs for «save session», and exits without "
+      "stopping anything if the user cancels), so the watch then asks " + c("ksmserver.isShuttingDown()") + ": " + c("true") + " arms it, "
+      + c("false") + " (cancelled, or not a logout) forces nothing, and a ksmserver that does not answer forces nothing either, because a "
+      "logout that cannot be confirmed is not worth the user's unsaved work. <b>Second</b>, the older one: " + c("plasma-workspace.target")
+      + " seen <b>active</b> in this child's life and then not active while " + c("org.kde.KWin") + " is still on the bus (on Plasma 6.6 "
+      "and later plasma-shutdown never stops that target, which is why the first road exists). After a grace of "
+      + c("KDE_LOGOUT_GRACE_MS") + " = 4 s, in which the normal road wins if it works, the stop of " + c("graphical-session.target")
+      + " is asked again with mode " + c("fail") + " (as plasma-shutdown does), every " + c("KDE_LOGOUT_RETRY_MS") + " = 3 s, "
+      + c("KDE_LOGOUT_TRIES") + " = 10 times; then in mode " + c("replace") + " (a queued start job replaces nothing of the user's work) "
+      "another ten times. If even that is refused the watch returns «to be closed» and the child closes the session by the product's own "
+      "road (" + c("session_terminate()") + "). One log line per attempt. Declared limits (comment): " + c("logoutAndShutdown")
+      + " and " + c("logoutAndReboot") + " are not covered (they are reachable only through the menu entries, which REMOTIX removes), and "
+      "a restart of KWin by its wrapper during the wait resets the request.") + \
     warn("whether a refused stop can also happen on other desktops was not investigated in the code; only KDE has this watch. "
          "The PIANO.md status of 17 Nov also lists, as an open point, that XFCE ignores a Log Out requested while the desktop "
          "is still starting: it is described there as a behaviour of the desktop itself, and the code does not retry it "
@@ -351,6 +427,11 @@ S6 = p("GNOME is started through the machine's own GNOME session, with a systemd
         + " §3 table, question 13; " + rif("Screen capture") + ").",
         "<b>The pointer.</b> Mutter delivers the cursor as metadata (" + c("cursor-mode=2") + "); " + c("cursor.c")
         + " turns it into the wire's " + c("CURSOR_SHAPE") + " and discards sizes the protocol forbids.",
+        "<b>The first movement is sent twice.</b> The comment in " + c("input_pointer()") + " (" + c("input.c") + ") records that the first "
+        "absolute motion after the pointer device is (re)started reaches the windows with one of the two coordinates at 0, so a click made "
+        "at once (a tap from a phone) lands on the edge of the screen; the following motions, and the same position sent a second time "
+        "right after the first, are exact. The first one is therefore sent twice (" + c("pointer_primed") + "); a compositor that needs no "
+        "such thing ignores the repeat. The comment marks it as to be removed when Mutter is fixed.",
     ]) + \
     h4("The session dconf") + \
     p(c("session_dconf_prepare()") + " writes " + sysf("$XDG_RUNTIME_DIR/remotix/dconf/profile") + ", a profile of three "
@@ -382,6 +463,18 @@ S6 = p("GNOME is started through the machine's own GNOME session, with a systemd
         [c("org.gnome.desktop.input-sources") + " " + c("sources") + ", " + c("current") + ", " + c("mru-sources"),
          "the negotiated layout, from the in-memory layer", "Lock only; " + rif("Input")],
     ], "«TAB» — The GNOME keys imposed on the session") + \
+    p("<b>The scale.</b> The input's coordinate space is the logical monitor's layout, and with a scale other than 1 the layout and the "
+      "stream's pixels diverge: the pointer goes elsewhere without any line saying so (guard 2 of " + c("DECISIONS.md") + " §5.0-sexies, "
+      "comment of " + c("mutter.h") + "). The child reads the scale of REMOTIX's own logical monitor (" + c("mutter_our_scale()") + "). If it "
+      "was read and is not 1 (a scale saved from Settings → Displays in " + sysf("~/.config/monitors.xml") + ", a mandatory dconf profile "
+      "of the administrator), the child makes <b>one</b> attempt, " + c("mutter_scale_to_one()") + " (" + c("mutter.c") + "), with "
+      + c("ApplyMonitorsConfig") + " method 1 (temporary, never written to " + sysf("monitors.xml") + ") and only in the plain case of one "
+      "logical monitor, which is ours, with one monitor; the user's own settings are untouched and at a local login they find their own "
+      "scale again. If the scale re-read is exactly 1.0 the stage goes on and a line says the user's scale is ignored in the remote "
+      "session. If not, the stage is refused: " + c("MSG_STAGE") + " carries " + c("fatal") + " = 1, the parent sends " + c("0x0E")
+      + " to every login of that user (" + c("stage_refused_by_child()") + ", " + rif("Local excludes remote and the session cap")
+      + "), and the child closes the graphical session, retrying every 10 s if that fails, instead of remounting the stage for ever in front "
+      "of a black page. A scale that could not be read is not taken for 1.0: the child goes on and says so.") + \
     p("At birth the in-memory layer is emptied and the user's real " + c("input-sources") + " is copied into it; the "
       "negotiated layout replaces it later. After the birth nothing is written: " + c("session_dconf_verify()") + " "
       "<i>re-reads</i> every key through the session profile, as the Shell and the " + c("gsd-*") + " daemons do, and says "
@@ -457,7 +550,8 @@ S7 = p("Plasma is started with " + c("startplasma-wayland") + ", which starts KW
         "It waits for labwc's socket for at most " + c("HOST_BIRTH_MS") + " = 10 s and stops if labwc exits first.",
         "labwc's headless output is born 1280×720; the helper sets it to W×H at " + c("HOST_MHZ") + " = 240 Hz and reads the size "
         "back <b>before</b> KWin opens its window, so the desktop is born at the right size.",
-        "It starts the ticker, sets " + c("KWIN_FORCE_SW_CURSOR=1") + ", and becomes the KWin wrapper with "
+        "It starts the ticker and the ScreenSaver sidecar (below), both with a double fork so that neither stays a zombie of the "
+        "wrapper, sets " + c("KWIN_FORCE_SW_CURSOR=1") + ", and becomes the KWin wrapper with "
         + c("--wayland-display <labwc's socket>") + " added.",
     ]) + \
     table(["Trap of KWin inside labwc (measured 11 Oct 2026, per the comments)", "Cure in " + c("kwin.c")], [
@@ -511,8 +605,34 @@ S7 = p("Plasma is started with " + c("startplasma-wayland") + ", which starts KW
       "socket. The shape of the pointer comes from the metadata, where the session's cursor theme " + c("remotix-invisible")
       + " has one-pixel opaque images of unique colours that the dictionary " + c("shape_from_pixel()") + " maps back to a "
       "real cursor image (" + c("shape.c") + "; " + rif("Screen capture") + ").") + \
-    note(c("kwin_check_permission()") + " ends its failure messages with «Remedy: reinstall the package (apt install --reinstall remotix)» "
-         "(" + c("RX-KDE-001") + ", " + c("RX-KDE-002") + " and " + c("RX-KDE-003") + ", " + c("kwin.c") + "): the remedy is the package's, since there is no installer.",
+    p("<b>The ScreenSaver sidecar.</b> From Plasma 6.4 on, Ctrl+Alt+Del did nothing: the shortcut is a kded6 module that calls "
+      + c("requestLogoutPrompt()") + ", which first asks " + c("org.freedesktop.ScreenSaver.GetActive") + " («never show the logout prompt on "
+      "top of the lock screen»). That name belongs to KWin's lock-screen daemon, KWin starts with " + c("--no-lockscreen") + " (locking is "
+      "REMOTIX's), nobody owns the name, the call fails with " + c("ServiceUnknown") + " and the failure is read as «the screen is locked» "
+      "(comment in " + c("kwin.c") + ", measured on Plasma 6.6.7: with a stand-in that answered false the prompt came up in one second). The "
+      "cure is " + c("screensaver_alive()") + ", a process that the start line forks beside KWin, in the unit's cgroup, that owns the name "
+      "(" + c("DO_NOT_QUEUE") + ": if a real owner is there first, the sidecar ends and says so) on the two paths " + c("/ScreenSaver")
+      + " and " + c("/org/freedesktop/ScreenSaver") + " and answers every method of the standard interface: «not locked» and zero times "
+      "for " + c("GetActive") + " and the time queries, the harmless answer for " + c("SimulateUserActivity") + ", the standard error "
+      + c("NotSupported") + " for " + c("Lock") + ", " + c("Throttle") + " and " + c("UnThrottle") + ". " + c("Inhibit") + " is <b>forwarded</b> to "
+      "powerdevil's call with the same arguments and the same cookie back, and given back when the caller leaves the bus or calls "
+      + c("UnInhibit") + ": measured with VLC, which asks the ScreenSaver name first and, on an error, does not go on, so a fake cookie "
+      "would have left the video without a real inhibition. The sidecar dies with the unit and leaves nothing on the user's bus or in "
+      "the user's files; if it cannot start, a line says Ctrl+Alt+Del will not open the logout screen.") + \
+    p("<b>The lost frame.</b> KWin can leave a window on an old picture when nothing damages it: its stream is the driver of the graph, "
+      "and a buffer queued before the reader ran for the previous one overwrites it, so a picture can be lost and with it its damage; if "
+      "it was the last picture of an animation, nothing follows. " + c("capture_watch_sequence()") + " (" + c("capture.c") + ") counts the "
+      "numbers KWin gives to its buffers, cursor-only ones included: a hole is a buffer that never arrived, and the next picture goes out "
+      "«all changed». If no picture comes by itself within " + c("LOST_QUIET_MS") + " = 200 ms, " + c("capture_frame_lost()") + " tells the "
+      "child, which calls " + c("kwin_poke()") + " (" + c("kwin.c") + "): the transparent pixel on top, on the capture's own connection, is "
+      "attached, damaged and committed again, so KWin draws a frame. No stream restart, so no input device is recreated. At most one poke "
+      "every " + c("LOST_QUIET_MS") + ", ten in a row (" + c("LOST_POKES_MAX") + ") without a picture, then it stops and says so once. A safety "
+      "switch turns the count off, with a line, if more than half of " + c("SEQ_WINDOW") + " = 600 buffers in a row show a hole (a producer "
+      "that does not number them one by one). It never runs on a still desktop: it takes a hole in the numbers.") + \
+    note(c("kwin_check_permission()") + " ends its failure messages with «Remedy: reinstall the package from its file (sudo apt install "
+         "--reinstall ./remotix_&lt;version&gt;_amd64.deb)» (" + c("RX-KDE-001") + ", " + c("RX-KDE-002") + " and " + c("RX-KDE-003") + ", "
+         + c("kwin.c") + "): the remedy is the package's, since there is no installer; the same sentence is used by the other reinstall "
+         "messages (" + c("main.c") + ").",
          "Remedy text.")
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -566,6 +686,30 @@ S8 = p("XFCE on Wayland has no compositor of its own: it runs on labwc. There is
       "button the user adds by hand during the session has a new id and is not locked in that session; it is locked from the "
       "next birth. There is no inhibition on XFCE: " + c("xfce4-session") + " does not consult the inhibitor when it logs out, "
       "so one would give a false sign in the log and no protection (" + c("session_inhibit()") + ").") + \
+    p("<b>Only the leaf keys are locked, and the panel is checked.</b> In the lock files the nodes that are only the parent of a lock ("
+      + c("plugins") + ", " + c("plugin-N") + ") are written as " + c("type=\"empty\"") + ", never as a value the user must own (the comment above "
+      + c("xfce_panel_xml()") + "). The reason was seen: with a plugin's type in the lock, " + c("xfconfd")
+      + " does not write into the user's file a value equal to the system's, so the user's file kept " + c("type=\"empty\"") + " and, "
+      "once the lock was gone, the plugin had no type and the panel dropped it: the «actions» button vanished at the local login. "
+      + c("xfce_panel_integrity()") + " runs at every birth (in " + c("xfce_session_xfconf()") + ") and repairs the "
+      + c("/plugins/plugin-<id>") + " entries of a panel's " + c("plugin-ids") + " that have no type: from a copy still pending, or from the "
+      "standard layout, but <b>only</b> for the two types REMOTIX locks (" + c("PLUGIN_ACTIONS") + ", " + c("PLUGIN_WHISKER")
+      + ") because the number may belong to another plugin by now, and never while " + c("xfconfd") + " still holds the lock in memory ("
+      + c("xfconfd_holds_lock()") + " reads " + c("/proc/<pid>/environ") + " looking for REMOTIX's folder; if it cannot tell, it does not write). "
+      "It is silent when all is well.") + \
+    p("<b>Programs that a remote session does not start.</b> " + c("session_autostart_cover()") + " writes, in the " + c("autostart")
+      + " folder of REMOTIX's session folder (first in " + c("XDG_CONFIG_DIRS") + "), an entry with the same file name as the system's and "
+      + c("Hidden=true") + ", so XFCE does not start the program. The list is " + c("SESSION_NOT_IN_REMOTE_AUTOSTART") + ": "
+      + c("blueman.desktop") + " (Bluetooth is a device of the machine, not of the remote user, and the applet crashes now and then and "
+      "covers the screen with the crash reporter's window) and " + c("xiccd.desktop") + " (colour profiles: at every login it asks colord "
+      "to create a device, an action polkit gives to the seated user only, and a remote session met a password window of an "
+      "administrator in the middle of the desktop, holding the keyboard and the pointer). It is deliberately <b>not</b> a polkit rule: colord's "
+      "devices and profiles are one set for the whole machine, and granting the action to remote sessions would let any remote user touch "
+      "the seated user's screen; a remote desktop has no monitor to profile anyway. An entry is written only if the system's one exists, "
+      "otherwise only one of ours (marked " + c("X-REMOTIX") + ") of an earlier birth is removed. A " + c("Hidden=true") + " entry hides the file "
+      "name wherever it is, so the user's own visible " + sysf("~/.config/autostart/blueman.desktop") + " is not started either (a differently "
+      "named entry is). The code does not remove the cover at the end of the session: it goes with " + sysf("/run/user/<uid>") + "; with another "
+      "session of the same user alive (ssh, lingering) it stays, harmless because no non-remote session reads that folder.") + \
     p("<b>The copy and the restore.</b> A lock on a single property has a price: at the first save of the channel, " + c("xfconfd")
       + " writes each locked key into the user's file as " + c("type=\"empty\"") + " and the user's value is lost. REMOTIX "
       "therefore keeps a <b>copy</b> of the user's value of each key it locks, before locking, and puts the values back at "
@@ -601,6 +745,14 @@ S9 = p("According to the comment in " + c("session.h") + ", Debian trixie packag
          "is inside a logind session of the PAM service " + c("remotix") + " (asked of " + c("loginctl") + ", through " + c("timeout 3")
          + " when available)", "«Leave» then only logs out, and a local login on the same machine gets the normal programs. "
          "Nothing is written in the user's LXQt files"],
+        ["X11 composition managers", "The same recipe, a script of the same name that logs a line and exits 0, for " + c("picom") + ", "
+         + c("compton") + " and " + c("xcompmgr") + " (" + c("LXQT_X11_COMPOSITORS") + "), <b>only if the program is installed</b> (the script of "
+         "an earlier birth goes if it is not)", "Their entry is an LXQt module without " + c("X-LXQt-X11-Only") + ", so with no X server to "
+         "compose it dies, " + c("lxqt-session") + " restarts it up to " + c("MAX_CRASHES_PER_APP") + " times and shows «X Compositor crashed too many "
+         "times». A module that exits 0 is not restarted, and the compositor the session has, labwc, is already there"],
+        ["Autostart cover", c("blueman.desktop") + " and " + c("xiccd.desktop") + " with " + c("Hidden=true") + " (" + c("session_autostart_cover()")
+         + ", as on XFCE)", "Same reasons as on XFCE (" + rif("XFCE: labwc and a locked xfconf") + "). On LXQt the user's own entry of the same name should "
+         "win because the user's folder comes first; this was not measured"],
         ["Menu entries", c("settings_lxqt()") + " writes six " + c("Hidden=true") + ", " + c("NoDisplay=true") + " entries "
          "(" + c("lxqt-leave") + ", " + c("lxqt-lockscreen") + ", " + c("lxqt-suspend") + ", " + c("lxqt-hibernate") + ", "
          + c("lxqt-shutdown") + ", " + c("lxqt-reboot") + ") into REMOTIX's session-data folder at the head of " + c("XDG_DATA_DIRS")
@@ -639,14 +791,17 @@ S10 = p("One table to answer «where does REMOTIX write, for this desktop?». " 
          + ", " + c("action/switch_user") + " false in " + c("kdeglobals") + "; " + c("BorderSize=Normal") + ", "
          + c("BorderSizeAuto=false") + " in " + c("kwinrc") + " (a starting point, written without " + c("[$i]") + ", so the user's "
          "own value wins); " + c("loginMode=emptySession") + " in " + c("ksmserverrc") + " (also a starting point); the screen "
-         "inhibition to powerdevil; the start line's " + c("--no-lockscreen"),
+         "inhibition to powerdevil; the start line's " + c("--no-lockscreen") + "; the ScreenSaver sidecar (not a setting: it only answers "
+         "a question on the bus)",
          sysf("$XDG_RUNTIME_DIR/remotix/xdg/") + " (first in " + c("XDG_CONFIG_DIRS") + "), the drop-in, memory",
          c("write_kde_menu_rules()") + " logs each file; the drop-in is re-read"],
         ["XFCE", "the locked keys of " + c("XFCE_LOCKS") + ", the panel's action and whisker entries, labwc's " + c("rc.xml"),
          sysf("$XDG_RUNTIME_DIR/remotix/xdg-xfce/") + " and " + sysf("labwc-xfce/") + ", the " + sysf("xfconfd.service") + " drop-in; "
          "a copy of the user's values in the state folder",
-         "every key re-read through " + c("xfconf-query") + "; the manager's environment for " + sysf("xfconfd.service") + " re-read"],
-        ["LXQt", "the labwc folder, the two command scripts, six hidden menu entries", sysf("$XDG_RUNTIME_DIR/remotix/labwc-lxqt/")
+         "every key re-read through " + c("xfconf-query") + "; the manager's environment for " + sysf("xfconfd.service") + " re-read; the panel's "
+         "plugin types checked (" + c("xfce_panel_integrity()") + "); the autostart covers (" + c("blueman.desktop") + ", " + c("xiccd.desktop") + ")"],
+        ["LXQt", "the labwc folder, the two command scripts, the scripts for the X11 composition managers that are installed, the autostart covers, six hidden menu entries",
+         sysf("$XDG_RUNTIME_DIR/remotix/labwc-lxqt/")
          + ", " + sysf("bin-lxqt/") + ", " + sysf("data-lxqt/"), "the six entries are re-read (" + c("n/6 entries hidden, RE-READ") + ")"],
     ], "«TAB» — What the session imposes, per desktop") + \
     p("<b>KDE's powerdevil inhibition.</b> " + c("powerdevil_guard()") + " runs as a thread in the child: powerdevil's default "
@@ -687,9 +842,9 @@ S11 = p("What follows is what the maintainer will meet on the four desktops. Ite
          "PIANO.md; see " + rif("Performance and capacity") + "."],
         ["GNOME", "The check that runs " + c("pkexec") + " gets an empty " + c("SHELL") + ", by design (the composed environment "
          "sets it empty).", "PIANO.md, final run."],
-        ["GNOME, XFCE, LXQt, KDE", "AppArmor was tried on a real Debian 13 VM only up to the connection (0 denials in complain and "
-         "enforce mode); a session could not be tried there because the VM has no graphics card.", "PIANO.md; "
-         + rif("Appendix C — Known issues and open points")],
+        ["GNOME, XFCE, LXQt, KDE", "The AppArmor profile of the network side is checked on every desktop by " + c("prove/check-apparmor.py")
+         + ", which looks in the kernel journal for denials (and, in complain mode, for «allowed» lines of the profile) since the start of "
+         "the round.", "The package installs the profile in complain mode; " + rif("Security model") + "; " + rif("Testing") + "."],
     ], "«TAB» — Behaviours of the four desktops") + \
     p("<b>Places that differ per desktop</b> (the list to walk when a fifth is added): " + c("recognize_desktop()") + ", "
       + c("desktop_name()") + ", " + c("compose_environment()") + ", " + c("write_dropin()") + ", " + c("start()") + ", "

@@ -1,4 +1,4 @@
-from build import arrow, box, c, fig, note, p, rif, steps, table, text, ul, warn, zone
+from build import sysf, arrow, box, c, fig, note, p, rif, steps, table, text, ul, warn, zone
 
 # ── 14.1 Trust boundaries ────────────────────────────────────────────────
 ZONES = fig(
@@ -157,26 +157,32 @@ S4 = p("The profile is " + c("debian/remotix_network.apparmor") + ", installed a
         ["No capability", "No " + c("capability") + " line at all."],
         ["Files", "The binary and " + c("/usr/share/remotix") + " read; the XKB data read; " + c("/etc/machine-id")
          + " read; " + c("/var/lib/remotix/net") + " and " + c("/run/remotix/net") + " read, write and lock; the "
-         "system bus, the journal sockets and logind's session files; selected " + c("/proc") + ", " + c("/sys")
+         "system bus, the journal sockets and logind's session files; " + c("/usr/share/applications/org.kde.remotix.desktop") + " read (KWin's screencast permission file, which this side reads too on KDE); selected " + c("/proc") + ", " + c("/sys")
          + " and " + c("/dev") + " entries (" + c("null") + ", " + c("urandom") + ", " + c("random") + ")."],
         ["Network", c("inet") + " and " + c("inet6") + " " + c("dgram") + " and " + c("stream") + ", " + c("unix")
          + " " + c("stream") + " and " + c("dgram") + ", and " + c("netlink raw") + " (marked in the profile as to be "
          "removed when proven unused; the seccomp filter of the walls already refuses " + c("AF_NETLINK") + ")."],
         ["Signals", "Receive from unconfined processes (the root side); send and receive among profile members."],
-        ["Denied", c("deny ptrace") + ", " + c("deny mount") + ", " + c("deny unix addr=@*") + " (abstract sockets)."],
+        ["Denied", c("deny ptrace") + ", " + c("deny mount") + ", and the abstract Unix sockets of the machine, in two lines that name the operations: "
+         + c("deny unix (bind, listen) addr=@**") + " and " + c("deny unix (connect, send, receive) peer=(addr=@**)") + ". A bare "
+         + c("deny unix addr=@*") + " would also carry " + c("create") + ", which has no address to compare, and on a kernel that mediates Unix sockets "
+         "it would forbid every Unix socket (a " + c("deny") + " holds in complain mode too: no D-Bus, no logind, every sign-in refused). "
+         + c("@**") + " and not " + c("@*") + ": one star stops at a slash, and the names to close contain one (" + c("@/tmp/.X11-unix/X0") + ")."],
+        ["The administrator's additions", c("include if exists <local/remotix_network>") + ": the file " + sysf("/etc/apparmor.d/local/remotix_network") + " (empty, made by "
+         + c("dh_apparmor") + ") is where an administrator adds rules without touching the conffile."],
     ], "«TAB» — What the profile allows, in summary") + \
     p("<b>What was verified, and what was not.</b> " + c("PIANO.md") + " records, for 17 Nov 2026, a run on a "
-      "real Debian 13 virtual machine: installation, the profile loaded in complain and then in enforce mode, "
-      "0 denials up to the connection, restart, removal and purge without residue. The same record says the "
-      "session could not be tried, because that virtual machine has no video card. <b>The profile has therefore never "
-      "been observed during a session</b> (login, desktop birth, video, audio), neither in complain nor in "
-      "enforce mode, and it must not be moved to enforce until it has, on a machine with a card, with zero "
-      "unexpected audit lines through the functional checks. " + c("check-package.py") + " has an " + c("apparmor")
+      "real Debian 13 virtual machine without a video card: installation, the profile loaded in complain and then in enforce mode, "
+      "0 denials up to the connection, restart, removal and purge without residue; no session could be tried there. Sessions "
+      "(login, desktop birth, video, audio) are run on the bench's virtual machines with a video card, and " + c("check-apparmor.py")
+      + " reads the kernel journal of the machine (and the audit log if there is one) and fails on any " + c("apparmor=\"ALLOWED\"")
+      + " or " + c("apparmor=\"DENIED\"") + " line of the profile since a given moment (complain mode shows what the profile does not "
+      "cover as ALLOWED); the bench's full round runs it last. The profile ships in complain mode all the same: moving it to enforce is a "
+      "decision that has not been taken. " + c("check-package.py") + " has an " + c("apparmor")
       + " check that tests that the profile text compiles and, when the interface exists, that it is loaded; "
       "in containers, which have no AppArmor interface, it answers BLOCKED.") + \
-    note("The header of the profile now states the same facts (corrected on 17 Nov 2026): loaded in complain mode, 0 denials up to the "
-         "connection on a Debian 13 virtual machine, no session tried there for lack of a video card. The rules for " + c("/proc")
-         + " are still marked «not tried». Neither the header nor the machine run covers a session.", "State of the profile.") + \
+    note("The rules for " + c("/proc") + " are still marked «not tried» in the header of the profile. The one file the profile did not cover in full "
+         "rounds on KDE, " + c("org.kde.remotix.desktop") + ", is now read-allowed.", "State of the profile.") + \
     p("On removal, " + c("debian/remotix.postrm") + " writes the profile name to the kernel's " + c(".remove")
       + " file of AppArmor, so the profile leaves the kernel even if its file is already gone.")
 
@@ -246,7 +252,9 @@ S5C = p("<b>The problem.</b> A user who has a REMOTIX desktop and then logs in a
          "only. PAM runs it as root, inside the login's own stack, and the login waits for it."],
         ["The PAM line", c("session optional pam_exec.so quiet /usr/libexec/remotix/remotix-local-login") + " in " + c("/etc/pam.d/common-session")
          + ", put there by " + c("pam-auth-update") + " from the profile " + c("/usr/share/pam-configs/remotix") + " ("
-         + rif("The PAM service file remotix.pam") + ", " + rif("Files the package installs") + ")."],
+         + rif("The PAM service file remotix.pam") + ", " + rif("Files the package installs") + "). It is also checked at every start of the "
+         "service: " + c("ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check") + " looks for the line and, if it is missing, puts it back with "
+         + c("pam-auth-update --package") + " and writes one line in the log; it never forces and never re-enables a profile the administrator switched off."],
         ["The requests", c("/run/remotix/prelocal/") + ": a folder of root, mode 0700, made by the root side (not by tmpfiles). "
          "A request is an empty file named by the uid. The file " + c(".lock") + " in it is held with an exclusive lock for as long "
          "as the root side lives."],
@@ -325,9 +333,10 @@ S6 = p("A REMOTIX session has no seat, so polkit gives it the answer meant for a
          + c("AUTH_ADMIN") + ": «challenge» would leave the entry in the menu asking a password, which promises "
          "something that is not there."],
         [c("remotix-remote-sessions.rules"), c("40-remotix-remote-sessions.rules"),
-         "Removes the unrequested password windows of a remote session, for five actions only. Catalogue refresh "
+         "Removes the unrequested password windows of a remote session, for six actions only. Catalogue refresh "
          "(" + c("Flatpak.metadata-update") + ", " + c("Flatpak.appstream-update") + ", "
-         + c("packagekit.system-sources-refresh") + "): " + c("YES") + " for every REMOTIX user, if the machine "
+         + c("packagekit.system-sources-refresh") + ", " + c("fwupd.refresh-remote") + " (gnome-software's firmware metadata refresh at login; "
+         "fwupd 2.0.20 of Debian 13 has no such action yet, so it matters only where fwupd is newer)): " + c("YES") + " for every REMOTIX user, if the machine "
          "gives the seated user " + c("yes") + ". Network control and system repositories ("
          + c("NetworkManager.network-control") + ", " + c("Flatpak.modify-repo") + "): " + c("YES") + " for an "
          "administrator (member of " + c("wheel") + ", " + c("sudo") + " or " + c("admin") + ") under the same "
@@ -434,7 +443,7 @@ S8 = p("The honest list, from the code and the decisions:", lead=True) + \
         ["Kernel facilities that the walls need", "The read-only tree needs kernel 5.12; without it the network side "
          "does not start. Landlock's abstract-socket scope needs 6.12 and is skipped on an older kernel. Only x86_64 "
          "and aarch64 have a seccomp filter."],
-        ["AppArmor in a session", "The profile is in complain mode and was never observed during a session (previous "
+        ["AppArmor in a session", "The profile is in complain mode and moving it to enforce is a decision not taken (previous "
          "section)."],
         ["What the package changes on the machine",
          "<b>One system file is edited:</b> through " + c("pam-auth-update") + " the package adds one line, " + c("session optional pam_exec.so quiet "

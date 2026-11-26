@@ -1,4 +1,4 @@
-from build import c, code, note, p, rif, table, tree, ul, warn
+from build import c, code, note, p, rif, sysf, table, tree, ul, warn
 
 # ── 15.1 What the package is ─────────────────────────────────────────────
 S1 = p("REMOTIX for Debian 13 is one binary package, " + c("remotix") + ", built from the " + c("debian/") + " folder "
@@ -57,7 +57,9 @@ S2 = p("The dependencies are those that " + c("dpkg-shlibdeps") + " cannot see: 
          "ICD comes with the proprietary driver."],
         [c("Recommends"), c("labwc") + ", " + c("wlr-randr") + ", " + c("xwayland"), "The compositor REMOTIX starts for "
          "XFCE and LXQt, and for KDE (KWin is born nested in a screenless labwc). They are installed also on a "
-         "GNOME-only or KDE-only machine, because package metadata cannot say «only if XFCE is there»."],
+         "GNOME-only or KDE-only machine, because package metadata cannot say «only if XFCE is there». " + c("labwc") + " is Debian's own "
+         "package: REMOTIX neither contains nor builds it (nor wlroots, which it links), and uses the one of the distribution. Where it "
+         "is missing on an XFCE or LXQt machine the " + c("postinst") + " says so (below) and a user who logs in is told (" + rif("Logging and diagnostics") + ")."],
         [c("Recommends"), c("dconf-cli"), "GNOME session rules are compiled with " + c("dconf compile") + "; without it "
          "GNOME goes back to a declared fallback in which the user's changes made remotely are not kept."],
         [c("Recommends"), c("fonts-dejavu-core"), "labwc dies without a scalable font."],
@@ -66,8 +68,9 @@ S2 = p("The dependencies are those that " + c("dpkg-shlibdeps") + " cannot see: 
         "<b>No desktop is a dependency.</b> The package never installs a desktop by itself; with none of the four "
         "present the server says so at start-up. Nor does it recommend " + c("gnome-session") + ".",
         "<b>Whoever installs with " + c("--no-install-recommends") + " loses</b> the drivers and the compositor "
-        "packages, and a desktop that needs them will not start. Nothing in the package verifies this after the "
-        "fact; " + c("check-package.py") + " has an informative check, " + c("recommends") + ", that only reports which "
+        "packages, and a desktop that needs them will not start. The " + c("postinst") + " only warns about the "
+        "one case it can recognise, labwc missing on a machine with XFCE or LXQt and without GNOME or Plasma (below); "
+        "otherwise nothing in the package verifies this after the fact; " + c("check-package.py") + " has an informative check, " + c("recommends") + ", that only reports which "
         "Recommends the installation pulled in (it always passes).",
         "<b>Static-Built-Using:</b> " + c("ngtcp2 (= 1.25.0)") + " and " + c("nghttp3 (= 1.18.0)") + ". The build "
         "refuses (" + c("test") + " lines in " + c("debian/rules") + ") if " + c("pkg-config") + " reports another "
@@ -128,14 +131,20 @@ S4 = p("The " + c("postinst") + " does, on " + c("configure") + ", in this order
         "<i>remotix: ⚠ pam-auth-update not found</i>, and <i>remotix: ⚠ common-session was edited by hand</i> (the line is not in the file after "
         "the step: a local login is then not held and only the periodic check remains). A failure of " + c("pam-auth-update")
         + " itself is said too. The step runs at every " + c("configure") + ", "
-        "upgrades included; whether an administrator's deselection of the profile survives an upgrade was not verified.",
+        "upgrades included; whether an administrator's deselection of the profile survives an upgrade was not verified. The line is "
+        "also checked at every start of the service (below). The check of the step uses a pattern that matches the line itself "
+        "(" + c("session … pam_exec.so … remotix-local-login") + "), not a comment that merely names the file.",
         "<b>The encoding test, on the first configuration only</b> (the second argument of the script is empty) and "
-        "only if the binary is there: " + c("timeout 30 /usr/libexec/remotix/remotix --encoding-test h264") + ". Its "
+        "only if the binary is there: " + c("MESA_SHADER_CACHE_DISABLE=true timeout 30 /usr/libexec/remotix/remotix --encoding-test h264") + " (Mesa then does not open a shader cache in " + sysf("/root/.cache") + " for a probe that runs once). Its "
         "exit status is 0 if the card encodes a test frame, 3 if no card can encode, 1 if it opens and produces "
         "nothing. Any non-zero status prints a two-line warning that REMOTIX will show no desktop until the card "
         "encodes, naming the driver to check (Intel and AMD: " + c("va-driver-all") + "; NVIDIA: its proprietary "
         "driver) and the command to repeat. It does not stop the installation: the VA driver may arrive with a "
         "Recommends configured after REMOTIX itself.",
+        "<b>The compositor warning.</b> If " + c("labwc") + " is not installed, and the machine has " + c("xfce4-session") + " or "
+        + c("lxqt-session") + " and has neither " + c("gnome-shell") + " nor " + c("startplasma-wayland") + " (so there is no doubt about "
+        "which desktop REMOTIX would start), the step prints <i>remotix: ⚠ the package labwc is not installed (it is only a Recommends)</i> "
+        "and the command " + c("sudo apt install labwc") + ". It runs at every " + c("configure") + " and never stops apt.",
         "The debhelper part (" + c("#DEBHELPER#") + "): the AppArmor lines of " + c("dh_apparmor") + " (load or reload "
         "the profile " + c("remotix_network") + ") and the systemd lines described in the service policy section. "
         "The service and the user groups are not touched.",
@@ -160,6 +169,7 @@ FILES = tree([
     "/usr/libexec/remotix/",
     "├── remotix  # the server, mode 0755: root side, network side, child, PAM helper (one executable)",
     "├── remotix-local-login  # the local-login hook, mode 0755, libc only: run by PAM at a local login",
+    "├── remotix-pam-hook  # shell script, mode 0755: puts the hook's PAM line back at every start of the service",
     "└── remotix-polkit-seated  # shell helper of the 40- polkit rule, mode 0755",
     "/usr/share/remotix/",
     "├── page.html  # the page the server sends (lintian override: it is the program, not documentation)",
@@ -182,6 +192,7 @@ FILES = tree([
     "/etc/remotix/remotix.conf.d/  # empty folder for the administrator's drop-ins",
     "/etc/ufw/applications.d/remotix  # conffile: the REMOTIX profile, defined, not opened",
     "/etc/apparmor.d/remotix_network  # conffile: the profile, complain mode",
+    "/etc/needrestart/conf.d/remotix.conf  # conffile (debian/remotix.install): needrestart never restarts the service",
 ], "«TAB» — Where the package puts its files (from " + c("debian/rules") + "; created at run time and not listed: "
    + c("/var/lib/remotix") + ", " + c("/run/remotix") + ", and " + c("/etc/apparmor.d/local/remotix_network")
    + " made by the " + c("dh_apparmor") + " lines of the " + c("postinst") + ")")
@@ -197,10 +208,18 @@ S5 = p("Everything is installed by " + c("override_dh_auto_install") + " and " +
         "<b>The page certificate is not in the package.</b> The server makes its own certificates at start-up in "
         + c("/var/lib/remotix/net/certificates") + " (" + c("certificates_prepare()") + "); an administrator's own, "
         "put there without the " + c(".ours") + " mark, is used instead.",
+        "<b>The needrestart file</b> (" + c("debian/needrestart/remotix.conf") + ", copied by " + c("debian/remotix.install") + ") holds the single line "
+        + c("$nrconf{override_rc}{qr(^remotix\\.service$)} = 0;") + ". A restart of REMOTIX closes every remote desktop, and " + c("needrestart")
+        + " (run by an automatic update, or with " + c("-r a") + ") would restart it without asking after any update of a library it uses; "
+        "with the line the service is only listed under the services to restart by hand, and the administrator restarts it when no remote desktop is open "
+        "(the old library stays loaded until then). It is a conffile, so an administrator's edit survives an upgrade. On a machine without "
+        + c("needrestart") + " the folder " + sysf("/etc/needrestart/conf.d") + " is created by the package and the file does nothing. "
+        "That the line has this effect on Debian was <b>not observed</b>.",
         "<b>The KDE file</b> " + c("org.kde.remotix.desktop") + " has " + c("Exec=/usr/libexec/remotix/remotix") + ", "
         + c("NoDisplay=true") + " and " + c("X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1") + ". The package "
         "ships it and the program only checks it at start-up (" + c("kwin_check_permission()") + "); it never writes it.",
-        "<b>The two polkit files and the helper</b> are active as soon as they are installed; the two files under "
+        "<b>The two polkit files and the helper</b> are active as soon as they are installed (the 40- rule has a fourth refresh action, "
+        + c("org.freedesktop.fwupd.refresh-remote") + ", which gnome-software asks at login; fwupd 2.0.20 of Debian 13 has no such action, so on Debian 13 the line has no effect yet); the two files under "
         + c("belts/") + " are not (" + rif("Security model") + ").",
         "<b>The unit comes from debhelper.</b> " + c("dh_installsystemd") + " picks " + c("debian/remotix.service") + " and "
         "installs it under " + c("/usr/lib/systemd/system/") + "; " + c("rules") + " has no line for it.",
@@ -238,11 +257,6 @@ S6 = p("Removal has two scripts and two outcomes. " + c("apt remove") + " keeps 
       "restart of the service that the " + c("postinst") + " does if it was running closes them, see the last section).</b> The order matters and each step was added "
       "deliberately (the closing of the sessions before the stop, after a measurement on 17 Nov 2026):") + \
     ul([
-        "<b>Take the PAM line out first.</b> " + c("pam-auth-update --package --remove remotix") + " (if " + c("pam-auth-update")
-        + " exists) removes the local-login line from " + c("/etc/pam.d/common-session") + ", before anything else and while the "
-        "profile file is still in place; a failure is said (<i>remotix: ⚠ pam-auth-update --remove remotix failed: check "
-        "/etc/pam.d/common-session</i>) and does not stop dpkg. A purge passes here too, because it runs the " + c("prerm") + " with "
-        + c("remove") + " first.",
         "<b>Close the sessions, with the service still running.</b> " + c("remotix_close_sessions()") + " finds "
         "the logind sessions whose " + c("Service") + " is " + c("remotix") + " and which have no seat ("
         + c("remotix_sessions()") + "; a seated session is never ours whatever its service says) and runs "
@@ -258,6 +272,11 @@ S6 = p("Removal has two scripts and two outcomes. " + c("apt remove") + " keeps 
         + c("stderr") + "), then waits up to 5 s more. Never a process outside a REMOTIX session's scope.",
         "<b>Stop the service</b> with " + c("deb-systemd-invoke stop") + ", because " + c("--no-start") + " makes "
         "debhelper not do it on removal and a started service would otherwise stay alive on a deleted binary.",
+        "<b>Take the PAM line out, now that the service is down.</b> " + c("pam-auth-update --package --remove remotix") + " (if " + c("pam-auth-update")
+        + " exists) removes the local-login line from " + c("/etc/pam.d/common-session") + " while the profile file is still in place. It is done only after "
+        "the stop because the " + c("ExecStartPre") + " of the unit would put the line back if the service restarted in between. A failure is said "
+        "(<i>remotix: ⚠ pam-auth-update --remove remotix failed: check /etc/pam.d/common-session</i>) and does not stop dpkg. A purge passes here too, "
+        "because it runs the " + c("prerm") + " with " + c("remove") + " first.",
         "<b>Sweep again</b> for what the stop left in an abandoned scope, then, for each person who had a REMOTIX "
         "session and has no other graphical session (a non-REMOTIX session of type x11, wayland or mir), stop " + c("graphical-session.target") + " in "
         "that user's manager.",
@@ -313,11 +332,20 @@ S7 = p("The package installs the service disabled and does not start it. The adm
         ["Removal", "The " + c("prerm") + " closes the REMOTIX sessions and stops the service (see the previous section)."],
         ["Purge", "As removal, then the state is deleted."],
     ], "«TAB» — The package and the service") + \
+    p("<b>Two lines of the unit.</b> " + c("ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check") + ": at every start the script looks for the "
+      "hook's line in " + c("/etc/pam.d/common-session") + " and, if it is missing (an update, a hand edit), puts it back with " + c("pam-auth-update --package")
+      + " and writes one line in the service's log saying what it found; the " + c("-") + " means a failure never prevents the start, and the script never uses "
+      + c("--force") + " or " + c("--enable") + ", so a file edited by hand or a profile switched off in " + c("pam-auth-update") + " stay as they are (the line then "
+      "says the hook is not in place). And " + c("Environment=MESA_SHADER_CACHE_DISABLE=true") + ": the codec probe of the root side would otherwise make Mesa "
+      "open a shader cache in " + sysf("/root/.cache") + "; the users' desktops get their environment from PAM and keep their cache.") + \
+    p("<b>Reinstalling.</b> The messages that tell the administrator to reinstall (the KDE permission file, a missing PAM file) give the command for a " + c(".deb") + ": "
+      + c("sudo apt install --reinstall ./remotix_<version>_amd64.deb") + ". A reinstall runs the scripts as an upgrade does: the service is restarted if it was running, "
+      "and the encoding test of the " + c("postinst") + " is not repeated.") + \
     p("The rule comes from point 1 of decision §10.12 of " + c("DECISIONS.md") + " (the package switches nothing on; "
       "the rest of that decision is about the old installer) and is stated in the repository's " + c("CLAUDE.md")
       + ": the service is installed disabled and not started, and the administrator enables it. The unit uses the "
       "machine's name (" + c("%H") + ") for the certificate; an administrator who connects by IP address puts "
-      + c("REMOTIX_OPTIONS=--name 192.168.1.10") + " in a drop-in under " + c("/etc/remotix/remotix.conf.d/")
+      + c("REMOTIX_OPTIONS=--name 192.0.2.10") + " in a drop-in under " + c("/etc/remotix/remotix.conf.d/")
       + " (the last " + c("--name") + " wins). The runtime life cycle of the service is in "
       + rif("Startup and life cycle") + ".")
 

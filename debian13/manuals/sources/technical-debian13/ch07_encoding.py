@@ -4,7 +4,7 @@ from build import arrow, box, c, code, fig, flow, h4, note, p, rif, table, text,
 VIA = fig(
     box(20, 30, 160, 64, "Captured frame", "DMA-BUF or pixels", "navy")
     + box(220, 30, 200, 64, "encoder.c", "one front for two routes", "blue")
-    + box(470, 8, 190, 56, "vulkanvideo.c", "Vulkan Video (AMD, NVIDIA)", "light")
+    + box(470, 8, 190, 56, "vulkanvideo.c", "Vulkan Video (by capability)", "light")
     + box(470, 74, 190, 56, "vadirect.c", "VA-API via libva (Intel)", "light")
     + box(700, 30, 180, 64, "Annex-B bytes", "checked, then sent", "green")
     + arrow(182, 62, 218, 62) + arrow(422, 52, 468, 36) + arrow(422, 72, 468, 102)
@@ -159,7 +159,7 @@ S4 = p("Two different cards matter. The desktop is drawn by the compositor on <i
         "<b>Declared limits:</b> a device recreated while the desktop lives (driver reload, hotplug) loses the grant; removing the grant does not close descriptors already open."]) + \
     note("NVIDIA's proprietary driver opens the card through " + c("/dev/nvidia*") + " devices with group and mode set by module parameters, not through "
          + c("/dev/dri") + " alone. The code of this tree does not handle that case, and DECISIONS-11.md §11.38 records it as a known limit, not "
-         "measured on a real NVIDIA machine.", "NVIDIA device files.")
+         "measured on a real NVIDIA machine (Ubuntu 26.04, 5–6 Oct 2026) and not tried on Debian 13.", "NVIDIA device files.")
 
 # ── 5 ───────────────────────────────────────────────────────────────────────
 S5 = p("The package asks the product itself whether the machine encodes a frame on the GPU. " + c("remotix --encoding-test [h264|hevc] [--node /dev/dri/…] "
@@ -184,7 +184,7 @@ S5 = p("The package asks the product itself whether the machine encodes a frame 
       + c("none") + " where root would see " + c("hardware") + ", so the probe must run with the identity in question.") + \
     p("<b>Where the package uses it.</b> " + c("debian/remotix.preinst") + " refuses a <i>new</i> installation when the kernel lists no DRM render node "
       "(" + c("/sys/class/drm/renderD*") + "), and " + c("debian/remotix.postinst") + " runs " + c("remotix --encoding-test h264") + " under a 30 s timeout at the "
-      "first configuration and, if it does not exit 0, prints that the card did not encode a test frame and what to check (the VA driver, or NVIDIA's own "
+      "first configuration (with " + c("MESA_SHADER_CACHE_DISABLE=true") + ", so that no shader cache is written in root's folders) and, if it does not exit 0, prints that the card did not encode a test frame and what to check (the VA driver, or NVIDIA's own "
       "driver). It never makes " + c("apt") + " fail, because the driver may arrive with the Recommends configured after the package. The package is "
       "described in " + rif("The package") + ".") + \
     note("the comment above " + c("test_exits()") + " in " + c("child.c") + " (around line 7055) still lists the per-codec keys as " + c("hevc_strada") + " and "
@@ -234,7 +234,7 @@ S7 = p(c("vulkanvideo.c") + " uses " + c("VK_KHR_video_encode_queue") + " with t
         ["AMD with RADV (Mesa)", "Vulkan", "The comment in " + c("encoder.c") + " records (1 Oct 2026, RADV, Mesa 25.0.7) H.264 and HEVC on a Radeon RX 6800 on the development server; " + c("SPECS.md") + " §11.4-bis lists AMD on Debian 13 as served by the official repositories. Debian 13 ships Mesa; the package Recommends " + c("mesa-vulkan-drivers") + "."],
         ["Intel (integrated, Arc)", "VA-API", "Chosen by capability: " + c("vulkan_fit()") + " fails on a driver that does not declare encoding, and the Intel path is "
          + c("iHD") + " with " + c("EncSliceLP") + " (" + c("va-driver-all") + " is a Recommends)."],
-        ["NVIDIA, proprietary driver", "Vulkan, by capability", "Written, and recorded in comments as measured on an RTX 4090 (driver 595, 5–6 Oct 2026) on an earlier, non-Debian build; " + c("SPECS.md") + " §11.4-bis lists it as «not tested» on every distribution including Debian 13. Treat it as unverified."],
+        ["NVIDIA, proprietary driver", "Vulkan, by capability", "NVIDIA cards encode through Vulkan Video with NVIDIA's proprietary driver. Measured on a real card (RTX 4090, driver 595) on 5–6 October 2026, on Ubuntu 26.04, with an earlier version of the same code (the " + c("[M]") + " comments in " + c("src/vulkanvideo.c") + " lines 85 and 2232, " + c("src/child.c") + " lines 6994 and 7236, " + c("src/wlroots.c") + " lines 349 and 1241); not run again on Debian 13."],
     ], "«TAB» — Which cards take which route") + \
     table(["Aspect", "What vulkanvideo.c does"], [
         ["Device choice", "The physical device behind the DRM node, matched with " + c("VK_EXT_physical_device_drm") + ", never «the first card». One encode queue and one compute queue."],
@@ -380,7 +380,7 @@ S13 = p("Every encoded frame carries its costs separately, so that a drop in fra
         + " «codec», which reads from the journal which codec, level and GPU node the server negotiated with Chrome and with Firefox, that it is hardware, and that the picture is sharp "
         "at the default quality; " + c("check-package.py") + " 8/8 on each desktop; on a real Debian 13 VM, installation, remove and purge, and a clean refusal on a VM with no card.",
         "<b>Known behaviour without a card:</b> " + c("PIANO.md") + " («rifiniture rimaste») records that without a video card the error repeats in the log every 2 s; which loop writes it was not traced for this manual (the codec retry of " + c("rootside.c") + " starts at 2 s and doubles up to 60 s).",
-        "<b>Not verified:</b> NVIDIA on Debian 13 (any NVIDIA figure quoted in the code comments predates this tree); a canvas at 4096×2304 end to end (the test browser's decoder stops at "
+        "<b>Not verified:</b> NVIDIA on Debian 13 (measured on Ubuntu 26.04 on 5–6 Oct 2026, with an earlier version of the code); a canvas at 4096×2304 end to end (the test browser's decoder stops at "
         "3840×2160); AV1 (not offered); the padding layers' effect by eye on AMD in this build."])
 
 CHAPTER = ("Video encoding", [

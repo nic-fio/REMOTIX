@@ -32,7 +32,13 @@ S_RESTART = p("<b>What a restart of the service does to people at work.</b> Stop
         "fell is closed unless its user comes back within those few seconds.",
         "<b>Restarting the machine</b> ends every desktop and every program in the same way.",
         "A user who signs in at the machine's screen while their remote desktop is open waits a moment (a few "
-        "seconds, at most about 25) while the remote desktop is closed; if the service is stopped there is no wait.",
+        "seconds, at most about 25) while the remote desktop is closed; if the service is stopped there is no wait. "
+        "On KDE Plasma, if a program of the remote desktop does not close by itself (for example one that asks "
+        "“save?”), REMOTIX gives the KDE desktop 5 seconds to close by itself and then closes it by force, so the "
+        "person at the machine waits about six seconds.",
+        "If the machine has <code class=\"sys\">needrestart</code> (Debian does not always have it), the "
+        "package tells it never to restart REMOTIX by itself after a library update, and lists the service "
+        "for a manual restart. Do it when nobody is working.",
     ])
 
 S_OPTIONS = p("Settings go in " + sysf("/etc/remotix/remotix.conf.d/") + " as described in "
@@ -85,23 +91,33 @@ S_USERS = p("REMOTIX adds very little to the machine. This is the whole list.", 
          + ", taken back when the desktop is gone and by <i>remove</i>, and disappear at the next boot in any case."],
         ["Two polkit rules in " + sysf("/usr/share/polkit-1/rules.d/"),
          "<b>50-remotix-no-poweroff</b>: nobody can power off, restart, halt, suspend or hibernate the machine from "
-         "a desktop, remote or local; root with sudo still can. <b>40-remotix-remote-sessions</b>: three requests "
+         "a desktop, remote or local; root with sudo still can. <b>40-remotix-remote-sessions</b>: a few requests "
          "that desktops make on their own at sign-in, and that a remote user cannot answer, are settled instead "
-         "of showing a password window: the software centre refreshing its catalogue is allowed for every "
+         "of showing a password window: the software centre refreshing its catalogues (Flatpak, PackageKit and, "
+         "where the machine's fwupd has the action, the firmware list) is allowed for every "
          "REMOTIX user; changing the network or adding a system-wide software source is allowed to administrators "
          "(members of <code class=\"sys\">sudo</code>, <code class=\"sys\">wheel</code> or "
          "<code class=\"sys\">admin</code>) and silently refused to others. Everything else still asks for a "
          "password, as with sudo."],
         ["An AppArmor profile " + sysf("/etc/apparmor.d/remotix_network"),
          "Describes what the network part may do. It is installed in <b>complain</b> mode: it logs what it would "
-         "forbid and forbids nothing. It has not yet been watched during a full session on a machine with a video "
-         "card, so it is not switched to enforcing."],
+         "forbid and forbids nothing, so it is not switched to enforcing. It forbids the network part every abstract "
+         "unix socket (the X11 ones, for example), and an administrator can add "
+         "rules of their own in " + sysf("/etc/apparmor.d/local/remotix_network") + ", which the profile includes."],
+        ["A needrestart file " + sysf("/etc/needrestart/conf.d/remotix.conf"),
+         "Keeps automatic restarts away from the service, if the machine has needrestart (it is harmless if not)."],
+        ["A KDE permission " + sysf("/usr/share/applications/org.kde.remotix.desktop"),
+         "Lets KWin share its screen with REMOTIX."],
         ["A ufw profile " + sysf("/etc/ufw/applications.d/remotix"), "Describes the port; it opens nothing."],
         ["A line in " + sysf("/etc/pam.d/common-session") + ", put there by <code class=\"sys\">pam-auth-update</code> "
          "from " + sysf("/usr/share/pam-configs/remotix"),
          "When somebody signs in at the machine's own screen, the login waits until that user's remote desktop is "
          "closed. The line is <i>optional</i> and ends within 25 seconds: it can never stop a login. "
-         "<i>remove</i> takes it out again."],
+         "At every start the service checks that the line is there and, if it is not (after an update, for "
+         "example), puts it back with <code class=\"sys\">pam-auth-update</code> and writes one summary line in "
+         "its journal (the program is " + c("remotix-pam-hook") + "). If you edited the file by hand, or switched "
+         "the REMOTIX profile off in " + c("pam-auth-update") + ", the tool is not forced: the line stays out and "
+         "the summary line says so. <i>remove</i> takes it out again, once the service has stopped."],
     ], "«TAB» — What REMOTIX adds to the machine") + \
     p("<b>Users' own settings.</b> While a user's remote session lasts, REMOTIX applies the session's rules to the "
       "desktop (no shut down, restart, suspend or lock buttons; “Log Out” always shown) and puts the user's values "
@@ -150,7 +166,10 @@ S_SECURITY = p("<b>REMOTIX is made for your own server, on your own network or b
 
 S_FILES = p("Where REMOTIX keeps things on a Debian 13 machine:", lead=True) + \
     tree([
-        "/usr/libexec/remotix/remotix  # the program",
+        "/usr/libexec/remotix/",
+        "├── remotix  # the program",
+        "├── remotix-local-login  # the hook that closes a remote desktop when its user signs in at the machine",
+        "└── remotix-pam-hook  # checks that the hook's line is in the PAM file, at every start",
         "/usr/share/remotix/",
         "├── page.html  # the page served to browsers",
         "├── remotix.conf  # the defaults: do not edit",
@@ -162,6 +181,8 @@ S_FILES = p("Where REMOTIX keeps things on a Debian 13 machine:", lead=True) + \
         "/usr/share/pam-configs/remotix  # the line pam-auth-update adds to /etc/pam.d/common-session",
         "/etc/ufw/applications.d/remotix  # the ufw profile",
         "/etc/apparmor.d/remotix_network  # the AppArmor profile (complain mode)",
+        "/etc/needrestart/conf.d/remotix.conf  # keeps automatic restarts away from the service",
+        "/usr/share/applications/org.kde.remotix.desktop  # the KDE permission",
         "/usr/share/polkit-1/rules.d/  # the two polkit rules (40 and 50)",
         "/var/lib/remotix/",
         "├── net/  # what the network part writes (owner: remotix)",

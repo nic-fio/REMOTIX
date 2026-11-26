@@ -36,7 +36,8 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
         ["Server", "C (" + c("-std=gnu11") + "), Linux only, systemd, one server executable " + c("/usr/libexec/remotix/remotix")
          + " started by " + c("remotix.service") + " as root; it re-executes itself for the network side, the PAM "
          "helper and the per-user children (" + rif("Overall architecture") + "). The package also ships a second, very small "
-         "program, " + c("remotix-local-login") + ", that PAM runs at a local login (" + rif("The local-login hold") + ")"],
+         "program, " + c("remotix-local-login") + ", that PAM runs at a local login (" + rif("The local-login hold") + "), and a shell script, "
+         + c("remotix-pam-hook") + ", that the unit runs before every start to check that the line of that hook is still in " + sysf("/etc/pam.d/common-session") + " (" + rif("Startup and life cycle") + ")"],
         ["Client", "The page " + c("src/page.html") + " (HTML and JavaScript in one file), served by the server itself "
          "over TCP; a small Opus decoder in WebAssembly (" + c("src/opus-wasm/") + ")"],
         ["Protocol", "RCP/1 over WebTransport, path " + c("/rcp/1") + "; port " + c("7447") + " (" + c("DEFAULT_PORT")
@@ -53,12 +54,16 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
         ["Clocks", "30 s of client silence (" + c("SILENCE") + " in " + c("rcp.c") + "), 30 min without input "
          "(" + c("DEFAULT_INACTIVITY") + " in " + c("rcp.c") + "), 60 min until the session is closed (" + c("DEFAULT_ABANDON_MS")
          + " in " + c("main.c") + "); see " + rif("Startup and life cycle")],
-        ["Packaging", "A single " + c(".deb") + " built in a " + c("debian:trixie") + " container (" + rif("Build and release")
-         + "); the service is installed disabled and not started (" + rif("The package") + ")"],
+        ["Packaging", "A single " + c(".deb") + " built in a Debian 13 virtual machine, with no container (" + c("build/build-deb-vm.sh") + ", " + rif("Build and release")
+         + "); the service is installed disabled and not started (" + rif("The package") + "). The package carries its own AppArmor profile for the network side, a " + c("needrestart")
+         + " rule that keeps the service from being restarted by an update, and the " + c("pam-auth-update") + " profile of the local-login hook"],
         ["Size", f"{righe(conta('.c') + conta('.h'))} lines of C and headers, {righe(conta('page.html'))} lines of page "
          "(counted when the manual is generated)"],
         ["Licence", "A licence text of the author, " + c("LICENSE.md") + ", shipped in the package with "
-         + c("THIRD-PARTY-LICENSES") + "; not an open-source licence"],
+         + c("THIRD-PARTY-LICENSES") + "; not an open-source licence for REMOTIX. The package carries no third-party program: ngtcp2 and nghttp3 are linked into the "
+         "server statically, and the " + c("labwc") + " that XFCE and LXQt use (and that hosts KWin on KDE) is Debian's own package, not a part of REMOTIX's; "
+         "there is no wlroots in it and no installer. " + c("THIRD-PARTY-LICENSES") + " lists ngtcp2 1.25.0, nghttp3 1.18.0 (with sfparse), libopus 1.5.2 "
+         "(WebAssembly, inside the page), the Emscripten system libraries (with musl) and 10 Wayland protocol files"],
     ], "«TAB» — REMOTIX at a glance") + \
     note("SPECS §3 gives targets of image quality, frame rate and delay (a minimum of 480p at 25 fps, a desired 4K at "
          "60 fps, a delay of at most 50 ms). Since 30 September 2026 they are <b>design goals, not measured promises</b> "
@@ -67,15 +72,15 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
          "Goals, not promises.")
 
 S2 = p("Two kinds of statement are made in this manual and they are kept apart. What was <b>verified</b> was run "
-       "on 17 November 2026 on the owner's development server, in four containers (one per desktop) with real "
-       "browsers, by the checks in " + c("prove/") + " (" + rif("Testing") + "), and on one real Debian 13 virtual machine "
+       "on the owner's development server, in four virtual machines (one per desktop, with a graphics card passed through to the one "
+       "being tested) with real browsers, by the checks in " + c("prove/") + " (" + rif("Testing") + "), and in a Debian 13 virtual machine "
        "for the package. What was <b>not verified</b> is said every time it matters, and collected in "
        + rif("Appendix C — Known issues and open points") + ".", lead=True) + \
-    table(["Area", "Verified (PIANO.md, 17 Nov 2026)", "Not verified"], [
-        ["Desktops", "XFCE, LXQt, KDE Plasma and GNOME, each by " + c("prove/all.sh") + " in a container; the last full "
-         "round is recorded as 111/118 (XFCE), 112/118 (LXQt), 111/118 (KDE) and 104/118 (GNOME) passing, every "
-         "non-passing line explained in PIANO.md", "Four desktops on one machine together; a desktop on the physical "
-         "display"],
+    table(["Area", "Verified (PIANO.md)", "Not verified"], [
+        ["Desktops", "XFCE, LXQt, KDE Plasma and GNOME, each by " + c("prove/all.sh") + " in its own virtual machine; the lines that do not "
+         "pass are listed in PIANO.md", "Four desktops on one machine together; a desktop on the physical "
+         "display; the local login that closes the remote desktop <i>with programs open</i> was run on GNOME on the bench and, "
+         "on the four desktops, by the owner from the live images"],
         ["Browsers", "Chrome and Firefox on Linux (base, input, audio); Chrome for the clipboard; the owner's own test "
          "with Samsung DeX on GNOME (clipboard, audio and video, window resizing)", "Firefox clipboard (open); a real "
          "phone; Safari; Firefox on Windows and Android"],
@@ -86,7 +91,8 @@ S2 = p("Two kinds of statement are made in this manual and they are kept apart. 
          "The 30-min and 60-min clocks at their real values (only the mechanism at short values)"],
         ["Package", "Installation, restart, removal and purge on a real Debian 13 VM; AppArmor profile in complain and "
          "enforce mode with no denial up to the connection", "A session under the AppArmor profile on a machine with "
-         "a graphics card (the profile is still in complain mode); NVIDIA; a 4096×2304 canvas"],
+         "a graphics card (the profile is still in complain mode); a card that is not an AMD or Intel one (NVIDIA: measured on Ubuntu 26.04 on 5–6 Oct 2026, "
+         "with an earlier version of the code; not run again on Debian 13); a 4096×2304 canvas"],
     ], "«TAB» — What has been checked, and where the checking stops") + \
     p("<b>Browsers as SPECS §11.5 declares them.</b> Chrome and the other Blink browsers on Linux and Windows: HEVC "
       "if the device decodes it, otherwise H.264. Chrome on Android: HEVC or H.264. Firefox on Linux: H.264 only. "
@@ -161,7 +167,7 @@ S3 = p("A handful of words recur in every chapter. Their names in the code are i
          + c("sentinel_shutdown_forbidden()") + ")"],
     ], "«TAB» — The invariants quoted in the code")
 
-S4 = p("The repository holds the product, the package recipe, the build container, the checks that drive real "
+S4 = p("The repository holds the product, the package recipe, the build scripts, the checks that drive real "
        "browsers, the dev-server scripts and the specifications. Everything is in English except part of the "
        "older documents.", lead=True) + tree([
     "REMOTIX-DEBIAN/",
@@ -169,9 +175,9 @@ S4 = p("The repository holds the product, the package recipe, the build containe
     "│   ├── protocols/  # Wayland protocol XML files the server is built against",
     "│   └── opus-wasm/  # the page's Opus decoder (build script and the .wasm)",
     "├── debian/         # the package: control, rules, unit, maintainer scripts, AppArmor profile",
-    "├── build/          # build-deb.sh, the container recipe, quic-static.sh (ngtcp2 and nghttp3, static)",
+    "├── build/          # build-deb-vm.sh (the build, on a virtual machine), build-deb.sh (its checks, and the older container build), quic-static.sh",
     "├── prove/          # the checks with real browsers: all.sh and one check-*.py per area",
-    "├── boxes/          # the four test containers, one per desktop",
+    "├── boxes/          # the four older test containers, one per desktop (the tests run on virtual machines, prove/banco-vm/)",
     "├── server/         # scripts of the dev server and of the VM login test",
     "├── docs/           # SPECS.md, RCP.md, DECISIONS*.md, LESSONS.md and the cleaning inventories",
     "├── licenses/       # how-it-works.html: history of a licensing system that was dropped",
@@ -187,7 +193,7 @@ S4 = p("The repository holds the product, the package recipe, the build containe
         [c("debian/"), c("control") + ", " + c("rules") + ", the unit " + c("remotix.service") + ", "
          + c("remotix.sysusers") + " (the user " + c("remotix") + "), " + c("remotix.tmpfiles") + ", the maintainer scripts, "
          + c("remotix_network.apparmor") + " and " + c("denied-users") + "."],
-        [c("build/"), c("build-deb.sh") + " builds the .deb in a " + c("debian:trixie") + " podman container; "
+        [c("build/"), c("build-deb-vm.sh") + " builds the .deb in the " + c("costruzione") + " virtual machine (no container); " + c("build-deb.sh") + " is the older build in a " + c("debian:trixie") + " podman container, kept in the tree; "
          + c("quic-static.sh") + " builds ngtcp2 and nghttp3 as static libraries because Debian does not ship the "
          "versions needed (" + c("src/Makefile") + " lists them)."],
         [c("prove/"), c("all.sh") + " runs, for one desktop, the base, lifecycle, multiuser, desktop, media, resilience, "
@@ -216,9 +222,9 @@ PARTS = [
      "how the server is built and what it installs around itself", lambda f: f.startswith("src/")),
     ("Package", c("debian/"), "control, rules, unit, maintainer scripts, AppArmor profile",
      lambda f: f.startswith("debian/")),
-    ("Build", c("build/"), "the container build", lambda f: f.startswith("build/")),
+    ("Build", c("build/"), "the build on a virtual machine, the older container build, the static QUIC libraries", lambda f: f.startswith("build/")),
     ("Checks and test rigs", c("prove/") + ", " + c("boxes/") + ", " + c("server/"),
-     "the checks with real browsers, the four containers, the dev-server scripts",
+     "the checks with real browsers, the virtual-machine bench, the older containers, the dev-server scripts",
      lambda f: f.startswith(("prove/", "boxes/", "server/"))),
     ("Manual sources", c("manuals/sources/"), "this manual's generator, style and chapters", lambda f: True),
 ]

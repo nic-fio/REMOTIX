@@ -189,6 +189,10 @@ S9 = p("This cure does not decide how well the desktop is seen but whether the c
       + c("dead-line") + " that carries every number of the decision, and the transport, the only owner of the QUIC connection, closes it. The page then returns to the login form (" + rif("The browser page")
       + "). The comments record that the stall threshold sits 5.0 times above the longest empty second of a line that holds and 2.9 times below the freeze of a line that serves nobody (measured on emulated "
       "lines on the earlier test machine); a wrong value would throw out someone who is working, so whoever changes " + c("WT_LM_STALL_MS") + " must measure those two margins again.") + \
+    p("<b>The line that says why a connection closed.</b> When a QUIC connection is reaped, " + c("close_why()") + " in " + c("transport.c") + " adds the reason to the log line "
+      "«connection with … closed (N left) — …»: who closed it (the peer or the server), the QUIC error or, for a close by silence, «idle timeout (silence)»; for a CRYPTO error the TLS alert is named "
+      "(42 bad_certificate, 45 certificate_expired, 46 certificate_unknown, 48 unknown_ca and others) and the line ends with «TLS handshake COMPLETED» or «NOT completed». "
+      "The reason text sent by the peer is cut to printable ASCII and 60 characters. The function decides nothing and changes no behaviour.") + \
     warn("DECISIONS.md also lists «copious loss within 1–2 s» as a cause, and the code does not use it: the comments record that the loss fraction was refuted by its own bench, because on a reordering line "
          + c("pkt_lost") + " over " + c("pkt_sent") + " measures reordering, not loss. The fraction stays in the log line as " + c("permille=") + ", a witness rather than a judge.", "Loss is not a cause.")
 
@@ -262,7 +266,12 @@ S12 = p("A refusal decided after the desktop has started is not a refusal: it is
          "No more capacity for another desktop; the open sessions continue; a place frees as soon as someone leaves"],
     ], "«TAB» — The two limits and their two refusals") + \
     p("The two refusals are deliberately different: two different facts may not share an outcome. A child that cannot be born for another reason (a name NSS does not resolve, uid 0, " + c("fork") + " failing) "
-      "also ends in 0x0E, with the cause in the log. Neither limit is checked on a <b>resume</b>: a user whose stage already exists is already inside both counts, and refusing their reattach would be a false no. The "
+      "also ends in 0x0E, with the cause in the log. The code has more roads to 0x0E: the page's own comment (" + c("REASON_TEXT") + " in " + c("page.html") + ") counts six: an unknown layout, a full slot register, a canvas that cannot be granted, memory exhausted on the control channel, all stages busy, and "
+      "«the desktop's compositor is not installed» (XFCE or LXQt without " + c("labwc") + ": " + c("session_missing_component()") + " is tested in " + c("main.c") + " before the child is spawned, so no process and no "
+      "logind session exist). The road is possible on Debian because labwc is only a <i>Recommends</i> of the package: an installation with " + c("--no-install-recommends") + " leaves it out, and the " + c("postinst") + " then prints a warning when the machine has XFCE or LXQt and neither GNOME nor Plasma. Four more uses are outside that count: the previous desktop of the user still closing (" + c("delivery_verdict()") + "), logind not able to say whether a local session exists, a failed birth, "
+      "and the stage refused because the user's scale is not 1 and the repair failed: " + c("stage_refused_by_child()") + " sends 0x0E to the clients of that user and the graphical session is closed (" + rif("Screen capture") + "). "
+      "The farewell of a session that ended is sent with " + c("wt_dismiss_user_session_over()") + ": a login of the same name still waiting for PAM, or whose «no» is being kept for the fixed second, is skipped, so it is not "
+      "given a false 0x10 in place of its true 0x0E; a login already admitted onto the ended session gets the farewell when its fixed second ends. The refusals of this section use " + c("wt_dismiss_user()") + ". Neither limit is checked on a <b>resume</b>: a user whose stage already exists is already inside both counts, and refusing their reattach would be a false no. The "
       "refusal is sent after " + c("transport_verdict()") + ", through " + c("wt_dismiss_user()") + ": that order lets the admitted verdict reset the failed-password counter of that user on that address (" + c("login_resolve()") + " in " + c("rcp.c") + "; the counters of the address itself and of the /48 are not reset), and the client never sees " + c("ADMITTED") + ", only the "
       "farewell. The body of the " + c("FAREWELL") + " carries the figures for the log; the page shows its own phrase (" + rif("The RCP/1 protocol") + "). The phrase for 0x06 promises only what is true at the gate: at that "
       "point the only canvas number is " + c("video.max_size") + ", the decoder's ceiling, so shrinking the window would get the same refusal.") + \
@@ -299,6 +308,8 @@ S13 = p("Four small headers, each with no dependency and no clock of its own (th
 S14 = p("Two producers of unnecessary frames are cut before they reach the encoder, and one consumer-side limit is exposed to the client.", lead=True) + \
     ul(["<b>Empty damage.</b> When the compositor declares that nothing changed (" + c("SPA_META_VideoDamage") + " present and empty), " + c("damage_classify()") + " counts the frame in " + c("empty_damage") + " and the buffer goes back "
         "to PipeWire without being encoded (" + rif("Screen capture") + ").",
+        "<b>Frames asked again, not dropped.</b> On KDE the opposite case is also handled: when KWin's buffer numbers show a hole, the next frame goes out as «all changed» and, if no picture follows, a poke makes KWin draw one ("
+        + rif("The lost frame (KWin)") + "). It adds at most one frame request every 200 ms and only after a hole, never on a still desktop.",
         "<b>The «unchanged» filter</b> (" + c("unchanged.h") + ", KDE only). A frame whose damaged rectangles hold the same bytes as the last frame that went out is not encoded. The filter measures its own cost: the mean cost of a "
         "look over a window (the first window of " + c("UC_COST_FIRST") + " = 30 looks, then every " + c("UC_COST_EVERY") + " = 300) switches it off if it exceeds " + c("UC_COST_HARD_US") + " = 10 000 µs whatever it holds back, or "
         + c("UC_COST_MAX_US") + " = 3000 µs when it held back fewer than one look in " + c("UC_YIELD_DIV") + " = 4; a switch-off for cost re-arms after " + c("UC_REARM_MS") + " = 5000 ms, and after " + c("UC_STRIKES_MAX")
@@ -317,7 +328,7 @@ S14 = p("Two producers of unnecessary frames are cut before they reach the encod
     h4("What was verified, and what was not") + \
     ul(["<b>Verified (17 Nov 2026):</b> with the budget off (the default), " + c("prove/check-media.py") + " «two-sessions-budget» has two users animating at the same time and requires that neither goes below 25 frames/s and that the first does not lose more than 30 % of what it had alone; "
         "the multi-user checks of " + c("prove/all.sh") + " ran green on all four desktops; the dead line and the reconnection after a network drop are among the 34 checks per desktop of the 17 Nov round (" + c("PIANO.md") + ").",
-        "<b>Not verified in this tree:</b> the budget switched on (the figures above are from the earlier test machine); the bandwidth cap and the quality rise on a real desktop; the decoder pace; a keyframe cap actually biting at 4096×2304; any of these on NVIDIA."])
+        "<b>Not verified in this tree:</b> the budget switched on (the figures above are from the earlier test machine); the bandwidth cap and the quality rise on a real desktop; the decoder pace; a keyframe cap actually biting at 4096×2304; any of these on NVIDIA (the only NVIDIA measurement is the one of Ubuntu 26.04, 5–6 Oct 2026, quoted in " + rif("The Vulkan Video encoder") + ")."])
 
 CHAPTER = ("Quality, degradation and budget", [
     ("The quality contract", S1),

@@ -1,4 +1,4 @@
-from build import arrow, box, c, fig, flow, note, p, rif, seq, steps, table, text, tip, ul, warn, zone
+from build import arrow, box, c, fig, flow, note, p, rif, seq, steps, table, text, tip, ui, ul, warn, zone
 
 # ── The stack at a glance ───────────────────────────────────────────────
 STACK = fig(
@@ -272,7 +272,7 @@ S6 = p("Two TLS contexts are built by " + c("tls.c") + " from the two certificat
         "basic constraints " + c("critical,CA:FALSE") + ", subject " + c("CN") + " equal to the name, and a " + c("subjectAltName") +
         " that " + c("san_di()") + " writes as " + c("IP:") + " or " + c("DNS:") + " according to the form of the name. The name is " + c("--name") +
         " (the unit passes " + c("%H") + ", the host name); " + c("main.c") + " refuses to start with " + c("0.0.0.0") + " or " + c("::") +
-        " as the name. A user who connects by IP address declares it with " + c("REMOTIX_OPTIONS=--name 192.168.1.10") + ".",
+        " as the name. A user who connects by IP address declares it with " + c("REMOTIX_OPTIONS=--name 192.0.2.10") + ".",
         "<b>The administrator's certificate is never touched.</b> Every certificate REMOTIX writes has a " + c(".ours") + " marker next to it. "
         "A " + c("page.pem") + " with its key but without the marker belongs to someone else and is used as it is and never regenerated, "
         "even when it expires. The test is «did we write it?», not «is it self-signed?». The session certificate has no such exemption: "
@@ -533,11 +533,37 @@ S13 = p("One QUIC connection carries at most one WebTransport session and one RC
     "<b>Life.</b> Stream data goes to " + c("rcp_receive()") + ", " + c("rcp_receive_input()") + " or " + c("rcp_receive_clipboard()") + " according to the class of the stream. Frames, "
     "audio blocks and cursor shapes coming from the per-user child are fanned out by user name (" + c("wt_video_broadcast()") + ", " + c("wt_audio_broadcast()") + ", " +
     c("wt_cursor_broadcast()") + "), each reaching only the connections whose RCP user is that user.",
-    "<b>Close.</b> RCP decides why (" + rif("The RCP/1 protocol") + "), and the WebTransport layer sends the capsule. At shutdown " + c("transport_dismiss_all()") + " says goodbye to "
-    "every session with " + c("SERVER_CLOSING") + " and the loop runs until the queues drain or a time budget (4 s in " + c("main.c") + ") expires.",
+    "<b>Close.</b> RCP decides why (" + rif("The RCP/1 protocol") + "), and the WebTransport layer sends the capsule. The farewell "
+    "of a graphical session that is over goes through " + c("wt_dismiss_user_session_over()") + ", which chooses which connections "
+    "of the user receive it (" + rif("From password to admission") + "). At shutdown " + c("transport_dismiss_all()") + " says goodbye to "
+    "every session with " + c("SERVER_CLOSING") + " and the loop runs until the queues drain or a time budget (4 s in " + c("main.c") + ") expires. "
+    "The log line of the connection's end, “connection with X closed (n left)”, carries the reason (" + rif("Why a connection closed") + ").",
 ]) + tip("the PAM verdict reaches the right connection through " + c("transport_verdict_as()") + ": the helper returns a ticket number, the transport offers it to every live session, and exactly "
          "one takes it. A verdict that finds nobody is counted as an orphan and not lost: the connection died while PAM was answering, and " + c("transport_awaits_verdict()") + " lets "
          "the caller skip starting a desktop for nobody.", "Verdict routing.")
+
+# ── Why a connection closed ─────────────────────────────────────────────
+S13B = p("A browser that cannot open a session says one thing, “Opening handshake failed”, whatever went wrong. The log says who "
+        "closed the connection and why, with one line per connection: " + c("connection with ADDRESS closed (n left) — …") + ". The text is written by " + c("close_why()")
+        + " in " + c("transport.c") + ", from what ngtcp2 recorded, and changes no behaviour and keeps no data of the client beyond the address that was already there.", lead=True) + \
+    table(["Part of the line", "What it says", "Where it comes from"], [
+        ["Who", "“the PEER closed it” (a CONNECTION_CLOSE came from the client: draining period); “WE closed it” (closing period); or “dropped without a CONNECTION_CLOSE”",
+         c("ngtcp2_conn_in_draining_period2()") + ", " + c("ngtcp2_conn_in_closing_period2()")],
+        ["What", "a transport error with its code and name (" + c("PROTOCOL_VIOLATION") + ", " + c("INVALID_TOKEN") + ", …); an application error with its code; “idle timeout (silence)”; “dropped silently”; "
+         "“retry”; “version negotiation”; “no error recorded” when nothing was written", c("transport_error_name()") + ", " + c("e->type")],
+        ["A TLS alert", "a transport error in the range 0x100 to 0x1ff is a TLS alert of the handshake and is named: 42 " + c("bad_certificate") + ", 45 " + c("certificate_expired") + ", 46 "
+         + c("certificate_unknown") + ", 48 " + c("unknown_ca") + ", and so on", c("tls_alert_name()")],
+        ["The peer's sentence", "the reason phrase the peer sent, cleaned (printable ASCII only, a quote turned into a dot, at most 60 characters)", c("close_why()")],
+        ["The handshake", "“TLS handshake COMPLETED” or “NOT completed”", c("ngtcp2_conn_get_handshake_completed2()")],
+    ], "«TAB» — What the closing line of a connection says") + \
+    p("A browser that connected with a wrong fingerprint produces " + c("the PEER closed it: transport error CRYPTO 0x12e = TLS alert 46 certificate_unknown")
+      + " and " + c("TLS handshake NOT completed") + ". A browser killed with SIGKILL gives, 30 s later, “dropped without a CONNECTION_CLOSE: idle timeout (silence)”. "
+      "Connections that never logged in are limited to the number of lines per window of " + c("BIRTH_LINES") + ": beyond it the line goes to the detail level, with the same text; "
+      "the closing of a connection that did log in is always written.") + \
+    warn("The certificate of a session is made valid from <b>one hour before</b> the moment it is created (" + c("notBefore") + " = now minus 3600 s, " + c("certificates.c") + "), "
+         "and the browser checks that date against <i>its own</i> clock. A client device whose clock is more than an hour behind the server's sees the certificate as “not yet valid”, and the "
+         "browser says only " + ui("Opening handshake failed") + ". It is not a defect: a very wrong clock breaks every secure site anyway, and the margin is not widened. "
+         "Requirement: <b>the clock of the client device must be right</b>. The closing line above is how the cause is read in the log.", "The client's clock.")
 
 # ── Verification ────────────────────────────────────────────────────────
 S14 = p("What is known about the transport at this version comes from three sources, and it helps to keep them apart.", lead=True) + \
@@ -547,7 +573,7 @@ S14 = p("What is known about the transport at this version comes from three sour
         ["A service restart closes the desktop and the client is told", c("prove/check-resilience.py") + ", check " + c("service-restart")
          + ": after the restart the client is told or returns to the form, nothing of the old desktop is left, and a new login is a NEW session", "—"],
         ["Wrong passwords ban the address; the page still loads", c("prove/check-ban.py"), "—"],
-        ["The package installs, starts and removes cleanly", c("prove/check-package.py") + " on the four test containers and a real Debian 13 VM (PIANO.md)", "AppArmor profile in a session on a machine with a graphics card"],
+        ["The package installs, starts and removes cleanly", c("prove/check-package.py") + " on the four virtual machines (PIANO.md)", "AppArmor profile in a session on a machine with a graphics card"],
         ["Retry, handshake rate buckets, caps and eviction, signed connection ids, Stateless Reset caps", "Present in the code and exercised implicitly by every connection of the checks (every connection passes the Retry)", "No check in " + c("prove/") + " floods the server. The unit and fuzz harnesses named in the comments of " + c("hsrate.h") + ", " + c("resetcap.h") + " and " + c("cid.h") + " are not in this tree and were not re-run"],
         ["Rotation of the session certificate", "Code path in " + c("certificates_rotate_if_needed()") + " and " + c("main.c"), "No check rotates a certificate or keeps a client connected through a rotation"],
         ["IPv6", "—", "The packaged unit binds an IPv4 wildcard; nothing exercised IPv6"],
@@ -567,5 +593,6 @@ CHAPTER = ("Transport", [
     ("Idle timeout, keep-alive PINGs and the dead line", S11),
     ("Congestion, pacing and the video queue", S12),
     ("One connection from first packet to close", S13),
+    ("Why a connection closed", S13B),
     ("What was verified for the transport", S14),
 ])

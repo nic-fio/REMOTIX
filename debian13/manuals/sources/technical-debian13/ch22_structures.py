@@ -42,7 +42,8 @@ S1 = p("The central data structures of the server, with the file that defines th
         [c("struct children") + ", " + c("struct child"), c("child.c"), "The network side's table of children and one child: "
          "user, uid, gid, pid, socket, pidfd, serial, the introduction and who-are-you clocks, the reassembly buffers for "
          "frames, cursor and clipboard (three tables, because the three arrive interleaved), what has been asked of the "
-         "stage", rif("Overall architecture")],
+         "stage, and the hooks the host connects, among them " + c("on_stage_refused") + " (a stage refused for the scale, " + c("children_hook_stage_refused()") + ", with the type " + c("ChildStageRefused") + " in " + c("child.h") + ")",
+         rif("Overall architecture")],
         [c("struct birth_opts") + ", " + c("struct child_born"), c("child.h"), "What the root side gives " + c("child_birth()")
          + " (canvas, survey folder, switches, the binary's path, the network side's uid, close-only) and what comes back "
          "(pid, socket end, uid, gid, whether a card ACL was granted)", rif("Overall architecture")],
@@ -67,8 +68,9 @@ S1 = p("The central data structures of the server, with the file that defines th
         "Other",
         [c("struct budget_count") + ", " + c("struct tenant"), c("budget.h") + ", " + c("budget.c"), "The composition budget: who is "
          "inside and the verdict on a newcomer", rif("Quality, degradation and budget")],
-        [c("DesktopSession") + ", " + c("SessionState") + ", " + c("SessionMonitor"), c("session.h"), "Which desktop, the health of a "
-         "started session, the virtual monitor read back", rif("The four desktops")],
+        [c("DesktopSession") + ", " + c("SessionState") + ", " + c("SessionMonitor") + ", " + c("SessionLife"), c("session.h"), "Which desktop, the health of a "
+         "started session, the virtual monitor read back, and the three answers (" + c("SESSION_LIFE_ALIVE") + " 0, " + c("SESSION_LIFE_DEAD") + " 1, " + c("SESSION_LIFE_UNKNOWN")
+         + " 2) to \"is the desktop alive\" given by " + c("session_life()") + ": dead only when the bus answered and the compositor's name has no owner", rif("The four desktops")],
     ], "«TAB» — The main C structures")
 
 # ── Root-side protocol ───────────────────────────────────────────────────
@@ -170,16 +172,18 @@ S4 = p("The header is the same for all (" + rif("Overall architecture") + "): " 
         ["9", c("MSG_CLIPBOARD_FROM_CLIENT"), "network → child", c("body_clipboard") + ": serial, total, offset, piece, “nothing”; the text in pieces"],
         ["10", c("MSG_INTRO"), "child → network", c("body_whoami") + ": uids, gids, pid, ppid, open descriptors, runtime folder, session bus, user, "
          "and the child's own answer to the name check (" + c("NAME_HOLDS") + ", " + c("NAME_GONE") + ", " + c("NAME_OTHER_UID") + ")"],
-        ["11", c("MSG_STAGE"), "child → network", c("body_stage") + ": bus, session state, capture take, monitors before and after, size, streams, fault text"],
+        ["11", c("MSG_STAGE"), "child → network", c("body_stage") + ": bus, session state, capture take, monitors before and after, size, streams, fault text, and <code>fatal</code> (u32, last field: 1 only when the stage was refused for the SCALE, "
+         "a fault that no retry cures; the parent then sends 0x0E to the clients and marks the user closing). The least body the parent accepts is " + c("STAGE_MIN") + ", the size before <code>fatal</code>: an older body is read with <code>fatal</code> = 0"],
         ["12", c("MSG_FRAME"), "child → network", c("body_frame") + ": codec, key, size, instant, total, offset, piece, last input id; in pieces"],
         ["13", c("MSG_CURSOR"), "child → network", c("body_cursor") + ": width, height, hotspot, total, offset, piece; in pieces"],
         ["14", c("MSG_CANVAS"), "child → network", c("body_canvas") + ": intended and got size (0×0 = failed), “should wait”"],
-        ["15", c("MSG_SESSION_FINISHED"), "child → network", "none: the graphical session ended and nobody asked"],
+        ["15", c("MSG_SESSION_FINISHED"), "child → network", "none: the graphical session ended and nobody asked. It may arrive BEFORE the child dismantles its stage (" + c("session_over_early()") + ", only when " + c("session_life()")
+         + " says dead, never on KDE); the parent then holds the child as closing (" + c("closing_asked_ms") + ", " + c("CLOSING_GRACE_MS") + " = 30 000 ms)"],
         ["16", c("MSG_BLOCK"), "child → network", c("body_block") + ": codec, byte count, instant, then one encoded audio block (never in pieces; dropped if the socket is full)"],
         ["17", c("MSG_CLIPBOARD_FROM_SESSION"), "child → network", "the session copied text; in pieces, already validated"],
         ["18", c("MSG_CLIPBOARD_REQUEST"), "child → network", "something in the session is pasting: the request's serial"],
         ["19", c("MSG_PACE"), "network → child", c("body_pace") + ": a frame-rate ceiling (0 = none); only if the server was started with " + c("--decoder-pace")],
-        ["20", c("MSG_LOCAL_FOUND"), "child → network", "none: the child's guard found a local session, did the light close and is leaving"],
+        ["20", c("MSG_LOCAL_FOUND"), "child → network", "none: the child's guard found a local session and is going to do the light close, then leave (it is sent BEFORE the close, because the close can wait for the sound service for up to 25 s)"],
     ], "«TAB» — The messages between the network side and a child") + \
     table(["Enumeration", "Values"], [
         [c("CHILDREN_INPUT_*") + " (the " + c("action") + " of " + c("MSG_INPUT") + ")", "1 pointer · 2 button · 3 wheel · 4 letter · 5 position · "
@@ -264,9 +268,9 @@ S6 = p("All RCP/1 message types by number. The bodies are in " + c("docs/RCP.md"
         ["0x0B", c("RCP_PROTOCOL_ERROR"), "a violation of the bytes"],
         ["0x0C", c("RCP_SERVER_CLOSING"), "the service is stopping"],
         ["0x0D", c("RCP_TIMED_OUT"), "a handshake ceiling expired"],
-        ["0x0E", c("RCP_SESSION_UNSERVABLE"), "the attach is well formed but cannot be served (cap, closing desktop, no stage, unknown layout)"],
+        ["0x0E", c("RCP_SESSION_UNSERVABLE"), "the attach is well formed but cannot be served: six routes (the cap, a closing desktop, no stage, an unknown layout, memory, and the two of this tree: the desktop's compositor is not installed, answered by " + c("delivery_verdict()") + " through " + c("session_missing_component()") + " before a child is born, and a stage refused for the scale, " + c("stage_refused_by_child()") + ")"],
         ["0x0F", c("RCP_ALREADY_ACTIVE_REMOTELY"), "another live client of the user holds the slot"],
-        ["0x10", c("RCP_SESSION_TERMINATED"), "the graphical session ended (Log Out)"],
+        ["0x10", c("RCP_SESSION_TERMINATED"), "the graphical session ended (Log Out). Sent through " + c("wt_dismiss_user_session_over()") + ": a client that is logged in gets it at once; one already admitted but still inside the fixed second gets it in place of ADMITTED; one still waiting for PAM is skipped, so it never receives a false 0x10"],
     ], "«TAB» — The farewell reasons (RCP.md §8.2, " + c("rcp.h") + ")")
 
 CHAPTER = ("Appendix A — Data structures and messages", [

@@ -4,11 +4,11 @@ src/page.html, src/encoder.c, src/child.c, debian/*, prove/*."""
 from build import c, h4, note, p, rif, steps, sysf, table, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("REMOTIX 1.0.1 is written for one distribution, Debian 13 (trixie). The rule is in " + c("CLAUDE.md") + ": \"no distro detection "
+S1 = p("REMOTIX 1.2.0 is written for one distribution, Debian 13 (trixie). The rule is in " + c("CLAUDE.md") + ": \"no distro detection "
        "or per-distro code (a future distro gets its own, separate code)\". The product does not read " + c("/etc/os-release") + " to "
        "choose a behaviour; where a distribution used to need a branch, the branch was removed, not generalised (" + c("docs/PULIZIA-tranche1.md")
        + "). The consequence for a maintainer is simple: a port is a separate copy of the tree with its own packaging, its own PAM file and "
-       "its own test boxes, not a new <code>if</code> in this one.", lead=True) + \
+       "its own test machines, not a new <code>if</code> in this one.", lead=True) + \
     p("Most of the code does not depend on the distribution at all: the transport, the RCP/1 protocol, capture, encoding, the budget, input, "
       "audio, clipboard, the page. Its dependencies are on the Linux kernel (DRM nodes, libei, PipeWire), on systemd and logind, on PAM and "
       "polkit, and on the four desktops. What depends on Debian is the thin layer listed in the next section.") + \
@@ -27,13 +27,15 @@ S2 = p("The table lists what a porter must look at. \"Debian\" here means a fact
         ["dependency names", c("libpam-systemd") + ", " + c("libpam-modules") + ", " + c("passwd") + ", " + c("dbus-user-session") + ", " + c("pipewire")
          + ", " + c("wireplumber") + ", " + c("va-driver-all") + ", " + c("mesa-vulkan-drivers") + ", " + c("labwc") + ", " + c("dconf-cli") + ", "
          + c("wlr-randr") + ", " + c("xwayland") + ", " + c("fonts-dejavu-core"), c("debian/control")],
-        ["build image", c("debian:trixie") + " with apt; the static QUIC libraries exist because Debian's are too old", c("build/Containerfile") + ", " + c("build/quic-static.sh")],
+        ["build machine", "a Debian 13 virtual machine with apt (no container); the static QUIC libraries exist because Debian's are too old", c("build/build-deb-vm.sh") + ", " + c("build/quic-static.sh") + ", " + c("server/vm-radeon.sh")],
         ["install paths", c("/usr/libexec/remotix/remotix") + ", " + c("/usr/share/polkit-1/rules.d") + ", " + c("/etc/ufw/applications.d") + ", "
          + c("/etc/apparmor.d"), c("debian/rules")],
         "Login and system integration",
         ["PAM service", "the file uses " + c("@include common-auth") + ", " + c("common-account") + ", " + c("common-session") + ", " + c("common-password")
          + ": a Debian modification of Linux-PAM; elsewhere the line is an illegal module type. It also lists " + c("pam_selinux") + " lines "
-         "(module_unknown=ignore, harmless on Debian) and reads " + c("/etc/default/locale"), c("src/remotix.pam")],
+         "(module_unknown=ignore, harmless on Debian). Two " + c("pam_env") + " lines give the desktop its " + c("PATH") + " (from " + c("/etc/environment") + ") and, with " + c("/etc/default/locale") + ", the system language", c("src/remotix.pam")],
+        ["language and PATH of the remote desktop", "the user's own language from AccountsService (" + c("/var/lib/AccountsService/users/<name>") + ", read as root), else the system one from " + c("/etc/default/locale") + "; the " + c("PATH") + " from PAM when it is valid, else " + c("~/.local/bin:~/bin:/usr/local/bin:/usr/bin")
+         + ". Both follow what a local login gets on Debian; another distribution keeps its language settings elsewhere", c("src/child.c") + ", " + c("src/remotix.pam")],
         ["PAM service lookup and messages", "the server checks " + c("/etc/pam.d/remotix") + ", then " + c("/usr/lib/pam.d/remotix") + "; some log "
          "messages still name other distributions' file names", c("src/main.c") + ", " + c("src/authentication.c")],
         ["who is an administrator", "polkit rules name " + c("sudo") + " (Debian's polkit admin group) and also " + c("wheel") + " and " + c("admin")
@@ -54,8 +56,9 @@ S2 = p("The table lists what a porter must look at. \"Debian\" here means a fact
          c("debian/control") + ", " + c("src/wlroots.c") + ", " + c("src/kwin.c")],
         ["KWin quirks", "runtime probes for KWin 6.3 (trixie) and later; no version test in the code", c("src/kwin.c") + ", " + c("src/clipboard_kde.c")],
         "Test machinery",
-        ["boxes", "the images install " + c("task-<de>-desktop") + " and register " + c("gdm3") + ", " + c("sddm") + " or " + c("lightdm"), c("boxes/Containerfile") + ", " + c("boxes/set-dm.sh")],
-        ["tests", "apt for the package check; Debian's package names for the browsers on the dev server", c("prove/check-package.py") + ", " + c("server/prepara-server.sh")],
+        ["test machines", "four virtual machines made from the Debian 13.8.0 live images, with the display managers " + c("gdm3") + ", " + c("sddm") + " and " + c("lightdm") + "; apt and the Debian names of the packages", c("server/vm-radeon.sh") + ", " + c("prove/banco-vm/")],
+        ["tests", "apt in the clean-up and in the package install; Debian's package names for the browsers on the dev server and for the tools the checks need in the machine", c("prove/banco-vm/fresh-vm.sh") + ", " + c("server/prepara-server-vm.sh") + ", " + c("prove/check-package.py")],
+        ["older container files", "images with " + c("task-<de>-desktop") + ", still in the tree and not used by the VM bench", c("boxes/Containerfile") + ", " + c("boxes/set-dm.sh")],
     ], "«TAB» — Where the code depends on Debian") + \
     p("The state of each item (removed, left, or to be removed later) is in " + c("docs/INVENTARIO-non-debian.md") + ", section \"Status after tranche 1\".")
 
@@ -118,11 +121,12 @@ S4 = p("The tree is not a template for a port, but the porting questions are kno
         "<b>Check the display manager and session names</b> the desktops register, against " + c("desktop_session()") + " and the readers in " + c("session.c")
         + ".",
         "<b>Check mandatory access control.</b> If SELinux is on, the removed handling of " + c("child.c") + " and " + c("walls.c") + " is needed; "
-        "for AppArmor, adapt the profile (it is shipped in complain mode and was never observed in a live session).",
+        "for AppArmor, adapt the profile (it is shipped in complain mode; " + c("check-apparmor.py") + " reads the kernel journal of every round and fails on any line of the profile, so adapt it until a round shows none).",
         "<b>Check the compositor,</b> labwc, at the version the distribution carries, and the four desktops' versions, in particular the GNOME "
         "session unit shape and the KWin quirks.",
-        "<b>Make the boxes:</b> add a Containerfile for the new distribution (the Debian one installs " + c("task-<de>-desktop") + "), keep the identity "
-        "check, and run the whole of " + c("prove/all.sh") + " on each desktop (" + rif("Testing") + ").",
+        "<b>Make the test machines:</b> one virtual machine per desktop really installed from the distribution's live image (" + c("vm-radeon.sh crea") + " is the Debian model), the ports "
+        "and names in " + c("banco-vm/box.sh") + " and " + c("lib.py") + ", and run the whole of " + c("prove/all.sh") + " on each desktop (" + rif("Testing") + "). On a new distribution or desktop also try by hand, on a real machine started from a live USB stick, "
+        "the local login with programs open in the remote desktop (" + rif("Testing the real machine from a live USB") + ").",
         "<b>Run the package check</b> (" + c("check-package.py") + "): install, first start, remove, purge, reinstall.",
     ]) + \
     warn("Do not add a branch for the new distribution to this tree. If code is shared, move it first; the two trees must not need each other.")
@@ -172,8 +176,8 @@ S6 = p("The product knows four desktops, by the enumeration " + c("DesktopSessio
         "<b>The places that branch on the desktop.</b> In " + c("child.c") + ", the birth of the session and the stage (the XFCE and LXQt wording and the KDE "
         "branch), and the close; in " + c("main.c") + ", the switch that names the desktop in the log; in " + c("session.c") + ", the branches that are specific to one desktop "
         "(for example the GNOME-only ones). Search for " + c("SESSION_DESKTOP_") + " to find all of them.",
-        "<b>Packaging.</b> Recommends in " + c("debian/control") + " if the desktop needs a compositor package, and a box: add the desktop to "
-        + c("boxes/box.sh") + " (the " + c("choose") + " function: ports and names), " + c("boxes/Containerfile") + " and the identity check.",
+        "<b>Packaging.</b> Recommends in " + c("debian/control") + " if the desktop needs a compositor package, and a test machine: add the desktop to "
+        + c("banco-vm/box.sh") + " (the " + c("choose") + " function: ports and names), " + c("lib.py") + " (" + c("PORTS") + ") and " + c("vm-radeon.sh") + ".",
         "<b>Tests.</b> Add the desktop to the dictionaries of the checks: " + c("PANEL") + " and " + c("LOGOUT") + " in " + c("deskkit.py") + ", " + c("PORTS")
         + " and " + c("SHELL_UP") + " in " + c("lib.py") + ", " + c("TERMINAL") + " and " + c("FILEMGR") + " in " + c("check-desktop.py") + ", the desktop list in "
         + c("all.sh") + " and " + c("matrix.sh") + " (" + c("fresh.sh") + " takes the desktop as its argument). Then run the full suite on it.",

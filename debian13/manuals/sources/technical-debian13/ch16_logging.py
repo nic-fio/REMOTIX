@@ -268,9 +268,11 @@ S6B = p("The priority of a line is decided in " + c("line()") + " by the first n
       "what is not ours and was left alone (for example the " + c("pam_env") + " message about a missing "
       + sysf("/etc/default/locale") + " in the test image, rtkit and colord messages in containers).") + \
     warn("two things the document itself leaves open. (1) On the test containers " + c("POWERED OFF OR SUSPENDED")
-         + " appears as an error because logind answers " + c("CanSuspend=(no answer)") + " there and the check "
-         "counts that as a failure; it was kept as an error because it is the safety belt, and changing it "
-         "would need a decision on the logic of the guardian (" + c("sentinel.c") + "). (2) About 700 call sites "
+         + " appeared as an error because logind answers no question there and the check counted that as a failure; it was kept as "
+         "an error because it is the safety belt. Since 1.2.0 the guardian (" + c("sentinel_shutdown_forbidden()") + ") accepts " + c("no")
+         + " and " + c("na") + " (not available on this machine: nobody can do it, as safe as " + c("no") + ") and counts only " + c("yes")
+         + ", " + c("challenge") + " and an error as unsafe; an error is still an alarm, but the detail now names the call and the reason, as in "
+         + c("CanSuspend=(ERROR: …)") + ", where it used to say «(no answer)». (2) About 700 call sites "
          "start with " + c("⛔") + " and did not occur in the run, so their level is unverified; the document names "
          "the quality-down line of " + c("encoder.c") + " (a bandwidth adaptation) as a candidate for " + c("⚠")
          + ". The warning level was not measured in depth.", "Open points of the priority pass.")
@@ -324,7 +326,7 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
          + c("codec_step()") + ", " + c("codec_retry()")],
         ["Which desktop the machine has and why (" + c("startup") + ")", c("session_desktop_explain()")],
         ["On KDE: the KWin capture permission, with the code " + c("RX-KDE-001") + ", " + c("RX-KDE-002") + " or "
-         + c("RX-KDE-003") + " and the remedy if it fails", c("kwin_check_permission()")],
+         + c("RX-KDE-003") + " and the remedy if it fails (" + c("sudo apt install --reinstall ./remotix_<version>_amd64.deb") + ")", c("kwin_check_permission()")],
         ["The clocks, the ghost-eviction threshold, the administrative session cap, the test tone when on", c("main.c")
          + ", " + c("wt_audio_test()")],
         ["The composition budget in force (" + c("budget") + ")", c("budget_startup_line()")],
@@ -337,9 +339,8 @@ S8 = p("At startup the parent writes the value <b>in force</b> of every mechanis
         ["What the parent passes to every child on its command line (" + c("child") + ")", c("children_phase9()")],
         ["The command socket, only if requested with the bench option " + c("--command-socket") + " (never in the packaged "
          "unit)", c("command_open()")],
-        ["The PAM service file found, or " + c("⛔ the PAM service «remotix» DOES NOT EXIST") + " (the message ends by naming the "
-         "files of other distributions, which do not exist here: the administrator runs " + c("apt install --reinstall remotix")
-         + ")", c("look_pam_service()")],
+        ["The PAM service file found, or " + c("⛔ the PAM service «remotix» DOES NOT EXIST") + " (the message says that PAM will fall back to " + c("other") + ", which on Debian includes the common stacks, and ends with "
+         "«The package installs that file: reinstall the package from its file (sudo apt install --reinstall ./remotix_<version>_amd64.deb)»)", c("look_pam_service()")],
         ["Certificates: generated or reused, fingerprints (" + c("cert") + ")", c("certificates_prepare()")],
         ["Desktops found alive from a previous server (reattach pending); the root side ends them about 10 s later if the user "
          "does not return (" + rif("Desktops found again after a restart") + ")", c("found_again_at_startup()")],
@@ -393,10 +394,23 @@ S8B = p("The lines below are those of the stop of the service (" + rif("Stopping
         [c("rootside"), "⚠ local login of «user» (uid N): its REMOTIX session is gone (N ms, scope ended by the root side: …) — the login goes on",
          "The end by the root side's own machinery (light clean-up only)."],
         [c("rootside"), "⚠ local login of «user» (uid N): its REMOTIX desktop is STILL there after 20 s — the login is let through anyway …",
-         "The ceiling " + c("PL_CEIL_MS") + " was reached."],
+         "The ceiling " + c("PL_CEIL_MS") + " (20 s) was reached."],
+        [c("session"), "asking the Plasma session to exit (org.kde.Shutdown.logout)", "KDE: the orderly request that begins the close. It waits 5 s when the close is for a local login (" + c("KDE_PRELOCAL_ORDERLY_MS") + "), 10 s otherwise (" + c("WAIT_EXIT_MS") + ")."],
+        [c("session"), "⚠ the session does not exit: I close it by force (StopUnit graphical-session.target), whatever was not saved is lost", "KDE: the forced close, which stops everything that is part of the graphical session (KWin, plasmashell). Whatever was not saved in the remote desktop is lost."],
         [c("rootside"), "⛔ SPAWN for «user» refused: a local login of uid N is being held (or was let through a moment ago): no remote desktop for it now",
          "A birth for that uid was refused during the hold and the " + c("PL_HOLD_MS") + " after it."],
     ], "«TAB» — The lines of the stop, the orphan rule and the local-login hold") + \
+    h4("Lines new in 1.2.0") + \
+    table(["Area", "The line contains", "Means"], [
+        [c("quic"), "connection with <addr> closed (N left) — the PEER closed it: transport error CRYPTO 0x12e = TLS alert 46 certificate_unknown …; TLS handshake NOT completed",
+         "Who closed the QUIC connection and why (" + c("close_why()") + " in " + c("transport.c") + "): «the PEER closed it», «WE closed it» or «dropped without a CONNECTION_CLOSE», the code (idle timeout, application error, transport error, TLS alert) and whether the handshake was completed. A client device with a wrong clock is a known cause of «Opening handshake failed» (certificate refused). The closing of a connection that never logged in is limited to a few lines per window."],
+        [c("child"), "⛔ «user» passed PAM but the desktop cannot be born: <desktop> needs `labwc` and it is NOT installed on this server — the administrator must install the package `labwc` (it is only a Recommends, so `--no-install-recommends` leaves it out).  ⭐ The child is NOT spawned, it gets 0x0E",
+         "XFCE or LXQt without " + c("labwc") + ", checked at every login (" + c("session_missing_component()") + " in " + c("main.c") + "); the user sees the 0x0E message instead of a black screen. The " + c("postinst") + " warns about the same case at installation."],
+        [c("wt"), "⛔ the child of «user» refused the stage (scale): sent away N clients with 0x0E", "GNOME: the desktop's scale is not 1 and could not be brought back; the session is closed and whoever is in is told."],
+        [c("child"), "⭐ the user's scale %.3f on «…» is NOT served: I try ONCE to bring our monitor back to 1 (temporary, the user's settings untouched)", "Before the refusal, one attempt on GNOME to put our monitor's scale back to 1 (" + c("child.c") + "); if it works the next line says the scale is ignored in the remote session."],
+        [c("session"), "⚠ the language is NOT put into the user manager (<reason>): the desktop's units may get the system's", "KDE, XFCE, LXQt: the language of the session could not be set in the user's systemd manager (" + c("manager_set_locale()") + " in " + c("session.c") + "); the desktop's own services may then use the system language."],
+        ["unit journal", "remotix: the local-login hook is in place in /etc/pam.d/common-session  |  … was missing … and has been put back (pam-auth-update --package)  |  ⚠ … is NOT in … and could not be put back …", "The summary line of " + c("remotix-pam-hook check") + ", run by " + c("ExecStartPre") + " at every start; it is in the journal of the unit (not in the product's own log)."],
+    ], "«TAB» — Lines new in 1.2.0 (text from the code of " + c("transport.c") + ", " + c("main.c") + ", " + c("child.c") + ", " + c("session.c") + " and " + c("remotix-pam-hook") + ")") + \
     p("A request whose user has no REMOTIX desktop leaves only a detail line (" + c("local login of uid N: no REMOTIX desktop of that user — "
       "the login goes on") + ", " + c("--verbose")+ "). What the page of a client that is refused a birth during the hold shows was not "
       "traced for this manual.")
@@ -426,7 +440,7 @@ S10 = p("REMOTIX reads almost nothing from the environment, on purpose. The comp
          "route and exercises the branch other cards take.", "Unset (route read from the driver)", c("vulkanvideo.c")],
         [c("REMOTIX_PORT"), "Expanded by the unit into " + c("--port") + ".", c("7447"), c("debian/remotix.conf")
          + " (read by " + c("debian/remotix.service") + ")"],
-        [c("REMOTIX_OPTIONS"), "Extra options appended to the server's command line, for example " + c("--name 192.168.1.10")
+        [c("REMOTIX_OPTIONS"), "Extra options appended to the server's command line, for example " + c("--name 192.0.2.10")
          + " for users who connect by address (the last " + c("--name") + " wins).", "Empty", c("debian/remotix.conf")
          + " (read by " + c("debian/remotix.service") + ")"],
         [c("REMOTIX_AREA") + ", " + c("REMOTIX_TENANT"), "Journal fields, not variables (" + rif("The systemd journal output") + ").",

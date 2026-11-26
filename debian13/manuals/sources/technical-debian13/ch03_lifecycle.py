@@ -5,6 +5,9 @@ S1 = p("The service starts in two stages: the root side (" + rif("The root side"
        "network side, and the network side then runs the rest of " + c("main()") + ". Both write at startup what the "
        "machine can do and which values are in force, so that a missing piece is read in the log rather than discovered by "
        "the first user.", lead=True) + \
+    p("<b>Before the root side</b>, systemd runs " + c("ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check") + " (" + c("debian/remotix.service")
+      + "): it checks that the line of the local-login hook is in " + sysf("/etc/pam.d/common-session") + " and, if it is not, puts it back with "
+      + c("pam-auth-update --package") + "; it writes one line in the log either way, and the dash means that it can never prevent the start (" + rif("The local-login hold") + " has the hook).") + \
     p("<b>In the root side</b>, before the network side exists: the options are parsed; the network user is resolved once, "
       "as root (" + c("getpwnam()") + " of " + c("remotix") + "; if it is missing or is uid 0 the service exits with "
       + c("EXIT_CONFIG") + " = 78, which the unit's " + c("RestartPreventExitStatus=78") + " does not retry); the certificate "
@@ -21,7 +24,9 @@ S1 = p("The service starts in two stages: the root side (" + rif("The root side"
         "(" + rif("The card that arrives late") + ").",
         "<b>The desktop.</b> " + c("session_desktop_explain()") + " says which desktop this machine will start and why; on KDE "
         + c("kwin_check_permission()") + " checks that the " + c(".desktop") + " file that lets KWin offer screen capture to "
-        "this binary is there (the package ships " + c("debian/org.kde.remotix.desktop") + ").",
+        "this binary is there (the package ships " + c("debian/org.kde.remotix.desktop") + "). On XFCE and LXQt the explanation also "
+        "says whether " + c("labwc") + " is installed: it is only a Recommends of the package, and without it the log says that "
+        "labwc is NOT there and the desktop cannot start. The check is not made for KDE Plasma, which on Debian runs KWin nested in the distribution's labwc (not KWin alone, as on Fedora 45).",
         "<b>The values in force.</b> The three clocks, the ghost-eviction threshold, the session cap, the budget, the queue "
         "threshold, the rate regulator, the dead line, the decoder pace: each is written with its value, <i>on or off</i>, "
         "so that a one-hour clock is verified by reading and not by waiting.",
@@ -81,6 +86,10 @@ S2 = p("The service is the system unit " + c("debian/remotix.service") + ", inst
         [c("RestartPreventExitStatus"), c("78"), "a configuration error (" + c("EXIT_CONFIG") + ") is not retried"],
         [c("LimitRTPRIO"), c("20"), "priority for audio and video threads"],
         [c("LimitNICE"), c("-11"), "the same"],
+        [c("Environment"), c("MESA_SHADER_CACHE_DISABLE=true"), "the root side's probe of the card must not open Mesa's shader cache in " + sysf("/root/.cache")
+         + ". Only the service's own environment: the users' desktops get theirs from PAM and keep the cache"],
+        [c("ExecStartPre"), c("-/usr/libexec/remotix/remotix-pam-hook check"), "checks at every start that the line of the local-login hook is in " + sysf("/etc/pam.d/common-session")
+         + " and puts it back through " + c("pam-auth-update") + " if not; the dash means that the start is never prevented"],
         [c("User="), "not set", "the unit runs as root; hardening is in the program (" + rif("The network side and its walls") + ")"],
         [c("EnvironmentFile"), c("/usr/share/remotix/remotix.conf") + " then " + c("/etc/remotix/remotix.conf.d/*.conf"),
          c("REMOTIX_PORT") + " (7447) and " + c("REMOTIX_OPTIONS") + " (empty); the last " + c("--name") + " wins"],
@@ -133,6 +142,9 @@ S3 = p("A login crosses five processes. Only the order and the numbers are given
         "<b>Admission</b> (" + c("delivery_verdict()") + " in " + c("main.c") + "), in this order, each a refusal that "
         "leaves no process behind: a local graphical session of that user, or logind not saying, before any birth (" + c("0x05")
         + " or " + c("0x0E") + ", fail-closed); the previous desktop of that user still closing (" + c("0x0E") + "); the "
+        "<b>compositor not installed</b> (" + c("session_missing_component()") + ": XFCE or LXQt without " + c("labwc") + ", "
+        + c("0x0E") + " with the sentence “the desktop (…) cannot start: `labwc` is not installed on this server”, for a login "
+        "that is not a resume; the log names the package, and the postinst has said " + c("sudo apt install labwc") + " when it saw the case; nothing is born); the "
         "stages of the server all in use (" + c("stage_count()") + " not below " + c("rcp_cap()") + ", " + c("0x0E") + "); "
         "the budget (" + c("has_capabilities()") + ", " + c("0x06 BUDGET_FULL") + "); then the birth.",
         "<b>The birth.</b> " + c("children_ensure_from()") + " sends " + c("RXR_SPAWN") + " with the grant and waits up to "
@@ -150,6 +162,13 @@ S3 = p("A login crosses five processes. Only the order and the numbers are given
         + "asks the stage for that canvas (the canvas granted can differ from the one asked for: the stage may already have another size, RCP.md §4.5), and answers " + c("SESSION")
         + " with state 1 (NEW) or 2 (RESUMED, the stage was already there).",
     ]) + \
+    p("<b>Who is told when a session ends.</b> The farewell of a session that is over (" + c("0x10") + ", or " + c("0x0E")
+      + " for a refused stage) does not go to every connection that carries the user's name: " + c("wt_dismiss_user_session_over()")
+      + " in " + c("webtransport.c") + " tells the connections that are logged in at once; a connection that was ADMITTED but is "
+      "still inside the fixed second (" + c("rcp_admitted_waiting()") + ") gets the same farewell held until that second has "
+      "passed, in the place of ADMITTED; a connection still waiting for PAM, or whose refusal is being held, is skipped, because "
+      "it was never attached to that session and must learn nothing about the account (RCP.md §4.4). A login refused with 0x0E "
+      "“still closing” therefore never receives a false 0x10.") + \
     tip("None of the admission checks forks a process: a user refused for a local session, a full cap or the budget costs no "
         "child. A desktop found again of a user who then opens a local session is not closed by the network side (it is "
         "user " + c("remotix") + ", and only the root side may end a logind session): it leaves the list (" + c("found_again_close_for_local()")
@@ -372,8 +391,10 @@ S8 = p("The user ends their session; the server ends it itself when it is abando
     ], "«TAB» — How a graphical session ends") + EXIT + \
     p("<b>The close itself</b> (" + c("session_terminate()") + " in " + c("session.c") + ") asks the desktop's own manager to exit and "
       "waits " + c("WAIT_EXIT_MS") + " (10 s) for the session to be gone, then forces: GNOME " + c("Logout(1)") + " then "
-      + c("Logout(2)") + "; Plasma " + c("org.kde.Shutdown.logout") + " then a forced stop of the unit; XFCE "
+      + c("Logout(2)") + "; Plasma " + c("org.kde.Shutdown.logout") + " then a forced " + c("StopUnit") + " of " + c("graphical-session.target") + " (" + c("SESSION_UNIT_GRAPHICAL") + ": it takes KWin, ksmserver and plasmashell with it) ; XFCE "
       + c("org.xfce.Session.Manager.Logout") + " then SIGTERM to labwc; LXQt " + c("org.lxqt.session.logout") + " then the same. "
+      "When the close is the one for a local login held in PAM (" + rif("The local-login hold") + "), the orderly step on Plasma waits "
+      + c("KDE_PRELOCAL_ORDERLY_MS") + " (5 s) and not 10: a program that asks “save?” would keep the local login waiting for nobody. "
       "Then " + c("session_clear_out_scope()") + " removes what a desktop that detached itself left in the child's logind scope "
       "(SIGTERM, a pause, SIGKILL), and the user manager's variables and drop-ins carrying REMOTIX's mark are restored. If "
       "the close fails the log says the two truths do not match (the client has its farewell, the desktop is still there).") + \
@@ -393,6 +414,55 @@ S8 = p("The user ends their session; the server ends it itself when it is abando
       "recorded in PIANO.md: the logind session now lasts for the whole life of the desktop and Log Out really closes it on "
       "all four desktops (" + c("child.c") + "), and on KDE a Log Out succeeds even if systemd refuses the stop (" + c("session.c")
       + "). XFCE ignores a Log Out asked while the desktop is still starting; that is the desktop's behaviour.")
+
+# ── Ending early ────────────────────────────────────────────────────────
+S8B = p("When a graphical session ends, the page must be told at once. The child therefore tells its parent <i>before</i> it dismantles its stage "
+        "(capture, input, clipboard), so that the farewell does not wait for PipeWire, whose real-time module can sit in a D-Bus call to RealtimeKit for up to 25 s on a "
+        "machine where that service is installed but cannot start.", lead=True) + \
+    p("<b>The rule</b> (" + c("session_over_early()") + " in " + c("child.c") + "). The child sends " + c("MSG_SESSION_FINISHED")
+      + " to the parent first, and dismantles the stage afterwards. Four conditions hold together, and each exists because the "
+      "farewell cannot be taken back:") + \
+    table(["Condition", "Why"], [
+        ["The session is <b>certainly</b> dead: " + c("session_life()") + " answered " + c("SESSION_LIFE_DEAD"),
+         "“I could not look” is not death. In doubt nothing is said here, and the old road holds: the remount, a second later, asks "
+         + c("session_state()") + " and decides"],
+        ["The stage is not a KWin stage (" + c("stage_kwin") + " is false)", "KDE is left out: a KWin restarted by systemd leaves its "
+         "bus name without an owner for a moment, so “no owner” is not certain there. On KDE the road is the Log Out watch (" + rif("Ending a graphical session") + ")"],
+        ["It was not said already (" + c("finished_told") + ") and the session was seen alive before (" + c("vista_viva") + ")",
+         "once only; a desktop that was never seen alive cannot have ended"],
+        ["The child is not a close-only child and the user did not close the session themselves", "those roads have their own farewell"],
+    ], "«TAB» — When the farewell is sent early") + \
+    table(["" + c("session_life()"), "Meaning", "What the child does"], [
+        [c("SESSION_LIFE_ALIVE"), "the session bus answered and the name of the desktop's own service has an owner (Mutter's display service on GNOME, " + c("org.kde.KWin") + " on KDE, " + c("SESSION_BUS_XFCE") + " and " + c("SESSION_BUS_LXQT") + " for the session managers) and, on GNOME, " + c("GetCurrentState") + " answered", "nothing; the counter of unknown answers is reset"],
+        [c("SESSION_LIFE_DEAD"), "the bus answered and that name has no owner", "the early farewell, then the dismantling"],
+        [c("SESSION_LIFE_UNKNOWN"), "no bus, a call failed or timed out, any other error", "nothing is concluded; see below"],
+    ], "«TAB» — The three answers about the life of the session") + \
+    p("<b>Unknown is not dead.</b> At a logout the user's session bus itself goes away for a moment, so the answer can be "
+      "“unknown” exactly when the session has just ended. When the compositor closes the input channel and the answer is unknown, "
+      "the child asks again after one second, up to " + c("EIS_UNKNOWN_ROUNDS") + " (3) rounds, before it falls back to the old road "
+      "(dismantle, no early farewell).") + \
+    p("<b>What the parent does.</b> It counts the child as <i>closing</i> from the moment it receives the message (" + c("closing_asked_ms")
+      + ", for at most " + c("CLOSING_GRACE_MS") + ", 30 s). A login in the meantime is refused with the true " + c("0x0E")
+      + " “still closing” and is never given a desktop that is going away (" + rif("From password to admission") + "). The clients that "
+      "were logged in get " + c("0x10") + " at once through " + c("wt_dismiss_user_session_over()") + ". After the early message the child cannot find the session again in any branch of its loop except one: a compositor that takes "
+      "its name back before the remount reads it. Otherwise the remount reads “dead” with the session seen alive, takes the §7.6 road, and ends the child with " + c("SIGTERM")
+      + ". In that one case the clients are already gone and the parent keeps the child “closing” for the grace period.") + \
+    p("<b>The stage refused for the scale.</b> " + c("MSG_STAGE") + " ends with a " + c("fatal") + " field (" + c("struct body_stage")
+      + "; a parent also accepts the older, shorter body, " + c("STAGE_MIN") + ", and reads it as “not fatal”). Only one refusal "
+      "sets it: the one for the screen scale. If the user has a scale other than 1 on GNOME (their own settings, or Settings → "
+      "Displays saved in " + sysf("monitors.xml") + ") the pointer would go elsewhere, and guard 2 (DECISIONS §5.0-sexies) refuses to "
+      "serve it. The child first makes <b>one temporary attempt</b> to bring its own monitor back to 1 "
+      "(" + c("mutter_scale_to_one()") + ": nothing persistent, the user's files untouched). If the scale re-read is 1 the stage goes "
+      "on. If not, " + c("MSG_STAGE") + " goes to the parent with " + c("fatal") + " set, the hook " + c("children_hook_stage_refused()") + " reaches " + c("stage_refused_by_child()")
+      + " in " + c("main.c") + ", the clients get " + c("0x0E") + " instead of a black page, and the child closes the graphical session by the road of the user's Logout "
+      "(the check for a local session first, which turns it into the light close), retried every 10 s if it fails; once the session "
+      "is gone the child leaves, so nothing stays alive. The cause is also cured upstream in the session's dconf rules, where "
+      + c("scaling-factor") + " is locked to 1 (a key of the table " + c("DCONF_KEYS") + ", with the user's own "
+      "file never touched); the refusal is the net under it, and its log line lists the likely causes: a scale saved from Settings, or a mandatory dconf "
+      "profile of the administrator.") + \
+    note("The early farewell and the Plasma Log Out watch have the same origin, a window in which the desktop is over and the clients "
+         "do not know: the first closes it on every desktop but KDE, the second (" + rif("Ending a graphical session") + ") on Plasma. "
+         "The records are in the comments of " + c("session_over_early()") + " and " + c("session_kde_logout_watch()") + ".", "Same window, two cures.")
 
 # ── Shutdown ────────────────────────────────────────────────────────────
 S9 = p("When systemd stops the unit (" + c("systemctl stop") + " or " + c("restart") + ", a package upgrade that restarts the "
@@ -451,6 +521,7 @@ S10 = p("A defect in this chain rarely names its cause: the user sees “black�
         lead=True) + \
     table(["Step", "Area", "The line contains"], [
         ["Service up", "rootside", "“ROOT SIDE on”, “network side started”, “the network side's walls in force”"],
+        ["Hook of the local login", "the unit's journal", "the line of " + c("remotix-pam-hook check") + " that the " + c("ExecStartPre") + " writes at every start: in place, put back, or “NOT in /etc/pam.d/common-session and could not be put back”"],
         ["Card probe", "startup", "“video.codec offered”, or “THIS SERVER CANNOT ENCODE VIDEO”"],
         ["Ready", "startup", "“ready: https://…”"],
         ["Clocks and cap", "startup", "“the three clocks in force”, “ADMINISTRATIVE session cap”"],
@@ -458,6 +529,9 @@ S10 = p("A defect in this chain rarely names its cause: the user sees “black�
         ["A password refused before PAM", "rootside", "“AUTH refused BEFORE PAM”, “not asked of PAM”"],
         ["Birth", "rootside, child", "“the birth for … took N ms”, “I am the child of”"],
         ["No stage", "child", "“NO STAGE at birth”, “loop ALIVE without a stage”"],
+        ["Desktop cannot be born", "child, session", "“passed PAM but the desktop cannot be born: … needs `labwc` and it is NOT installed”"],
+        ["Session over, told early", "child", "“the graphical session of «user» is over, CERTAINLY (…): the parent is told NOW, before the stage is dismantled”"],
+        ["Plasma logout watch", "session, child", "“Plasma: a logout is under way and KWin is still up”; “closing the graphical session by force”"],
         ["Detach", "rcp", "“DETACHED for silence”, “INACTIVITY”"],
         ["Come back", "child", "“COMES BACK to their desktop found again”"],
         ["Log Out", "child", "“§7.6”, “the graphical session WAS THERE and now is NO LONGER”"],
@@ -484,6 +558,7 @@ CHAPTER = ("Startup and life cycle", [
     ("Desktops found again after a restart", S6),
     ("The clocks, each one cited from its constant", S7),
     ("Ending a graphical session", S8),
+    ("When the session ends before the stage is gone", S8B),
     ("Stopping the service", S9),
     ("The log line that marks each step", S10),
 ])
