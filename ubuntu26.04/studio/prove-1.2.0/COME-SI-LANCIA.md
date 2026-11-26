@@ -11,8 +11,10 @@ Ubuntu: verificarlo al primo giro e correggere questo file.
    Su Ubuntu (kernel diverso da 6.12) non si sa se serve: **[IPOTESI]**, ma per prudenza si fa uguale.
 2. **Con la Radeon passata alla VM sono VIETATI**: `check-prelocal.py` senza `--only` che escluda P7, P8, P9 (i casi con accesso locale vero);
    `prelocal.sh`; `banco-vm/autologin-*.sh` con riavvio; `systemctl restart|stop gdm3|sddm|lightdm` dentro la VM; accessi locali grafici;
-   `reboot` dall'interno della VM; `all.sh` senza escludere `prelocal` (si usa `--only` con le altre voci: elenco `LABELS` in `all.sh`).
-   Esempio, un giro completo senza il locale: `./all.sh <de> --clean --only base-chrome,base-firefox,lifecycle,multiuser,desktop,media,resilience,audio-chrome,audio-firefox,clipboard,input-chrome,input-firefox,phone,ban,apparmor`.
+   `reboot` dall'interno della VM; `all.sh` con `RX_LOCALE_VERO=1`.
+   **`all.sh` di default lancia `prelocal` con solo P1-P6** (senza accessi locali veri) e mostra una riga SKIP `prelocal/real-login`; P7, P8, P9 entrano solo con il
+   consenso esplicito `RX_LOCALE_VERO=1` (limite di `all.sh` per `prelocal`: 1200 s di default, 3900 s con il consenso; il limite interno di `check-prelocal.py` e' 900 s
+   per P1-P6 piu' 700 s per ciascuno di P7-P9, cioe' 3000 s; tutti e due moltiplicati per `RX_TEMPO`). Un giro completo come al solito: `./all.sh <de> --clean`.
    I casi P1-P6 di `check-prelocal.py` NON fanno accessi locali veri e sono permessi: `--only P1,P2,P3,P4,P5,P6`.
    Prima di lanciare uno strumento che non si conosce, leggerne il codice.
 
@@ -72,8 +74,8 @@ dentro una chiamata ssh muore alla chiusura: usare `setsid nohup sh -c '...' </d
 # 4. Locale-chiude-remoto (P1-P9)
     RX_BANCO=vm python3 check-prelocal.py --box <de> --only P1,P2,P3,P4,P5,P6 > $L/prelocal.out 2>&1       # senza accessi locali veri: permesso con la Radeon
     RX_BANCO=vm python3 check-prelocal.py --box <de> --only P7,P8,P9 > $L/prelocal-busy.out 2>&1           # accesso locale VERO, riavvio del display manager
-I tre casi con programmi aperti NON si lanciano con la Radeon passata (divieto 2): solo su una VM SENZA Radeon, oppure dopo aver provato che il rimedio `amdgpu.runpm=0` regge
-(decisione del proprietario). Ogni caso dura circa 3 minuti.
+I tre casi con programmi aperti NON si lanciano con la Radeon passata (divieto 2). **[IPOTESI]** Si potrebbero lanciare su una VM SENZA Radeon, ma senza scheda il desktop remoto
+probabilmente non parte: non provato. Resta la decisione 1 del piano (`PIANO.md`, sezione 1.2.0): decide il proprietario se e come, anche dopo aver provato che `amdgpu.runpm=0` regge. Ogni caso dura circa 3 minuti.
 - **P7** terminale con `top` aperto; **P8** editor con testo non salvato (solo `kde`: kwrite o kate, e `xfce`: mousepad; `gnome` e `lxqt`: BLOCKED); **P9** Firefox (snap) aperto.
 - Utenti usati: `pl1`, `pl2` (P1-P5), `pl3` (P7), `pl4` (P8), `pl5` (P9). Non girano insieme a `all.sh` (stessi utenti `pl*`).
 - Lo strumento a mano: `prelocal.sh <de> 1|2a|2b|3` (stesso divieto), con `banco-vm/autologin-gdm3.sh`, `autologin-sddm.sh`, `autologin-lightdm.sh`.
@@ -89,6 +91,8 @@ I tre casi con programmi aperti NON si lanciano con la Radeon passata (divieto 2
    `banco-vm/autologin-sddm.sh` (plasma, Lubuntu) e `autologin-lightdm.sh` (xubuntu).
 2. gdm3: che `AutomaticLogin` in `/etc/gdm3/custom.conf` faccia partire la sessione `ubuntu`; che il file abbia la sezione `[daemon]` (altrimenti il caso dice BLOCKED).
 3. Terminale GNOME: `ptyxis -x top` (prima forma) o `ptyxis -- top` (seconda); vale la prima che mostra `top` su una pts.
-4. Programmi presenti: `kwrite` o `kate` su Kubuntu, `mousepad` su Xubuntu, `qterminal` su Lubuntu, `firefox` (snap) ovunque, `apport.service` attivo (per i crash).
+4. Programmi presenti: `kwrite` o `kate` su Kubuntu, `mousepad` su Xubuntu, `qterminal` su Lubuntu, `firefox` (snap) ovunque, `apport` come gestore dei core (`/proc/sys/kernel/core_pattern` lo contiene; i crash dei programmi snap, P9 compreso, NON passano da apport: per quelli la riga dice che i crash non sono controllati).
 5. Compositore locale di Lubuntu 26.04: `openbox` (se e' altro, il caso dice «no local desktop» e si corregge la tabella `COMPOSITOR`).
 6. Nome host nelle VM `rx-<vm>`: i tre script di autologin escono con 9 se il nome e' un altro.
+7. Il controllo `which python3 chromium firefox-esr labwc` sul server: `firefox-esr` e' il nome di Debian; sul server Ubuntu-banco potrebbe chiamarsi `firefox`. Adattare il comando al server vero.
+8. Il profilo della Firefox snap in `/tmp/rx-snap-profile-<uid>`: la snap ha un `/tmp` privato, quindi il profilo potrebbe non essere scrivibile o visibile come ci si aspetta; se Firefox non parte, il caso P9 dice «the program did not start» e va cambiato percorso (per esempio sotto `~/snap/firefox/common/`).

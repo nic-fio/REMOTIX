@@ -2,6 +2,7 @@
 # all.sh <de> [--fresh <path-to.deb>] - every check of prove/ on ONE box, in sequence, one log per check, a final table.
 #   <de>      xfce | lxqt | gnome | kde
 #   --fresh   first a fresh box with that package (fresh.sh: reset, install, enable)
+# prelocal runs P1-P6 only unless RX_LOCALE_VERO=1 (then P1-P9: real local logins, display manager restarted in the VM).
 # Order: base (Chrome, Firefox), lifecycle, multiuser, desktop, media, resilience, audio (Chrome, Firefox), clipboard, input (Chrome, Firefox), phone, prelocal, ban (LAST: it bans the test address
 # of the box's service and unblocks it again at the end, see check-ban.py), then apparmor (the kernel log of the whole round: lines of the remotix_network profile, see check-apparmor.py).
 # Logs: log/<tag>/<check>.out, the table also in log/<tag>/summary.txt. <tag> = $TAG or <de>-<date>-<time>.
@@ -73,11 +74,15 @@ run clipboard 480 python3 check-clipboard.py --box "$DE"
 run input-chrome 1500 python3 check-input.py --box "$DE" --browser chrome
 run input-firefox 1500 python3 check-input.py --box "$DE" --browser firefox
 run phone 1250 python3 check-phone.py --box "$DE"
-run prelocal 2400 python3 check-prelocal.py --box "$DE"
+# prelocal: by DEFAULT only P1-P6 (no real local login). P7-P9 (real autologin and a restart of the greeter INSIDE the VM, which froze the whole server on
+# Debian with the Radeon passed through) only with the explicit consent RX_LOCALE_VERO=1. The limits are above the internal deadline of check-prelocal.py
+# (lib.guard: 900 s for P1-P6, plus 700 s for each of P7-P9 = 3000 s): 1200 s by default, 3900 s with P7-P9 (the greeter restart in the clean-up takes up to 120 s each).
+if [ "${RX_LOCALE_VERO:-}" = 1 ]; then run prelocal 3900 python3 check-prelocal.py --box "$DE"
+else run prelocal 1200 python3 check-prelocal.py --box "$DE" --only P1,P2,P3,P4,P5,P6; fi
 run ban 900 python3 check-ban.py --box "$DE"
 run apparmor 180 python3 check-apparmor.py --box "$DE" --since "${T0:-none}"
 if [ "${RX_BANCO:-}" = vm ]; then
-	skip prelocal/real-greeter "the real graphical login of the display manager (GDM/SDDM/LightDM) cannot be automated: by hand; the hook itself is checked above by calling it"
+	[ "${RX_LOCALE_VERO:-}" = 1 ] || skip prelocal/real-login "P7, P8, P9 (real autologin + restart of the display manager inside the VM, programs open in the remote desktop) are NOT run: they need the explicit consent RX_LOCALE_VERO=1 (see studio/prove-1.2.0/COME-SI-LANCIA.md)"
 	skip ban/other-addresses "all clients reach the VM as 10.0.2.2, so only the ban of that one address is tried (the key); the 127.0.0.1 case of the containers does not exist"
 	skip package "check-package.py is not part of this run (it never was) and needs box.sh reset, which a VM cannot do"
 fi
