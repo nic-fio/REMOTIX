@@ -190,15 +190,18 @@ def unit_ids_of(box, user):
 
 def unit_residue(box, user, units):
     """(real, ignored): of the units that are still active with the same invocation, the ones that hold a process (or are not slices/sockets) and the
-    ones that do not (a `.slice` whose cgroup is empty; a `.socket`, which only listens: GNOME's keyring socket is shared by the remote and the local session)."""
+    ones that do not (a `.slice` whose cgroup subtree holds no process; a `.socket`, which only listens: GNOME's keyring socket is shared by the remote and the local session)."""
     real, ignored = [], []
     for ul in units:
         un = ul.split()[0]
         if un.endswith(".socket"):
             ignored.append(ul); continue
         if un.endswith(".slice"):
+            # the processes of a slice live in its CHILD units: `cgroup.procs` of the slice alone is always empty, so the whole subtree is
+            # counted; a cgroup that cannot be read answers `?` and the slice stays a real residue (never «could not look» = «empty»)
             n = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
-                        "[ -n \"$cg\" ] && cat /sys/fs/cgroup$cg/cgroup.procs 2>/dev/null | wc -l || echo 0" % (user, un))[1].strip().split()[-1:]
+                        "if [ -n \"$cg\" ] && [ -d \"/sys/fs/cgroup$cg\" ]; then find \"/sys/fs/cgroup$cg\" -name cgroup.procs -exec cat {} + 2>/dev/null | wc -l; "
+                        "else echo '?'; fi" % (user, un))[1].strip().split()[-1:]
             if n and n[0] == "0":
                 ignored.append(ul); continue
         real.append(ul)

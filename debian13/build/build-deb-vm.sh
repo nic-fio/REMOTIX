@@ -206,6 +206,8 @@ for k in 'R13 banco-nel-binario SI' 'R13 opzioni-di-banco-nell-unita SI' 'R14 fi
 	printf '%s\n' "$ctl" | grep -q "^$k" || { echo "line missing or NO: $k" >&2; fail=1; }
 done
 printf '%s\n' "$ctl" | grep -qE '^R[0-9]+ .* NO( |$)' && { echo "a check says NO" >&2; fail=1; }
+# a lintian ERROR fails the build as well (warnings are only shown)
+printf '%s\n' "$ctl" | grep -q '^lintian: E=0 ' || { echo "lintian reports errors (or its line is missing)" >&2; fail=1; }
 printf '%s\n' "$ctl" | grep -E '^(R[0-9]+ |lintian:)' | sed 's/^/   /'
 
 if [ "$fail" != 0 ]; then

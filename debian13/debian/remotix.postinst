@@ -24,7 +24,7 @@ fi
 if [ "$1" = configure ]; then
 	if command -v pam-auth-update >/dev/null 2>&1; then
 		pam-auth-update --package || echo "remotix: ⚠ pam-auth-update --package failed: a local login will not close the user's remote desktop first" >&2
-		grep -q remotix-local-login /etc/pam.d/common-session 2>/dev/null || \
+		grep -Eq '^[[:space:]]*session[[:space:]].*pam_exec\.so.*remotix-local-login' /etc/pam.d/common-session 2>/dev/null || \
 			echo "remotix: ⚠ common-session was edited by hand: pam-auth-update did not add REMOTIX's line; a local login will not be held, the periodic check remains" >&2
 	else
 		echo "remotix: ⚠ pam-auth-update not found: a local login will not close the user's remote desktop first" >&2
