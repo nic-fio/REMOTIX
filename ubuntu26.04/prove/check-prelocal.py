@@ -384,6 +384,9 @@ def busy_case(box_name, user, kind):
             ok_.append("crashes NOT checked (no coredumpctl, and apport is not the core_pattern handler; snap programs never go through apport)")
         elif cores:
             bad.append("crash(es) of %s since the start of the case (%s): %s" % (user, "coredumpctl" if have_cd else "apport", cores.replace("\n", " | ")[:300]))
+        elif kind == "snap" and not have_cd:
+            # apport never sees the crashes of a snap program: for P9 its silence says nothing about the program under test
+            ok_.append("crashes of the snap program NOT checked (snaps do not go through apport); no apport crash of the other programs of %s" % user)
         else:
             ok_.append("no crash of %s (%s)" % (user, "coredumpctl" if have_cd else "apport /var/crash"))
         # -- no AppArmor line about the profile of REMOTIX since the start of the case (the profile is in complain mode: a thing it does not cover
