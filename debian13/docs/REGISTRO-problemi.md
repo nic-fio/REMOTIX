@@ -271,7 +271,7 @@ vista scattare su Debian, lo dico.
 
 ### F4. La fine della sessione veniva detta al browser troppo tardi
 - **Cura:** il saluto di fine sessione parte subito, prima di smontare tutto (`§7.6` in `src/child.c`), e un nuovo
-  accesso non si aggancia a un desktop che sta morendo. Provato a mano su KDE, con e senza browser collegato.
+  accesso non si aggancia a un desktop che sta morendo. Vale su GNOME, XFCE e LXQt; KDE è escluso di proposito e usa la sorveglianza del Log Out (F7), provata a mano con e senza browser.
 
 ### F5. XFCE: il pulsante «azioni» del pannello spariva dal desktop locale (D-X3)
 - **Che cosa si vedeva:** dopo una sessione remota, nel desktop locale del pannello mancava il pulsante di uscita/azioni.
@@ -312,7 +312,7 @@ vista scattare su Debian, lo dico.
   alla versione 12, ne servono 22). KDE resta dentro il labwc di Debian.
 
 ### F8. GNOME: primo movimento del puntatore e scala dello schermo
-- **Puntatore:** il primo movimento dopo l'avvio del dispositivo viene inviato due volte (`src/input.c`), come su Fedora: il primo poteva andare perso.
+- **Puntatore:** il primo movimento dopo l'avvio del dispositivo viene inviato due volte (`src/input.c`), come su Fedora: il primo arrivava con una coordinata a zero (misurato su Fedora, Mutter 51; su Debian non misurato).
 - **Scala:** se l'utente ha una scala diversa da 1 (per esempio 200%), la sessione riporta il suo monitor a 1
   (`mutter_scale_to_one()` in `src/mutter.c`); se non riesce, chiude la sessione con un messaggio. La chiave
   `scaling-factor` è fra quelle bloccate (`DCONF_KEYS`). Su GNOME 48 di Debian (mutter 48.7) il cambio è possibile
@@ -389,9 +389,9 @@ vista scattare su Debian, lo dico.
 ## G. Banco di prova: lezione per le prossime distribuzioni (26 nov 2026)
 
 ### G1. Il server si è bloccato quattro volte con una VM Debian sulla scheda Radeon passata
-- **Quando e come si è visto:** 25-26 nov, durante le prove a macchine virtuali. Alle 01:17 e alle 08:26 il server intero si è
+- **Quando e come si è visto:** 26 nov, durante le prove a macchine virtuali. Alle 01:17 e alle 08:26 il server intero si è
   bloccato (né ping né ssh) sulla VM `kde`, nello stesso punto: la prova «accesso locale vero» (P7), cioè il riavvio di `sddm`
-  dentro la VM. La quarta volta è stata sulla VM `xfce`, mentre si installava il pacchetto. Ogni volta serviva il ripristino a mano del proprietario.
+  dentro la VM. La terza volta, il 26 nov alle 09:14, sulla VM `xfce` durante la voce `desktop` di `all.sh`, mentre partiva anche la VM `costruzione`; la quarta ancora sulla VM `xfce`, mentre si installava il pacchetto. Ogni volta serviva il ripristino a mano del proprietario.
 - **Prima diagnosi, SBAGLIATA:** «il riavvio del display manager con la Radeon passata fa cadere il server». Si è vietato quel passo
   e tutti i simili (nel file `COME-SI-LANCIA.md`), ma è caduto anche dopo, senza riavvii di display manager (installazione del
   pacchetto): la causa era un'altra.
@@ -446,7 +446,7 @@ vista scattare su Debian, lo dico.
 
 ### H4. P7/P8 automatiche solo su GNOME
 - Le prove automatiche «accesso locale vero con programmi aperti» (P7/P8) sono girate solo su GNOME; sulle altre VM sono vietate per
-  la sezione G1. Il proprietario le ha provate a mano sulle quattro live il 26 nov: tutte OK.
+  la sezione G1. Il proprietario ha provato la chiusura per accesso locale con programmi aperti sulle quattro live Debian 13.8.0, su macchina vera, il 26 nov 2026: GNOME, KDE, XFCE, LXQt tutte OK.
 
 ### H5. Da verificare altrove
 - Se su Fedora 1.2.0 la lingua scelta dall'utente arriva al desktop KDE (mai misurato).

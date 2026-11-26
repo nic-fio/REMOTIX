@@ -1281,7 +1281,7 @@ problema delle licenze è di chi installa remotix, non del progetto»*. REMOTIX 
 - The Red Hat family is tested on **Alma**, which stands in for it (Red Hat is paid).
 - A «no» to the drivers' repository **blocks** the installation (D5): without it, on that machine the card does not encode.
 - ✅ **NVIDIA**: the Vulkan Video route was measured on a real card, an RTX 4090 (proprietary driver 595), on 5-6 Oct 2026 on
-  Ubuntu 26.04 (GNOME 50 and XFCE/labwc; `[M]` comments in `src/encoder.c`). It was not repeated on the other distributions;
+  Ubuntu 26.04 (GNOME 50 and XFCE/labwc; `[M]` comments in `src/vulkanvideo.c`, `src/child.c`, `src/wlroots.c`). It was not repeated on the other distributions;
   the route is the same on all of them (Vulkan is the general route, not NVIDIA's). The earlier sentence «nobody has seen it
   work on a real NVIDIA» dated from 1 Oct 2026 and was corrected on 26 Nov 2026.
 - Without a capable card: REMOTIX does not install (§11.4). Virtual machines work only with the card
