@@ -225,11 +225,12 @@ fi
 hn=$(guest hostname) || { echo "the build VM does not answer" >&2; exit 2; }
 case "$hn" in rx-ub-costruzione) echo "   $hn" ;; *) echo "unexpected guest name: $hn" >&2; exit 2 ;; esac
 # a work folder left in the VM by a failed run is kept for inspection: never removed here
-if guest "test -e $WORK"; then
-	echo "the work folder $WORK exists already in the VM (left by an earlier run, kept for inspection): choose another label" >&2
+# atomic: the second mkdir has no -p, so it fails if the folder exists; a lost connection is told apart first
+guest true || { echo "the build VM does not answer (connection lost)" >&2; exit 2; }
+guest "mkdir -p ~/debwork && mkdir $WORK" || {
+	echo "cannot create the work folder $WORK in the VM: it probably exists already (left by an earlier run, kept for inspection): choose another label" >&2
 	exit 2
-fi
-guest "mkdir -p $WORK" || exit 1
+}
 tar -C "$pack" -cf - . | ssh "${SSHOPT[@]}" "$SERVER" "$GSSH 'tar -C $WORK -xf -'" || { echo "copy failed" >&2; exit 1; }
 
 echo "== build in the VM (log: $WORK/*.log in the guest; brought back at the end)"
