@@ -95,8 +95,16 @@ Correzioni a `check-prelocal.py` fatte dal giro: P9 prende `WAYLAND_DISPLAY`/`DI
 solo se contiene un processo del desktop REMOTO (la slice `app-gnome\x2dsession\x2dmanager.slice` ha lo stesso nome nella sessione locale e in quella remota); P9 aspetta la finestra
 fino a 30 s (controllo ogni 2 s).
 
+**Esiti degli altri giri (26 nov 2026):**
+- **KDE (`kubuntu`):** 126 PASS, 0 FAIL; P7, P8, P9 PASS (P8 con `kate`: chiusura gentile in 5,03 s, poi forzata accettata); desktop appena nato: 4 prove su 4 accettate.
+- **XFCE (`xubuntu`):** 125 PASS; `service-restart` PASS dopo la correzione dello strumento (`check-resilience.py` leggeva come esito un avviso di systemd «unit file changed on disk»:
+  ora `systemctl restart remotix 2>/dev/null; sleep 2; systemctl is-active remotix 2>/dev/null`); P7, P8, P9 PASS dopo la correzione di `unit_residue` (`gnome-keyring-daemon.service` non e'
+  un residuo del desktop remoto: un accesso locale di un utente nuovo lo avvia da solo con `pam_gnome_keyring.so auto_start` in `/etc/pam.d/lightdm`; e' un servizio dell'utente condiviso
+  fra le due sessioni, misurato su Xubuntu); `check-exit` 3/3.
+- Sessioni verificate: `plasma` (Kubuntu) e `xubuntu`. Presenti: `mousepad`, `xfce4-terminal`, `konsole`, `kate`.
+
 **ANCORA DA VERIFICARE (IPOTESI):**
-1. Sessioni delle altre VM: `ls /usr/share/wayland-sessions /usr/share/xsessions`. Attese `plasma` (Kubuntu), `xubuntu`, `Lubuntu`; scritte in `banco-vm/autologin-sddm.sh` e `autologin-lightdm.sh`.
-2. Programmi su Xubuntu (`mousepad`), Lubuntu (`qterminal`), `firefox` snap su tutte, nome del `.deb`.
+1. Sessione `Lubuntu` (in `banco-vm/autologin-sddm.sh`): `ls /usr/share/xsessions` nella VM.
+2. Programmi su Lubuntu (`qterminal`), nome del `.deb`.
 3. Che `amdgpu.runpm=0` serva anche sui kernel Ubuntu (lo verifica `vm-radeon.sh`).
 4. Il controllo `which python3 chromium firefox-esr labwc` e' sul server: `firefox-esr` e' il nome di Debian; adattarlo se il server lo chiama diversamente.

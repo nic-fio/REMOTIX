@@ -182,7 +182,7 @@ def check_restart(a, box, tag):
     try:
         ctx, text0, pid0 = bring_up(a, box, rig, "rs1", "resil")
         t0 = time.time()
-        c, t = box.run("systemctl restart remotix; sleep 2; systemctl is-active remotix", timeout=90)
+        c, t = box.run("systemctl restart remotix 2>/dev/null; sleep 2; systemctl is-active remotix 2>/dev/null", timeout=90)
         if t.strip().splitlines()[-1:] != ["active"]:
             raise Fail("the service is not active after the restart: %s" % t[-150:])
         told = page_told(rig, 45)
