@@ -92,3 +92,11 @@ passata e' il passo che precede la caduta. Nessuno dei due e' stato rifatto: ora
 - 3d: lingua rimessa vuota (`Languages=;`).
 - 4 `check-apparmor.py --box kde` (tutto l'avvio, successivo all'installazione): PASS, nessuna riga ALLOWED/DENIED di `remotix_network` (quindi nessuna per `org.kde.remotix.desktop`).
 - Chiusura: VM spenta, Radeon libera, `pgrep -c qemu` = 0, istantanea `giro5` creata. Prima dell'inizio il server mancava di `python3` (script di preparazione lanciato dal proprietario).
+
+### Seconda misura: il file di Plasma `plasma-localerc` (26 nov, 09:4x)
+Ipotesi: la lingua la riprende Plasma dal suo `~/.config/plasma-localerc`, creato al primo accesso con la lingua ancora inglese.
+- `kd1` (vecchio): `~/.config/plasma-localerc` = `[Formats]` / `LANG=en_US.UTF-8`, 27 byte, modificato 26 nov 08:53:01. Niente `plasma-locale-settings.sh` ne' `environment.d`.
+- Passo 3, utente `kdl1` (la sua casa esisteva gia' dalle 00:26 con `plasma-welcomerc`, ma senza `plasma-localerc`; lingua `it_IT.UTF-8` messa in AccountsService PRIMA della sessione): `remotix-child`, `labwc` (anche `LANGUAGE=` vuota), `kwin_wayland`, `plasmashell`, `startplasma-wayland` e gestore utente (`show-environment`: `LANG=it_IT.UTF-8`, `LANGUAGE=`) tutti `LANG=it_IT.UTF-8`. Il file `plasma-localerc` e' nato alle 09:42:31 con `LANG=it_IT.UTF-8`. Nessuna riga del servizio su lingua/ambiente. Dopo la chiusura normale il gestore utente era sparito.
+- Passo 5, `kd1` con `it_IT.UTF-8` in AccountsService e `plasma-localerc` spostato in `~kd1/plasma-localerc.da-parte`: tutti i processi (child, labwc, kwin_wayland, plasmashell, startplasma-wayland) e gestore utente `LANG=it_IT.UTF-8`; Plasma ha ricreato `plasma-localerc` (09:45:43) con `LANG=it_IT.UTF-8`. Poi: il file nuovo e' in `~kd1/plasma-localerc.nuovo-passo5`, il vecchio rimesso al suo posto, lingua vuota.
+- Conclusione: IPOTESI CONFERMATA. Il prodotto mette la lingua giusta; su KDE a vincere e' il `plasma-localerc` esistente dell'utente (`LANG=en_US.UTF-8`). Un utente che non ha ancora quel file, o non lo ha piu', la riceve. Non verificato qui: un accesso locale dello stesso utente con il file in posizione.
+- `kdl1` lasciato nella VM (non cancellato). VM spenta, Radeon libera, `pgrep -c qemu` = 0; istantanea non rifatta.
