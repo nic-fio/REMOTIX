@@ -3,19 +3,18 @@
 Scritto il 26 nov 2026 mentre si portavano gli strumenti di Debian 1.2.0. Cio' che e' marcato **[IPOTESI]** non e' ancora stato visto su una VM
 Ubuntu: verificarlo al primo giro e correggere questo file.
 
-# DIVIETI (valgono dal 26 nov 2026, imparati su Debian: il server intero e' caduto quattro volte)
+# DIVIETI (da Debian, 26 nov 2026: il server e' caduto quattro volte; per Ubuntu vale ancora solo il punto 1)
 
 1. **`amdgpu.runpm=0` OBBLIGATORIO.** Prima che una VM riceva la Radeon, nel suo `GRUB_CMDLINE_LINUX` (`/etc/default/grub`, poi `update-grub`;
    copia di prima in `/etc/default/grub.prima-runpm`) deve esserci `amdgpu.runpm=0`. Controlli nella VM: `cat /proc/cmdline` lo contiene,
    `cat /sys/module/amdgpu/parameters/runpm` = 0, `journalctl -k -b | grep -c "SMU is resuming"` = 0. Se non e' cosi': spegnere subito.
    Su Ubuntu (kernel diverso da 6.12) non si sa se serve: **[IPOTESI]**, ma per prudenza si fa uguale.
-2. **Con la Radeon passata alla VM sono VIETATI**: `check-prelocal.py` senza `--only` che escluda P7, P8, P9 (i casi con accesso locale vero);
-   `prelocal.sh`; `banco-vm/autologin-*.sh` con riavvio; `systemctl restart|stop gdm3|sddm|lightdm` dentro la VM; accessi locali grafici;
-   `reboot` dall'interno della VM; `all.sh` con `RX_LOCALE_VERO=1`.
-   **`all.sh` di default lancia `prelocal` con solo P1-P6** (senza accessi locali veri) e mostra una riga SKIP `prelocal/real-login`; P7, P8, P9 entrano solo con il
-   consenso esplicito `RX_LOCALE_VERO=1` (limite di `all.sh` per `prelocal`: 1200 s di default, 3900 s con il consenso; il limite interno di `check-prelocal.py` e' 900 s
-   per P1-P6 piu' 700 s per ciascuno di P7-P9, cioe' 3000 s; tutti e due moltiplicati per `RX_TEMPO`). Un giro completo come al solito: `./all.sh <de> --clean`.
-   I casi P1-P6 di `check-prelocal.py` NON fanno accessi locali veri e sono permessi: `--only P1,P2,P3,P4,P5,P6`.
+2. **Il divieto di Debian (P7-P9, riavvio del display manager, accessi locali con la Radeon passata) NON vale per Ubuntu** (decisione del proprietario, 26 nov 2026:
+   i blocchi del server venivano dai driver vecchi delle macchine Debian). Sul banco di Ubuntu P7, P8, P9 e `RX_LOCALE_VERO=1` sono PERMESSI; la protezione
+   `amdgpu.runpm=0` la verifica `vm-radeon.sh` da solo (punto 1).
+   `all.sh` di default lancia comunque `prelocal` con solo P1-P6 e mostra una riga SKIP `prelocal/real-login`; P7, P8, P9 entrano con `RX_LOCALE_VERO=1`
+   (limite di `all.sh` per `prelocal`: 1200 s di default, 3900 s con il consenso; il limite interno di `check-prelocal.py` e' 900 s per P1-P6 piu' 700 s per
+   ciascuno di P7-P9, cioe' 3000 s; tutti e due moltiplicati per `RX_TEMPO`). Un giro completo: `RX_LOCALE_VERO=1 ./all.sh <de> --clean`.
    Prima di lanciare uno strumento che non si conosce, leggerne il codice.
 
 # Le quattro macchine
@@ -44,8 +43,8 @@ Le prove si scelgono con `RX_BANCO=vm` e `--box gnome|kde|xfce|lxqt` (il nome `-
 
 # 0. Dopo un riavvio del server (gira in RAM)
     scp ubuntu26.04/server/prepara-server.sh nicfio@192.168.0.2:/tmp/ && ssh nicfio@192.168.0.2 'bash /tmp/prepara-server.sh'
-Deve finire con `ALL OK`. **[IPOTESI]** Debian ha uno script a parte (`prepara-server-vm.sh`) con QEMU/OVMF/ACL, chromium, firefox-esr, labwc, wlr-randr,
-python3-pil, libavcodec, PipeWire con sink nullo `rx_null`, limiti inotify; in `ubuntu26.04/server/` c'e' solo `prepara-server.sh`: prima del giro controllare con
+Deve finire con `ALL OK`. Sul server esiste anche `ubuntu26.04/server/prepara-server-vm.sh` (QEMU/OVMF/ACL, chromium, firefox-esr, labwc, wlr-randr, python3-pil,
+libavcodec, PipeWire con sink nullo `rx_null`, limiti inotify): rilanciarlo dal repository dopo ogni riavvio del server. Controllo veloce prima di lanciare:
 `ssh nicfio@192.168.0.2 'which python3 chromium firefox-esr labwc'` (sintomo se manca: `all.sh` finisce in un minuto con tutte le voci
 `BLOCKED (no verdict, exit 127)` e `python3: command not found`; `summary.txt` esiste subito, non fidarsi del solo file).
 
@@ -72,10 +71,9 @@ Non usare Monitor con grep ripetuto sui FAIL. Attesa dal tablet: cicli `for i in
 dentro una chiamata ssh muore alla chiusura: usare `setsid nohup sh -c '...' </dev/null &`.
 
 # 4. Locale-chiude-remoto (P1-P9)
-    RX_BANCO=vm python3 check-prelocal.py --box <de> --only P1,P2,P3,P4,P5,P6 > $L/prelocal.out 2>&1       # senza accessi locali veri: permesso con la Radeon
+    RX_BANCO=vm python3 check-prelocal.py --box <de> --only P1,P2,P3,P4,P5,P6 > $L/prelocal.out 2>&1       # senza accessi locali veri
     RX_BANCO=vm python3 check-prelocal.py --box <de> --only P7,P8,P9 > $L/prelocal-busy.out 2>&1           # accesso locale VERO, riavvio del display manager
-I tre casi con programmi aperti NON si lanciano con la Radeon passata (divieto 2). **[IPOTESI]** Si potrebbero lanciare su una VM SENZA Radeon, ma senza scheda il desktop remoto
-probabilmente non parte: non provato. Resta la decisione 1 del piano (`PIANO.md`, sezione 1.2.0): decide il proprietario se e come, anche dopo aver provato che `amdgpu.runpm=0` regge. Ogni caso dura circa 3 minuti.
+I tre casi con programmi aperti (accesso locale vero) sono PERMESSI sul banco di Ubuntu con la Radeon passata (decisione del proprietario, 26 nov 2026; vedi i divieti in cima). Ogni caso dura circa 3 minuti.
 - **P7** terminale con `top` aperto; **P8** editor con testo non salvato (solo `kde`: kwrite o kate, e `xfce`: mousepad; `gnome` e `lxqt`: BLOCKED); **P9** Firefox (snap) aperto.
 - Utenti usati: `pl1`, `pl2` (P1-P5), `pl3` (P7), `pl4` (P8), `pl5` (P9). Non girano insieme a `all.sh` (stessi utenti `pl*`).
 - Lo strumento a mano: `prelocal.sh <de> 1|2a|2b|3` (stesso divieto), con `banco-vm/autologin-gdm3.sh`, `autologin-sddm.sh`, `autologin-lightdm.sh`.
@@ -86,13 +84,19 @@ probabilmente non parte: non provato. Resta la decisione 1 del piano (`PIANO.md`
 - `check-kde-exit.py --box kde` (gli stessi tre casi per KDE; il Log Out dal menu di KDE si prova a mano). Non fa parte di `all.sh`.
 - `check-apparmor.py --box <de> [--since <epoch>]` (anche dentro `all.sh`).
 
-# 6. Cose da verificare alla prima macchina virtuale (tutte **[IPOTESI]**)
-1. Sessioni: `ls /usr/share/wayland-sessions /usr/share/xsessions` nelle quattro VM. Attese: `ubuntu`, `plasma`, `xubuntu`, `Lubuntu`. I nomi sono scritti in
-   `banco-vm/autologin-sddm.sh` (plasma, Lubuntu) e `autologin-lightdm.sh` (xubuntu).
-2. gdm3: che `AutomaticLogin` in `/etc/gdm3/custom.conf` faccia partire la sessione `ubuntu`; che il file abbia la sezione `[daemon]` (altrimenti il caso dice BLOCKED).
-3. Terminale GNOME: `ptyxis -x top` (prima forma) o `ptyxis -- top` (seconda); vale la prima che mostra `top` su una pts.
-4. Programmi presenti: `kwrite` o `kate` su Kubuntu, `mousepad` su Xubuntu, `qterminal` su Lubuntu, `firefox` (snap) ovunque, `apport` come gestore dei core (`/proc/sys/kernel/core_pattern` lo contiene; i crash dei programmi snap, P9 compreso, NON passano da apport: per quelli la riga dice che i crash non sono controllati).
-5. Compositore locale di Lubuntu 26.04: `openbox` (se e' altro, il caso dice «no local desktop» e si corregge la tabella `COMPOSITOR`).
-6. Nome host nelle VM `rx-<vm>`: i tre script di autologin escono con 9 se il nome e' un altro.
-7. Il controllo `which python3 chromium firefox-esr labwc` sul server: `firefox-esr` e' il nome di Debian; sul server Ubuntu-banco potrebbe chiamarsi `firefox`. Adattare il comando al server vero.
-8. Il profilo della Firefox snap in `/tmp/rx-snap-profile-<uid>`: la snap ha un `/tmp` privato, quindi il profilo potrebbe non essere scrivibile o visibile come ci si aspetta; se Firefox non parte, il caso P9 dice «the program did not start» e va cambiato percorso (per esempio sotto `~/snap/firefox/common/`).
+# 6. Cose da verificare sulle macchine virtuali
+**VERIFICATI sulla VM GNOME (`ubuntu`) nel primo giro, 26 nov 2026:**
+- sessione `ubuntu`; `/etc/gdm3/custom.conf` con la sezione `[daemon]` e autologin che fa partire `ubuntu`; `ptyxis -x top` (prima forma);
+- gestore dei core: **apport** su Ubuntu, Xubuntu e Lubuntu, ma **`systemd-coredump` + `coredumpctl` su Kubuntu** (il codice sceglie da solo);
+- **`kate` e non `kwrite`** su Kubuntu; compositore locale **`openbox`** su Lubuntu; nomi host `rx-<vm>`;
+- il profilo della Firefox snap in `/tmp/rx-snap-profile-<uid>` funziona.
+Primo giro GNOME: 125 PASS, 1 FAIL noto (`users-shell-and-environment`); P7 e P9 PASS, P8 BLOCKED per costruzione (GNOME non ha un editor con testo non salvato senza interazione).
+Correzioni a `check-prelocal.py` fatte dal giro: P9 prende `WAYLAND_DISPLAY`/`DISPLAY` da `systemctl --user show-environment`; `unit_residue` non conta i `.timer` e conta una `.slice`
+solo se contiene un processo del desktop REMOTO (la slice `app-gnome\x2dsession\x2dmanager.slice` ha lo stesso nome nella sessione locale e in quella remota); P9 aspetta la finestra
+fino a 30 s (controllo ogni 2 s).
+
+**ANCORA DA VERIFICARE (IPOTESI):**
+1. Sessioni delle altre VM: `ls /usr/share/wayland-sessions /usr/share/xsessions`. Attese `plasma` (Kubuntu), `xubuntu`, `Lubuntu`; scritte in `banco-vm/autologin-sddm.sh` e `autologin-lightdm.sh`.
+2. Programmi su Xubuntu (`mousepad`), Lubuntu (`qterminal`), `firefox` snap su tutte, nome del `.deb`.
+3. Che `amdgpu.runpm=0` serva anche sui kernel Ubuntu (lo verifica `vm-radeon.sh`).
+4. Il controllo `which python3 chromium firefox-esr labwc` e' sul server: `firefox-esr` e' il nome di Debian; adattarlo se il server lo chiama diversamente.

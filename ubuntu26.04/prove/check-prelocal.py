@@ -161,7 +161,7 @@ TERMINALS = {"gnome": (("ptyxis", "ptyxis -x top"), ("ptyxis", "ptyxis -- top"))
 EDITORS = {"kde": (("kwrite", "printf 'REMOTIX unsaved text\\n' | kwrite --stdin"), ("kate", "printf 'REMOTIX unsaved text\\n' | kate --stdin")),
            "xfce": (("mousepad", "printf 'REMOTIX unsaved text\\n' | mousepad -"),)}
 # A snap program (P9): Firefox from the snap store, its own profile and instance so that nothing of an earlier run is reused.
-SNAPS = (("firefox", "firefox --new-instance --profile /tmp/rx-snap-profile-$(id -u) about:blank"),)
+SNAPS = (("firefox", "eval $(systemctl --user show-environment | grep -E '^(WAYLAND_DISPLAY|DISPLAY)=' | sed 's/^/export /'); firefox --new-instance --profile /tmp/rx-snap-profile-$(id -u) about:blank"),)
 # What makes the compositor of a desktop (xfce: the local session of Xubuntu is X11 with xfwm4; lxqt: Lubuntu 26.04 is X11 with openbox; the remote one has labwc)
 COMPOSITOR = {"gnome": ("gnome-shell",), "kde": ("kwin_wayland",), "xfce": ("xfwm4", "labwc"), "lxqt": ("openbox", "labwc")}
 DM = {"gnome": "gdm3", "kde": "sddm", "xfce": "lightdm", "lxqt": "sddm"}
@@ -192,14 +192,21 @@ def unit_ids_of(box, user):
     return [" ".join(l.split()) for l in box.run(UNIT_IDS % {"u": user})[1].splitlines() if l.strip()]
 
 
-def unit_residue(box, user, units):
+def unit_residue(box, user, units, remote_procs=None):
     """(real, ignored): of the units that are still active with the same invocation, the ones that hold a process (or are not slices/sockets) and the
-    ones that do not (a `.slice` whose cgroup subtree holds no process; a `.socket`, which only listens: GNOME's keyring socket is shared by the remote and the local session)."""
+    ones that do not (a `.slice` holding no process of the REMOTE desktop: empty, or with the same name in the local session of the user; a `.socket` or `.timer`, shared by the remote and the local session)."""
     real, ignored = [], []
     for ul in units:
         un = ul.split()[0]
-        if un.endswith(".socket"):
+        if un.endswith(".socket") or un.endswith(".timer"):
             ignored.append(ul); continue
+        if un.endswith(".slice") and remote_procs is not None:
+            rows = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
+                           "if [ -n \"$cg\" ] && [ -d \"/sys/fs/cgroup$cg\" ]; then for p in $(find \"/sys/fs/cgroup$cg\" -name cgroup.procs -exec cat {} + 2>/dev/null); do "
+                           "[ -r /proc/$p/stat ] && echo \"$p $(sed 's/.*) //' /proc/$p/stat | awk '{print $20}') $(cat /proc/$p/comm)\"; done; else echo '?'; fi; true" % (user, un))[1].split("\n")
+            if "?" not in [r.strip() for r in rows] and not any(tuple(r.split(None, 2)) in {(a, b, c) for a, b, c in remote_procs} for r in rows if r.strip()):
+                ignored.append(ul); continue
+            real.append(ul); continue
         if un.endswith(".slice"):
             # the processes of a slice live in its CHILD units: `cgroup.procs` of the slice alone is always empty, so the whole subtree is
             # counted; a cgroup that cannot be read answers `?` and the slice stays a real residue (never «could not look» = «empty»)
@@ -298,8 +305,14 @@ def busy_case(box_name, user, kind):
         if not prog:
             raise lib.ToolError("the program did not start inside the remote desktop in 25 s per command (%s); processes: %s" % (
                 " | ".join(c for _, c in alts), ctx.procs(user)[:8]))
-        time.sleep(4)   # the window gets painted and shown to the client
-        if not pic_changed(before_png, rig.canvas_png()):
+        end_w = time.time() + 30   # the window gets painted and shown to the client (a snap's first start with a new profile takes longer than 4 s)
+        shown = False
+        while time.time() < end_w:
+            time.sleep(2)
+            if pic_changed(before_png, rig.canvas_png()):
+                shown = True
+                break
+        if not shown:
             raise lib.ToolError("%s is running (%s) but the picture of the remote desktop did not change: no window seen on the canvas" % (prog, what))
         # -- everything the remote desktop has now, to see afterwards that none of it is still there
         pr_before = procs_of(box, user)
@@ -347,7 +360,7 @@ def busy_case(box_name, user, kind):
             procs_left = [x for x in remote_procs if x in now]
             units_left = [u for u in unit_ids_of(box, user) if u in units_before]
             if units_left:   # an EMPTY slice or a socket-activation socket left behind in the shared user manager is not a piece of the desktop (found on Debian 13, 26 Nov 2026)
-                units_left, empty_left = unit_residue(box, user, units_left)
+                units_left, empty_left = unit_residue(box, user, units_left, remote_procs)
             rsess = ctx.remote_sessions(user)
             marks = box.run(KDE_MARKS % {"u": user})[1].strip()
             if not (procs_left or units_left or rsess or marks) or time.time() > end:
@@ -370,7 +383,7 @@ def busy_case(box_name, user, kind):
         if not (procs_left or units_left or rsess or marks):
             ok_.append("remote desktop gone (no process, no desktop unit of it, no remotix session, no KWin --virtual / REMOTIX_KDE_HOST=1)")
             if empty_left:
-                ok_.append("not counted as left-overs: %d empty slice(s)/socket(s) still active in the user manager (%s)" % (len(empty_left), ", ".join(u.split()[0] for u in empty_left)[:200]))
+                ok_.append("not counted as left-overs: %d unit(s) still active in the user manager but not of the remote desktop (empty or local-session slice, socket, timer) (%s)" % (len(empty_left), ", ".join(u.split()[0] for u in empty_left)[:200]))
         # -- no crash since the start of the case: coredumpctl when it is installed, otherwise apport (Ubuntu: /var/crash/*.crash owned by the user).
         #    Neither there = said, not claimed. (apport only reports some crashes: it is a hint, not a proof of «none»; the crashes of SNAP programs, P9 included, do NOT go through apport.)
         have_cd = box.run("command -v coredumpctl >/dev/null && echo yes")[1].strip() == "yes"

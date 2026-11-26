@@ -1,6 +1,6 @@
 #!/bin/sh
 # prelocal.sh BOX 1|2a|2b|3   BOX = gnome | kde | xfce | lxqt - «the local login closes the remote desktop» on gdm3 / sddm / lightdm / sddm (Ubuntu 26.04 VMs:
-# ubuntu, kubuntu, xubuntu, lubuntu).  ⛔ NOT with the Radeon passed to the VM: restarting the display manager there froze the whole server (see COME-SI-LANCIA.md).
+# ubuntu, kubuntu, xubuntu, lubuntu).  Restarts the display manager in the VM: allowed on the Ubuntu bench (owner decision of 26 Nov 2026; on Debian it froze the server, see COME-SI-LANCIA.md).
 # Run ON THE DEV SERVER (the prove/ folder is PROVE_DIR, default /media/REMOTIX-UBUNTU/tmp/prove-run/prove), with the VM switched on, the package installed and the service enabled; user lc1 must exist.
 #   1  remote desktop open -> local autologin of lc1 -> the remote closes, the local desktop stays
 #   2a the same, but the remote leader is killed with SIGKILL first (orphan)      2b the same, but the service is restarted first
