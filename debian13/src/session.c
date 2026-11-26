@@ -3574,6 +3574,34 @@ static char *log_session_path(void)
 	return NULL;
 }
 
+/* ⭐ 26 Nov 2026 — THE LANGUAGE REACHES THE WHOLE KDE / XFCE / LXQt DESKTOP.  `[M]` Debian 13 KDE: `remotix-child` had the user's
+ *    `LANG=it_IT.UTF-8`, but `systemd --user`, `labwc`, `kwin_wayland` and `plasmashell` had the system's.  The reason: on these desktops
+ *    KWin (and its host labwc, started by `--kwin-nested`) is a UNIT of the user manager, born with the manager's environment — made by
+ *    `pam_systemd` with the SYSTEM language — and not with the one `compose_environment()` gives `startplasma-wayland`, which does not export
+ *    `LANG` to the manager.  (GNOME is fine: `gnome-session` exports its whole environment.)
+ *    ⇒ The locale words of the environment we compose are put into the manager BEFORE the session starts; they are in `OUR_VARIABLES`, so the
+ *    snapshot taken at birth gives them back as they were at the end (`session_clear_out_handler()`).  Not for GNOME: it does it itself. */
+static void manager_set_locale(char **environment)
+{
+	g_autoptr(GDBusConnection) bus = NULL;
+	g_autoptr(GPtrArray) put = g_ptr_array_new();
+	g_autoptr(GVariant) r = NULL;
+	g_autoptr(GError) mistake = NULL;
+
+	for (char **e = environment; e && *e; e++)
+		if (strchr(*e, '=') && (g_str_has_prefix(*e, "LANG=") || g_str_has_prefix(*e, "LC_") || g_str_has_prefix(*e, "LANGUAGE=")))
+			g_ptr_array_add(put, *e);
+	if (!put->len || !(bus = sess_bus(NULL)))
+		return;
+	g_ptr_array_add(put, NULL);
+	r = g_dbus_connection_call_sync(bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
+	                                "SetEnvironment", g_variant_new("(^as)", (char **) put->pdata), NULL, G_DBUS_CALL_FLAGS_NONE, 5000,
+	                                NULL, &mistake);
+	if (!r)
+		registro_dice(LOG_SESSION, "⚠ the language is NOT put into the user manager (%s): the desktop's units may get the system's",
+		              mistake ? mistake->message : "no reason given");
+}
+
 /* ⭐ `width`/`height`: the client's canvas.  ⚠ The LXQt and
  *   XFCE branches use them (`measured_primary()`): GNOME and KDE take the size from the
  *   drop-in — identical to before. */
@@ -3625,6 +3653,8 @@ static gboolean start(uint32_t width, uint32_t height)
 	environment = compose_environment();
 	if (!environment)
 		return FALSE;
+	if (e_kde() || e_xfce() || e_lxqt())
+		manager_set_locale(environment);
 
 	/*
 	 * ⛔⭐ THE SESSION LOG CANNOT LIVE IN `XDG_RUNTIME_DIR` — 16
