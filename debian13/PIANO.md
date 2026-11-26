@@ -383,3 +383,24 @@ dopo ogni passo. I passi A e B non toccano il prodotto e partono in parallelo.
 Il pacchetto `remotix_1.2.0` per Debian 13 si costruisce senza contenitori; il revisore ha approvato ogni passo; le
 prove decise dal proprietario sono passate sui quattro desktop; l'elenco delle differenze da Fedora è quello scritto
 qui sopra e nient'altro; il proprietario ha fatto le sue prove.
+
+### Stato del piano 1.2.0 (26 nov 2026, ore 02:00) — lavoro notturno, ramo locale `debian-1.2.0` (nessun invio a GitHub)
+- **Codice**: tutte le voci «che cosa entra» 1-11 scritte (quattro programmatori, uno per desktop, più un secondo giro
+  per la scala di GNOME) e unite. Revisore (Fable): primo passaggio DA CORREGGERE (una graffa mancante e cinque note),
+  corretto; secondo passaggio: prodotto a posto, un controllo degli strumenti di prova da stringere, corretto.
+- **Costruzione senza contenitori**: fatta. VM `costruzione` (ssh 2365, mai la Radeon) e `build/build-deb-vm.sh`.
+  Pacchetto `remotix_1.2.0-1+deb13_amd64.deb` costruito (`giro1`), lintian senza errori né avvisi. Dopo il secondo
+  passaggio del revisore il `postinst` è cambiato di una riga: il pacchetto va ricostruito (`giro2`).
+- **Strumenti di prova per le VM** e **`server/live-installa.sh`** per le chiavette: scritti; procedura in
+  `studio/prove-1.2.0/COME-SI-LANCIA.md`.
+- **Prove su GNOME (giro1)**: 123 PASS; FAIL noto `pkexec`; `media/screen-updates` di poco oltre soglia (1,05-1,2 s
+  contro 1,0 s), causa da stabilire col confronto sugli altri desktop; purge pulito; lingua, `PATH`, registro delle
+  chiusure come previsto. Rapporto: `studio/prove-1.2.0/giro1-gnome.md`. P7 va rilanciato col controllo stretto.
+- **Prove su KDE**: interrotte alle 01:17 del 26 nov perché il server non risponde più (né ping né ssh). XFCE e LXQt
+  non cominciate.
+- **Licenze**: proposta pronta nel ramo `worktree-agent-a2cf5d24bfe7d7152` (commit `c960639`), NON unita: aspetta
+  l'OK del proprietario sui testi.
+- **Da decidere (proprietario)**: installare `systemd-coredump` nelle VM di prova (oggi il controllo dei core dump
+  non gira: il comando manca); aggiungere alle prove il controllo dei rifiuti di AppArmor.
+- **Restano**: prove KDE, XFCE, LXQt; ricostruzione `giro2` e conferma; versione nei documenti, registro dei
+  problemi, manuali, sito (dopo).
