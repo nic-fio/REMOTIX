@@ -30,6 +30,9 @@ profile remotix_network flags=(complain,attach_disconnected) {
   # The program itself (mapped; the exec of it is the root side's business).
   /usr/libexec/remotix/remotix mr,
   /usr/share/remotix/** r,
+  # 1.2.0: the .desktop file KWin wants for the screencast permission of the KDE desktop is read by this side as well
+  #    ([M] Debian 13 VM, 26 Nov 2026: the only line the profile did not cover in three full rounds on KDE)
+  /usr/share/applications/org.kde.remotix.desktop r,
   # The keyboard: the network side compiles the XKB keymap of the session (libxkbcommon reads rules, keycodes and types
   # here).  Seen by aa-deb-box.sh on 26 Oct 2026: 10 ALLOWED lines in complain, all of them under this folder.
   /usr/share/X11/xkb/ r,
