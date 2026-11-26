@@ -73,7 +73,10 @@ polkit.addRule(function (action, subject) {
     var refresh = [
         "org.freedesktop.Flatpak.metadata-update",
         "org.freedesktop.Flatpak.appstream-update",
-        "org.freedesktop.packagekit.system-sources-refresh"
+        "org.freedesktop.packagekit.system-sources-refresh",
+        // gnome-software refreshes the firmware metadata at login: where fwupd has this action a seated user gets `yes` (implicit
+        // active) and a remote session would meet a password window on top of the desktop (not checked whether fwupd of Ubuntu 26.04 has it)
+        "org.freedesktop.fwupd.refresh-remote"
     ];
     var machine = [
         "org.freedesktop.NetworkManager.network-control",

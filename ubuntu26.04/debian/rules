@@ -99,6 +99,7 @@ override_dh_auto_install:
 	#    puts it into /etc/pam.d/common-session (postinst runs pam-auth-update --package; prerm removes it on `remove`).
 	install -D -m 0755 src/remotix-local-login $(B)/usr/libexec/remotix/remotix-local-login
 	install -D -m 0644 debian/remotix.pam-config $(B)/usr/share/pam-configs/remotix
+	install -D -m 0755 src/remotix-pam-hook    $(B)/usr/libexec/remotix/remotix-pam-hook
 	install -D -m 0644 src/remotix-power-keys.conf \
 	  $(B)/usr/share/remotix/belts/remotix-power-keys.conf
 	install -D -m 0644 debian/remotix-no-suspend.conf \
@@ -118,5 +119,5 @@ override_dh_installsystemd:
 	# ⛔ DECISIONI §10.12: the package does NOT enable and does NOT start the service: the
 	#    administrator switches it on (`systemctl enable --now remotix`).  On upgrade it
 	#    restarts it (deb-systemd-invoke restart) ONLY if it was already active or enabled;
-	#    it does not stop it first: the desktops survive the stop (§5.2).
+	#    it does not stop it first (the stop of the service closes the desktops, §11.56).
 	dh_installsystemd --no-enable --no-start --restart-after-upgrade

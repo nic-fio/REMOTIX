@@ -8,8 +8,8 @@
 #    (There is no installer program: the package is installed with apt.)
 # ⭐ On upgrade (apt upgrade: REMOTIX upgrades with the system, DECISIONI
 #    §10.23) the debhelper part below does `try-restart`: the service
-#    restarts ONLY if it was running, and the desktops stay alive (T2, §5.2) — the new
-#    service finds them again (T7).
+#    restarts ONLY if it was running.  (The desktops are closed by the service's stop, §11.56: after an
+#    upgrade-restart the users reconnect.)
 set -e
 
 # ⭐ DECISIONS-11.md §11.50 (PHASE F) — BEFORE the debhelper part below (whose try-restart starts the new server): the
@@ -43,7 +43,7 @@ fi
 if [ "$1" = configure ]; then
 	if command -v pam-auth-update >/dev/null 2>&1; then
 		pam-auth-update --package || echo "remotix: ⚠ pam-auth-update --package failed: a local login will not close the user's remote desktop first" >&2
-		grep -q remotix-local-login /etc/pam.d/common-session 2>/dev/null || \
+		grep -Eq '^[[:space:]]*session[[:space:]].*pam_exec\.so.*remotix-local-login' /etc/pam.d/common-session 2>/dev/null || \
 			echo "remotix: ⚠ common-session was edited by hand: pam-auth-update did not add REMOTIX's line; a local login will not be held, the periodic check remains" >&2
 	else
 		echo "remotix: ⚠ pam-auth-update not found: a local login will not close the user's remote desktop first" >&2
@@ -54,7 +54,7 @@ fi
 #    with the product's own test (exit 0 = it encodes, 3 = no card can encode, 1 = it opens and produces nothing).  Only at the
 #    first configuration; never makes apt fail (the VA driver may arrive with the Recommends configured after us).
 if [ "$1" = configure ] && [ -z "${2:-}" ] && [ -x /usr/libexec/remotix/remotix ]; then
-	if ! timeout 30 /usr/libexec/remotix/remotix --encoding-test h264 >/dev/null 2>&1; then
+	if ! MESA_SHADER_CACHE_DISABLE=true timeout 30 /usr/libexec/remotix/remotix --encoding-test h264 >/dev/null 2>&1; then
 		echo "remotix: ⚠ the video card of this machine did not encode a test frame (H.264): REMOTIX will not show any desktop until it can." >&2
 		echo "remotix:   check the card's driver (Intel/AMD: va-driver-all; NVIDIA: its proprietary driver), then: sudo /usr/libexec/remotix/remotix --encoding-test h264" >&2
 	fi
