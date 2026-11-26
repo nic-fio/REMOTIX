@@ -106,6 +106,11 @@
  */
 #define WAIT_POLL_MS 400
 #define WAIT_EXIT_MS 10000
+/* ⭐ 25 Nov 2026 (owner's decision, a trial) — KDE, PRELOCAL close only (a local login of the user is held in PAM): the orderly
+ *    step waits 5 s instead of 10 before the forced one.  Plasma waits WITHOUT LIMIT for a program that does not close by itself
+ *    (a «save?» dialog; on the real machine a Konsole running `top` too) and nobody is there to answer: the 10 s were only a delay
+ *    of the local login.  Every other close, and every other desktop, keeps WAIT_EXIT_MS. */
+#define KDE_PRELOCAL_ORDERLY_MS 5000
 
 /*
  * ⚠ THE GRACE — how long the MONITOR is waited for after the compositor answers.
@@ -4343,6 +4348,43 @@ static char *log_session_path(void)
 	return NULL;
 }
 
+/* ⭐ 26 Nov 2026 — THE LANGUAGE REACHES THE WHOLE KDE DESKTOP (brought over from Debian 13 `session.c`, where it also serves XFCE and LXQt).
+ *    `[M]` Debian 13 KDE (same architecture as here: KWin inside labwc): `remotix-child` had the user's `LANG=it_IT.UTF-8`, but
+ *    `systemd --user`, `labwc`, `kwin_wayland` and `plasmashell` had the system's.  KWin (and its host labwc, started by `--kwin-nested`)
+ *    is a UNIT of the user manager, born with the manager's environment — made by `pam_systemd` with the SYSTEM language — and not with the
+ *    one `compose_environment()` gives `startplasma-wayland`.
+ *    ⇒ The locale words of the environment we compose are put into the manager BEFORE the session starts.
+ *    THE RULE ON THE WAY BACK:
+ *      · at the end of a NORMAL session the values go back as they were: they are in `OUR_VARIABLES`, so the snapshot taken at birth
+ *        restores them (`session_clear_out_handler()`);
+ *      · in the LIGHT close (`session_clear_out_light()`, local login) the language is left in the manager ON PURPOSE: it is the language
+ *        chosen by that same user, the one the local desktop now coming in uses too, and taking it away could take it from under that
+ *        desktop.  It is put right at the next remote birth (the clean-up of leftovers) or goes away with the manager when the user logs out. */
+static void manager_set_locale(char **environment)
+{
+	g_autoptr(GDBusConnection) bus = NULL;
+	g_autoptr(GPtrArray) put = g_ptr_array_new();
+	g_autoptr(GVariant) r = NULL;
+	g_autoptr(GError) mistake = NULL;
+
+	for (char **e = environment; e && *e; e++)
+		if (strchr(*e, '=') && (g_str_has_prefix(*e, "LANG=") || g_str_has_prefix(*e, "LC_") || g_str_has_prefix(*e, "LANGUAGE=")))
+			g_ptr_array_add(put, *e);
+	if (!put->len)
+		return;
+	if (!(bus = sess_bus(NULL))) {
+		registro_dice(LOG_SESSION, "⚠ the language is NOT put into the user manager (no session bus): the desktop's units may get the system's");
+		return;
+	}
+	g_ptr_array_add(put, NULL);
+	r = g_dbus_connection_call_sync(bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
+	                                "SetEnvironment", g_variant_new("(^as)", (char **) put->pdata), NULL, G_DBUS_CALL_FLAGS_NONE, 5000,
+	                                NULL, &mistake);
+	if (!r)
+		registro_dice(LOG_SESSION, "⚠ the language is NOT put into the user manager (%s): the desktop's units may get the system's",
+		              mistake ? mistake->message : "no reason given");
+}
+
 /* ⭐ `width`/`height`: the client's canvas.  ⚠ The LXQt and
  *   XFCE branches use them (`measured_primary()`): GNOME and KDE take the size from the
  *   drop-in — identical to before. */
@@ -4394,6 +4436,8 @@ static gboolean start(uint32_t width, uint32_t height)
 	environment = compose_environment();
 	if (!environment)
 		return FALSE;
+	if (e_kde() || e_xfce() || e_lxqt())
+		manager_set_locale(environment);
 
 	/*
 	 * ⛔⭐ THE SESSION LOG CANNOT LIVE IN `XDG_RUNTIME_DIR` — 16
@@ -4570,9 +4614,9 @@ static gboolean inactive_unit(const char **busy)
 	return !*busy;
 }
 
-static gboolean wait_until_done(void)
+static gboolean wait_until_done_ms(gint64 ms)
 {
-	gint64 expiry = g_get_monotonic_time() + (gint64) WAIT_EXIT_MS * 1000;
+	gint64 expiry = g_get_monotonic_time() + ms * 1000;
 
 	while (g_get_monotonic_time() < expiry) {
 		g_usleep(CHECK_INTERVAL_MS * 1000);
@@ -4586,14 +4630,27 @@ static gboolean wait_until_done(void)
 	return FALSE;
 }
 
+static gboolean wait_until_done(void)
+{
+	return wait_until_done_ms(WAIT_EXIT_MS);
+}
+
 /*
  * ⭐ PHASE 12 — the Plasma exit, brought over from v1 (`fondamenta/remotix-c/src/sessione.c`
  * 725-770) and measured there on 8 August 2026 (`STUDIES.md` §kde §6.5, M9).
  *
  *   orderly    `org.kde.Shutdown.logout()` — ⛔ not `LogoutPrompt`, which asks
  *              for a confirmation nobody gives in an unattended session
- *   forced     `StopUnit("plasma-workspace.target", "fail")` — ⛔ `Logout(2)`
+ *   forced     `StopUnit("graphical-session.target", "fail")` — ⛔ `Logout(2)`
  *              does not exist on KDE; it is what `plasma-shutdown` does at the end
+ * ⭐ 25 Nov 2026 — it was `plasma-workspace.target`, and on Plasma 6.8 that is NOT enough in time: kwin, ksmserver and
+ *   plasmashell are `PartOf=graphical-session.target`, which after the stop of plasma-workspace.target goes away only
+ *   ~4.5 s later (StopWhenUnneeded) — past the root side's deadline when the forced step comes after the orderly one.
+ *   `[M]` real machine (Fedora 45 KDE live, a program asking «save?» in the remote desktop): the local login went on
+ *   with the remote KWin alive.
+ * ⚠ Ubuntu 26.04 / Plasma 6.6.7, NOT measured with this call: systemd already refused the same stop
+ *   («Transaction for graphical-session.target/stop is destructive», a start job of xdg-desktop-portal queued) in the
+ *   first ~25 s of a desktop's life.  The forced step does not retry: if refused, the root side's last defence (13 s) acts.
  */
 static gboolean exit_kde(gboolean a_force)
 {
@@ -4607,7 +4664,7 @@ static gboolean exit_kde(gboolean a_force)
 		response = g_dbus_connection_call_sync(
 			bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1",
 			"org.freedesktop.systemd1.Manager", "StopUnit",
-			g_variant_new("(ss)", SESSION_UNIT_PLASMA, "fail"), NULL,
+			g_variant_new("(ss)", SESSION_UNIT_GRAPHICAL, "fail"), NULL,
 			G_DBUS_CALL_FLAGS_NONE, WAIT_RESPONSE_MS, NULL, &mistake);
 	else
 		response = g_dbus_connection_call_sync(
@@ -5637,7 +5694,7 @@ static bool really_terminate(void)
 	if (e_kde()) {
 		registro_dice(LOG_SESSION,
 		              "asking the Plasma session to exit (org.kde.Shutdown.logout)");
-		if (exit_kde(FALSE) && wait_until_done()) {
+		if (exit_kde(FALSE) && wait_until_done_ms(force_guard_on ? KDE_PRELOCAL_ORDERLY_MS : WAIT_EXIT_MS)) {
 			registro_dice(LOG_SESSION, "the graphical session has exited");
 			return true;
 		}
@@ -5646,7 +5703,7 @@ static bool really_terminate(void)
 		registro_dice(LOG_SESSION,
 		              "⚠ the session does not exit: I close it by force (StopUnit %s), whatever "
 		              "was not saved is lost",
-		              SESSION_UNIT_PLASMA);
+		              SESSION_UNIT_GRAPHICAL);
 		if (exit_kde(TRUE) && wait_until_done()) {
 			registro_dice(LOG_SESSION, "the graphical session has exited, by force");
 			return true;
