@@ -58,7 +58,7 @@ for f in 90-resil-clocks 91-ban-command 99-dk-cap; do rm -f "/etc/remotix/remoti
 B=/var/lib/remotix/net/ban
 if [ -s "$B" ]; then mv "$B" "$B.fresh-$(date +%y%m%d-%H%M%S)"; echo "ban state kept as $B.fresh-*"; fi
 # 4. the tools the box image had
-P="python3 python3-gi gir1.2-gtk-4.0 libglib2.0-bin openssl wl-clipboard openssh-client pipewire-bin procps"
+P="python3 python3-gi gir1.2-gtk-4.0 libglib2.0-bin openssl wl-clipboard openssh-client pipewire-bin procps systemd-coredump"
 [ "$DE" = lxqt ] && P="$P pcmanfm-qt"
 M=; for p in $P; do dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q '^install ok installed' || M="$M $p"; done
 if [ -n "$M" ]; then

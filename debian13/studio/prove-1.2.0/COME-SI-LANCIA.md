@@ -40,3 +40,13 @@ NON usare Monitor con grep ripetuto sui FAIL (ripete la stessa riga ogni ciclo).
 ## 5. Chiusura
     $V spegni <vm>; $V stato <vm>      # Radeon di nuovo "none"
     $V istantanea <vm> giro1           # a VM spenta
+
+## Trappole nuove (giro 2 KDE, 26 nov 2026)
+- Dopo un riavvio del server `prepara-server-vm.sh` va copiato e lanciato DI NUOVO dal repository, anche se "gia' rilanciato": la copia
+  rimasta sul server puo' essere la versione vecchia (senza i passi per le prove). Sintomo: `all.sh` finisce in 1 minuto con tutte le voci
+  `BLOCKED (no verdict, exit 127)` e `python3: command not found` (summary.txt esiste subito: non fidarsi del solo file). Controllo veloce prima di lanciare:
+  `ssh nicfio@192.168.0.2 'which python3 chromium firefox-esr labwc'`.
+- Il registratore della memoria avviato con `nohup ... &` dentro una chiamata ssh muore alla chiusura della chiamata: usare `setsid nohup sh -c '...' </dev/null &`.
+- `vm-radeon-1.2.0.sh ssh <vm> ...` entra come `prova` (journal incompleto, nessun `aa-status`): per i controlli da root usare `./banco-vm/box.sh ssh <vm> '...' </dev/null`.
+- Le voci specifiche di KDE: `check-exit.py` non vale per KDE (solo xfce/lxqt); il Log Out dal menu di KDE non e' coperto da `check-kde-exit.py`
+  (che prova terminate-session, restart del servizio, chiusura del browser): va fatto a mano.
