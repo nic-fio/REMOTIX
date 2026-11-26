@@ -1,5 +1,7 @@
 # Come si lanciano le prove sul banco a VM, Ubuntu 26.04 (modello: `debian13/studio/prove-1.2.0/COME-SI-LANCIA.md`)
 
+**Il primo giro completo sui quattro desktop (GNOME, KDE, XFCE, LXQt) e' del 26 nov 2026, con il pacchetto `prova2` (`1.2.0~dev`).**
+
 Scritto il 26 nov 2026 mentre si portavano gli strumenti di Debian 1.2.0. Cio' che e' marcato **[IPOTESI]** non e' ancora stato visto su una VM
 Ubuntu: verificarlo al primo giro e correggere questo file.
 
@@ -103,8 +105,11 @@ fino a 30 s (controllo ogni 2 s).
   fra le due sessioni, misurato su Xubuntu); `check-exit` 3/3.
 - Sessioni verificate: `plasma` (Kubuntu) e `xubuntu`. Presenti: `mousepad`, `xfce4-terminal`, `konsole`, `kate`.
 
+- **LXQt (`lubuntu`):** 125 PASS + `settings-intact` PASS dopo la correzione dello strumento (`check-desktop.py` copiava `/usr/share/lxqt/panel.conf`, percorso di Debian: ora usa
+  il primo esistente fra `/etc/xdg/xdg-Lubuntu/lxqt/panel.conf`, `/etc/xdg/lxqt/panel.conf`, `/usr/share/lxqt/panel.conf`); P7 e P9 PASS con chiusura gentile in ~0,6 s e desktop locale
+  `openbox` dopo 4 s; P8 BLOCKED per costruzione; `check-exit` 3/3. Sessione `Lubuntu`, `qterminal` e `featherpad` verificati.
+
 **ANCORA DA VERIFICARE (IPOTESI):**
-1. Sessione `Lubuntu` (in `banco-vm/autologin-sddm.sh`): `ls /usr/share/xsessions` nella VM.
-2. Programmi su Lubuntu (`qterminal`), nome del `.deb`.
-3. Che `amdgpu.runpm=0` serva anche sui kernel Ubuntu (lo verifica `vm-radeon.sh`).
-4. Il controllo `which python3 chromium firefox-esr labwc` e' sul server: `firefox-esr` e' il nome di Debian; adattarlo se il server lo chiama diversamente.
+1. Il nome del `.deb` costruito (la versione vera e' quella costruita).
+2. Che `amdgpu.runpm=0` serva anche sui kernel Ubuntu (lo verifica `vm-radeon.sh`).
+3. Il controllo `which python3 chromium firefox-esr labwc` e' sul server: `firefox-esr` e' il nome di Debian; adattarlo se il server lo chiama diversamente.
