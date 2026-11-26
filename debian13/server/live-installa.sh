@@ -202,7 +202,8 @@ prova_codifica() {
 # only for whoever follows the test from the tablet; nothing here ever blocks
 accesso_tablet() {
     local chiave="$TMP/chiave.pub"
-    curl -fsS -m 10 -o "$chiave" "$SORGENTE/chiave.pub" 2>/dev/null || return 0
+    # wget like the rest of the script: a Debian live image has no curl
+    wget -q -T 10 -t 1 -O "$chiave" "$SORGENTE/chiave.pub" 2>/dev/null || return 0
     [ -s "$chiave" ] || return 0
     passo "Accesso per chi segue la prova dal tablet (facoltativo)"
     {
