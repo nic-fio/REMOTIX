@@ -55,7 +55,8 @@
 # `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopus-dev`.
 # ⚠ `ngtcp2` and `nghttp3` are NOT
 # enough in the packaged version (1.11 / 1.8): they must be built from
-# source, and that is what `benches/01-b2-build-ngtcp2.sh` does.
+# source: `build/quic-static.sh`, run by `build/build-deb-vm.sh` in the build virtual machine
+# (`build/build-deb.sh` and `Containerfile` stay as documentation).
 #
 # -----------------------------------------------------------------------------
 #   make DEPS_PREFIX=/path/where/ngtcp2/and/nghttp3/are

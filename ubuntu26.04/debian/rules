@@ -1,9 +1,9 @@
 #!/usr/bin/make -f
 # debian/rules — the REMOTIX .deb package (Ubuntu 26.04 only; installed with apt, no installer program).
 #
-# ⚠ It is built INSIDE the Ubuntu 26.04 (resolute) container with `build/build-deb.sh`
-#   (build/Containerfile): static ngtcp2 1.25.0 and nghttp3 1.18.0 live there
-#   (LIBRARY_PATH, PKG_CONFIG_PATH), not in the Build-Depends (D2 closed: DECISIONI §10.6).
+# ⚠ It is built in the `costruzione` virtual machine (Ubuntu 26.04, resolute) with `build/build-deb-vm.sh`
+#   (`build/build-deb.sh` and build/Containerfile stay as documentation): static ngtcp2 1.25.0 and nghttp3 1.18.0 live
+#   there (LIBRARY_PATH, PKG_CONFIG_PATH), not in the Build-Depends (D2 closed: DECISIONI §10.6).
 # ⚠ The tree has no benches/: the Makefile's twin comparison (src/ vs benches/rcp/) is declared OFF with TWIN=none below.
 
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
@@ -20,9 +20,9 @@ R_CFLAGS := $(CFLAGS) $(CPPFLAGS) -std=gnu11 -Wall -Wextra -Wno-unused-parameter
 B := debian/remotix
 
 # ⭐ PIANO «Correzione B» — OUR labwc (/usr/libexec/remotix/labwc: labwc 0.9.3 + a patched wlroots 0.19.2, static;
-#    build/labwc-ospite/, copied here as labwc-ospite/ by build-deb.sh) hosts the nested KWin >= 6.5:
+#    build/labwc-ospite/, copied here as labwc-ospite/ by build-deb-vm.sh) hosts the nested KWin >= 6.5:
 #    with Ubuntu's labwc the windows of a KDE session stay on their first frame.  The two upstream tarballs
-#    are in the build image (fetched and sha256-checked there, like ngtcp2): NO network during dpkg-buildpackage.
+#    are brought into the build VM (fetched and sha256-checked by build-deb-vm.sh; LABWC_SOURCES points to them): NO network during dpkg-buildpackage.
 LABWC_SOURCES ?= /usr/local/src/labwc-sources
 LABWC_PATH := /usr/libexec/remotix/labwc
 

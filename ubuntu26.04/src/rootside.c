@@ -2426,7 +2426,7 @@ static void lx_stop_say(void)
 #define PL_LOCK     ".lock"
 #define PL_MAX      8      /* logins held at the same time (a seat has one login screen) */
 #define PL_GRACE_MS 13000  /* the child's full close: 0.7 s measured on GNOME (18 Nov 2026, the tablet), but its orderly logout may wait
-                            * WAIT_EXIT_MS (10 s, session.c) before forcing, and cutting it short leaves the user manager half closed:
+                            * WAIT_EXIT_MS (10 s, session.c; KDE closed for a local login: KDE_PRELOCAL_ORDERLY_MS, 5 s) before forcing, and cutting it short leaves the user manager half closed:
                             * this is above that budget plus the scope's clear-out; then this side ends the scope */
 #define PL_CEIL_MS  20000  /* a login is never held longer (the hook's own ceiling is 25 s) */
 #define PL_HOLD_MS  10000  /* no birth for that uid after the answer: the local session is about to be registered */
