@@ -171,6 +171,46 @@ class Box:
         if c:
             raise ToolError("cannot run in the session of %s: %s" % (user, t[-150:]))
 
+    def apparmor(self, since):
+        """AppArmor lines about the profile of REMOTIX (remotix_network, or a child of it: remotix_network//...) from the epoch `since`.
+        Returns (checked, lines, why). `checked` False = the log could not be read: the caller says «AppArmor NOT checked», never «none».
+        Both apparmor="DENIED" (enforce) and apparmor="ALLOWED" (complain, the mode of the package) mean the profile does not cover what the
+        program did. Source: the kernel journal; /var/log/audit/audit.log too when it exists (auditd is not there on Debian by default).
+        The leading space before profile= leaves out peer_profile= and the lines of other programs' profiles (apparmor="STATUS" is not matched)."""
+        pat = "grep -E 'apparmor=\"(DENIED|ALLOWED)\"' | grep -E ' profile=\"remotix_network(//[^\"]*)?\"'"
+        c, t = self.run("journalctl -k --no-pager -n 1 -o cat >/dev/null 2>&1 || { echo RXNOLOG; exit 0; }; "
+                        "o=$(journalctl -k --no-pager -o cat --since @%d 2>&1); rc=$?; "
+                        "if [ $rc -ne 0 ] && ! echo \"$o\" | grep -q 'No entries'; then echo RXNOLOG; exit 0; fi; echo RXOK; "
+                        "printf '%%s\\n' \"$o\" | %s | cut -c1-400 | tail -200; "
+                        "if [ -r /var/log/audit/audit.log ]; then echo RXAUDIT; cat /var/log/audit/audit.log | %s | cut -c1-400 | tail -200; fi; true" % (since, pat, pat))
+        rows = t.splitlines()
+        if c != 0 or "RXOK" not in rows:
+            return False, [], "the kernel journal could not be read (exit %d: %.100s)" % (c, t.replace("\n", " "))
+        lines, in_audit = [], False
+        for r in rows[rows.index("RXOK") + 1:]:
+            if r == "RXAUDIT":
+                in_audit = True
+                continue
+            m = re.search(r"audit\((\d+)", r)
+            if in_audit and m and int(m.group(1)) < since:
+                continue
+            lines.append(r)
+        return True, lines, ""
+
+    @staticmethod
+    def apparmor_summary(lines, n=5):
+        """A short text for the lines found: how many ALLOWED (complain) and DENIED (enforce), and the first few distinct operations."""
+        al = sum('apparmor="ALLOWED"' in l for l in lines)
+        de = sum('apparmor="DENIED"' in l for l in lines)
+        seen = []
+        for l in lines:
+            kv = {k: re.search(k + r'="([^"]*)"', l) for k in ("apparmor", "operation", "name", "comm", "profile")}
+            e = " ".join("%s=%s" % (k, kv[k].group(1)) for k in ("apparmor", "profile", "operation", "name", "comm") if kv[k])
+            if e not in seen:
+                seen.append(e)
+        return "%d ALLOWED (profile in complain mode: nothing blocked, but the profile does not cover it), %d DENIED (profile enforcing: blocked): %s" % (
+            al, de, " | ".join(seen[:n]))
+
     def journal(self, grep, since="-4min", n=8):
         t = self.run("journalctl -u remotix --no-pager -o cat --since '%s' | grep -iE '%s' | grep -v 'rate of\\|quic-net\\|loop: \\|not there YET\\|not on the bus\\|DIGITAL silence' | tail -%d; true" % (since, grep, n))[1]
         return " | ".join(x.strip()[:160] for x in t.splitlines()) or "(no remotix journal line for %s)" % grep

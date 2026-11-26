@@ -3,7 +3,7 @@
 #   <de>      xfce | lxqt | gnome | kde
 #   --fresh   first a fresh box with that package (fresh.sh: reset, install, enable)
 # Order: base (Chrome, Firefox), lifecycle, multiuser, desktop, media, resilience, audio (Chrome, Firefox), clipboard, input (Chrome, Firefox), phone, prelocal, ban (LAST: it bans the test address
-# of the box's service and unblocks it again at the end, see check-ban.py).
+# of the box's service and unblocks it again at the end, see check-ban.py), then apparmor (the kernel log of the whole round: lines of the remotix_network profile, see check-apparmor.py).
 # Logs: log/<tag>/<check>.out, the table also in log/<tag>/summary.txt. <tag> = $TAG or <de>-<date>-<time>.
 # RX_BANCO=vm: the bench is ONE of the four QEMU VMs (banco-vm/), not a container: fresh = fresh-vm.sh, ports 884x, RX_TEMPO=2 (deadlines x2);
 #   --clean (VM only) = the same clean-up without installing a package. WITHOUT --fresh/--clean the VM is NOT cleaned (as the container was not).
@@ -16,7 +16,7 @@ DE=${1:-}; [ $# -gt 0 ] && shift
 case $DE in xfce|lxqt|gnome|kde) ;; *) usage ;; esac
 FRESH=; CLEAN=; ONLY=
 while [ $# -gt 0 ]; do case $1 in --fresh) FRESH=${2:-}; [ -f "$FRESH" ] || usage; FRESH=$(readlink -f "$FRESH"); shift 2 ;; --clean) [ "${RX_BANCO:-}" = vm ] || usage; CLEAN=1; shift ;; --only) ONLY=,${2:-},; [ "$ONLY" != ,, ] || usage; shift 2 ;; *) usage ;; esac; done
-LABELS="base-chrome base-firefox lifecycle multiuser desktop media resilience audio-chrome audio-firefox clipboard input-chrome input-firefox phone prelocal ban package"
+LABELS="base-chrome base-firefox lifecycle multiuser desktop media resilience audio-chrome audio-firefox clipboard input-chrome input-firefox phone prelocal ban apparmor package"
 [ -z "$ONLY" ] || [ -n "$(echo "$ONLY" | tr -d ,)" ] || { echo "--only: no label given. Valid labels: $LABELS"; exit 2; }
 if [ -n "$ONLY" ]; then for l in $(echo "$ONLY" | tr ',' ' '); do case " $LABELS " in *" $l "*) ;; *) echo "--only: \"$l\" is not a check. Valid labels: $LABELS"; exit 2 ;; esac; done; fi
 case ${RX_TEMPO-1} in ''|*[!0-9]*|0*) echo "RX_TEMPO must be an integer >= 1, no leading zero (got \"${RX_TEMPO:-}\")"; exit 2 ;; esac
@@ -57,6 +57,8 @@ if [ -n "$FRESH" ] || [ -n "$CLEAN" ]; then
 	grep -q 'Welcome Center hidden' "$L/fresh.out" && ROWS+=("fresh/note|NOTE (Welcome Center hidden in /etc/skel by the test bench: it stays for users made by hand too)")
 	if [ $rc -eq 0 ]; then ROWS+=("fresh|PASS"); else ROWS+=("fresh|BLOCKED (fresh box failed, exit $rc: $(tail -1 "$L/fresh.out" | cut -c1-80))"); ABORT=1; fi
 fi
+# start of the round by the box clock (minus 5 s): check-apparmor.py looks at the AppArmor lines from here; empty = BLOCKED there, never "no lines"
+T0=$(python3 -c "import lib; print(int(lib.Box('$DE').run('date +%s')[1].split()[-1]) - 5)" 2>/dev/null </dev/null) || T0=
 skip() { [ -n "$ONLY" ] && case $ONLY in *",${1%%/*},"*) ;; *) return 0 ;; esac; ROWS+=("$1|SKIP ($2)"); }  # skip <label> <reason>: shown in the table, not counted as a failure, never as PASS
 run base-chrome 480 python3 check-base.py --box "$DE" --browser chrome
 run base-firefox 480 python3 check-base.py --box "$DE" --browser firefox
@@ -73,6 +75,7 @@ run input-firefox 1500 python3 check-input.py --box "$DE" --browser firefox
 run phone 1250 python3 check-phone.py --box "$DE"
 run prelocal 2400 python3 check-prelocal.py --box "$DE"
 run ban 900 python3 check-ban.py --box "$DE"
+run apparmor 180 python3 check-apparmor.py --box "$DE" --since "${T0:-none}"
 if [ "${RX_BANCO:-}" = vm ]; then
 	skip prelocal/real-greeter "the real graphical login of the display manager (GDM/SDDM/LightDM) cannot be automated: by hand; the hook itself is checked above by calling it"
 	skip ban/other-addresses "all clients reach the VM as 10.0.2.2, so only the ban of that one address is tried (the key); the 127.0.0.1 case of the containers does not exist"

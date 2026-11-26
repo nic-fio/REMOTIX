@@ -376,6 +376,15 @@ def busy_case(box_name, user, kind):
             bad.append("core dump(s) of %s since the start of the case: %s" % (user, cores.replace("\n", " | ")[:300]))
         else:
             ok_.append("no core dump of %s" % user)
+        # -- no AppArmor line about the profile of REMOTIX since the start of the case (the profile is in complain mode: a thing it does not cover
+        #    shows as apparmor="ALLOWED", in enforce as "DENIED"; both are an error). A log that cannot be read is said, never «none».
+        aa_ok, aa_lines, aa_why = box.apparmor(t_case)
+        if not aa_ok:
+            ok_.append("AppArmor NOT checked (%s)" % aa_why)
+        elif aa_lines:
+            bad.append("AppArmor line(s) of the remotix_network profile since the start of the case: %s" % box.apparmor_summary(aa_lines))
+        else:
+            ok_.append("no AppArmor ALLOWED/DENIED line of the remotix_network profile")
         if bad:
             c, st = box.run("systemctl --user -M %s@ list-units --state=active --no-legend --no-pager --plain 2>&1 | awk '{print $1}' | head -25 | tr '\\n' ' '; true" % user)
             jl = box.run("journalctl -u remotix --no-pager -o cat --since @%d | grep -E 'by force|HELD|local excludes remote|FAILED|stop ' | tail -12 | cut -c1-220; true" % t_case)[1]
