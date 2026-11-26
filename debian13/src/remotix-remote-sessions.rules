@@ -35,6 +35,12 @@
  *   Everything else: NOT_HANDLED, the distribution decides as always.
  *   Power off, reboot, suspend: 50-remotix-no-poweroff.rules, untouched.
  *
+ * ⭐ ADDED 26 Nov 2026 (the owner): the colord actions asked by `xiccd` (list
+ *   `like_seated` below).  Same principle as everywhere: a remote session gets
+ *   what the seated user gets on this machine, never more — YES where the
+ *   seated user gets `yes`, otherwise NOT_HANDLED.  No administrator requirement:
+ *   locally `yes` holds for any seated user.
+ *
  * ---------------------------------------------------------------------------
  * ⛔ NUMBER 40, NOT 50 OR 99: openSUSE's polkit-default-privs writes
  *   90-default-privs.rules, which answers these actions itself; a rule after it
@@ -60,7 +66,7 @@
  *   SYNCHRONOUSLY; with polkitd waiting for a loginctl that waits for logind,
  *   [M] both stall 10 s (`Timed out after 10 seconds` in the census) and every
  *   login and authorization of the server waits.  Not pkaction/pkcheck either:
- *   they ask polkitd itself.  And the helper runs ONLY for the five actions.
+ *   they ask polkitd itself.  And the helper runs ONLY for the listed actions.
  * ⚠ Declared: a REMOTIX user who is also logged in by ssh gets the same answers
  *   there — same person; a REMOTIX session still «closing» counts too.
  * ⚠ «Administrator» = member of `wheel`, `sudo` or `admin`, the groups the
@@ -82,10 +88,23 @@ polkit.addRule(function (action, subject) {
         "org.freedesktop.NetworkManager.network-control",
         "org.freedesktop.Flatpak.modify-repo"
     ];
+    // xiccd (autostart of Debian XFCE, /etc/xdg/autostart/xiccd.desktop, NotShowIn=GNOME;KDE;) asks colord at the start of every
+    // session to register the screen: org.freedesktop.color-manager.create-device.  [M] 26 Nov 2026, Debian 13 XFCE VM: the seated
+    // user gets `yes` (allow_active), a REMOTIX session got an «Authenticate» window that stole the focus.  Only the six that xiccd
+    // uses and the seated user gets `yes` for; NOT install-system-wide (seated: auth_admin_keep), NOT device-inhibit / sensor-lock.
+    var like_seated = [
+        "org.freedesktop.color-manager.create-device",
+        "org.freedesktop.color-manager.create-profile",
+        "org.freedesktop.color-manager.modify-device",
+        "org.freedesktop.color-manager.modify-profile",
+        "org.freedesktop.color-manager.delete-device",
+        "org.freedesktop.color-manager.delete-profile"
+    ];
+    var is_like_seated = like_seated.indexOf(action.id) >= 0;
     var is_refresh = refresh.indexOf(action.id) >= 0;
     var is_machine = machine.indexOf(action.id) >= 0;
 
-    if (!is_refresh && !is_machine)
+    if (!is_refresh && !is_machine && !is_like_seated)
         return polkit.Result.NOT_HANDLED;
     /* whoever sits at the machine: the distribution decides */
     if (subject.local)
@@ -103,7 +122,7 @@ polkit.addRule(function (action, subject) {
         return polkit.Result.NOT_HANDLED;
     var seated_yes = (words[1] == "yes");
 
-    if (is_refresh)
+    if (is_refresh || is_like_seated)
         return seated_yes ? polkit.Result.YES : polkit.Result.NOT_HANDLED;
     if (subject.isInGroup("wheel") || subject.isInGroup("sudo") ||
         subject.isInGroup("admin"))
