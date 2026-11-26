@@ -198,7 +198,9 @@ def unit_residue(box, user, units, remote_procs=None):
     real, ignored = [], []
     for ul in units:
         un = ul.split()[0]
-        if un.endswith(".socket") or un.endswith(".timer"):
+        if un.endswith(".socket") or un.endswith(".timer") or un == "gnome-keyring-daemon.service":
+            # gnome-keyring-daemon.service: socket-activated by the user manager and also started by the LOCAL session alone (pam_gnome_keyring auto_start in /etc/pam.d/lightdm, measured 26 Nov 2026 on
+            # Xubuntu: a local autologin of a fresh user has it active) - one daemon per user, shared by the remote and the local session
             ignored.append(ul); continue
         if un.endswith(".slice") and remote_procs is not None:
             rows = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
