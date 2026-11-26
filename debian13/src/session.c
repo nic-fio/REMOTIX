@@ -2549,8 +2549,8 @@ static gboolean session_autostart_cover(const char *dir, const char *desktop)
 	if (covered && ok)
 		registro_dice(LOG_SESSION,
 		              "⭐ %s: %d system autostart entr%s not started in the remote session "
-		              "(%s: Hidden=true in %s, first in XDG_CONFIG_DIRS) — shared server, the "
-		              "machine's Bluetooth is not the remote user's; %s; "
+		              "(%s: Hidden=true in %s, first in XDG_CONFIG_DIRS) — shared server, they "
+		              "are programs of the machine, not of the remote user; %s; "
 		              "the user's files are not touched",
 		              desktop, covered, covered == 1 ? "y is" : "ies are", done->str, dir,
 		              strcmp(desktop, "XFCE") == 0

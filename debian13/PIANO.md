@@ -404,3 +404,27 @@ qui sopra e nient'altro; il proprietario ha fatto le sue prove.
   non gira: il comando manca); aggiungere alle prove il controllo dei rifiuti di AppArmor.
 - **Restano**: prove KDE, XFCE, LXQt; ricostruzione `giro2` e conferma; versione nei documenti, registro dei
   problemi, manuali, sito (dopo).
+
+### Stato del piano 1.2.0 (26 nov 2026, ore 12:50) — ramo locale `debian-1.2.0`, nessun invio a GitHub
+- **Pacchetto in prova: `giro7`** (`/media/REMOTIX-DEBIAN/pacchetti/giro7/`, sha256 `ed9a7cd8…5a53`), installato sulle quattro VM
+  (istantanea `giro7` su ciascuna), consegnate al proprietario per le prove a mano; poi le live.
+- **Blocchi del server (quattro, 26 nov)**: causa trovata — nelle VM Debian (kernel 6.12) il driver addormentava e risvegliava
+  di continuo la Radeon passata; rimedio del banco `amdgpu.runpm=0` nelle quattro VM (dettagli in
+  `studio/prove-1.2.0/COME-SI-LANCIA.md`). Da allora nessun blocco.
+- **Prove automatiche**: GNOME, KDE, XFCE, LXQt passati (rapporti in `studio/prove-1.2.0/`). Aperti: `media/screen-updates`
+  di poco oltre soglia su GNOME, KDE, LXQt (1,0-1,5 s contro 1,0; causa non stabilita); `pkexec` su GNOME (noto);
+  `kbd-not-producible` su Firefox in LXQt (probabile strumento). P7/P8 (chiusura per accesso locale con programmi aperti):
+  solo GNOME; il proprietario le prova sulle live (sua decisione).
+- **Aggiunte al piano nate dalle prove** (oltre alle 13 voci):
+  - lingua: il prodotto la passa anche al gestore di sessione dell'utente per KDE, XFCE, LXQt (serve ai servizi di contorno;
+    misurato su XFCE); nella chiusura per accesso locale resta lì di proposito. Su KDE la lingua del desktop segue le
+    Impostazioni di KDE dell'utente (`plasma-localerc`), come in locale: da scrivere nel manuale;
+  - AppArmor: il profilo copre la lettura di `org.kde.remotix.desktop`; controllo dei rifiuti/avvisi di AppArmor e dei
+    core dump negli strumenti di prova (decisioni del proprietario);
+  - XFCE di Debian: `xiccd` (profili colore) non viene avviato nella sessione remota: chiedeva una password di
+    amministratore al centro del desktop. NON una regola polkit (colord è unico per la macchina: bocciata dal revisore);
+  - licenze ripulite per Debian (principio del proprietario: ogni distribuzione rispecchia il suo pacchetto).
+- **Da fare prima di pubblicare**: ricostruire una volta il pacchetto (una riga di registro corretta dopo `giro7`, nessun
+  cambio di comportamento) e reinstallarlo; registro dei problemi; manuali (lingua su KDE, Requirements, NVIDIA); sito.
+- **Da verificare altrove**: se su Fedora 1.2.0 la lingua scelta dall'utente arriva al desktop KDE (mai misurato); se
+  Xubuntu ha `xiccd` (per Ubuntu 1.2.0).
