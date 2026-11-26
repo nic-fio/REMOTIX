@@ -1660,7 +1660,7 @@ static bool child_accounts_language(const char *user, char *out, size_t out_size
 		return false;
 	buf[n] = 0;
 	for (line = strtok_r(buf, "\n", &save); line; line = strtok_r(NULL, "\n", &save)) {
-		const char *v = NULL;
+		char *v = NULL;   /* not const: the line is cut in place at the first `;` (with a const pointer the compiler of Ubuntu 26.04 warns at the strchr() below) */
 		char *semi;
 
 		if (strncmp(line, "Languages=", 10) == 0)
