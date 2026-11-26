@@ -226,3 +226,229 @@ virtuali e forse qualche gioco leggono invece la **posizione** del tasto, e most
 ### E2. Righe non verdi note nel giro di prove
 - Pulsanti Ctrl+Alt+Canc e Ctrl+Alt+Fine (prove da allineare, vedi B3); coordinate del mouse su XFCE nell'angolo
   coperto dal pannello; un controllo su GNOME voluto così (`pkexec`); primo tocco da telefono su GNOME, saltuario.
+
+---
+
+## F. Versione 1.2.0 (26 nov 2026): Debian 13 allineata a Fedora 45
+
+Regola del proprietario (25 nov): dove Fedora fa una cosa e su Debian si può fare, si fa come Fedora, senza varianti di
+Debian. Il lavoro è stato fatto a blocchi sui file di Debian (mai copiando interi `child.c`, `session.c`, `main.c`...,
+perché avrebbero riportato codice tolto apposta e rotto il filo che tiene viva la sessione dell'utente). Le prove sono
+sul banco a macchine virtuali (sezione G) e a mano, dal proprietario, sulle quattro live. Dove una cura non è stata
+vista scattare su Debian, lo dico.
+
+### F1. Il desktop remoto parlava sempre inglese
+- **Che cosa si vedeva:** qualunque lingua avesse l'utente, il desktop remoto partiva in inglese.
+- **Causa:** il server non passava nessuna lingua alla sessione.
+- **Cura:** la sessione usa la lingua che l'utente ha scelto nelle Impostazioni (la legge dal servizio di sistema che
+  tiene i dati degli utenti) e, se non ne ha scelta una, quella del sistema, con i formati (date, numeri). Misurato su
+  GNOME e su XFCE/LXQt: la lingua arriva a tutti i processi del desktop.
+- **Il gestore utente:** su KDE, XFCE e LXQt anche il gestore dei servizi dell'utente riceve la lingua (funzione
+  `manager_set_locale` in `src/session.c`), perché da lì nascono i servizi di contorno; a fine sessione il valore torna
+  com'era. Nella chiusura «leggera» per accesso locale la lingua resta lì **di proposito**: non si rimette a posto,
+  e non è un difetto.
+- **KDE:** la lingua del desktop la decide il file `plasma-localerc` dell'utente, come in locale. Se quel file dice
+  un'altra lingua, vince lui (è così che è stato trovato: il primo esito «la lingua non arriva a Plasma» era dovuto a un
+  file `plasma-localerc` già presente, non a REMOTIX). Non è un difetto.
+- **Resta:** `xfconfd` (il servizio di impostazioni di XFCE) resta nella lingua di sistema; da verificare su Fedora se la
+  lingua dell'utente arriva al desktop KDE (non è mai stato misurato lì).
+- **Su una distribuzione nuova:** misurare la lingua dentro i processi del desktop (non solo del processo figlio) e
+  guardare se il desktop ha un suo file di lingua per utente.
+
+### F2. `PATH` fisso: i programmi dell'utente in `~/.local/bin` non partivano
+- **Causa:** il `PATH` del desktop remoto era una lista fissa.
+- **Cura (regola di Fedora):** si usa il `PATH` che il sistema dà all'accesso; se manca, il ripiego con `~/.local/bin` e
+  `~/bin` davanti alle cartelle di sistema, come un accesso grafico locale (`src/child.c`, blocco «PATH»). Dalla
+  revisione è stata corretta anche una graffa mancante in quel blocco.
+
+### F3. Schermo nero quando manca `labwc` (XFCE, LXQt)
+- **Che cosa succedeva:** `labwc` è solo «raccomandato» dal pacchetto; su una macchina con XFCE o LXQt senza `labwc` il
+  desktop non nasceva e l'utente vedeva nero.
+- **Cura:** il server riconosce che il compositor non è installato e manda il rifiuto `0x0E` con un messaggio chiaro, e il
+  registro nomina il pacchetto (`src/main.c`, `src/session.c`). In più `debian/remotix.postinst` avvisa all'installazione
+  (solo se la macchina ha XFCE o LXQt e né GNOME né Plasma, per non avere dubbi su quale desktop partirà); l'avviso non
+  fa mai fallire `apt`.
+
+### F4. La fine della sessione veniva detta al browser troppo tardi
+- **Cura:** il saluto di fine sessione parte subito, prima di smontare tutto (`§7.6` in `src/child.c`), e un nuovo
+  accesso non si aggancia a un desktop che sta morendo. Provato a mano su KDE, con e senza browser collegato.
+
+### F5. XFCE: il pulsante «azioni» del pannello spariva dal desktop locale (D-X3)
+- **Che cosa si vedeva:** dopo una sessione remota, nel desktop locale del pannello mancava il pulsante di uscita/azioni.
+- **Causa:** il file con cui REMOTIX blocca il pannello nascondeva il tipo del plugin (`xfconfd` non scrive nel file
+  dell'utente un valore uguale a quello di sistema), e il pannello locale, vedendo un plugin senza tipo, lo cancellava.
+  Riprodotto su Debian 13 con xfconf 4.20 (era già il difetto D-X3 di Ubuntu).
+- **Cura:** controllo di integrità del pannello (`xfce_panel_integrity()` in `src/session.c`) e blocco scritto in modo
+  che il tipo resti. In più i programmi inutili in una sessione remota (Bluetooth) non partono.
+- **Su una distribuzione nuova:** dopo una sessione remota, aprire il desktop locale e guardare il pannello.
+
+### F6. XFCE: una finestra di password di amministratore al centro del desktop remoto
+- **Che cosa si vedeva:** nella prova di mouse e tastiera su XFCE comparivano finestre di password («Authenticate») che
+  facevano fallire le prove di mouse e tastiera.
+- **Causa:** `xiccd`, il programma dei profili colore (parte di `colord`), parte da solo all'avvio del desktop e chiede
+  a polkit di creare un dispositivo colore. Una sessione remota non è «seduta alla macchina», quindi polkit chiede la
+  password di amministratore.
+- **Cura:** `xiccd.desktop` non viene avviato nella sessione remota (`SESSION_NOT_IN_REMOTE_AUTOSTART` in
+  `src/session.c`, con `blueman.desktop`). I profili colore di un desktop remoto senza schermo vero non servono.
+- **Perché NON una regola polkit:** era stata provata e poi ritirata (commit `7d75a36`, annullato da `c92da17`).
+  `colord` è un servizio unico per tutta la macchina, non per sessione: una regola che dà alle sessioni remote il permesso
+  vale per la macchina intera. Il revisore l'ha bocciata.
+- **Resta:** da verificare se Xubuntu ha `xiccd` (serve alla 1.2.0 di Ubuntu).
+
+### F7. KDE: chiusura per accesso locale, fotogramma perso, Ctrl+Alt+Canc, Log Out
+- **Chiusura per accesso locale:** attesa di 5 secondi (prima 10) e chiusura forzata che ferma `graphical-session.target`
+  (`src/session.c`, `src/child.c`). Su Plasma 6.3.6 fermare quel gruppo o `plasma-workspace.target` ferma tutto nello stesso
+  tempo (0,37 contro 0,47 s), quindi su Debian la cura è innocua e uniforme più che necessaria; resta come in Fedora.
+- **Fotogramma perso:** se KWin non manda l'immagine, il server lo «tocca» (`src/capture.c`, `src/kwin.c`), con
+  un limite di tocchi consecutivi e una riga di registro. Su Debian **non è mai scattato** (0 righe in tre avvii): innocuo,
+  non visto in azione.
+- **Ctrl+Alt+Canc:** il difetto di Fedora (Plasma 6.4 e oltre chiede a `org.freedesktop.ScreenSaver` se lo schermo è
+  bloccato, e senza risposta non apre la finestra di uscita) su Plasma 6.3.6 di Debian non nasce; il piccolo servizio di
+  appoggio che risponde «non bloccato» è portato lo stesso, per uniformità (`src/kwin.c`). Le prove della pagina (Ctrl+Alt+Canc
+  nascosto, catena, Ctrl+Alt+Fine) passano.
+- **Log Out dal menu senza nessuno collegato:** riconosciuto anche senza browser; il desktop sparisce in 2 secondi, nessun
+  processo resta. Provato a mano.
+- **Resta, dichiarato:** KDE con KWin da solo e cambio di risoluzione a caldo servono a KWin 6.8; Debian ha 6.3.6 (protocollo
+  alla versione 12, ne servono 22). KDE resta dentro il labwc di Debian.
+
+### F8. GNOME: primo movimento del puntatore e scala dello schermo
+- **Puntatore:** il primo movimento dopo l'avvio del dispositivo viene inviato due volte (`src/input.c`), come su Fedora: il primo poteva andare perso.
+- **Scala:** se l'utente ha una scala diversa da 1 (per esempio 200%), la sessione riporta il suo monitor a 1
+  (`mutter_scale_to_one()` in `src/mutter.c`); se non riesce, chiude la sessione con un messaggio. La chiave
+  `scaling-factor` è fra quelle bloccate (`DCONF_KEYS`). Su GNOME 48 di Debian (mutter 48.7) il cambio è possibile
+  (`supports-changing-layout-mode` vero); prima la scena veniva rifiutata e ritentata in loop.
+- **Resta:** alcune protezioni nate su GNOME 50 su Debian potrebbero non scattare mai: sono innocue ma «non viste
+  scattare su Debian».
+
+### F9. AppArmor: la riga `deny unix` per i kernel nuovi (voce C4 del registro di Ubuntu)
+- **Causa e cura:** la riga `deny unix addr=@*,` del profilo del lato rete porta con sé anche il permesso di *creare*
+  un socket e, su un kernel che controlla i socket unix (quello di Ubuntu 26.04), vieta tutto: niente D-Bus, niente
+  risposta di logind e ogni accesso viene rifiutato. Ora le righe nominano le operazioni
+  (`deny unix (bind, listen) addr=@**,` e `deny unix (connect, send, receive) peer=(addr=@**),`), `debian/remotix_network.apparmor`.
+- **Su Debian oggi non si vedeva:** il kernel 6.12 di Debian 13 non controlla i socket unix (nel kernel non ci sono le
+  funzioni `af_unix` di AppArmor), quindi la riga non aveva effetto. È messa a posto perché un kernel più nuovo
+  (backports, Debian futura) non faccia lo stesso danno. Non provata su un kernel che li controlli.
+- **Limite noto:** resta permesso l'«autobind»; il secondo muro (landlock) resta. Da riguardare quando il profilo passerà
+  da «complain» a «enforce».
+
+### F10. AppArmor: il profilo non copriva la lettura di `org.kde.remotix.desktop`
+- **Come si è visto:** il nuovo controllo del banco (`check-apparmor.py`, guarda nel registro del kernel le righe del
+  profilo `remotix_network`) su KDE ha trovato righe «ALLOWED» tutte uguali: lettura di
+  `/usr/share/applications/org.kde.remotix.desktop`, il file del permesso di cattura per KWin.
+- **Causa:** il profilo è in «complain» (voluto e scritto nei manuali): non blocca, ma segnala. In «enforce» sarebbe un rifiuto.
+- **Cura:** riga `r` su quel percorso in `debian/remotix_network.apparmor`.
+- **Su una distribuzione nuova:** far girare il controllo dei rifiuti/avvisi di AppArmor su ogni desktop e a fine giro.
+
+### F11. L'aggancio «il locale chiude il remoto» si controlla a ogni avvio; la riga PAM si toglie dopo l'arresto
+- **Cura:** a ogni avvio del servizio `ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check` guarda se la riga è in
+  `/etc/pam.d/common-session` e, se manca (un aggiornamento, una modifica a mano), la rimette con `pam-auth-update` e lo scrive nel
+  registro. Non impedisce mai l'avvio. Se l'amministratore ha modificato a mano il file, lo strumento di Debian rifiuta e
+  resta la sola riga di avviso (come prima).
+- **Riga tolta troppo presto:** in `debian/remotix.prerm` la riga PAM ora si toglie **dopo** l'arresto del servizio; prima,
+  un riavvio fra la rimozione e l'arresto l'avrebbe rimessa, lasciandola dopo la rimozione.
+- **`postinst`:** il controllo «la riga c'è già?» cerca ora la riga vera (`session ... pam_exec.so ... remotix-local-login`)
+  e non una qualunque riga che contenga il nome.
+
+### F12. Piccole voci
+- **Sentinella «na»:** la sentinella chiede al sistema se le azioni di spegnimento sono permesse; la risposta «na» («non
+  disponibile su questa macchina», per esempio una VM o un server) conta come «no», sicura, e non è più un allarme (`src/sentinel.c`).
+- **Chiusura della connessione:** una riga di registro dice chi ha chiuso (il browser col suo saluto, un silenzio, la rete) e perché
+  (`src/transport.c`).
+- **`needrestart`:** `debian/needrestart/remotix.conf` impedisce che un aggiornamento di libreria riavvii da solo il servizio, che
+  chiuderebbe tutti i desktop remoti: il servizio compare fra quelli «da riavviare a mano».
+- **Cache di Mesa di root:** la prova delle schede video faceva scrivere a Mesa una cache in `/root/.cache`, che dopo la
+  rimozione restava. Ora la prova e il servizio hanno `MESA_SHADER_CACHE_DISABLE=true` (`debian/remotix.service`,
+  `debian/remotix.postinst`); i desktop degli utenti non cambiano e tengono la loro cache.
+- **Licenze ripulite:** via ogni riferimento a materiale che il pacchetto non contiene (installatore, moduli Go, labwc e
+  wlroots, file `.run`). Principio del proprietario: ogni distribuzione rispecchia il proprio pacchetto.
+- **Testi:** i messaggi «reinstalla il pacchetto» danno il comando giusto per un `.deb`; via i riferimenti a Fedora, Arch e SUSE.
+- **Regola polkit per gli aggiornamenti firmware** (Fedora): inserita ma su Debian 13 non fa nulla (fwupd 2.0.20 non ha
+  quell'azione): innocua, non vista in azione.
+
+### F13. Voci del registro di Ubuntu che ora valgono anche per Debian
+- **B3-bis (lezione di metodo):** una riga rossa uguale su tutti i desktop fa sospettare lo strumento, ma va dimostrato prima
+  di archiviarla; guardare gli eventi grezzi della finestra di prova (`WAYLAND_DEBUG`). Su Ubuntu con GTK 4.22 tre prove di
+  trascinamento fallivano per un cambiamento del campo di testo; con GTK 4.18 (Debian) erano verdi. Qui vale ancora per
+  `kbd-not-producible` su Firefox in LXQt (sezione H).
+- **C4:** vedi F9.
+- **C5, database di impostazioni di sistema (dconf): DIFFERENZA DICHIARATA, non portata.** Su Ubuntu le regole di sessione
+  stanno in `/etc/dconf/db/remotix` e nel profilo `$XDG_RUNTIME_DIR/dconf/profile`, perché i programmi Flutter e gli «snap» di Ubuntu
+  non leggono il profilo a tre strati. Su Debian 13 non ci sono quei programmi e il meccanismo a tre strati (profilo in
+  `$XDG_RUNTIME_DIR/remotix/dconf/`, database a runtime) funziona; per decisione del proprietario (25 nov 2026) non si porta.
+  Conseguenza: Debian non scrive il file `~/.config/dconf/remotix` nella casa dell'utente, e non ha il database di sistema.
+  Se un giorno su Debian compariranno programmi che scartano il profilo (`Unknown DConf source`), la strada è quella di Ubuntu.
+- **E3 (variabili del gestore utente):** nella chiusura fatta dal lato root la «foto» dell'ambiente dell'utente non viene
+  cancellata, e alcuni punti trattano «non ho potuto chiedere se il desktop è vivo» come «è chiuso» (`session_alive()` e
+  l'uscita in `child.c`). Casi forzati, non provocabili sul banco; correzione piccola consigliata, **non fatta**. Su Debian
+  il codice è lo stesso, quindi vale uguale; non misurato su Debian.
+- **E4 (piccoli scatti nel video da Chrome su Android):** misurati su Ubuntu (nessun pacchetto perso, un fotogramma su venti in
+  ritardo di pochi millisecondi); causa non distinta fra telefono, rete e riproduttore. Non bloccante; su Debian non misurato.
+
+---
+
+## G. Banco di prova: lezione per le prossime distribuzioni (26 nov 2026)
+
+### G1. Il server si è bloccato quattro volte con una VM Debian sulla scheda Radeon passata
+- **Quando e come si è visto:** 25-26 nov, durante le prove a macchine virtuali. Alle 01:17 e alle 08:26 il server intero si è
+  bloccato (né ping né ssh) sulla VM `kde`, nello stesso punto: la prova «accesso locale vero» (P7), cioè il riavvio di `sddm`
+  dentro la VM. La quarta volta è stata sulla VM `xfce`, mentre si installava il pacchetto. Ogni volta serviva il ripristino a mano del proprietario.
+- **Prima diagnosi, SBAGLIATA:** «il riavvio del display manager con la Radeon passata fa cadere il server». Si è vietato quel passo
+  e tutti i simili (nel file `COME-SI-LANCIA.md`), ma è caduto anche dopo, senza riavvii di display manager (installazione del
+  pacchetto): la causa era un'altra.
+- **Causa vera:** nell'ospite Debian il driver `amdgpu` del kernel 6.12 metteva a dormire e risvegliava di continuo la scheda
+  (nel registro: `amdgpu: SMU is resuming...`, 19 volte in 9 minuti). La scheda era passata senza monitor e il suo controllo
+  dei consumi (`runpm`) la addormentava; nel server comparivano errori PCIe (`CmpltTO`, `vfio_bar_restore`) un attimo prima del blocco.
+- **Cura:** `amdgpu.runpm=0` nella riga di avvio del kernel di **ogni VM Debian del banco**, messo PRIMA di dare la
+  Radeon alla VM (`GRUB_CMDLINE_LINUX` in `/etc/default/grub`, poi `update-grub`; copia di prima in
+  `/etc/default/grub.prima-runpm`). Controlli prima di ogni giro: `/proc/cmdline` contiene `amdgpu.runpm=0`;
+  `/sys/module/amdgpu/parameters/runpm` vale 0; nel registro del kernel `SMU is resuming` non compare mai. Se uno non torna,
+  si spegne la VM. Da allora nessun blocco, su GNOME, KDE, XFCE e LXQt, comprese installazioni e prove complete.
+- **Il divieto di P7/P8** non era la cura: resta scritto in `studio/prove-1.2.0/COME-SI-LANCIA.md`.
+- **Su una distribuzione nuova:** (1) scheda passata a una VM senza monitor ⇒ guardare subito `runpm` dell'ospite; (2) dopo una
+  caduta del server non fidarsi della prima ipotesi: cercare nel registro del kernel il minuto prima del blocco; (3) un'ipotesi
+  si verifica con una prova che *dovrebbe* fallire, non solo con una che passa.
+
+### G2. La costruzione del `.deb` senza contenitori
+- **Regola del proprietario:** niente contenitori. Il pacchetto si costruisce in una VM del server, `costruzione`
+  (mai con la Radeon), con `build/build-deb-vm.sh [etichetta]`: accende la VM, costruisce, controlla con `lintian` (gli errori
+  fanno fallire la costruzione), spegne. Uscita in `/media/REMOTIX-DEBIAN/pacchetti/<etichetta>/`. I file vecchi
+  (`build/build-deb.sh`, `build/Containerfile`) restano ma non si usano.
+- **Provato:** `remotix_1.2.0-1+deb13_amd64.deb`, `lintian` senza errori né avvisi.
+
+### G3. Controlli nuovi nel giro di prove
+- **AppArmor:** `prove/check-apparmor.py` legge nel registro del kernel le righe del profilo `remotix_network` dall'inizio del
+  giro; se il profilo non è caricato o il giro non ha un orario di partenza, risponde BLOCKED e non «nessuna riga»
+  (è così che si è trovata la voce F10).
+- **Core dump:** `systemd-coredump` installato nelle VM di prova, così un programma di REMOTIX che muore lascia traccia e la prova lo vede.
+- **Dopo la prova di rimozione:** nessun file di REMOTIX in `/etc /usr /var /root /home`; l'unica eccezione trovata era una cache di
+  Mesa di root, ora evitata (F12).
+- **Metodo:** P1-P6 delle prove «locale chiude remoto» girano su tutti i desktop; P7/P8 (accesso locale grafico vero) sulle
+  quattro live in mano al proprietario, che il 26 nov le ha provate a mano e sono andate tutte bene.
+
+---
+
+## H. Rinviati o aperti nella 1.2.0 (non bloccanti)
+
+### H1. `media/screen-updates` di poco oltre la soglia su GNOME, KDE e LXQt
+- **Misurato:** il tempo fra il cambio di un contatore nella sessione e la sua comparsa nel browser è 1,0-1,5 secondi
+  (GNOME 1,05-1,2; KDE 1,03-1,06; LXQt 1,5), la soglia della prova è 1,0. Nessun passo indietro, animazione a 58-61 fotogrammi al secondo.
+- **Che cosa non si sa:** la causa. Stesso ordine di grandezza su tutti i desktop, quindi non è di uno; sospetti: VM senza monitor,
+  strumento, carico del server. Soglia non allargata. Da confrontare con la 1.0.1 e con una macchina vera.
+
+### H2. `pkexec` su GNOME
+- **Noto, su tutte le distribuzioni:** nella prova `desktop/users-shell-and-environment` `pkexec` dà `SHELL` vuoto e non mostra
+  la finestra di password. Il resto della prova (terminale, cartella personale, gruppi) è a posto. Voluto così, come nel giro di prove da sempre.
+
+### H3. `kbd-not-producible` su Firefox in LXQt
+- **Probabile difetto dello strumento** (da confermare): la prova passa su Chrome; su Firefox il testo scritto è giusto
+  (`entry 'xyz'`) e non arriva nulla di finto al desktop, ma una riga attesa del registro compare una volta su due. Su KDE il
+  FAIL del primo giro non si è ripresentato col pacchetto aggiornato.
+
+### H4. P7/P8 automatiche solo su GNOME
+- Le prove automatiche «accesso locale vero con programmi aperti» (P7/P8) sono girate solo su GNOME; sulle altre VM sono vietate per
+  la sezione G1. Il proprietario le ha provate a mano sulle quattro live il 26 nov: tutte OK.
+
+### H5. Da verificare altrove
+- Se su Fedora 1.2.0 la lingua scelta dall'utente arriva al desktop KDE (mai misurato).
+- Se Xubuntu ha `xiccd` (per Ubuntu 1.2.0).
+- `xfconfd` resta nella lingua di sistema su XFCE (F1).

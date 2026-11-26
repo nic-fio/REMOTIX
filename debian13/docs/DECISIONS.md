@@ -6224,6 +6224,7 @@ driver does not encode via VA-API: it fell back to the processor, already before
   Vulkan Video discarded for now: `[M]` 1 Oct, Vulkan encoding is there on the Radeon (RADV, Mesa 25.0) but on the
   Intel UHD 770 only behind `ANV_DEBUG=video-encode` even with Mesa 26.2.3 (experimental).
 - ⚠ A real NVIDIA is needed to try it: there is none in the lab.
+  (Corrected 26 Nov 2026: it was tried afterwards, on an RTX 4090 on 5-6 Oct 2026, on Ubuntu 26.04; see SPECS §11.4.)
 - ✅ **Vulkan first** (user's word: *«la codifica deve avvenire con strumenti standard, preferibilmente
   con Vulkan, che accomuna tutte e 4 le architetture»*): the route is chosen **by capability**, not by vendor —
   1) Vulkan Video if the card offers it (today AMD, NVIDIA; Intel when Mesa makes it stable), 2) VA-API
@@ -6247,6 +6248,7 @@ driver does not encode via VA-API: it fell back to the processor, already before
   `SPECIFICHE.md` §11.4-bis.
 - ⚠ **NVIDIA**: the user cannot buy the card; the Vulkan route stays «untested» until it is tried
   (a rented machine, at his choice, or a user who has one).
+  (Corrected 26 Nov 2026: it was measured on an RTX 4090 on 5-6 Oct 2026, Ubuntu 26.04; Vulkan Video is the general route, not NVIDIA's.)
 - ⭐ **Android**: Chrome on Android joins phase 19's suite (emulator on the server); Firefox Android stays
   out (§7.18).
 - ⇒ **Phase 19** (`fasi/19-nvidia.md`). Phase 18's redone measurements stop where they are (user's

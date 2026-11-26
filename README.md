@@ -8,7 +8,7 @@ tests, docs, manuals and licences, and builds its own package (`.deb` or `.rpm`)
 
 | Directory | Distribution |
 |---|---|
-| [`debian13/`](debian13/) | Debian 13 (trixie) |
+| [`debian13/`](debian13/) | Debian 13 (trixie), 1.2.0: the language of the user's desktop, the user's own `PATH`, clearer messages, tighter local/remote login handling on every desktop |
 | [`ubuntu26.04/`](ubuntu26.04/) | Ubuntu 26.04 (Ubuntu, Kubuntu, Xubuntu, Lubuntu) |
 | [`fedora45/`](fedora45/) | Fedora 45 (Workstation, KDE Plasma Desktop, Xfce, LXQt) |
 

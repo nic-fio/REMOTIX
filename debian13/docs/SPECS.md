@@ -1236,7 +1236,7 @@ The ladder:
 3. ⛔ **No GPL dependencies**: all the server's libraries are permissive (MIT, BSD, Apache),
    a condition of the licence (`DECISIONS.md` §10.22)
 
-⭐ The **Vulkan Video** route (AMD, NVIDIA) is phase 19 (`phases/19-nvidia.md`), ✅ grafted in on
+⭐ The **Vulkan Video** route (the general one, chosen by capability: AMD and NVIDIA today, Intel when Mesa makes it stable) is phase 19 (`phases/19-nvidia.md`), ✅ grafted in on
 1 Oct 2026: it is chosen by capability when each encoder opens (`h264_card`/`hevc_card`,
 `src/encoder.c`), Vulkan first and VA-API where Vulkan is not there; `--encoding-route vulkan|vaapi` forces it
 for tests, and `--encoding-test` says which one encoded (`route`). `[M]` 1 Oct 2026 on the server:
@@ -1271,17 +1271,19 @@ problema delle licenze è di chi installa remotix, non del progetto»*. REMOTIX 
 
 | distribution | Intel | AMD | NVIDIA (proprietary driver) | desktops |
 |---|---|---|---|---|
-| Debian 13 | ✅ official repositories | ✅ official repositories | ⚠ Vulkan Video, not tested | all 4 |
-| Ubuntu 26.04 | ✅ official repositories (universe) | ✅ official repositories | ⚠ Vulkan Video, not tested | all 4 |
-| Fedora 44 | ✅ with **RPM Fusion** (nonfree) | ✅ with **RPM Fusion** (`mesa-va-drivers-freeworld`) | ⚠ Vulkan Video, not tested | all 4 |
-| Red Hat / Alma / Rocky 10 | ✅ with **RPM Fusion EL** + **EPEL** | ⛔ **not supported**: no repository puts AMD encoding back | ⚠ Vulkan Video, not tested | ⛔ **GNOME and KDE only** |
-| openSUSE Leap 16, Tumbleweed | ✅ official repositories | ✅ with **Packman** | ⚠ Vulkan Video, not tested | all 4 |
-| Arch | ✅ official repositories | ✅ official repositories | ⚠ Vulkan Video, not tested | all 4 |
+| Debian 13 | ✅ official repositories | ✅ official repositories | ✅ Vulkan Video (measured on Ubuntu 26.04, not repeated on Debian 13) | all 4 |
+| Ubuntu 26.04 | ✅ official repositories (universe) | ✅ official repositories | ✅ Vulkan Video (measured on an RTX 4090, 5-6 Oct 2026) | all 4 |
+| Fedora 44 | ✅ with **RPM Fusion** (nonfree) | ✅ with **RPM Fusion** (`mesa-va-drivers-freeworld`) | ✅ Vulkan Video (measured on Ubuntu 26.04, not repeated here) | all 4 |
+| Red Hat / Alma / Rocky 10 | ✅ with **RPM Fusion EL** + **EPEL** | ⛔ **not supported**: no repository puts AMD encoding back | ✅ Vulkan Video (measured on Ubuntu 26.04, not repeated here) | ⛔ **GNOME and KDE only** |
+| openSUSE Leap 16, Tumbleweed | ✅ official repositories | ✅ with **Packman** | ✅ Vulkan Video (measured on Ubuntu 26.04, not repeated here) | all 4 |
+| Arch | ✅ official repositories | ✅ official repositories | ✅ Vulkan Video (measured on Ubuntu 26.04, not repeated here) | all 4 |
 
 - The Red Hat family is tested on **Alma**, which stands in for it (Red Hat is paid).
 - A «no» to the drivers' repository **blocks** the installation (D5): without it, on that machine the card does not encode.
-- ⚠ **NVIDIA**: the route is written (Vulkan Video) but nobody has seen it work on a real NVIDIA — the
-  lab has none. It stays «not tested» until it is tested (a rented machine or a user with the card).
+- ✅ **NVIDIA**: the Vulkan Video route was measured on a real card, an RTX 4090 (proprietary driver 595), on 5-6 Oct 2026 on
+  Ubuntu 26.04 (GNOME 50 and XFCE/labwc; `[M]` comments in `src/encoder.c`). It was not repeated on the other distributions;
+  the route is the same on all of them (Vulkan is the general route, not NVIDIA's). The earlier sentence «nobody has seen it
+  work on a real NVIDIA» dated from 1 Oct 2026 and was corrected on 26 Nov 2026.
 - Without a capable card: REMOTIX does not install (§11.4). Virtual machines work only with the card
   passed to the machine (passthrough, vGPU).
 - The canvas is at most **4096×2304** (§6.1-bis): a larger window receives the reduced canvas.
