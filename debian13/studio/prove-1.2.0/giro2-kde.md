@@ -83,3 +83,12 @@ passata e' il passo che precede la caduta. Nessuno dei due e' stato rifatto: ora
 - Il registratore della memoria va avviato con `setsid nohup sh -c '...' </dev/null &` (registro: `/media/REMOTIX-DEBIAN/log/memoria-kde.log`, fermato a fine lavoro).
 - Strumenti: nessuna correzione necessaria in questo giro (`debian13/prove/` copiato sul server senza toccare `log/`).
 - Da decidere/correggere nel prodotto: (1) il profilo AppArmor non copre `/usr/share/applications/org.kde.remotix.desktop`; (2) su KDE la lingua di AccountsService non arriva a Plasma.
+
+## Riprova con giro5 (lingua, AppArmor)
+26 nov 2026, 09:2x-09:40. Pacchetto giro5 (md5 `37d30533...2a37`) installato sopra il precedente, `remotix` riavviato (attivo; «the local-login hook is in place»); poi VM spenta e riaccesa (avvio nuovo, solo dopo l'installazione). Utente `kd1`, sessioni aperte e chiuse con `hold.py` (chiusura normale).
+- 3a (nessuna scelta): `remotix-child`, `labwc`, `kwin_wayland`, `plasmashell` e gestore utente tutti `LANG=en_US.UTF-8`, nessun `LC_*`. PASS.
+- 3b (`SetLanguage it_IT.UTF-8`, nuova sessione): `remotix-child` `LANG=it_IT.UTF-8`, MA `labwc`, `kwin_wayland`, `plasmashell` e `systemctl --user show-environment` restano `LANG=en_US.UTF-8`. **FAIL**: la correzione non ha effetto su KDE. Nel registro di `remotix` dall'inizio della prova nessuna riga «language is NOT put into the user manager» (e nessuna riga sulla lingua). Il registro di sessione/servizio non dice che cosa e' successo.
+- 3c: dopo la chiusura normale il gestore utente e' sparito (`user@1005` inactive); `show-environment` rilanciato dopo, `LANG=en_US.UTF-8`, nessun `LC_*`/`LANGUAGE`. Esito valido (niente da ripristinare, ma 3b non ha messo nulla).
+- 3d: lingua rimessa vuota (`Languages=;`).
+- 4 `check-apparmor.py --box kde` (tutto l'avvio, successivo all'installazione): PASS, nessuna riga ALLOWED/DENIED di `remotix_network` (quindi nessuna per `org.kde.remotix.desktop`).
+- Chiusura: VM spenta, Radeon libera, `pgrep -c qemu` = 0, istantanea `giro5` creata. Prima dell'inizio il server mancava di `python3` (script di preparazione lanciato dal proprietario).
