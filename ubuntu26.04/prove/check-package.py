@@ -11,7 +11,7 @@ Runs ON THE DEV SERVER (drives ./boxes/box.sh). One line per check: `PASS|FAIL|B
                 remotix (nologin), nothing on 7447
   first-start   enable --now: active, TCP and UDP listening, certificates with safe modes, no error in the journal, the two
                 processes run as the design says (root side root, network side remotix)
-  apparmor      the profile of the network side loaded and confining (complain or enforce; BLOCKED if the box has no AppArmor interface)
+  apparmor      the profile of the network side loaded and attached to the network side (complain = logs only, or enforce; BLOCKED if the box has no AppArmor interface)
   remove        a test user logged in, then apt remove while the session is alive: sessions closed, desktop processes gone,
                 group enrolments undone, /dev/dri grants taken back, service stopped, binary gone, configuration and
                 /var/lib/remotix kept, no process left, nothing else touched

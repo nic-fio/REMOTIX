@@ -4,10 +4,11 @@
     python3 check-prelocal.py [--box xfce] [--only P1,P6,P7,P9]
 
 Runs ON THE DEV SERVER (lib.py). Uses its own users pl1 (P1-P3, one remote desktop carried through) and pl2 (P4, P5: no desktop).
-The boxes are systemd containers with no display manager, so the LOCAL login is SIMULATED: the PAM hook is run as root inside the
-box, with the environment pam_exec would give it:
+P1-P6: the LOCAL login is SIMULATED (also in the VMs, where the display manager is real but is not used here): the PAM hook is run as root
+inside the box, with the environment pam_exec would give it:
     env -i PAM_TYPE=open_session PAM_SERVICE=prova-dm PAM_USER=<user> XDG_SEAT=seat0 XDG_SESSION_CLASS=user XDG_SESSION_TYPE=wayland
         /usr/libexec/remotix/remotix-local-login
+P7-P9 are different: a REAL local login (autologin of the display manager, restarted) in a VM; all.sh runs them only with RX_LOCALE_VERO=1.
 One line per check:  PASS|FAIL|BLOCKED name - evidence.  Exit 0 only if every selected case PASS.
   P1 hook-closes-desktop  a remote desktop of pl1 is open: the hook returns 0 within 15 s and afterwards nothing of the user is left
                           (no logind session of the service, no program, no unit of the desktop in the user manager), the page
@@ -173,11 +174,8 @@ UNIT_IDS = ("systemctl is-active user@$(id -u %(u)s).service >/dev/null 2>&1 || 
 KDE_MARKS = ("for p in $(pgrep -u %(u)s); do tr '\\0' '\\n' < /proc/$p/environ 2>/dev/null | grep -qx REMOTIX_KDE_HOST=1 && echo \"$p $(cat /proc/$p/comm)\"; done; "
              "ps -u %(u)s -o pid=,args= | grep -E 'kwin_wayland.*--virtual' | grep -v grep | cut -c1-120; true")
 # test-bench autologin (a deterministic REAL local login), written and removed here; xfce/kde/lxqt use the scripts of banco-vm/ (as prelocal.sh),
-# GNOME edits /etc/gdm3/custom.conf (Ubuntu's file; section [daemon]; our own backup .rxbak, put back at the end)
-AUTO_ON = {"gnome": "f=/etc/gdm3/custom.conf; grep -q '^\\[daemon\\]' $f || exit 9; [ -f $f.rxbak ] || cp -p $f $f.rxbak; "
-                    "sed -i '/^AutomaticLogin/d;/^\\[daemon\\]/a AutomaticLoginEnable=True\\nAutomaticLogin=%(u)s' $f; echo gdm3 custom.conf: autologin %(u)s"}
-AUTO_OFF = {"gnome": "f=/etc/gdm3/custom.conf; [ -f $f.rxbak ] && cp -p $f.rxbak $f && rm -f $f.rxbak; true"}   # our own backup, taken above
-AUTO_SCRIPT = {"xfce": "autologin-lightdm.sh", "kde": "autologin-sddm.sh", "lxqt": "autologin-sddm.sh"}
+# GNOME too (banco-vm/autologin-gdm3.sh: /etc/gdm3/custom.conf, own backup .rxbak): every script checks the machine name (rx-<vm>) and is called with `norestart`
+AUTO_SCRIPT = {"gnome": "autologin-gdm3.sh", "xfce": "autologin-lightdm.sh", "kde": "autologin-sddm.sh", "lxqt": "autologin-sddm.sh"}
 
 
 def procs_of(box, user):
@@ -222,11 +220,8 @@ def pic_changed(a, b, thr=0.3):
 
 
 def autologin(box, de, user, on):
-    if de in AUTO_SCRIPT:
-        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "banco-vm", AUTO_SCRIPT[de])).read()
-        c, t = box.run("bash -s %s %s norestart" % ("on" if on else "off", user if on else "x"), stdin=src)
-    else:
-        c, t = box.run((AUTO_ON if on else AUTO_OFF)[de] % {"u": user})
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "banco-vm", AUTO_SCRIPT[de])).read()
+    c, t = box.run("bash -s %s %s norestart" % ("on" if on else "off", user if on else "x"), stdin=src)
     if c and on:
         raise lib.ToolError("cannot %s the bench autologin of %s in the box (rc %d): %s" % ("write", DM[de], c, t[-150:]))
     return t
@@ -377,16 +372,16 @@ def busy_case(box_name, user, kind):
             if empty_left:
                 ok_.append("not counted as left-overs: %d empty slice(s)/socket(s) still active in the user manager (%s)" % (len(empty_left), ", ".join(u.split()[0] for u in empty_left)[:200]))
         # -- no crash since the start of the case: coredumpctl when it is installed, otherwise apport (Ubuntu: /var/crash/*.crash owned by the user).
-        #    Neither there = said, not claimed. (apport only reports some crashes: it is a hint, not a proof of «none».)
+        #    Neither there = said, not claimed. (apport only reports some crashes: it is a hint, not a proof of «none»; the crashes of SNAP programs, P9 included, do NOT go through apport.)
         have_cd = box.run("command -v coredumpctl >/dev/null && echo yes")[1].strip() == "yes"
-        have_ap = box.run("[ -d /var/crash ] && systemctl is-enabled apport.service >/dev/null 2>&1 && echo yes")[1].strip() == "yes"
+        have_ap = box.run("[ -d /var/crash ] && grep -q apport /proc/sys/kernel/core_pattern && echo yes")[1].strip() == "yes"   # apport is the handler only if core_pattern says so
         cores = ""
         if have_cd:
             cores = box.run("coredumpctl list --no-legend --no-pager -q --since @%d COREDUMP_UID=$(id -u %s) 2>&1 | grep -vi 'no coredumps'; true" % (t_case, user))[1].strip()
         elif have_ap:
             cores = box.run("find /var/crash -maxdepth 1 -name '*.crash' -user %s -newermt @%d 2>/dev/null | head -5; true" % (user, t_case))[1].strip()
         if not (have_cd or have_ap):
-            ok_.append("crashes NOT checked (neither coredumpctl nor apport is active in the box)")
+            ok_.append("crashes NOT checked (no coredumpctl, and apport is not the core_pattern handler; snap programs never go through apport)")
         elif cores:
             bad.append("crash(es) of %s since the start of the case (%s): %s" % (user, "coredumpctl" if have_cd else "apport", cores.replace("\n", " | ")[:300]))
         else:
