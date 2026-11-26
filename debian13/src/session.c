@@ -2502,7 +2502,13 @@ static gboolean system_autostart_exists(const char *file)
  *   whichever folder it is in, so the user's own VISIBLE `~/.config/autostart/<same name>`
  *   is not started either (a differently named user entry is).  LXQt: not measured; the
  *   user's folder comes first, so the user's own entry should win. */
-static const char *const SESSION_NOT_IN_REMOTE_AUTOSTART[] = { "blueman.desktop", NULL };
+/* ⭐ 1.2.0, Debian 13 XFCE ([M] bench VM, 26 Nov 2026) — `xiccd.desktop` (colour profiles of the screens, a dependency of
+ *   `xfce4-settings`): at every login it asks colord for `org.freedesktop.color-manager.create-device`, which polkit gives to
+ *   the seated user only (`allow_active=yes`, `allow_inactive=no`); a remote session met a password window («Authentication is
+ *   required to create a color managed device») in the middle of the desktop, holding the keyboard and the pointer.  It is not
+ *   started: a remote desktop has no monitor to profile, and colord's devices and profiles are ONE set for the whole machine
+ *   (granting the action to remote sessions would let any remote user touch the seated user's screen).  ⇒ Not a polkit rule. */
+static const char *const SESSION_NOT_IN_REMOTE_AUTOSTART[] = { "blueman.desktop", "xiccd.desktop", NULL };
 
 /* `dir` is the `autostart` folder of the session folder that is first in `XDG_CONFIG_DIRS`
  * (XFCE: `labwc-xfce`, LXQt: `xdg-lxqt`); `desktop` is only for the log.  Returns FALSE if a
