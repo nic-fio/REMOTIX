@@ -3254,7 +3254,14 @@ static gboolean system_autostart_exists(const char *file)
  *   whichever folder it is in, so the user's own VISIBLE `~/.config/autostart/<same name>`
  *   is not started either (a differently named user entry is).  LXQt: not measured; the
  *   user's folder comes first, so the user's own entry should win. */
-static const char *const SESSION_NOT_IN_REMOTE_AUTOSTART[] = { "blueman.desktop", NULL };
+/* ⭐ 1.2.0 (carried from Debian 13 XFCE, where it was measured on a bench VM) — `xiccd.desktop` (colour profiles of the
+ *   screens, a dependency of `xfce4-settings`): at every login it asks colord for `org.freedesktop.color-manager.create-device`,
+ *   which polkit gives to the seated user only (`allow_active=yes`, `allow_inactive=no`); a remote session met a password
+ *   window («Authentication is required to create a color managed device») in the middle of the desktop, holding the keyboard
+ *   and the pointer.  It is not started: a remote desktop has no monitor to profile, and colord's devices and profiles are ONE
+ *   set for the whole machine (granting the action to remote sessions would let any remote user touch the seated user's screen).
+ *   ⇒ Not a polkit rule.  [?] Not yet measured on Xubuntu 26.04 (it does start `xiccd` there). */
+static const char *const SESSION_NOT_IN_REMOTE_AUTOSTART[] = { "blueman.desktop", "xiccd.desktop", NULL };
 
 /* `dir` is the `autostart` folder of the session folder that is first in `XDG_CONFIG_DIRS`
  * (XFCE: `labwc-xfce`, LXQt: `xdg-lxqt`); `desktop` is only for the log.  Returns FALSE if a
@@ -3295,8 +3302,8 @@ static gboolean session_autostart_cover(const char *dir, const char *desktop)
 	if (covered && ok)
 		registro_dice(LOG_SESSION,
 		              "⭐ %s: %d system autostart entr%s not started in the remote session "
-		              "(%s: Hidden=true in %s, first in XDG_CONFIG_DIRS) — shared server, the "
-		              "machine's Bluetooth is not the remote user's; %s; "
+		              "(%s: Hidden=true in %s, first in XDG_CONFIG_DIRS) — shared server, they "
+		              "are programs of the machine, not of the remote user; %s; "
 		              "the user's files are not touched",
 		              desktop, covered, covered == 1 ? "y is" : "ies are", done->str, dir,
 		              strcmp(desktop, "XFCE") == 0
