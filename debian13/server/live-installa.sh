@@ -41,9 +41,18 @@ pulisci() {
 }
 trap pulisci EXIT
 
+# prendi URL FILE [seconds]: wget if there is one, else curl
+prendi() {
+    if command -v wget >/dev/null 2>&1; then
+        wget -q -T "${3:-20}" -t 2 -O "$2" "$1"
+    else
+        curl -fsS -m "${3:-20}" --retry 1 -o "$2" "$1"
+    fi
+}
+
 controlli() {
     passo "1. Controlli iniziali"
-    [ "$(id -u)" -eq 0 ] || fine "Questo programma va lanciato come amministratore. Scrivi:  wget -qO- $SORGENTE/installa.sh | sudo bash"
+    [ "$(id -u)" -eq 0 ] || fine "Questo programma va lanciato come amministratore. Scrivi:  sudo bash debian_install.sh"
     ok "Sei amministratore (root)."
     local versione=
     # shellcheck disable=SC1091
@@ -69,10 +78,18 @@ controlli() {
     if [ -z "$(ip -4 route show default 2>/dev/null || true)" ]; then
         fine "Manca la rete: nessuna strada verso l'esterno (nessuna rotta di default). Collega la macchina alla rete e rilancia."
     fi
-    if wget -q --spider -T 10 -t 1 http://deb.debian.org/debian/ 2>/dev/null; then
-        ok "La rete raggiunge l'archivio di Debian."
+    # the real question is whether APT reaches its archive: ask apt itself (a live image may have neither wget nor curl)
+    if apt-get -o DPkg::Lock::Timeout=180 update </dev/null >/tmp/remotix-live-apt-update.log 2>&1; then
+        ok "apt raggiunge l'archivio di Debian."
     else
-        fine "Non riesco a raggiungere deb.debian.org: senza la rete apt non puo' installare labwc e le altre parti del programma. Controlla la rete e rilancia."
+        tail -n 5 /tmp/remotix-live-apt-update.log | sed 's/^/     /' >&2 || true
+        fine "apt non riesce ad aggiornare gli elenchi dei pacchetti (registro in /tmp/remotix-live-apt-update.log): senza l'archivio non puo' installare labwc e le altre parti del programma. Controlla la rete e rilancia."
+    fi
+    # a tool to download the package from the file server: wget, else curl, else wget is installed now
+    if ! command -v wget >/dev/null 2>&1 && ! command -v curl >/dev/null 2>&1; then
+        apt-get -o DPkg::Lock::Timeout=180 install -y wget </dev/null >/tmp/remotix-live-wget.log 2>&1 \
+            || fine "Su questa live non ci sono ne' wget ne' curl e non sono riuscito a installare wget (registro in /tmp/remotix-live-wget.log)."
+        ok "Ho installato wget (su questa live mancava)."
     fi
 }
 
@@ -80,9 +97,9 @@ scarica() {
     passo "2. Scarico il pacchetto e controllo che sia integro"
     TMP=$(mktemp -d /var/tmp/remotix-live.XXXXXX)
     chmod 755 "$TMP"   # apt reads the file as an unprivileged user
-    wget -q -T 20 -t 2 -O "$TMP/$PACCHETTO" "$SORGENTE/$PACCHETTO" \
-        || fine "Non riesco a scaricare il pacchetto da $SORGENTE. Il server di sviluppo e' acceso? E' nella stessa rete? Controlla l'indirizzo."
-    wget -q -T 20 -t 2 -O "$TMP/$PACCHETTO.sha256" "$SORGENTE/$PACCHETTO.sha256" \
+    prendi "$SORGENTE/$PACCHETTO" "$TMP/$PACCHETTO" 120 \
+        || fine "Non riesco a scaricare il pacchetto da $SORGENTE. Il tablet sta servendo i file? E' nella stessa rete? Controlla l'indirizzo."
+    prendi "$SORGENTE/$PACCHETTO.sha256" "$TMP/$PACCHETTO.sha256" \
         || fine "Non riesco a scaricare il file di controllo ($PACCHETTO.sha256) da $SORGENTE."
     local atteso reale
     atteso=$(awk 'NR==1{print $1}' "$TMP/$PACCHETTO.sha256")
@@ -202,8 +219,7 @@ prova_codifica() {
 # only for whoever follows the test from the tablet; nothing here ever blocks
 accesso_tablet() {
     local chiave="$TMP/chiave.pub"
-    # wget like the rest of the script: a Debian live image has no curl
-    wget -q -T 10 -t 1 -O "$chiave" "$SORGENTE/chiave.pub" 2>/dev/null || return 0
+    prendi "$SORGENTE/chiave.pub" "$chiave" 10 2>/dev/null || return 0
     [ -s "$chiave" ] || return 0
     passo "Accesso per chi segue la prova dal tablet (facoltativo)"
     {
