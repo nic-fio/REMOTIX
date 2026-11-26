@@ -178,12 +178,15 @@ class Box:
         program did. Source: the kernel journal; /var/log/audit/audit.log too when it exists (auditd is not there on Debian by default).
         The leading space before profile= leaves out peer_profile= and the lines of other programs' profiles (apparmor="STATUS" is not matched)."""
         pat = "grep -E 'apparmor=\"(DENIED|ALLOWED)\"' | grep -E ' profile=\"remotix_network(//[^\"]*)?\"'"
-        c, t = self.run("journalctl -k --no-pager -n 1 -o cat >/dev/null 2>&1 || { echo RXNOLOG; exit 0; }; "
+        c, t = self.run("grep -qE '^remotix_network ' /sys/kernel/security/apparmor/profiles 2>/dev/null || { echo RXNOPROFILE; exit 0; }; "
+                        "journalctl -k --no-pager -n 1 -o cat >/dev/null 2>&1 || { echo RXNOLOG; exit 0; }; "
                         "o=$(journalctl -k --no-pager -o cat --since @%d 2>&1); rc=$?; "
                         "if [ $rc -ne 0 ] && ! echo \"$o\" | grep -q 'No entries'; then echo RXNOLOG; exit 0; fi; echo RXOK; "
                         "printf '%%s\\n' \"$o\" | %s | cut -c1-400 | tail -200; "
                         "if [ -r /var/log/audit/audit.log ]; then echo RXAUDIT; cat /var/log/audit/audit.log | %s | cut -c1-400 | tail -200; fi; true" % (since, pat, pat))
         rows = t.splitlines()
+        if "RXNOPROFILE" in rows:
+            return False, [], "profile not loaded (remotix_network is not in /sys/kernel/security/apparmor/profiles, or AppArmor is off)"
         if c != 0 or "RXOK" not in rows:
             return False, [], "the kernel journal could not be read (exit %d: %.100s)" % (c, t.replace("\n", " "))
         lines, in_audit = [], False

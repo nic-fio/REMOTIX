@@ -3574,13 +3574,25 @@ static char *log_session_path(void)
 	return NULL;
 }
 
-/* ⭐ 26 Nov 2026 — THE LANGUAGE REACHES THE WHOLE KDE / XFCE / LXQt DESKTOP.  `[M]` Debian 13 KDE: `remotix-child` had the user's
- *    `LANG=it_IT.UTF-8`, but `systemd --user`, `labwc`, `kwin_wayland` and `plasmashell` had the system's.  The reason: on these desktops
- *    KWin (and its host labwc, started by `--kwin-nested`) is a UNIT of the user manager, born with the manager's environment — made by
- *    `pam_systemd` with the SYSTEM language — and not with the one `compose_environment()` gives `startplasma-wayland`, which does not export
- *    `LANG` to the manager.  (GNOME is fine: `gnome-session` exports its whole environment.)
- *    ⇒ The locale words of the environment we compose are put into the manager BEFORE the session starts; they are in `OUR_VARIABLES`, so the
- *    snapshot taken at birth gives them back as they were at the end (`session_clear_out_handler()`).  Not for GNOME: it does it itself. */
+/* ⭐ 26 Nov 2026 — THE LANGUAGE REACHES THE WHOLE KDE / XFCE / LXQt DESKTOP.  `[M]` Debian 13 KDE (Plasma 6.3.6): `remotix-child` had the
+ *    user's `LANG=it_IT.UTF-8`, but `systemd --user`, `labwc`, `kwin_wayland` and `plasmashell` had the system's.  KWin (and its host labwc,
+ *    started by `--kwin-nested`) is a UNIT of the user manager, born with the manager's environment — made by `pam_systemd` with the SYSTEM
+ *    language — and not with the one `compose_environment()` gives `startplasma-wayland`; measured: on that Plasma `LANG` does not reach
+ *    the manager.  (On GNOME `gnome-session` exports its whole environment.)
+ *    ⇒ The locale words of the environment we compose are put into the manager BEFORE the session starts.  They are in `OUR_VARIABLES`:
+ *    the snapshot taken at birth gives them back at the end (`session_clear_out_handler()`).
+ *    ⛔ The LIGHT close (`session_clear_out_light()`, called by the child AND by the root side in a fork that has become the user) does not use
+ *    the snapshot, only the «remotix» mark, which a language does not carry.  ⇒ What we put is written, name and value, in
+ *    `$XDG_RUNTIME_DIR/remotix/locale-set` (a FILE, like the snapshot, so both callers see it: the child writes it, the root side's fork reads
+ *    it with the user's own identity and the same `XDG_RUNTIME_DIR`); the light close puts back the snapshot's value (or removes the variable)
+ *    only for those names and only if the manager still holds OUR value. */
+static char *locale_set_path(void)
+{
+	const char *runtime = g_getenv("XDG_RUNTIME_DIR");
+
+	return runtime && *runtime ? g_build_filename(runtime, "remotix", "locale-set", NULL) : NULL;
+}
+
 static void manager_set_locale(char **environment)
 {
 	g_autoptr(GDBusConnection) bus = NULL;
@@ -3591,15 +3603,39 @@ static void manager_set_locale(char **environment)
 	for (char **e = environment; e && *e; e++)
 		if (strchr(*e, '=') && (g_str_has_prefix(*e, "LANG=") || g_str_has_prefix(*e, "LC_") || g_str_has_prefix(*e, "LANGUAGE=")))
 			g_ptr_array_add(put, *e);
-	if (!put->len || !(bus = sess_bus(NULL)))
+	if (!put->len)
 		return;
+	if (!(bus = sess_bus(NULL))) {
+		registro_dice(LOG_SESSION, "⚠ the language is NOT put into the user manager (no session bus): the desktop's units may get the system's");
+		return;
+	}
 	g_ptr_array_add(put, NULL);
 	r = g_dbus_connection_call_sync(bus, "org.freedesktop.systemd1", "/org/freedesktop/systemd1", "org.freedesktop.systemd1.Manager",
 	                                "SetEnvironment", g_variant_new("(^as)", (char **) put->pdata), NULL, G_DBUS_CALL_FLAGS_NONE, 5000,
 	                                NULL, &mistake);
-	if (!r)
+	if (!r) {
 		registro_dice(LOG_SESSION, "⚠ the language is NOT put into the user manager (%s): the desktop's units may get the system's",
 		              mistake ? mistake->message : "no reason given");
+		return;
+	}
+	/* the register of what we put (for the light close); a failure is said, the normal clear-out does not need it */
+	{
+		g_autoptr(GKeyFile) mine = g_key_file_new();
+		g_autofree char *fpath = locale_set_path();
+		g_autofree char *folder = fpath ? g_path_get_dirname(fpath) : NULL;
+		g_autoptr(GError) bad = NULL;
+
+		for (guint i = 0; i + 1 < put->len; i++) {
+			const char *m = g_ptr_array_index(put, i);
+			const char *eq = strchr(m, '=');
+			g_autofree char *name = g_strndup(m, eq - m);
+
+			g_key_file_set_string(mine, "messe", name, eq + 1);
+		}
+		if (!fpath || g_mkdir_with_parents(folder, 0700) != 0 || !g_key_file_save_to_file(mine, fpath, &bad))
+			registro_dice(LOG_SESSION, "⚠ the register of the language put into the manager is NOT written (%s): the light close "
+			              "will not put it back", bad ? bad->message : g_strerror(errno));
+	}
 }
 
 /* ⭐ `width`/`height`: the client's canvas.  ⚠ The LXQt and
@@ -4148,6 +4184,9 @@ static gboolean clear_out_handler_run(const char *why, gboolean quiet)
 	g_autoptr(GDBusConnection) bus = NULL;
 	g_autoptr(GHashTable) env = NULL;
 	g_autoptr(GKeyFile) photo = g_key_file_new();
+	g_autoptr(GKeyFile) light_mine = g_key_file_new();  /* light mode: name=value of the language we put */
+	g_autoptr(GKeyFile) light_photo = g_key_file_new(); /* light mode: the snapshot, read for those names only */
+	gboolean light_mine_ok = FALSE;
 	g_autofree char *fpath = manager_before_path();
 	g_autoptr(GPtrArray) remove = g_ptr_array_new_with_free_func(g_free);
 	g_autoptr(GPtrArray) put = g_ptr_array_new_with_free_func(g_free);
@@ -4237,17 +4276,33 @@ static gboolean clear_out_handler_run(const char *why, gboolean quiet)
 	 *    and only the variables whose CURRENT value carries our mark. */
 	with_photo = !clear_out_local && fpath &&
 	             g_key_file_load_from_file(photo, fpath, G_KEY_FILE_NONE, NULL);
+	/* ⭐ 26 Nov 2026, light mode only: the snapshot is read ONLY for the language words we put (`manager_set_locale()`), see there */
+	if (clear_out_local) {
+		g_autofree char *lpath = locale_set_path();
+
+		light_mine_ok = lpath && fpath && g_key_file_load_from_file(light_mine, lpath, G_KEY_FILE_NONE, NULL) &&
+		                g_key_file_load_from_file(light_photo, fpath, G_KEY_FILE_NONE, NULL);
+	}
 	for (int i = 0; env && OUR_VARIABLES[i]; i++) {
 		const char *name = OUR_VARIABLES[i];
 		const char *now = g_hash_table_lookup(env, name);
 		g_autofree char *prima = with_photo ? g_key_file_get_string(photo, "prima", name, NULL)
 		                                  : NULL;
 		gboolean was_absent = with_photo && g_key_file_get_boolean(photo, "assenti", name, NULL);
+		g_autofree char *ours = light_mine_ok ? g_key_file_get_string(light_mine, "messe", name, NULL) : NULL;
+		g_autofree char *lprima = ours ? g_key_file_get_string(light_photo, "prima", name, NULL) : NULL;
+		gboolean lwas_absent = ours && g_key_file_get_boolean(light_photo, "assenti", name, NULL);
 
 		if (with_photo) {
 			if (prima && g_strcmp0(prima, now) != 0)
 				g_ptr_array_add(put, g_strdup_printf("%s=%s", name, prima));
 			else if (was_absent && now)
+				g_ptr_array_add(remove, g_strdup(name));
+		} else if (ours && g_strcmp0(ours, now) == 0 && (lprima || lwas_absent)) {
+			/* the manager still holds OUR language: back to how it was (or away, if it was not there) */
+			if (lprima)
+				g_ptr_array_add(put, g_strdup_printf("%s=%s", name, lprima));
+			else
 				g_ptr_array_add(remove, g_strdup(name));
 		} else if (now && (strstr(now, "remotix") ||
 		                   (!clear_out_local && strcmp(name, "DESKTOP_SESSION") == 0))) {
@@ -4283,6 +4338,12 @@ static gboolean clear_out_handler_run(const char *why, gboolean quiet)
 	}
 	if (with_photo && env)
 		g_unlink(fpath); /* consumed: the next birth makes another one */
+	if (env && (with_photo || light_mine_ok)) {
+		g_autofree char *lpath = locale_set_path();
+
+		if (lpath)
+			g_unlink(lpath); /* the register of the language put by `manager_set_locale()`: consumed with the snapshot */
+	}
 
 	if (said->len)
 		registro_dice(LOG_SESSION,
