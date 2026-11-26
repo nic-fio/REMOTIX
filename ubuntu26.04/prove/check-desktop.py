@@ -430,7 +430,7 @@ def seed_user(box, user, de):
     for rel, content in files.items():
         script.append("mkdir -p %s; cat > %s <<'EOF_RX'\n%sEOF_RX" % (shlex.quote(os.path.dirname(rel)), shlex.quote(rel), content))
     if de == "lxqt":
-        script.append("mkdir -p .config/lxqt; cp /usr/share/lxqt/panel.conf .config/lxqt/panel.conf")
+        script.append("mkdir -p .config/lxqt; cp $(ls /etc/xdg/xdg-Lubuntu/lxqt/panel.conf /etc/xdg/lxqt/panel.conf /usr/share/lxqt/panel.conf 2>/dev/null | head -1) .config/lxqt/panel.conf")
     if de == "gnome":
         f = "/tmp/rx-dconf-seed-%s.sh" % user
         script.append("cat > %s <<'EOF_RX'\n%s\nsleep 1\nEOF_RX\ndbus-run-session -- bash %s; rm -f %s" % (
@@ -485,7 +485,7 @@ def check_settings(rig, de, a):
     rig.user = user
     box.ensure_user(user, PW)
     seeded = seed_user(box, user, de)
-    sys_panel = box.run("cat /usr/share/lxqt/panel.conf 2>/dev/null")[1] if de == "lxqt" else ""
+    sys_panel = box.run("cat $(ls /etc/xdg/xdg-Lubuntu/lxqt/panel.conf /etc/xdg/lxqt/panel.conf /usr/share/lxqt/panel.conf 2>/dev/null | head -1) 2>/dev/null")[1] if de == "lxqt" else ""
     if de == "lxqt":
         seeded[".config/lxqt/panel.conf"] = sys_panel
     before = snapshot(box, user)
