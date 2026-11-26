@@ -29,7 +29,7 @@
 #
 # Environment (all optional):
 #   OUTPUT        results folder on the server           (default /media/REMOTIX-UBUNTU/pacchetti/<label>)
-#   RX_VERSION    upstream version                       (default 1.2.0)          RX_REVISION  Debian revision (default 1)
+#   RX_VERSION    upstream version                       (default 1.2.0~dev; a release passes RX_VERSION=1.2.0)  RX_REVISION  Debian revision (default 1)
 #   SOURCE_DATE_EPOCH  build date, for a reproducible .deb (default: the newest mtime in src/, debian/, build/labwc-ospite/)
 #   TWICE=1       second build + byte comparison         KEEP_VM=1  do not turn the VM off at the end
 #   RX_LABWC_SOURCES  a folder here where the two labwc tarballs are kept between runs (default: a temporary one, fetched each time)
@@ -48,7 +48,7 @@ SERVER=${RX_SERVER:-nicfio@192.168.0.2}
 GUESTPORT=${RX_GUEST_PORT:-2345}
 VMSCRIPT=${RX_VMSCRIPT:-/media/REMOTIX-UBUNTU/vm-radeon/vm-radeon.sh}
 OUTDIR=${OUTPUT:-/media/REMOTIX-UBUNTU/pacchetti/$LABEL}
-VERSION_UP=${RX_VERSION:-1.2.0}
+VERSION_UP=${RX_VERSION:-1.2.0~dev}
 REVISION=${RX_REVISION:-1}
 VERSION="$VERSION_UP-$REVISION+ubuntu26.04"
 SSHOPT=(-o BatchMode=yes -o StrictHostKeyChecking=no)
@@ -66,7 +66,7 @@ vm_off() {
 }
 
 # the parent folder only (never the label's: its existence is the check below)
-ssh "${SSHOPT[@]}" "$SERVER" "mkdir -p /media/REMOTIX-UBUNTU/pacchetti" || exit 2
+ssh "${SSHOPT[@]}" "$SERVER" "mkdir -p '$(dirname "$OUTDIR")'" || exit 2
 if ssh "${SSHOPT[@]}" "$SERVER" "test -e '$OUTDIR'"; then
 	echo "$OUTDIR exists already on the server: choose another label (a previous package is never overwritten)" >&2
 	exit 2
@@ -115,7 +115,7 @@ cat >"$pack/guest-build.sh" <<'GUEST'
 #!/bin/bash
 # runs in the build VM, in the work folder; arguments: none; environment: SOURCE_DATE_EPOCH, TWICE
 set -uo pipefail
-cd "$(dirname "$(readlink -f "$0")")"
+cd "$(dirname "$(readlink -f "$0")")" || exit 1
 W=$PWD
 SUDO() { echo prova2026 | sudo -S -p "" "$@"; }
 export DEBIAN_FRONTEND=noninteractive
@@ -156,6 +156,7 @@ sha256sum "$deb" >"$deb.sha256"
 echo "== lintian and checks"
 lintian -I --pedantic --no-tag-display-limit "$deb" >lintian.txt 2>&1
 # R13 positive control: rcp.o built with BENCH_ON 1, same flags as the Makefile
+cd "$W" || exit 1
 rm -rf positivo; cp -a a/remotix/src positivo
 sed -i 's/^#define BENCH_ON 0$/#define BENCH_ON 1/' positivo/rcp.c
 ( cd positivo && make TWIN=none BENCH=1 rcp.o >/dev/null 2>&1 ) >/dev/null 2>&1
@@ -209,6 +210,7 @@ if [ "${TWICE:-0}" = 1 ]; then
 	fi
 fi
 printf 'lintian: E=%s W=%s\n' "$(grep -c '^E: ' lintian.txt)" "$(grep -c '^W: ' lintian.txt)" >>controlli.txt
+cd "$W" || exit 1
 rm -rf a b positivo remotix
 echo "== done"
 GUEST
@@ -222,7 +224,12 @@ if ! guest hostname >/dev/null 2>&1; then
 fi
 hn=$(guest hostname) || { echo "the build VM does not answer" >&2; exit 2; }
 case "$hn" in rx-ub-costruzione) echo "   $hn" ;; *) echo "unexpected guest name: $hn" >&2; exit 2 ;; esac
-guest "rm -rf $WORK && mkdir -p $WORK" || exit 1
+# a work folder left in the VM by a failed run is kept for inspection: never removed here
+if guest "test -e $WORK"; then
+	echo "the work folder $WORK exists already in the VM (left by an earlier run, kept for inspection): choose another label" >&2
+	exit 2
+fi
+guest "mkdir -p $WORK" || exit 1
 tar -C "$pack" -cf - . | ssh "${SSHOPT[@]}" "$SERVER" "$GSSH 'tar -C $WORK -xf -'" || { echo "copy failed" >&2; exit 1; }
 
 echo "== build in the VM (log: $WORK/*.log in the guest; brought back at the end)"

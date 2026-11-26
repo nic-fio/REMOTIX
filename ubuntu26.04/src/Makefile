@@ -54,8 +54,9 @@
 # On Debian Trixie / Ubuntu 26.04: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
 # `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopus-dev`.
 # ⚠ `ngtcp2` and `nghttp3` are NOT
-# enough in the packaged version: the package build links static ngtcp2 1.25.0 and nghttp3 1.18.0
-# made in the build image (`build/Containerfile`, see `debian/rules`); by hand, use DEPS_PREFIX below.
+# enough in the packaged version: the package build links static ngtcp2 1.25.0 and nghttp3 1.18.0,
+# built from source by `build/quic-static.sh`, run by `build/build-deb-vm.sh` in the build virtual machine
+# (`build/build-deb.sh` and `Containerfile` stay as documentation; see `debian/rules`); by hand, use DEPS_PREFIX below.
 #
 # -----------------------------------------------------------------------------
 #   make DEPS_PREFIX=/path/where/ngtcp2/and/nghttp3/are
