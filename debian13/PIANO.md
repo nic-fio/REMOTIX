@@ -428,3 +428,15 @@ qui sopra e nient'altro; il proprietario ha fatto le sue prove.
   cambio di comportamento) e reinstallarlo; registro dei problemi; manuali (lingua su KDE, Requirements, NVIDIA); sito.
 - **Da verificare altrove**: se su Fedora 1.2.0 la lingua scelta dall'utente arriva al desktop KDE (mai misurato); se
   Xubuntu ha `xiccd` (per Ubuntu 1.2.0).
+
+### 1.2.0 PUBBLICATA (26 nov 2026, ore 15:00)
+- Prove del proprietario: quattro macchine virtuali (uso da remoto) e quattro live Debian 13.8.0 su macchina vera, compresa
+  la chiusura per accesso locale con programmi aperti: GNOME, KDE, XFCE, LXQt tutte OK. Aggiornamento 1.0.1 → 1.2.0
+  fatto sul tablet del proprietario senza avvisi.
+- Pacchetto pubblicato: `remotix_1.2.0-1+deb13_amd64.deb`, sha256
+  `88aa03828d117bc7cd7af9c17b9fde73c2558b79ce8239924a4c8ea5d5e00577` (costruzione `finale-1`).
+- GitHub: `main` aggiornato, rilascio `debian13-1.2.0` (pacchetto, impronta, i due manuali). Sito: pagina di Debian 13
+  alla 1.2.0 con la voce delle novità, manuali e pacchetto nuovi; 1.0.1 e 1.0.0 restano scaricabili; verificato da fuori.
+- Manuali e registro dei problemi (sezioni F, G, H) aggiornati e passati dal revisore.
+- Restano aperti (registro, sezione H): `media/screen-updates` di poco oltre soglia; `pkexec` su GNOME; da verificare su
+  Fedora la lingua dell'utente su KDE; da verificare `xiccd` su Xubuntu. Prossimo lavoro: Ubuntu 26.04 alla 1.2.0.
