@@ -10,8 +10,8 @@ be modified or redistributed. This summary is not the licence; the sections belo
 
 ## 1. Definitions
 
-- **"REMOTIX"** means the software published by the Author: the installer (`remotix-*.run`), the packages it
-  contains, the web page that REMOTIX sends to browsers, the source code in the repository
+- **"REMOTIX"** means the software published by the Author: the REMOTIX packages, the web page that REMOTIX
+  sends to browsers, the source code in the repository
   `github.com/nic-fio/REMOTIX`, the manuals and every other file published with them by the Author, except
   third-party components (section 8).
 - **"Author"** means Nicola Fiorillo.
@@ -91,14 +91,6 @@ makes the desktops of the computer reachable over the network: You use it at You
 
 The third-party components used by REMOTIX keep their own licences, whose texts are shipped with REMOTIX. Nothing in this
 licence limits the rights that those licences give You over those components.
-
-In particular, the REMOTIX package for RHEL / AlmaLinux 10 carries **labwc** (GNU GPL version 2 only; two of its files
-LGPL version 2 or later) as the separate program `/usr/lib/remotix/labwc`. The terms of this licence — among them the
-bans on modification and redistribution of section 3 — apply to REMOTIX only and **do not apply** to labwc: You may use,
-study, modify and redistribute it under its own licence, whose full text is in the file `THIRD-PARTY-LICENSES` shipped
-with REMOTIX. Its exact corresponding source — the upstream release tarball, unmodified, and the build recipe — is
-published with every REMOTIX release, inside the `.run` file (folder `source/labwc/`) and next to it
-(`remotix-<version>-labwc-source.tar.gz`).
 
 ## 9. Limitation of liability
 
