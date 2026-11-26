@@ -51,11 +51,11 @@
 #                             to build; `libgbm1` to run, and it is already there
 #                             wherever labwc runs (wlroots wants it for itself).
 #
-# On Debian Trixie: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
+# On Debian Trixie / Ubuntu 26.04: `libssl-dev`, `libpam0g-dev`, `libglib2.0-dev`,
 # `libpipewire-0.3-dev`, `libdrm-dev`, `libva-dev`, `libopus-dev`.
 # ⚠ `ngtcp2` and `nghttp3` are NOT
-# enough in the packaged version (1.11 / 1.8): they must be built from
-# source, and that is what `benches/01-b2-build-ngtcp2.sh` does.
+# enough in the packaged version: the package build links static ngtcp2 1.25.0 and nghttp3 1.18.0
+# made in the build image (`build/Containerfile`, see `debian/rules`); by hand, use DEPS_PREFIX below.
 #
 # -----------------------------------------------------------------------------
 #   make DEPS_PREFIX=/path/where/ngtcp2/and/nghttp3/are

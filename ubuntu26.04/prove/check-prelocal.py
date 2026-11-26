@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """check-prelocal - a LOCAL graphical login closes the user's remote desktop FIRST (DECISIONS-11 §11.57), with a real browser (Chrome).
 
-    python3 check-prelocal.py [--box xfce]
+    python3 check-prelocal.py [--box xfce] [--only P1,P6,P7,P9]
 
 Runs ON THE DEV SERVER (lib.py). Uses its own users pl1 (P1-P3, one remote desktop carried through) and pl2 (P4, P5: no desktop).
 The boxes are systemd containers with no display manager, so the LOCAL login is SIMULATED: the PAM hook is run as root inside the
 box, with the environment pam_exec would give it:
     env -i PAM_TYPE=open_session PAM_SERVICE=prova-dm PAM_USER=<user> XDG_SEAT=seat0 XDG_SESSION_CLASS=user XDG_SESSION_TYPE=wayland
         /usr/libexec/remotix/remotix-local-login
-One line per check:  PASS|FAIL|BLOCKED name - evidence.  Exit 0 only if all six PASS.
+One line per check:  PASS|FAIL|BLOCKED name - evidence.  Exit 0 only if every selected case PASS.
   P1 hook-closes-desktop  a remote desktop of pl1 is open: the hook returns 0 within 15 s and afterwards nothing of the user is left
                           (no logind session of the service, no program, no unit of the desktop in the user manager), the page
                           was told (0x04), the journal has the request
@@ -18,8 +18,20 @@ One line per check:  PASS|FAIL|BLOCKED name - evidence.  Exit 0 only if all six 
   P4 no-desktop           pl2 has no remote desktop: the hook returns 0 in under 2 s
   P5 service-stopped      `systemctl stop remotix`: the hook returns 0 in under 2 s; the service is started again at the end
   P6 pam-line-order       /etc/pam.d/common-session has the pam_exec line of remotix-local-login AFTER the pam_systemd line
+  P7 busy-terminal        (ANY of the four desktops) the remote desktop of pl3 has the desktop's terminal running `top`; the REAL local login of the same
+                          user (display-manager autologin, test-bench config, DM restarted) must reach a local desktop (session with the seat, local
+                          shell, local compositor) AND leave NOTHING of the remote one: no process, no desktop unit with the same invocation,
+                          no `remotix` logind session, no KWin `--virtual` / REMOTIX_KDE_HOST=1 (KDE); no new core dump of the user (checked only
+                          when coredumpctl is installed; on Ubuntu apport takes its place: a new /var/crash/*.crash owned by the user). Caps: local desktop 90 s, remote gone 20 s later.
+  P8 unsaved-editor       the same with an editor holding UNSAVED text (kwrite or kate on KDE, mousepad on XFCE); GNOME and LXQt: BLOCKED (no simple,
+                          reliable way to open an unsaved document without interaction)
+  P9 busy-snap            (Ubuntu only) the same with a SNAP program open in the remote desktop: Firefox (snap). A snap runs in its own transient
+                          scope (snap.firefox.firefox-<uuid>.scope), so the case also asks that no such scope and no firefox process are left.
+P7/P8/P9 make the forced-close road run (a desktop that is NOT empty): P1 closes an empty desktop only. They are slow (about 3 min each) and need the
+VM's display manager: BLOCKED (never PASS) when the program cannot be started inside the remote desktop. `--only` picks cases (default: all nine).
 Everything is seen from INSIDE the box. FAIL = product (also: page or login refused). BLOCKED = the tool could not look."""
 import argparse
+import io
 import os
 import re
 import sys
@@ -27,10 +39,13 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib  # noqa: E402
+import deskkit as K  # noqa: E402
 from lib import PASS, FAIL, BLOCKED, Fail, ToolError  # noqa: E402
 
 PW = "pl-pass-2026"
-NAMES = ("P1-hook-closes-desktop", "P2-new-desktop-after", "P3-hook-ignores", "P4-no-desktop", "P5-service-stopped", "P6-pam-line-order")
+OLD_NAMES = ("P1-hook-closes-desktop", "P2-new-desktop-after", "P3-hook-ignores", "P4-no-desktop", "P5-service-stopped", "P6-pam-line-order")
+NEW_NAMES = ("P7-busy-terminal", "P8-unsaved-editor", "P9-busy-snap")
+NAMES = OLD_NAMES + NEW_NAMES
 HOOK = "/usr/libexec/remotix/remotix-local-login"
 FULL = {"PAM_TYPE": "open_session", "PAM_SERVICE": "prova-dm", "XDG_SEAT": "seat0", "XDG_SESSION_CLASS": "user", "XDG_SESSION_TYPE": "wayland"}
 # the sessions of a user with the service that opened them (Service=remotix is ours)
@@ -80,7 +95,9 @@ class Ctx:
 # check-lifecycle waits up to 40 s for NO process and NO logind session at all) — they get the same grace here, a desktop does not
 HELPERS = ("remotix", "systemd", "(sd-pam)", "dbus-daemon", "dbus-broker", "pipewire", "wireplumber", "pipewire-pulse", "mpris-proxy", "obexd",
            "gvfsd", "gvfs", "at-spi", "dconf-service", "gpg-agent", "ssh-agent", "gcr-ssh-agent", "gnome-keyring-d", "xdg-desktop-por",
-           "xdg-document-po", "xdg-permission-", "tumblerd", "xfconfd", "kded6", "kdeconnectd", "kactivitymanage", "xdg-desktop-portal")
+           "xdg-document-po", "xdg-permission-", "tumblerd", "xfconfd", "kded6", "kdeconnectd", "kactivitymanage", "xdg-desktop-portal",
+           "plasma_waitforn")
+# plasma_waitforn: Plasma's tiny «wait for a D-Bus name» helper: still there for a moment at the first sample, gone within the grace (measured 22 Nov 2026, KDE)
 
 
 def is_helper(comm):
@@ -128,12 +145,293 @@ def nothing_left_wait(ctx, user, grace=40):
     return bad, ["all gone after %.0f s (no process, no session, no unit)" % (time.time() - t0)]
 
 
+# ------------------------------------------------------------------------------------------------ P7 / P8: a NOT empty remote desktop
+# The desktop's terminal, as (binary, command) alternatives tried in order (the command runs INSIDE the remote desktop, deskkit.run_in).
+# Ubuntu 26.04: Ptyxis on GNOME; the others as check-desktop.py's TERMINAL. On KDE (Plasma 6.3.6) Konsole with `top` does NOT hold the Log Out
+# (the real blocker there is an editor with unsaved text, P8): P7 on KDE only asks that the remote desktop is gone, never that the terminal blocks.
+# (Ptyxis: `-x` / `--execute` runs the command; the second form is the older «ptyxis -- top»: the first that shows `top` on a pts wins. Hypothesis to check in the VM.)
+TERMINALS = {"gnome": (("ptyxis", "ptyxis -x top"), ("ptyxis", "ptyxis -- top")),
+             "kde": (("konsole", "konsole -e top"),),
+             "xfce": (("xfce4-terminal", "xfce4-terminal -x top"),),
+             "lxqt": (("qterminal", "qterminal -e top"),)}
+# An editor with UNSAVED text, no interaction: text on stdin (kwrite --stdin, kate --stdin, mousepad -). GNOME Text Editor has no stdin and keeps drafts by itself
+# (no «save?» question), FeatherPad's stdin is not known: no simple, reliable way there -> the case says BLOCKED.
+# Alternatives, tried in order (Kubuntu may not ship KWrite: Kate is the fallback; none installed = BLOCKED).
+EDITORS = {"kde": (("kwrite", "printf 'REMOTIX unsaved text\\n' | kwrite --stdin"), ("kate", "printf 'REMOTIX unsaved text\\n' | kate --stdin")),
+           "xfce": (("mousepad", "printf 'REMOTIX unsaved text\\n' | mousepad -"),)}
+# A snap program (P9): Firefox from the snap store, its own profile and instance so that nothing of an earlier run is reused.
+SNAPS = (("firefox", "firefox --new-instance --profile /tmp/rx-snap-profile-$(id -u) about:blank"),)
+# What makes the compositor of a desktop (xfce: the local session of Xubuntu is X11 with xfwm4; lxqt: Lubuntu 26.04 is X11 with openbox; the remote one has labwc)
+COMPOSITOR = {"gnome": ("gnome-shell",), "kde": ("kwin_wayland",), "xfce": ("xfwm4", "labwc"), "lxqt": ("openbox", "labwc")}
+DM = {"gnome": "gdm3", "kde": "sddm", "xfce": "lightdm", "lxqt": "sddm"}
+LOCAL_CAP, GONE_CAP = 90, 20   # s: the local desktop arrives within LOCAL_CAP of the DM restart; the remote is gone GONE_CAP after that
+PROCS = ("for p in $(pgrep -u %(u)s); do [ -r /proc/$p/stat ] || continue; "
+         "echo \"$p $(sed 's/.*) //' /proc/$p/stat | awk '{print $1, $20}') $(cat /proc/$p/comm 2>/dev/null)\"; done; true")   # pid state starttime comm
+UNIT_IDS = ("systemctl is-active user@$(id -u %(u)s).service >/dev/null 2>&1 || exit 0; "
+            "for x in $(systemctl --user -M %(u)s@ list-units --state=active --no-legend --no-pager --plain 2>/dev/null | awk '{print $1}' "
+            "| grep -E '^(app-|snap\\.|org\\.gnome\\.|gnome-|plasma-|xfce|lxqt)'); do echo \"$x $(systemctl --user -M %(u)s@ show -p InvocationID --value $x 2>/dev/null)\"; done; true")
+KDE_MARKS = ("for p in $(pgrep -u %(u)s); do tr '\\0' '\\n' < /proc/$p/environ 2>/dev/null | grep -qx REMOTIX_KDE_HOST=1 && echo \"$p $(cat /proc/$p/comm)\"; done; "
+             "ps -u %(u)s -o pid=,args= | grep -E 'kwin_wayland.*--virtual' | grep -v grep | cut -c1-120; true")
+# test-bench autologin (a deterministic REAL local login), written and removed here; xfce/kde/lxqt use the scripts of banco-vm/ (as prelocal.sh),
+# GNOME edits /etc/gdm3/custom.conf (Ubuntu's file; section [daemon]; our own backup .rxbak, put back at the end)
+AUTO_ON = {"gnome": "f=/etc/gdm3/custom.conf; grep -q '^\\[daemon\\]' $f || exit 9; [ -f $f.rxbak ] || cp -p $f $f.rxbak; "
+                    "sed -i '/^AutomaticLogin/d;/^\\[daemon\\]/a AutomaticLoginEnable=True\\nAutomaticLogin=%(u)s' $f; echo gdm3 custom.conf: autologin %(u)s"}
+AUTO_OFF = {"gnome": "f=/etc/gdm3/custom.conf; [ -f $f.rxbak ] && cp -p $f.rxbak $f && rm -f $f.rxbak; true"}   # our own backup, taken above
+AUTO_SCRIPT = {"xfce": "autologin-lightdm.sh", "kde": "autologin-sddm.sh", "lxqt": "autologin-sddm.sh"}
+
+
+def procs_of(box, user):
+    """[(pid, state, starttime, comm)] of the user's processes."""
+    rows = []
+    for l in box.run(PROCS % {"u": user})[1].splitlines():
+        p = l.split(None, 3)
+        if len(p) == 4:
+            rows.append(tuple(p))
+    return rows
+
+
+def unit_ids_of(box, user):
+    return [" ".join(l.split()) for l in box.run(UNIT_IDS % {"u": user})[1].splitlines() if l.strip()]
+
+
+def unit_residue(box, user, units):
+    """(real, ignored): of the units that are still active with the same invocation, the ones that hold a process (or are not slices/sockets) and the
+    ones that do not (a `.slice` whose cgroup subtree holds no process; a `.socket`, which only listens: GNOME's keyring socket is shared by the remote and the local session)."""
+    real, ignored = [], []
+    for ul in units:
+        un = ul.split()[0]
+        if un.endswith(".socket"):
+            ignored.append(ul); continue
+        if un.endswith(".slice"):
+            # the processes of a slice live in its CHILD units: `cgroup.procs` of the slice alone is always empty, so the whole subtree is
+            # counted; a cgroup that cannot be read answers `?` and the slice stays a real residue (never «could not look» = «empty»)
+            n = box.run("cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
+                        "if [ -n \"$cg\" ] && [ -d \"/sys/fs/cgroup$cg\" ]; then find \"/sys/fs/cgroup$cg\" -name cgroup.procs -exec cat {} + 2>/dev/null | wc -l; "
+                        "else echo '?'; fi" % (user, un))[1].strip().split()[-1:]
+            if n and n[0] == "0":
+                ignored.append(ul); continue
+        real.append(ul)
+    return real, ignored
+
+
+def pic_changed(a, b, thr=0.3):
+    """True when two PNG pictures differ (mean grey difference on a 160x120 reduction above thr): a new window is on the canvas."""
+    from PIL import Image, ImageChops, ImageStat
+    x, y = (Image.open(io.BytesIO(p)).convert("L").resize((160, 120)) for p in (a, b))
+    return ImageStat.Stat(ImageChops.difference(x, y)).mean[0] > thr
+
+
+def autologin(box, de, user, on):
+    if de in AUTO_SCRIPT:
+        src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "banco-vm", AUTO_SCRIPT[de])).read()
+        c, t = box.run("bash -s %s %s norestart" % ("on" if on else "off", user if on else "x"), stdin=src)
+    else:
+        c, t = box.run((AUTO_ON if on else AUTO_OFF)[de] % {"u": user})
+    if c and on:
+        raise lib.ToolError("cannot %s the bench autologin of %s in the box (rc %d): %s" % ("write", DM[de], c, t[-150:]))
+    return t
+
+
+def dm_restart(box, de):
+    box.run("systemctl reset-failed %s 2>/dev/null; systemctl restart %s; true" % (DM[de], DM[de]), timeout=120)
+
+
+def busy_case(box_name, user, kind):
+    """P7 (kind "terminal") / P8 (kind "editor") / P9 (kind "snap"): see the module docstring. Returns (status, evidence)."""
+    de = box_name
+    rig = lib.Rig(box_name, "chrome", user, PW, "prelocal-" + kind)
+    box = rig.box
+    ctx = Ctx(rig)
+    t_case = ctx.t0 = int(time.time()) - 5      # core dumps and journal lines are looked at from here
+    bench_on = False
+    try:
+        # -- what the bench can do on this desktop (BLOCKED, never PASS, when it cannot)
+        if kind == "terminal":
+            alts = TERMINALS[de]
+        elif kind == "snap":
+            if box.run("snap list firefox >/dev/null 2>&1 && echo yes")[1].strip() != "yes":
+                raise lib.ToolError("the Firefox snap is not installed in the box (snap list firefox): P9 has no snap program to open")
+            alts = SNAPS
+        elif de in EDITORS:
+            alts = EDITORS[de]
+        else:
+            raise lib.ToolError("no simple, reliable way to open an editor with UNSAVED text without interaction on %s (GNOME Text Editor: no stdin, "
+                                "keeps drafts by itself; FeatherPad: stdin not known): only the terminal case (P7) exists there" % de)
+        if not any(box.run("command -v %s >/dev/null && echo yes" % b)[1].strip() == "yes" for b, _ in alts):
+            raise lib.ToolError("none of %s is installed in the box (apt or snap install it): the program cannot be started inside the remote desktop" % [b for b, _ in alts])
+        if kind == "terminal" and box.run("command -v top >/dev/null && echo yes")[1].strip() != "yes":
+            raise lib.ToolError("`top` is not installed in the box (procps)")
+        box.ensure_user(user, PW)
+        left = box.end_users([user])
+        if left:
+            raise lib.ToolError("an earlier session of %s could not be ended: %s" % (user, left))
+        if box.run("systemctl is-active %s" % DM[de])[1].strip() != "active":
+            raise lib.ToolError("the display manager %s is not active in the box: the real local login cannot be done" % DM[de])
+        # -- the remote desktop of the user, with the program running INSIDE it
+        rig.start(make_user=False)
+        rig.open_page()
+        ok, s = rig.try_login(retry=20)
+        if not (ok and s["session"] and s["cls"] == "good"):
+            raise Fail("%s not admitted: \"%s\" (%s); journal: %s" % (user, (s.get("outcome") or "").strip(), s.get("cls"), ctx.journal(user)))
+        rig.settle(still=1)
+        remote_sess = ctx.remote_sessions(user)
+        if not remote_sess:
+            raise Fail("frames shown but no logind session of the service for %s" % user)
+        K.install(box)
+        before_png = rig.canvas_png()
+        prog, what = None, ""
+        for binary, cmd in alts:
+            if box.run("command -v %s >/dev/null && echo yes" % binary)[1].strip() != "yes":
+                continue
+            c, t = K.run_in(box, de, user, cmd, bg=True)
+            if c == 9 or "NOANCHOR" in t:
+                raise lib.ToolError("the bench cannot start a program inside the remote desktop of %s: %s" % (de, t[-150:]))
+            end = time.time() + 25
+            while time.time() < end:
+                time.sleep(1)
+                if kind == "terminal":
+                    rows = [l.split() for l in box.run("ps -u %s -o pid=,comm=,tty= | awk '$3 ~ /pts/'" % user)[1].splitlines()]
+                    hit = [r for r in rows if len(r) >= 3 and r[1] == "top"]
+                else:
+                    hit = [l for l in box.run("pgrep -u %s -x %s" % (user, binary))[1].split() if l.strip().isdigit()]
+                if hit:
+                    prog = binary
+                    what = "top on %s" % hit[0][2] if kind == "terminal" else "%s pid %s" % (binary, hit[0])
+                    break
+            if prog:
+                break
+        if not prog:
+            raise lib.ToolError("the program did not start inside the remote desktop in 25 s per command (%s); processes: %s" % (
+                " | ".join(c for _, c in alts), ctx.procs(user)[:8]))
+        time.sleep(4)   # the window gets painted and shown to the client
+        if not pic_changed(before_png, rig.canvas_png()):
+            raise lib.ToolError("%s is running (%s) but the picture of the remote desktop did not change: no window seen on the canvas" % (prog, what))
+        # -- everything the remote desktop has now, to see afterwards that none of it is still there
+        pr_before = procs_of(box, user)
+        proc_set = {(p, st, c) for p, s_, st, c in pr_before}       # (pid, starttime, comm)
+        remote_procs = [(p, st, c) for p, s_, st, c in pr_before if not is_helper(c)]
+        units_before = unit_ids_of(box, user)
+        print("%s: remote desktop of %s up, %s running (%s); %d process(es) (%d not helpers), %d desktop unit(s)" % (
+            kind, user, prog, what, len(pr_before), len(remote_procs), len(units_before)), flush=True)
+        # -- the REAL local login of the same user
+        autologin(box, de, user, True)
+        bench_on = True
+        t_dm = time.time()
+        dm_restart(box, de)
+        loc, arrived = {}, None
+        while time.time() < t_dm + LOCAL_CAP:
+            time.sleep(3)
+            sess = [x for x in ctx.sessions(user) if "Seat=seat0" in x and "Service=remotix" not in x]
+            procs_now = procs_of(box, user)
+            new = [(p, st, c) for p, s_, st, c in procs_now if (p, st, c) not in proc_set and s_ != "Z"]
+            shell_new = [x for x in new if x[2] == K.PANEL[de]]
+            comp_new = [x for x in new if x[2] in COMPOSITOR[de]]
+            if de == "kde" and comp_new:   # a KWin of the local session is not REMOTIX's virtual one
+                virt = box.run("ps -u %s -o pid=,args= | grep -E 'kwin_wayland.*--virtual' | grep -v grep | awk '{print $1}'" % user)[1].split()
+                comp_new = [x for x in comp_new if x[0] not in virt]
+            loc = dict(sess=sess, shell=shell_new, comp=comp_new)
+            if sess and shell_new and comp_new:
+                arrived = time.time() - t_dm
+                break
+        bad, ok_ = [], ["real local login (DM %s restarted, bench autologin)" % DM[de]]
+        if arrived is None:
+            hook = ctx.journal("prelocal|local login|by force|HELD", n=6)
+            note = "no local desktop in %d s: local sessions %s, new local shell %s, new compositor %s" % (
+                LOCAL_CAP, loc.get("sess"), loc.get("shell"), loc.get("comp"))
+            if not loc.get("sess") and hook.startswith("(no remotix journal line"):
+                raise lib.ToolError(note + "; REMOTIX saw no local login at all: the bench autologin did not engage, nothing to judge")
+            bad.append(note)
+        else:
+            ok_.append("local desktop after %.0f s (session %s, shell %s, compositor %s)" % (
+                arrived, loc["sess"][0].split()[0], loc["shell"][0][2], loc["comp"][0][2]))
+        # -- the remote desktop is gone (GONE_CAP s after the local desktop; from the cap when the local one never came)
+        end = time.time() + GONE_CAP
+        empty_left = []
+        while True:
+            now = {(p, st, c) for p, s_, st, c in procs_of(box, user) if s_ != "Z"}
+            procs_left = [x for x in remote_procs if x in now]
+            units_left = [u for u in unit_ids_of(box, user) if u in units_before]
+            if units_left:   # an EMPTY slice or a socket-activation socket left behind in the shared user manager is not a piece of the desktop (found on Debian 13, 26 Nov 2026)
+                units_left, empty_left = unit_residue(box, user, units_left)
+            rsess = ctx.remote_sessions(user)
+            marks = box.run(KDE_MARKS % {"u": user})[1].strip()
+            if not (procs_left or units_left or rsess or marks) or time.time() > end:
+                break
+            time.sleep(2)
+        if procs_left:
+            bad.append("%d process(es) of the remote desktop still alive %d s after the local desktop: %s" % (len(procs_left), GONE_CAP, [x[2] + ":" + x[0] for x in procs_left][:12]))
+        if units_left:
+            bad.append("desktop unit(s) of the remote desktop still active (same invocation): %s" % units_left[:10])
+            for ul in units_left[:6]:   # evidence for whoever reads the failure: since when the unit is active, and who is inside its cgroup
+                un = ul.split()[0]
+                dt = box.run("systemctl --user -M %s@ show -p ActiveEnterTimestamp -p ControlGroup -- '%s' 2>&1 | tr '\\n' ' '; echo; "
+                             "cg=$(systemctl --user -M %s@ show -p ControlGroup --value -- '%s' 2>/dev/null); "
+                             "for p in $(cat /sys/fs/cgroup$cg/cgroup.procs 2>/dev/null); do echo \"  member $p $(cat /proc/$p/comm 2>/dev/null)\"; done; true" % (user, un, user, un))[1]
+                print("unit-detail %s: %s" % (ul, " | ".join(x.strip() for x in dt.splitlines() if x.strip())[:400]), flush=True)
+        if rsess:
+            bad.append("logind session(s) of the service still there: %s" % rsess)
+        if marks:
+            bad.append("KWin --virtual / REMOTIX_KDE_HOST=1 still there: %s" % marks.replace("\n", " | ")[:300])
+        if not (procs_left or units_left or rsess or marks):
+            ok_.append("remote desktop gone (no process, no desktop unit of it, no remotix session, no KWin --virtual / REMOTIX_KDE_HOST=1)")
+            if empty_left:
+                ok_.append("not counted as left-overs: %d empty slice(s)/socket(s) still active in the user manager (%s)" % (len(empty_left), ", ".join(u.split()[0] for u in empty_left)[:200]))
+        # -- no crash since the start of the case: coredumpctl when it is installed, otherwise apport (Ubuntu: /var/crash/*.crash owned by the user).
+        #    Neither there = said, not claimed. (apport only reports some crashes: it is a hint, not a proof of «none».)
+        have_cd = box.run("command -v coredumpctl >/dev/null && echo yes")[1].strip() == "yes"
+        have_ap = box.run("[ -d /var/crash ] && systemctl is-enabled apport.service >/dev/null 2>&1 && echo yes")[1].strip() == "yes"
+        cores = ""
+        if have_cd:
+            cores = box.run("coredumpctl list --no-legend --no-pager -q --since @%d COREDUMP_UID=$(id -u %s) 2>&1 | grep -vi 'no coredumps'; true" % (t_case, user))[1].strip()
+        elif have_ap:
+            cores = box.run("find /var/crash -maxdepth 1 -name '*.crash' -user %s -newermt @%d 2>/dev/null | head -5; true" % (user, t_case))[1].strip()
+        if not (have_cd or have_ap):
+            ok_.append("crashes NOT checked (neither coredumpctl nor apport is active in the box)")
+        elif cores:
+            bad.append("crash(es) of %s since the start of the case (%s): %s" % (user, "coredumpctl" if have_cd else "apport", cores.replace("\n", " | ")[:300]))
+        else:
+            ok_.append("no crash of %s (%s)" % (user, "coredumpctl" if have_cd else "apport /var/crash"))
+        # -- no AppArmor line about the profile of REMOTIX since the start of the case (the profile is in complain mode: a thing it does not cover
+        #    shows as apparmor="ALLOWED", in enforce as "DENIED"; both are an error). A log that cannot be read is said, never «none».
+        aa_ok, aa_lines, aa_why = box.apparmor(t_case)
+        if not aa_ok:
+            ok_.append("AppArmor NOT checked (%s)" % aa_why)
+        elif aa_lines:
+            bad.append("AppArmor line(s) of the remotix_network profile since the start of the case: %s" % box.apparmor_summary(aa_lines))
+        else:
+            ok_.append("no AppArmor ALLOWED/DENIED line of the remotix_network profile")
+        if bad:
+            c, st = box.run("systemctl --user -M %s@ list-units --state=active --no-legend --no-pager --plain 2>&1 | awk '{print $1}' | head -25 | tr '\\n' ' '; true" % user)
+            jl = box.run("journalctl -u remotix --no-pager -o cat --since @%d | grep -E 'by force|HELD|local excludes remote|FAILED|stop ' | tail -12 | cut -c1-220; true" % t_case)[1]
+            return FAIL, "; ".join(bad) + " | ok: " + "; ".join(ok_) + " | active user units: " + st.strip() + " | processes: " + \
+                str([c + ":" + p for p, s_, st_, c in procs_of(box, user)][:25]) + " | remotix journal: " + jl.replace("\n", " | ")
+        return PASS, "; ".join(ok_) + " (program: %s)" % what
+    finally:
+        try:
+            if bench_on:
+                autologin(box, de, user, False)
+            box.run("loginctl terminate-user %s; true" % user, timeout=60)
+            if bench_on:
+                dm_restart(box, de)    # back to the greeter, no autologin left
+        except Exception as e:  # noqa: BLE001 - cleanup must not hide the verdict
+            print("cleanup of %s: %s" % (user, lib.tool_error(e)), flush=True)
+        rig.stop()
+        box.end_users([user])
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--box", default="xfce", choices=sorted(lib.PORTS))
+    ap.add_argument("--only", default="", help="comma list of cases, by number or name (P1,P7 ...): default all nine")
     a = ap.parse_args()
-    res, rig = lib.Results(NAMES), lib.Rig(a.box, "chrome", "pl1", PW, "prelocal")
-    ctx = Ctx(rig)
+    want = [x.strip().upper() for x in a.only.split(",") if x.strip()]
+    sel = [n for n in NAMES if not want or n.split("-")[0] in want]
+    if want and not sel:
+        ap.error("--only: no such case in %s" % ", ".join(n.split("-")[0] for n in NAMES))
+    old_sel = [n for n in sel if n in OLD_NAMES]
+    res = lib.Results(sel)
+    rig = lib.Rig(a.box, "chrome", "pl1", PW, "prelocal") if old_sel else None
+    ctx = Ctx(rig) if rig else None
     st = {}
 
     def login_new(retry=20):
@@ -315,19 +613,29 @@ def main():
             return FAIL, "pam_exec of remotix-local-login (line %d) is NOT after pam_systemd (line %d)" % (n_ex[0], n_sd[0])
         return PASS, "pam_systemd line %d, pam_exec remotix-local-login line %d (after it)" % (n_sd[0], n_ex[0])
 
-    lib.guard(900)
+    lib.guard((900 if old_sel else 0) + 700 * (len(sel) - len(old_sel)))
     try:
-        try:
-            setup()
-        except Exception as e:  # noqa: BLE001
-            res.rest(FAIL if isinstance(e, Fail) else BLOCKED, str(e) if isinstance(e, Fail) else lib.tool_error(e))
-            return 1
-        for name, fn in zip(NAMES, (p1, p2, p3, p4, p5, p6)):
-            res.attempt(name, fn)
+        if old_sel:
+            try:
+                try:
+                    setup()
+                except Exception as e:  # noqa: BLE001
+                    why = str(e) if isinstance(e, Fail) else lib.tool_error(e)
+                    for i, n in enumerate(old_sel):   # only the old cases: P7/P8 do not depend on this setup
+                        res.say((FAIL if isinstance(e, Fail) else BLOCKED) if i == 0 else BLOCKED, n, why if i == 0 else "an earlier check stopped the run")
+                else:
+                    for name, fn in zip(OLD_NAMES, (p1, p2, p3, p4, p5, p6)):
+                        if name in sel:
+                            res.attempt(name, fn)
+            finally:
+                rig.stop()
+                ctx.box.run("systemctl is-active --quiet remotix || systemctl start remotix; true", timeout=60)
+        for name, user, kind in (("P7-busy-terminal", "pl3", "terminal"), ("P8-unsaved-editor", "pl4", "editor"), ("P9-busy-snap", "pl5", "snap")):
+            if name in sel:
+                res.attempt(name, lambda u=user, k=kind: busy_case(a.box, u, k))
         return res.code()
     finally:
-        rig.stop()
-        ctx.box.run("systemctl is-active --quiet remotix || systemctl start remotix; true", timeout=60)
+        lib.Box(a.box).run("systemctl is-active --quiet remotix || systemctl start remotix; true", timeout=60)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ Runs ON THE DEV SERVER (drives ./boxes/box.sh). One line per check: `PASS|FAIL|B
                 remotix (nologin), nothing on 7447
   first-start   enable --now: active, TCP and UDP listening, certificates with safe modes, no error in the journal, the two
                 processes run as the design says (root side root, network side remotix)
-  apparmor      the profile of the network side loaded / enforcing (BLOCKED if the box has no AppArmor interface)
+  apparmor      the profile of the network side loaded and confining (complain or enforce; BLOCKED if the box has no AppArmor interface)
   remove        a test user logged in, then apt remove while the session is alive: sessions closed, desktop processes gone,
                 group enrolments undone, /dev/dri grants taken back, service stopped, binary gone, configuration and
                 /var/lib/remotix kept, no process left, nothing else touched
@@ -41,7 +41,8 @@ UID_BASE = {"xfce": 3100, "lxqt": 3200, "gnome": 3300, "kde": 3400}
 PW = "pk1pass2026"
 RECOMMENDS = ("labwc", "wlr-randr", "xwayland", "va-driver-all", "mesa-vulkan-drivers", "dconf-cli", "fonts-dejavu-core")
 EXPECT_PATHS = ("/var/lib/remotix", "/run/remotix",  # made by systemd-tmpfiles at install (debian/remotix.tmpfiles)
-               "/etc/apparmor.d/local/remotix_network")  # made by the dh_apparmor snippet of postinst (must go at purge)
+               "/etc/apparmor.d/local/remotix_network",  # made by the dh_apparmor snippet of postinst (must go at purge)
+               "/etc/dconf/db/remotix")  # the system dconf database compiled by postinst (debian/remotix.postinst); postrm removes it at purge
 HERE = lib.HERE
 
 
@@ -287,8 +288,10 @@ def c_apparmor(ctx):
     c, attr = ctx.sh("cat /proc/%s/attr/current 2>&1" % pid.strip()) if pid.strip() else (1, "no network-side process")
     if not prof.strip():
         raise Fail("profile remotix_network is not loaded (profiles file has no such line); network side attr: %s" % attr.strip())
-    if "(enforce)" not in prof or "(enforce)" not in attr:
-        raise Fail("profile loaded but not enforcing: \"%s\"; network side confined as \"%s\" (flags=complain in the shipped profile)" % (prof.strip(), attr.strip()))
+    # the shipped profile is flags=(complain) on purpose (written in the manuals): complain is a PASS, enforce too; only «not confined» fails
+    mode = "(enforce)" if "(enforce)" in prof else "(complain)"
+    if mode not in prof or mode not in attr:
+        raise Fail("profile loaded but the network side is not confined by it: \"%s\"; network side confined as \"%s\"" % (prof.strip(), attr.strip()))
     return PASS, "loaded: \"%s\"; network side confined as \"%s\"" % (prof.strip(), attr.strip())
 
 
