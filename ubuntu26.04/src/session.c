@@ -3265,7 +3265,8 @@ static gboolean system_autostart_exists(const char *file)
  *   window («Authentication is required to create a color managed device») in the middle of the desktop, holding the keyboard
  *   and the pointer.  It is not started: a remote desktop has no monitor to profile, and colord's devices and profiles are ONE
  *   set for the whole machine (granting the action to remote sessions would let any remote user touch the seated user's screen).
- *   ⇒ Not a polkit rule.  [?] Not yet measured on Xubuntu 26.04 (it does start `xiccd` there). */
+ *   ⇒ Not a polkit rule.  [M] Xubuntu 26.04 (bench VM, 26 Nov 2026): `xiccd` started by hand inside a remote desktop opens that same
+ *   window at once, in the middle of the screen (polkit: `create-device` FAILED for the remote session); not started, no window. */
 static const char *const SESSION_NOT_IN_REMOTE_AUTOSTART[] = { "blueman.desktop", "xiccd.desktop", NULL };
 
 /* `dir` is the `autostart` folder of the session folder that is first in `XDG_CONFIG_DIRS`
