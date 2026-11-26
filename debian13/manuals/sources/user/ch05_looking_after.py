@@ -101,9 +101,8 @@ S_USERS = p("REMOTIX adds very little to the machine. This is the whole list.", 
          "password, as with sudo."],
         ["An AppArmor profile " + sysf("/etc/apparmor.d/remotix_network"),
          "Describes what the network part may do. It is installed in <b>complain</b> mode: it logs what it would "
-         "forbid and forbids nothing, so it is not switched to enforcing. It forbids the network part every abstract "
-         "unix socket (the X11 ones, for example), and an administrator can add "
-         "rules of their own in " + sysf("/etc/apparmor.d/local/remotix_network") + ", which the profile includes."],
+         "forbid and forbids nothing. Its explicit deny lines (ptrace, mount, abstract unix sockets) act only on a "
+         "kernel that mediates them. An administrator can add rules in " + sysf("/etc/apparmor.d/local/remotix_network") + "."],
         ["A needrestart file " + sysf("/etc/needrestart/conf.d/remotix.conf"),
          "Keeps automatic restarts away from the service, if the machine has needrestart (it is harmless if not)."],
         ["A KDE permission " + sysf("/usr/share/applications/org.kde.remotix.desktop"),

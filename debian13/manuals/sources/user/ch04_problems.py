@@ -255,12 +255,8 @@ S_KNOWN = p("These are the limits and open points known on Debian 13 that a user
          "A program started with <code class=\"sys\">pkexec</code> may not start in a remote GNOME session. Use "
          "<code class=\"sys\">sudo</code> in a terminal."],
         ["The first click after signing in (GNOME)",
-         "The first pointer movement after signing in used to arrive with one coordinate at zero, so that the "
-         "first click could land on the edge of the screen. REMOTIX cures it in software: the first movement is "
-         "sent twice. If the first click still lands in the wrong place, click again."],
-        ["A <b>password window for the keyring</b> in a program",
-         "The keyring of the user is locked in a remote session (declared, see " + rif("What REMOTIX is not")
-         + "). Type the password in the window, or work without the stored passwords."],
+         "REMOTIX sends the first pointer movement after signing in twice, a precaution for a defect seen on newer "
+         "GNOME versions; should the first touch land in the wrong place, touch again."],
         ["The language of the desktop",
          "The remote desktop uses the language the user chose in the desktop settings, otherwise the system's "
          "language (" + sysf("/etc/default/locale") + "), with the formats (dates, numbers). At the end of a normal "

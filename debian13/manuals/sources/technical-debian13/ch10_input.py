@@ -638,7 +638,7 @@ S14 = p("labwc has no " + c("libei") + ". " + c("wlr_input.c") + " creates our o
       "then puts the pointer back where the user had it. On GNOME and KDE the function does nothing, because "
       "the compositor already does it. The shortcut itself is described in " + rif("The four desktops") + ".")
 
-S16 = p("What the checks of " + c("prove/") + " exercise for input, and what they cannot. They run on the development server, one container per desktop (XFCE, LXQt, GNOME, KDE), "
+S16 = p("What the checks of " + c("prove/") + " exercise for input, and what they cannot. They run on the development server, one virtual machine per desktop (XFCE, LXQt, GNOME, KDE), "
         "with real browsers: Chrome through DevTools, Firefox through WebDriver, real mouse and key events. The desktop side is a window inside the user's session "
         "(" + c("window-input.py") + ") that logs every event it receives, so the verdicts are built on what the application got, never on what the browser was told to send.", lead=True) + \
     table(["Area", "Checks of " + c("check-input.py"), "State on 17 Nov 2026 (PIANO.md)"], [

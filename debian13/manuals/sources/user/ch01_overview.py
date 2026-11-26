@@ -69,8 +69,6 @@ S_REQ = p("REMOTIX works only if five conditions are met. Read them <b>before</b
     ul([
         "<b>A sign-in at the machine's own screen with the same user closes that user's remote desktop</b> "
         "with its programs: unsaved work is lost (see " + rif("Leaving and coming back") + ").",
-        "<b>No unlocked keyring.</b> A program that asks for the user's keyring (the stored passwords of the "
-        "desktop) finds it locked in a remote session and asks for the password on the remote screen.",
         "<b>No power off, restart, suspend or hibernate</b> from any desktop, for any user (see "
         + rif("What REMOTIX is not") + ").",
     ])
@@ -131,8 +129,6 @@ S_NOT = p("What REMOTIX deliberately does not do:", lead=True) + \
         "<b>No power off, restart, suspend or hibernate</b> from any desktop, remote or at the machine itself, "
         "for any user: it is wanted, because other people may be working on the machine (an administrator "
         "still can, with " + c("sudo") + " in a terminal). And no screen lock inside a remote desktop.",
-        "<b>No unlocked keyring in a remote session</b>: a program that asks for the keyring finds it locked and "
-        "asks for the password on the remote screen. This is declared and was decided.",
         "<b>No several monitors</b>, no session recording, no X11 desktop sessions (X11 programs run through "
         "XWayland), no connections from RDP, VNC or SPICE programs.",
     ])

@@ -336,7 +336,7 @@ S6 = p("The bench of REMOTIX for Debian 13 is virtual machines: QEMU with KVM an
        "virtual machines only. The scripts are " + c("server/vm-radeon.sh") + " (438 lines), " + c("server/prepara-server-vm.sh") + " (94 lines) and "
        + c("prove/banco-vm/") + "; " + c("server/VM-BANCO.md") + " is the note that goes with them.", lead=True) + \
     h4("The machines") + \
-    table(["Machine (check key)", "ISO (read-only, in /media/DOWNLOAD)", "ssh / REMOTIX ports", "Display manager"], [
+    table(["Machine (check key)", "ISO (read-only)", "ssh / REMOTIX ports", "Display manager"], [
         [c("gnome"), c("debian-live-13.8.0-amd64-gnome.iso"), "2361 / 8861", c("gdm3")],
         [c("kde"), c("debian-live-13.8.0-amd64-kde.iso"), "2362 / 8862", c("sddm")],
         [c("xfce"), c("debian-live-13.8.0-amd64-xfce.iso"), "2363 / 8863", c("lightdm")],
@@ -345,9 +345,7 @@ S6 = p("The bench of REMOTIX for Debian 13 is virtual machines: QEMU with KVM an
     ], "«TAB» — The five VMs of server/vm-radeon.sh (ISO names, ports and display managers from the script)") + \
     p("The machine " + c("costruzione") + " has 8 CPUs and 6 GB of memory, never has the Radeon (the script refuses) and has no REMOTIX port forwarded. The four test machines have 4 CPUs, a 40 GB disk and "
       "5 GB of memory without the Radeon and 12 GB with it (the variable " + c("RX_VM_MEM") + " overrides both), " + c("q35") + " with UEFI (" + c("OVMF_CODE_4M.fd") + ", " + c("OVMF_VARS_4M.fd") + "), KVM, a serial console in "
-      + c("serial.log") + " and user networking with the ports of the table forwarded. Each machine's disk, UEFI variables, key " + c("vmkey") + " and serial log are in its own folder under "
-      + sysf("/media/REMOTIX-DEBIAN/vm-radeon/") + ". The ordinary users of a machine are " + c("prova") + " (in the group " + c("sudo") + ") and " + c("prova2") + " (without sudo); the host name is "
-      + c("rx-deb-<name>") + "; the language is " + c("en_US.UTF-8") + " and there is no automatic login. Recorded on 25 Nov 2026: kernel " + c("6.12.118+deb13-amd64") + ", systemd 257.13, "
+      + c("serial.log") + " and user networking with the ports of the table forwarded. Each machine's disk, UEFI variables, key " + c("vmkey") + " and serial log are in its own folder under the bench folder. There are two test users (one in the group " + c("sudo") + ", one without sudo); the host name is built from the machine's name; the language is " + c("en_US.UTF-8") + " and there is no automatic login. Recorded on 25 Nov 2026: kernel " + c("6.12.118+deb13-amd64") + ", systemd 257.13, "
       + c("firmware-amd-graphics") + " 20250410-2 on all four.") + \
     p("<b>How a disk is made.</b> " + c("crea <name>") + " does not run an installer: it builds the disk from the system of the ISO's squashfs (GPT, a 512 MB EFI partition, ext4), with the kernel "
       "of Debian and never that of the server, removes the " + c("live-*") + " packages and the installer, sets the archives " + c("main non-free-firmware") + ", updates and security, runs "
@@ -357,10 +355,10 @@ S6 = p("The bench of REMOTIX for Debian 13 is virtual machines: QEMU with KVM an
     h4("server/vm-radeon.sh") + \
     table(["Command", "What it does"], [
         [c("crea <name>"), "makes the disk (above)"],
-        [c("accendi <name>"), "binds the two functions of the Radeon (" + c("0000:03:00.0") + " and its audio function " + c("0000:03:00.1") + ") to " + c("vfio-pci") + " and starts the VM with the Radeon as its only video card, then waits for ssh. Refuses if another VM of the bench holds the card."],
+        [c("accendi <name>"), "binds the two PCI functions of the card (video and audio) to " + c("vfio-pci") + " and starts the VM with the Radeon as its only video card, then waits for ssh. Refuses if another VM of the bench holds the card."],
         [c("accendi <name> virtuale"), "no Radeon: a virtual video card (" + c("virtio-vga") + "), no window, same ports. Several virtual VMs may run together; the Radeon only in one."],
         [c("spegni <name>"), "turns the machine off and gives the Radeon back to the server (only if this machine held it)"],
-        [c("ssh <name> [cmd]"), "ssh as " + c("prova") + " with the machine's key"],
+        [c("ssh <name> [cmd]"), "ssh as a test user with the machine's key"],
         [c("stato <name>"), "running or stopped, and which VM holds the Radeon"],
         [c("prova-avvio <name> [--resta]"), "a boot check without the Radeon: prints facts, then powers off; with " + c("--resta") + " it leaves the machine on"],
         [c("schermo <name> <file.png>"), "a screen dump of a machine started with " + c("virtuale") + " (through the QEMU monitor)"],
@@ -402,7 +400,7 @@ S7 = p("The 1.2.0 work added scripts and checks that are <b>not</b> in " + c("al
         [c("check-apparmor.py"), "also in " + c("all.sh") + " (" + rif("The checks of all.sh and what each proves") + ")"],
     ], "«TAB» — The tools of the 1.2.0 work (none of the first five is in all.sh)") + \
     p("Why " + c("check-prelocal.py") + " has P7 and P8: a check that opens an <i>empty</i> remote desktop only ever runs the orderly close, so the forced road, the one that stops a desktop with a program still open, was never asked. "
-      "P7 and P8 open a desktop with a terminal running " + c("top") + " and with an editor holding unsaved text. On Debian they were run on GNOME on the bench and by the owner on the four live images (below).")
+      "P7 and P8 open a desktop with a terminal running " + c("top") + " and with an editor holding unsaved text. On Debian, P7 was run on GNOME on the bench (P8 is BLOCKED there); the owner tried the local-login close with open programs (one that closes by itself, one that asks for confirmation) on the four Debian 13.8.0 live images on a real machine on 26 Nov 2026: all four passed (below).")
 
 # ── 17.8 ─────────────────────────────────────────────────────────────────────
 S7B = p("A virtual machine is not the machine: the display manager, the two video cards and the timings of a real boot are different. The owner therefore also tries the product on a <b>real machine started from a Debian 13 live USB stick</b> "
@@ -413,7 +411,7 @@ S7B = p("A virtual machine is not the machine: the display manager, the two vide
         "downloads the " + c(".deb") + " and its " + c(".sha256") + " and refuses to go on if they differ; prepares apt; " + c("apt install") + " of the package with what it recommends (labwc, wlr-randr, xwayland, the video drivers); creates the two test users " + c("prova") + " and " + c("prova2") + " if they do not exist (it never touches an existing one, nor its password); "
         + c("systemctl enable --now remotix") + "; and runs " + c("remotix --encoding-test h264") + " to say whether the video card encodes. If " + c("ufw") + " is active it only warns, and says how to open the port.",
         "The name of the package is a variable at the head of the script (" + c("PACCHETTO") + "): " + c("remotix_1.2.0-1+deb13_amd64.deb") + ". If a file with an administrator's public key is also served, the script can open ssh for root with it, only to read the logs of the trial; nothing else on the system is changed.",
-        "<b>What was tried</b>: the owner makes the 1.2.0 trials of P7 and P8 by hand on the four live images; the results are not written in this manual, and no log of those trials was read for it.",
+        "<b>What was tried</b>: the owner tried the local-login close with open programs (one that closes by itself, one that asks for confirmation) on the four Debian 13.8.0 live images on a real machine on 26 Nov 2026: all four passed.",
     ]) + \
     p("The rule that comes out of the Fedora work holds here too: on a new distribution or desktop, the trial «the local login closes the remote one» is made <b>with programs open in the remote desktop</b>, on a real machine, before publishing.")
 
@@ -446,7 +444,7 @@ S8 = p("Each item below is something no file in " + c("prove/") + " or " + c("se
          "P1 to P6 of " + c("check-prelocal.py") + " call the hook by hand; P7 and P8 and " + c("prelocal.sh") + " make a real local login through the display manager of the VM, but by its automatic login (a test-bench file), "
          "and " + c("all.sh") + " lists the typed login as a SKIP. The refusal of a remote login while the same user is signed in locally (RCP reason 0x05) is exercised by hand, by " + c("prelocal.sh") + " case 3. "
          "The hold was tried by the owner on the four real login screens with 1.0.x (GNOME with the journal read; KDE, XFCE and LXQt on live Debian 13 systems, as reported by the owner, journals not read), "
-         "and the owner tries 1.2.0 on the four live images (" + rif("Testing the real machine from a live USB") + "). See " + rif("Appendix C — Known issues and open points") + "."],
+         "and the owner tried 1.2.0 on the four live images (" + rif("Testing the real machine from a live USB") + "). See " + rif("Appendix C — Known issues and open points") + "."],
         ["Real networks",
          "the tests run on 127.0.0.1. The only fault injected is the nft cut of UDP in " + c("network-drop") + "; loss, jitter, NAT "
          "and mobile links are not exercised by this suite."],
@@ -467,7 +465,7 @@ S9 = p("This section reports what PIANO.md, the reports in " + c("studio/prove-1
         "with these items open: " + c("media/screen-updates") + " a little over its limit (1.0 to 1.5 s against 1.0 s) on GNOME, KDE and LXQt, cause not established; " + c("pkexec") + " on GNOME (" + c("users-shell-and-environment") + ", known); "
         + c("kbd-not-producible") + " with Firefox on LXQt, probably the tool.",
         "The first round on GNOME (report " + c("giro1-gnome.md") + ") counted 123 PASS lines, the known " + c("pkexec") + " failure and the same " + c("screen-updates") + " item; the removal with purge left the machine clean; the language, the " + c("PATH") + " and the register line of who closed the connection were as designed.",
-        "P7 and P8 were run on GNOME on the bench only; the owner tries them on the four live images. The checks of the Ctrl+Alt+Del and Ctrl+Alt+End decisions were realigned (" + c("page-cad-hidden") + ", " + c("page-ctrl-alt-end-passes") + "), so the two lines that failed on every desktop on 17 Nov no longer exist under their old names.",
+        "P7 was run on GNOME on the bench (P8 is BLOCKED there); the owner tried the local-login close with open programs (one that closes by itself, one that asks for confirmation) on the four Debian 13.8.0 live images on a real machine on 26 Nov 2026: all four passed. The checks of the Ctrl+Alt+Del and Ctrl+Alt+End decisions were realigned (" + c("page-cad-hidden") + ", " + c("page-ctrl-alt-end-passes") + "), so the two lines that failed on every desktop on 17 Nov no longer exist under their old names.",
     ]) + \
     h4("The rounds of 17 and 18 November 2026 (1.0.0, on the container boxes)") + \
     p("The code under test is the tree that became version 1.0.0: PIANO.md states that the provisional version number used in its earlier notes designates the same code, tested under that "

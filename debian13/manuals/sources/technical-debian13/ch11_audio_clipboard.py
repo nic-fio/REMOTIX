@@ -394,7 +394,7 @@ C5 = p("In the browser the clipboard is not REMOTIX's: the page gets it only und
       "hand the paste field must not open the system keyboard (" + rif("The on-screen keyboard on a phone")
       + "). Safari is not tested.")
 
-V1 = p("What the checks of " + c("prove/") + " exercise for audio and clipboard, and what they do not. They run on the development server, one container per desktop, with real browsers.", lead=True) + \
+V1 = p("What the checks of " + c("prove/") + " exercise for audio and clipboard, and what they do not. They run on the development server, one virtual machine per desktop, with real browsers.", lead=True) + \
     table(["Area", "Check", "What it proves", "State on 17 Nov 2026 (PIANO.md)"], [
         ["Audio heard", c("check-audio.py"), "A 440 Hz tone played in the user's session is heard in the browser: an " + c("AnalyserNode") + " inserted between the blocks the page schedules and the " + c("AudioDestinationNode")
          + " measures level and peak frequency every 100 ms, counted only while the " + c("AudioContext") + " is " + c("running") + ". Stage A: no gesture beyond the login; stage B: after one real click on the canvas",

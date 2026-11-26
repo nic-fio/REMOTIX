@@ -4,7 +4,7 @@ from build import c, code, note, p, rif, sysf, table, tree, ul, warn
 S1 = p("REMOTIX for Debian 13 is one binary package, " + c("remotix") + ", built from the " + c("debian/") + " folder "
        "(source format " + c("3.0 (native)") + ", " + c("debhelper-compat (= 13)") + ", " + c("Rules-Requires-Root: no")
        + "). It is installed with " + c("apt install ./remotix_*.deb") + "; there is no installer program. The "
-       "build itself, in a " + c("debian:trixie") + " container with the static ngtcp2 and nghttp3, is in "
+       "build itself, on the build virtual machine with the static ngtcp2 and nghttp3, is in "
        + rif("Build and release") + ". The package is " + c("Architecture: any") + ": the binary is compiled for the "
        "machine, and the walls of the network side exist only for x86_64 and aarch64 (" + rif("Security model") + ").",
        lead=True) + \

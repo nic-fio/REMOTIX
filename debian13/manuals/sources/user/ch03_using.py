@@ -232,9 +232,8 @@ S_TOUCH = p("On a phone or a tablet, REMOTIX works like on a PC if you have a mo
         "mouse and keyboard, is more comfortable.",
     ]) + \
     note("the touch layout has been exercised on a simulated phone for this release, <b>not yet on a real phone</b>. "
-         "On GNOME the first pointer movement after signing in used to arrive with one coordinate at zero, so that a "
-         "first tap could land on the edge of the screen: REMOTIX now sends the first movement twice. Should the "
-         "first touch after signing in still land in the wrong place, touch again.",
+         "REMOTIX sends the first pointer movement after signing in twice, a precaution for a defect seen on newer "
+         "GNOME versions; should the first touch land in the wrong place, touch again.",
          "Not yet verified on a real phone.")
 
 S_DEX = p("<b>Samsung DeX</b> (a phone or tablet connected to a screen, with a mouse and keyboard) is used as a PC: "

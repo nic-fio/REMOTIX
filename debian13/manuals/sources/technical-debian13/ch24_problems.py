@@ -12,8 +12,7 @@ S_INTRO = p("This appendix lists what is known to be open, unverified or inconsi
          "video card passed through; the reports are in <code>studio/prove-1.2.0/</code>. The checks passed on the four desktops except the items "
          "listed below (<code>media/screen-updates</code> a little over its threshold on GNOME, KDE and LXQt, <code>pkexec</code> on GNOME, "
          "<code>kbd-not-producible</code> with Firefox on LXQt). The checks of the local login with programs open in the remote desktop "
-         "(P7, P8 of <code>prove/check-prelocal.py</code>) were run on the bench on GNOME only; the owner tried them by hand on the four live "
-         "systems. Nothing in this appendix is a failure of those rounds unless it is stated so.", "Scope.")
+         "(P7, P8 of <code>prove/check-prelocal.py</code>): P7 was run on GNOME on the bench (P8 is BLOCKED there); the owner tried the local-login close with open programs (one that closes by itself, one that asks for confirmation) on the four Debian 13.8.0 live images on a real machine on 26 Nov 2026: all four passed. Nothing in this appendix is a failure of those rounds unless it is stated so.", "Scope.")
 
 S_UNVERIFIED = items([
     ["AppArmor in a session", "The profile <code>remotix_network</code> is in complain mode on purpose. With sessions on the four desktops "
@@ -174,7 +173,6 @@ CONTRA = [
     ["Shutdown wait", "main.c ~4140", "Comment: two seconds. Loop: 4000 ms."],
     ["PACE", "DECISIONS-11 §11.32 title; comments citing RCP.md §13", "Title says on by default; body, rcp.h and main.c say off. RCP.md has no §13."],
     ["Encoder header", "encoder.c:2; child.c:7055-56", "Header names software and AV1; code has neither. Comment says hevc_strada, code prints hevc_route."],
-    ["NVIDIA", "SPECS.md:1273", "Says nobody has seen NVIDIA work; comments cite measurements on an RTX 4090."],
     ["KWin --virtual", "session.c:3008; kwin.h", "Say it is gone; kwin.c:1318-1330 still uses it when labwc is not in PATH."],
     ["Bandwidth floor", "encoder.c, main.c, budget comments", "20 Mbit/s; WT_FLOOR_BYTE_MS is 3750 bytes/ms (webtransport.c:4018)."],
     ["Names", "wlroots.c; rcp.c comments", "RCP_TELA_L/A_MASSIMA for RCP_CANVAS_MAX_W/H; <code>tratta_*()</code> does not exist. SPECS names MAX_ATTACCATE, MAX_FIGLI, QUANTI_PRESENTI, WT_PALCHI, which are not in src/."],

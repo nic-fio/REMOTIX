@@ -97,7 +97,7 @@ S3 = p("The script is a sequence of steps. The label names the output folder " +
         + c("License: LicenseRef-REMOTIX") + " (an empty line becomes \" .\"), the leftovers of a local build "
         "(the binary, " + c("*.o") + ", the generated protocol sources) are deleted and " + c("debian/changelog") + " is written with one entry, \"Debian 13 build\", "
         "dated from " + c("SOURCE_DATE_EPOCH") + ". The working tree is never touched.",
-        "<b>The machine.</b> If it does not answer, the script starts it " + c("virtuale") + " and waits; it checks that the guest's name is " + c("rx-deb-costruzione") + " and copies the work folder in (" + sysf("~/debwork/<label>") + " in the guest).",
+        "<b>The machine.</b> If it does not answer, the script starts it " + c("virtuale") + " and waits; it checks that it is the build virtual machine and copies the work folder in (" + sysf("~/debwork/<label>") + " in the guest).",
         "<b>Dependencies.</b> In the guest, " + c("apt-get install --no-install-recommends") + " of " + c("build-essential") + ", " + c("pkg-config") + ", " + c("git") + ", " + c("cmake") + ", " + c("ninja-build") + ", the " + c("-dev") + " packages of OpenSSL, PAM, GLib, PipeWire, libdrm, libva, Opus, zlib, "
         "libei, xkbcommon, gbm, Wayland and the Vulkan loader, and the packaging tools " + c("debhelper") + ", " + c("dh-apparmor") + ", " + c("dpkg-dev") + ", " + c("fakeroot") + ", " + c("lintian") + " and " + c("binutils") + ". Log " + sysf("apt.log") + ".",
         "<b>Static libraries.</b> " + c("quic-static.sh") + ", unless the right versions are already there (" + rif("The build machine and the static QUIC libraries") + "). Log " + sysf("quic.log") + ".",

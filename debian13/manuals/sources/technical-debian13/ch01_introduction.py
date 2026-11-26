@@ -78,9 +78,7 @@ S2 = p("Two kinds of statement are made in this manual and they are kept apart. 
        + rif("Appendix C — Known issues and open points") + ".", lead=True) + \
     table(["Area", "Verified (PIANO.md)", "Not verified"], [
         ["Desktops", "XFCE, LXQt, KDE Plasma and GNOME, each by " + c("prove/all.sh") + " in its own virtual machine; the lines that do not "
-         "pass are listed in PIANO.md", "Four desktops on one machine together; a desktop on the physical "
-         "display; the local login that closes the remote desktop <i>with programs open</i> was run on GNOME on the bench and, "
-         "on the four desktops, by the owner from the live images"],
+         "pass are listed in PIANO.md; the local login that closes the remote desktop <i>with programs open</i>: P7 was run on GNOME on the bench (P8 is BLOCKED there), and the owner tried the local-login close with open programs (one that closes by itself, one that asks for confirmation) on the four Debian 13.8.0 live images on a real machine on 26 Nov 2026: all four passed", "Four desktops on one machine together"],
         ["Browsers", "Chrome and Firefox on Linux (base, input, audio); Chrome for the clipboard; the owner's own test "
          "with Samsung DeX on GNOME (clipboard, audio and video, window resizing)", "Firefox clipboard (open); a real "
          "phone; Safari; Firefox on Windows and Android"],
