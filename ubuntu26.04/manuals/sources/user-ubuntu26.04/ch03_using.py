@@ -53,6 +53,14 @@ S_DESKTOP = p("Once signed in you have your own desktop — GNOME (Ubuntu), KDE 
         ["No screen lock",
          "The desktops' screen lock is switched off in a remote session: the only way into the desktop is the "
          "sign-in page."],
+        ["The language of the desktop",
+         "The remote desktop uses the language the user chose in the desktop settings (the one the login screen "
+         "stores); if there is none, the language of the machine. The formats (dates, numbers and the like) follow "
+         "the machine's settings, not the user's own choice. <b>On KDE Plasma</b> the language of the desktop follows "
+         "the <b>KDE Settings</b> of the user (the file <code class=\"sys\">~/.config/plasma-localerc</code>), exactly "
+         "as at a local sign-in: a user who has already used KDE in one language changes it from the KDE Settings, "
+         "not from the login screen. <b>On XFCE</b> the desktop's settings service stays in the language of the "
+         "machine."],
         ["No power buttons",
          "There is no shut down, restart, suspend or hibernate in the desktop's menus, on any of the four desktops, "
          "because other people may be working on the same machine."],
@@ -70,7 +78,7 @@ S_DESKTOP = p("Once signed in you have your own desktop — GNOME (Ubuntu), KDE 
          "password, as at the machine. On GNOME the password window of graphical programs was <b>not verified</b>: "
          "in the automatic test, a program started with <code class=\"sys\">pkexec</code> refused to start in a "
          "remote GNOME session, so no password window could appear. If it does not appear, do the same action with "
-         "<code class=\"sys\">sudo</code> in a terminal. Three requests that a desktop makes on its own at "
+         "<code class=\"sys\">sudo</code> in a terminal. A few requests that a desktop makes on its own at "
          "sign-in, and that would only confuse, are settled quietly (see "
          + rif("Users, groups and what REMOTIX changes") + ").", "Passwords inside the desktop.")
 
@@ -190,10 +198,12 @@ S_LEAVE = p("Your desktop belongs to <i>you</i>, not to the browser tab. Closing
          "Your remote desktop is closed at once, with all its programs: unsaved work is lost. The page says "
          + ui("the local session on that machine took precedence") + ". While that person is signed in at the "
          "machine you cannot sign in from the browser (the page says " + ui("that user is already signed in locally")
-         + "); after they sign out you can, and you get a new desktop. This was tried at the real login screens of "
-         "<b>Ubuntu</b> (GDM) and <b>Kubuntu</b> (SDDM), from live systems: the local login waited, your desktop was "
-         "closed and the local login went on (about a second on GNOME; on KDE the person at the machine waited "
-         "about eleven seconds). At the login screens of Xubuntu (LightDM) and Lubuntu (SDDM) it was <b>not tried</b>."],
+         + "); after they sign out you can, and you get a new desktop. On KDE Plasma, if a program in your desktop "
+         "does not close by itself (for example one that asks “save?”), REMOTIX gives the KDE desktop 5 seconds to "
+         "close by itself and then closes everything by force, so the person at the machine waits about six "
+         "seconds. This was tried at the real login screens of all four flavours (GDM, SDDM, LightDM), in the test "
+         "machines and by the owner on four live systems: the local login waits a few seconds, the time to close "
+         "your desktop in order, your desktop is closed and the local login goes on."],
     ], "«TAB» — Leaving and coming back") + \
     warn("only your own input — keys, mouse, touch — counts as touching the desktop. A desktop left for an hour "
          "without any input is closed even if a video is playing in it.", "The one-hour clock.")
@@ -233,8 +243,8 @@ S_TOUCH = p("On a phone or a tablet, REMOTIX works like on a PC if you have a mo
     note("the touch layout has been exercised on a simulated phone, and the gestures were <b>not tried one by one on "
          "a real phone</b> on Ubuntu. What was tried by hand on Ubuntu 26.04, on all four desktops, from an Android "
          "phone and a tablet: signing in, working, and leaving and coming back. On GNOME the desktop starts in the "
-         "Overview, which holds touches, and the first tap after signing in may land in the wrong place: touch "
-         "again. (It was seen once in thirteen tries on Debian 13 and not measured again on Ubuntu.)",
+         "Overview, which holds touches. REMOTIX sends the first pointer movement after signing in twice, a precaution "
+         "for a defect seen on newer GNOME versions; should the first touch land in the wrong place, touch again.",
          "Not yet verified gesture by gesture on a real phone.")
 
 S_DEX = p("<b>Samsung DeX</b> (a phone or tablet connected to a screen, with a mouse and keyboard) is used as a PC: "

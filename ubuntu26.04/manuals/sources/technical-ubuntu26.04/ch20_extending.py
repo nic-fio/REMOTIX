@@ -5,9 +5,9 @@ docs/PULIZIA-tranche1.md, studio/5-sistema-ubuntu.md, studio/8-pacchetto-e-prove
 from build import c, h4, note, p, rif, steps, sysf, table, tip, ul, warn
 
 # ── 20.1 ─────────────────────────────────────────────────────────────────────
-S1 = p("REMOTIX 1.0.1 exists twice: for Debian 13 (trixie), in the folder " + c("debian13/") + ", and for Ubuntu 26.04 (resolute) with its four flavours "
+S1 = p("REMOTIX 1.2.0 exists twice: for Debian 13 (trixie), in the folder " + c("debian13/") + ", and for Ubuntu 26.04 (resolute) with its four flavours "
        "(Ubuntu with GNOME, Kubuntu with KDE Plasma, Xubuntu with XFCE, Lubuntu with LXQt), in this tree. The second tree is a separate copy of the first, "
-       "with its own packaging, its own build image, its own test bench and its own manual: the rule that a port is a copy and not a new <code>if</code> "
+       "with its own packaging, its own build VM, its own test bench and its own manual: the rule that a port is a copy and not a new <code>if</code> "
        "in the old tree has been followed once, and this chapter is written from what that port needed.", lead=True) + \
     p("Most of the code does not depend on the distribution at all: the transport, the RCP/1 protocol, capture, encoding, the budget, input, "
       "audio, clipboard, the page. Its dependencies are on the Linux kernel (DRM nodes, libei, PipeWire), on systemd and logind, on PAM and "
@@ -45,22 +45,28 @@ S2 = p("The table lists what a porter must look at, area by area, for the two di
          + c("patch") + ", " + c("hwdata") + ", " + c("wayland-protocols") + ", " + c("libinput-dev") + ", " + c("libseat-dev") + ", ...). " + c("libva-dev") + " and the Recommends are in "
          "universe; the Mesa VA driver lives in " + c("mesa-libgallium") + ", which is why the declaration stays " + c("va-driver-all") + " alone",
          c("debian/control")],
-        ["build image", c("debian:trixie") + " with apt",
-         c("docker.io/library/ubuntu:26.04") + " with apt (universe on). The static QUIC libraries remain: Ubuntu 26.04 carries ngtcp2 1.16 and nghttp3 1.12 (studio 8), too old for the pinned "
-         "1.25.0 and 1.18.0. The image also fetches, and checks the sha256 of, the two upstream tarballs of our labwc",
-         c("build/Containerfile") + ", " + c("build/quic-static.sh") + ", " + c("build/labwc-ospite/fetch.sh")],
-        ["package version and archives", sysf("remotix_1.0.1-1+deb13_amd64.deb"), sysf("remotix_1.0.1-1+ubuntu26.04_amd64.deb") + " (suite " + c("resolute") + ") and the source of our labwc, "
-         + sysf("remotix-<version>-labwc-source.tar.gz") + ", published with every release because labwc is GPL-2", c("build/build-deb.sh") + ", " + c("LICENSE.md")],
+        ["build machine", "a Debian 13 virtual machine with apt (no container); the static QUIC libraries exist because Debian's are too old",
+         "the «costruzione» virtual machine, Ubuntu 26.04 with apt (universe on), no container. The static QUIC libraries remain: Ubuntu 26.04 carries ngtcp2 1.16 and nghttp3 1.12 (studio 8), too old for the pinned "
+         "1.25.0 and 1.18.0. The script also fetches, and checks the sha256 of, the two upstream tarballs of our labwc (the older container road, " + c("build/build-deb.sh") + " and " + c("build/Containerfile") + ", is still in the tree)",
+         c("build/build-deb-vm.sh") + ", " + c("build/quic-static.sh") + ", " + c("build/labwc-ospite/fetch.sh") + ", " + c("server/vm-radeon.sh")],
+        ["package version and archives", sysf("remotix_1.2.0-1+deb13_amd64.deb"), sysf("remotix_1.2.0-1+ubuntu26.04_amd64.deb") + " (suite " + c("resolute") + ") and the source of our labwc, "
+         + sysf("remotix-<version>-labwc-source.tar.gz") + ", published with every release because labwc is GPL-2", c("build/build-deb-vm.sh") + ", " + c("LICENSE.md")],
         ["install paths", c("/usr/libexec/remotix/remotix") + ", " + c("/usr/share/polkit-1/rules.d") + ", " + c("/etc/ufw/applications.d") + ", "
          + c("/etc/apparmor.d"), "the same, plus " + sysf("/usr/libexec/remotix/labwc") + " and " + sysf("/etc/needrestart/conf.d") + ". " + c("ufw") + " is installed but off by default on Ubuntu (" + c("ENABLED=no") + ")",
          c("debian/rules")],
         "Login and system integration",
         ["PAM service", "the file uses " + c("@include common-auth") + ", " + c("common-account") + ", " + c("common-session") + ", " + c("common-password")
          + ": a Debian modification of Linux-PAM; elsewhere the line is an illegal module type. It also lists " + c("pam_selinux") + " lines "
-         "(module_unknown=ignore, harmless) and reads " + sysf("/etc/default/locale"),
-         "the same file, unchanged in content (Ubuntu inherits the " + c("@include") + " syntax). Only a comment was added: the session's " + c("PATH") + " comes from "
-         + c("pam_env") + " and " + sysf("/etc/environment") + " (which on Ubuntu lists " + sysf("/snap/bin") + "), so " + c("user_readenv=1") + " must NOT be added",
+         "(module_unknown=ignore, harmless). Two " + c("pam_env") + " lines give the desktop its " + c("PATH") + " (from " + sysf("/etc/environment") + ") and, with " + sysf("/etc/default/locale") + ", the system language",
+         "the same file (Ubuntu inherits the " + c("@include") + " syntax). The session's " + c("PATH") + " comes from "
+         + c("pam_env") + " and " + sysf("/etc/environment") + " (which on Ubuntu lists " + sysf("/snap/bin") + "), so " + c("user_readenv=1") + " must NOT be added; the second " + c("pam_env")
+         + " line gives the system language",
          c("src/remotix.pam") + ", " + c("child_path_ok()") + " in " + c("src/child.c")],
+        ["language and PATH of the remote desktop", "the user's own language from AccountsService (" + sysf("/var/lib/AccountsService/users/<name>") + ", read as root), else the system one from " + sysf("/etc/default/locale") + "; the " + c("PATH") + " from PAM when it is valid, else " + sysf("~/.local/bin:~/bin:/usr/local/bin:/usr/bin")
+         + ". Both follow what a local login gets on Debian",
+         "the same for the language (the user's own from AccountsService, read as root before the identity changes, else the system one; " + c("LC_*") + " and " + c("LANGUAGE") + " too); the " + c("PATH") + " from PAM when it is valid, else the fixed " + sysf("/usr/local/bin:/usr/bin:/bin")
+         + ", not a copy of what the system gives. Another distribution keeps its language settings elsewhere",
+         c("src/child.c") + ", " + c("src/remotix.pam")],
         ["PAM service lookup and messages", "the server checks " + sysf("/etc/pam.d/remotix") + ", then " + sysf("/usr/lib/pam.d/remotix") + "; some log "
          "messages still name other distributions' file names", "unchanged", c("src/main.c") + ", " + c("src/authentication.c")],
         ["who is an administrator", "polkit rules name " + c("sudo") + ", " + c("wheel") + " and " + c("admin") + "; only " + c("sudo") + " exists on trixie as shipped",
@@ -73,7 +79,7 @@ S2 = p("The table lists what a porter must look at, area by area, for the two di
          c("src/remotix-no-poweroff.rules") + ", " + c("power-implied") + " in " + c("prove/check-desktop.py")],
         ["system user and directories", "sysusers and tmpfiles files; the system user " + c("remotix") + " with " + sysf("/usr/sbin/nologin"), "unchanged", c("debian/remotix.sysusers")
          + ", " + c("debian/remotix.tmpfiles")],
-        ["mandatory access control", "AppArmor, profile in complain mode, never observed in a live graphical session; SELinux code was removed",
+        ["mandatory access control", "AppArmor, profile in complain mode (" + c("check-apparmor.py") + " reads the kernel journal of every round); SELinux code was removed",
          "AppArmor in complain mode, observed in real sessions (the start-up log line was read on the live images of Ubuntu and Kubuntu and on the four virtual machines; on the Xubuntu and Lubuntu live images only the owner's report of a successful sign-in exists). Three differences from the Debian profile: the two <code>deny unix</code> lines "
          "that name their operations (the single line of Debian forbids every unix socket on the kernel of Ubuntu, 7.0, which mediates them, and a <code>deny</code> holds in complain "
          "mode too: register C4); the XKB folders of xkb-data 2.46 (" + sysf("/usr/share/xkeyboard-config-2/") + ", " + sysf("/etc/xkb/") + ", " + sysf("/etc/X11/xkb/") + "); and "
@@ -115,16 +121,16 @@ S2 = p("The table lists what a porter must look at, area by area, for the two di
          + ", because the Flutter programs of Ubuntu and the confined snaps have their own dconf reader (register C5)",
          c("src/session.c") + ", " + c("debian/remotix.postinst")],
         "Test machinery",
-        ["boxes", "the images install " + c("task-<de>-desktop") + " and register " + c("gdm3") + ", " + c("sddm") + " or " + c("lightdm") + " (ports 8811 to 8814)",
+        ["test machines", "four virtual machines made from the Debian 13.8.0 live images, with the display managers " + c("gdm3") + ", " + c("sddm") + " and " + c("lightdm") + "; apt and the Debian names of the packages",
+         "four QEMU virtual machines installed from the Ubuntu 26.04.1 desktop images (Ubuntu, Kubuntu, Xubuntu, Lubuntu), with the display managers " + c("gdm3") + ", " + c("sddm") + ", " + c("lightdm") + " and " + c("sddm") + ", and the server's Radeon passed through (" + rif("The VM bench") + ")",
+         c("server/vm-radeon.sh") + ", " + c("prove/banco-vm/")],
+        ["tests", "apt in the clean-up and in the package install; Debian's package names for the browsers on the dev server and for the tools the checks need in the machine",
+         c("prove/check-package.py") + " is not part of the VM bench (declared SKIP); " + c("server/prepara-server-vm.sh") + " uses " + sysf("/media/REMOTIX-UBUNTU") + "; the Ubuntu machines have snap Firefox and the rules of sudo-rs, which the checks know",
+         c("prove/banco-vm/fresh-vm.sh") + ", " + c("server/prepara-server-vm.sh") + ", " + c("prove/all.sh")],
+        ["older container files", "images with " + c("task-<de>-desktop") + ", still in the tree and not used by the VM bench",
          "container images " + c("rxu-<de>") + " installed with the flavours' own packages (" + c("ubuntu-desktop-minimal") + ", " + c("kubuntu-desktop") + ", " + c("xubuntu-desktop") + ", " + c("lubuntu-desktop")
-         + "; ports 8821 to 8824), with the snap browsers kept out by a pin. They are still in the tree but are NOT the bench of the release",
-         c("boxes/Containerfile") + ", " + c("boxes/box.sh")],
-        ["release bench", "the four containers and one real virtual machine",
-         "four QEMU virtual machines, installed from the desktop images, with the server's Radeon passed through (" + rif("The VM bench") + ")",
-         c("server/vm-radeon.sh") + ", " + c("prove/banco-vm/box.sh")],
-        ["tests", "apt for the package check; Debian's package names for the browsers on the dev server",
-         c("prove/check-package.py") + " is not part of the VM bench (declared SKIP); " + c("server/prepara-server.sh") + " uses " + sysf("/media/REMOTIX-UBUNTU") + " and the container storage shared with the Debian tree",
-         c("prove/all.sh") + ", " + c("server/prepara-server.sh")],
+         + "; ports 8821 to 8824), with the snap browsers kept out by a pin. Still in the tree, NOT the bench of the release; " + c("server/prepara-server.sh") + " prepares the server for them (container storage shared with the Debian tree)",
+         c("boxes/Containerfile") + ", " + c("boxes/box.sh") + ", " + c("server/prepara-server.sh")],
     ], "«TAB» — Where the code depends on the distribution (Debian 13 and Ubuntu 26.04)") + \
     p("The state of each item on the Debian tree (removed, left, or to be removed later) is in " + c("docs/INVENTARIO-non-debian.md") + ", section \"Status after tranche 1\".")
 
@@ -234,7 +240,7 @@ S4 = p("The tree is not a template for a port, but the porting questions are now
         "<b>Check the library minimums</b> in " + c("src/Makefile") + " (" + c("MINIMI") + "): OpenSSL 3.5 or newer, GLib 2.80, libei 1.3.901, "
         "PipeWire, libva, Vulkan loader 1.3.274. The QUIC libraries are built from source in the image whatever the distribution carries (Ubuntu's are too old, too).",
         "<b>Rewrite the package</b> for the new format: dependency names, install paths, maintainer scripts. Keep the guards of " + c("debian/rules")
-        + " (R13, R24) and the checks of " + c("build/build-deb.sh") + " (R4, R13, R14, R23) as requirements, however they are implemented. On Ubuntu they also cover our labwc: no libwlroots among its "
+        + " (R13, R24) and the checks of " + c("build/build-deb-vm.sh") + " (R4, R13, R14, R23) as requirements, however they are implemented. On Ubuntu they also cover our labwc: no libwlroots among its "
         "dependencies, and the corresponding source archive is built reproducibly.",
         "<b>Write the PAM service file</b> for that distribution's stack. Without the file, Linux-PAM falls back to the service " + c("other") + ", and what "
         + c("other") + " does depends on the distribution (on some it is a hard deny, so every right password is refused). The program checks "
@@ -244,14 +250,14 @@ S4 = p("The tree is not a template for a port, but the porting questions are now
         "<b>Check the display manager and the session names</b> the desktops register, against " + c("desktop_session()") + ", " + c("gnome_session()") + " and the readers in " + c("session.c")
         + ". Check the order of the substring tests: a name that contains another (xubuntu, ubuntu) must be asked first.",
         "<b>Check mandatory access control on a real or virtual machine.</b> If SELinux is on, the removed handling of " + c("child.c") + " and " + c("walls.c") + " is needed. For AppArmor, adapt the profile, "
-        "write every <code>deny</code> with its operations, and expect that the path that the profile sees is the resolved one (the XKB data are behind a symbolic link on Ubuntu). The profile is still shipped in complain mode "
-        "and the enforce mode was not proven on either distribution (" + rif("What is unverified") + ").",
+        "write every <code>deny</code> with its operations, and expect that the path that the profile sees is the resolved one (the XKB data are behind a symbolic link on Ubuntu). The profile is still shipped in complain mode: " + c("check-apparmor.py") + " reads the kernel journal of every round and fails on any line of the profile, so adapt it until a round shows none; "
+        "the enforce mode was not proven on either distribution (" + rif("What is unverified") + ").",
         "<b>Check the programs that read the settings themselves</b> (snap, Flutter, Flatpak): open them in a remote session and read the log of the session for settings errors (register C5).",
         "<b>Check the compositor</b> at the version the distribution carries, and the four desktops' versions, in particular the GNOME session unit shape (a template with instances from GNOME 50), the KWin version and "
         "whether the labwc of the distribution hosts KWin correctly: on Ubuntu it did not, and a labwc of our own is built into the package.",
         "<b>Make the bench.</b> Containers are good for speed and bad for the real login screen, the security module and the confined programs. Use virtual machines installed from the desktop images "
-        "(" + rif("The VM bench") + "), keep the identity check, and run the whole of " + c("prove/all.sh") + " on each desktop; on Ubuntu the order that was followed was a full round on one desktop and a short "
-        "check, then the owner's hand tests, on the others (" + rif("Testing") + ").",
+        "(" + rif("The VM bench") + "), the ports and names in " + c("banco-vm/box.sh") + " and " + c("lib.py") + ", and run the whole of " + c("prove/all.sh") + " on each desktop (" + rif("Testing") + "). "
+        "On a new distribution or desktop also try by hand, on a real machine started from a live USB stick, the local login with programs open in the remote desktop (" + rif("Testing the real machine from a live USB") + ").",
         "<b>Run the package check</b> (" + c("check-package.py") + "): install, first start, remove, purge, reinstall. On Ubuntu it is not in the VM bench; it has to be run on a bench that can be reset, or by hand.",
         "<b>Write the manual from the code of the new distribution,</b> not by adapting the old one (register B5); and search for personal data in the finished package before publishing (register C3).",
     ]) + \
@@ -309,8 +315,8 @@ S6 = p("The product knows four desktops, by the enumeration " + c("DesktopSessio
         "<b>Packaging.</b> Recommends in " + c("debian/control") + " if the desktop needs a compositor package. If the compositor can be missing (a Recommends is not a Depends), make "
         + c("session_missing_component()") + " return its name: " + c("main.c") + " then answers 0x0E with the package's name before it spawns a child, and the " + c("postinst") + " warns when the "
         "desktop is installed alone.",
-        "<b>The bench.</b> Add the desktop to the dictionaries that give the bench its ports: " + c("PORTS") + " in " + c("lib.py") + " (8821 to 8824 for the containers, 8841 to 8844 for the virtual machines "
-        "chosen by " + c("RX_BANCO=vm") + "), " + c("box.sh") + " of the container bench and the one of " + c("prove/banco-vm/box.sh") + ", the " + c("boxes/Containerfile") + " and the identity check of the containers, or a new virtual machine in "
+        "<b>The bench.</b> Add the desktop to the dictionaries that give the bench its ports: " + c("PORTS") + " in " + c("lib.py") + " (8841 to 8844 for the virtual machines "
+        "chosen by " + c("RX_BANCO=vm") + "; 8821 to 8824 belong to the older containers), " + c("box.sh") + " of " + c("prove/banco-vm/box.sh") + ", and a new virtual machine in "
         + c("server/vm-radeon.sh") + ".",
         "<b>Tests.</b> Add the desktop to the dictionaries of the checks: " + c("PANEL") + " and " + c("LOGOUT") + " in " + c("deskkit.py") + ", " + c("PORTS")
         + " and " + c("SHELL_UP") + " in " + c("lib.py") + ", " + c("TERMINAL") + " and " + c("FILEMGR") + " in " + c("check-desktop.py") + " (on Ubuntu GNOME the terminal is " + c("ptyxis") + "), the desktop list in "

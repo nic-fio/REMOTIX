@@ -1,4 +1,4 @@
-from build import arrow, box, c, fig, flow, note, p, rif, seq, steps, sysf, table, text, tip, ul, warn, zone
+from build import arrow, box, c, fig, flow, note, p, rif, seq, steps, sysf, table, text, tip, ui, ul, warn, zone
 
 # ── The stack at a glance ───────────────────────────────────────────────
 STACK = fig(
@@ -82,7 +82,7 @@ S2 = p("No QUIC library considered for REMOTIX implements WebTransport on the se
       "rewritten, the log says which one, and the server has no WebTransport; it never emits a misaligned control stream.") + \
     note("the benches that compared the QUIC libraries and measured the WebTransport handshake against real browsers are not "
          "part of this tree. This manual repeats their result from code comments, not from a re-run. What was verified for "
-         "1.0.0 is in " + rif("What was verified for the transport") + ".", "Provenance.")
+         "this version is in " + rif("What was verified for the transport") + ".", "Provenance.")
 
 # ── Two listeners ───────────────────────────────────────────────────────
 S3 = p("The server listens on port 7447 twice: UDP for HTTP/3 and WebTransport, TCP for the first load of the page. The user "
@@ -276,7 +276,7 @@ S6 = p("Two TLS contexts are built by " + c("tls.c") + " from the two certificat
         "basic constraints " + c("critical,CA:FALSE") + ", subject " + c("CN") + " equal to the name, and a " + c("subjectAltName") +
         " that " + c("san_di()") + " writes as " + c("IP:") + " or " + c("DNS:") + " according to the form of the name. The name is " + c("--name") +
         " (the unit passes " + c("%H") + ", the host name); " + c("main.c") + " refuses to start with " + c("0.0.0.0") + " or " + c("::") +
-        " as the name. A user who connects by IP address declares it with " + c("REMOTIX_OPTIONS=--name 192.168.1.10") + ".",
+        " as the name. A user who connects by IP address declares it with " + c("REMOTIX_OPTIONS=--name 192.0.2.10") + ".",
         "<b>The administrator's certificate is never touched.</b> Every certificate REMOTIX writes has a " + c(".ours") + " marker next to it. "
         "A " + c("page.pem") + " with its key but without the marker belongs to someone else and is used as it is and never regenerated, "
         "even when it expires. The test is «did we write it?», not «is it self-signed?». The session certificate has no such exemption: "
@@ -520,7 +520,7 @@ S12 = p("QUIC measures the line continuously. REMOTIX uses that measurement and 
     ], "«TAB» — What sits between the encoder and ngtcp2") + \
     p("The threshold and the regulator are on together by default; with the threshold off the delta queue empties at every frame and the regulator can never trigger, which "
       "the start-up line says. The code comments record a declared price measured with benches that are not in this tree: up to 160 ms of extra delay on a bad line and none on a healthy one. "
-      "This manual does not repeat those measurements as verified for 1.0.0.")
+      "This manual does not repeat those measurements as verified for this version.")
 
 # ── Connection life ─────────────────────────────────────────────────────
 S13 = p("One QUIC connection carries at most one WebTransport session and one RCP session. The steps follow a connection from its first datagram to its close; the RCP steps "
@@ -540,24 +540,47 @@ S13 = p("One QUIC connection carries at most one WebTransport session and one RC
     "<b>Close.</b> RCP decides why (" + rif("The RCP/1 protocol") + "), and the WebTransport layer sends the capsule. The farewell "
     "of a graphical session that is over goes through " + c("wt_dismiss_user_session_over()") + ", which chooses which connections "
     "of the user receive it (" + rif("From password to admission") + "). At shutdown " + c("transport_dismiss_all()") + " says goodbye to "
-    "every session with " + c("SERVER_CLOSING") + " and the loop runs until the queues drain or a time budget (4 s in " + c("main.c") + ") expires.",
+    "every session with " + c("SERVER_CLOSING") + " and the loop runs until the queues drain or a time budget (4 s in " + c("main.c") + ") expires. "
+    "The log line of the connection's end, “connection with X closed (n left)”, carries the reason (" + rif("Why a connection closed") + ").",
 ]) + tip("the PAM verdict reaches the right connection through " + c("transport_verdict_as()") + ": the helper returns a ticket number, the transport offers it to every live session, and exactly "
          "one takes it. A verdict that finds nobody is counted as an orphan and not lost: the connection died while PAM was answering, and " + c("transport_awaits_verdict()") + " lets "
          "the caller skip starting a desktop for nobody.", "Verdict routing.")
 
+# ── Why a connection closed ─────────────────────────────────────────────
+S13B = p("A browser that cannot open a session says one thing, “Opening handshake failed”, whatever went wrong. The log says who "
+        "closed the connection and why, with one line per connection: " + c("connection with ADDRESS closed (n left) — …") + ". The text is written by " + c("close_why()")
+        + " in " + c("transport.c") + ", from what ngtcp2 recorded, and changes no behaviour and keeps no data of the client beyond the address that was already there.", lead=True) + \
+    table(["Part of the line", "What it says", "Where it comes from"], [
+        ["Who", "“the PEER closed it” (a CONNECTION_CLOSE came from the client: draining period); “WE closed it” (closing period); or “dropped without a CONNECTION_CLOSE”",
+         c("ngtcp2_conn_in_draining_period2()") + ", " + c("ngtcp2_conn_in_closing_period2()")],
+        ["What", "a transport error with its code and name (" + c("PROTOCOL_VIOLATION") + ", " + c("INVALID_TOKEN") + ", …); an application error with its code; “idle timeout (silence)”; “dropped silently”; "
+         "“retry”; “version negotiation”; “no error recorded” when nothing was written", c("transport_error_name()") + ", " + c("e->type")],
+        ["A TLS alert", "a transport error in the range 0x100 to 0x1ff is a TLS alert of the handshake and is named: 42 " + c("bad_certificate") + ", 45 " + c("certificate_expired") + ", 46 "
+         + c("certificate_unknown") + ", 48 " + c("unknown_ca") + ", and so on", c("tls_alert_name()")],
+        ["The peer's sentence", "the reason phrase the peer sent, cleaned (printable ASCII only, a quote turned into a dot, at most 60 characters)", c("close_why()")],
+        ["The handshake", "“TLS handshake COMPLETED” or “NOT completed”", c("ngtcp2_conn_get_handshake_completed2()")],
+    ], "«TAB» — What the closing line of a connection says") + \
+    p("A browser that connected with a wrong fingerprint produces " + c("the PEER closed it: transport error CRYPTO 0x12e = TLS alert 46 certificate_unknown")
+      + " and " + c("TLS handshake NOT completed") + ". A browser killed with SIGKILL gives, 30 s later, “dropped without a CONNECTION_CLOSE: idle timeout (silence)”. "
+      "Connections that never logged in are limited to the number of lines per window of " + c("BIRTH_LINES") + ": beyond it the line goes to the detail level, with the same text; "
+      "the closing of a connection that did log in is always written.") + \
+    warn("The certificate of a session is made valid from <b>one hour before</b> the moment it is created (" + c("notBefore") + " = now minus 3600 s, " + c("certificates.c") + "), "
+         "and the browser checks that date against <i>its own</i> clock. A client device whose clock is more than an hour behind the server's sees the certificate as “not yet valid”, and the "
+         "browser says only " + ui("Opening handshake failed") + ". It is not a defect: a very wrong clock breaks every secure site anyway, and the margin is not widened. "
+         "Requirement: <b>the clock of the client device must be right</b>. The closing line above is how the cause is read in the log.", "The client's clock.")
+
 # ── Verification ────────────────────────────────────────────────────────
 S14 = p("What is known about the transport at this version comes from three sources, and it helps to keep them apart: the "
-        "automatic rounds of the checks in " + c("prove/") + " (containers on 18 and 19 Nov 2026, a virtual machine on 19 Nov 2026), what the "
-        "owner tried by hand on real machines, and what is only in the code. The rounds on the virtual machines run with the deadlines "
-        "doubled (" + c("RX_TEMPO=2") + ") and, because QEMU's user network shows every client as " + c("10.0.2.2") + ", the ban check "
+        "automatic rounds of the checks in " + c("prove/") + " (the four virtual machines, 26 and 27 Nov 2026), what the "
+        "owner tried by hand on the virtual machines and on real machines, and what is only in the code. Because QEMU's user network shows every client as " + c("10.0.2.2") + ", the ban check "
         "can only try the ban of that one address (" + c("check-ban.py") + ").", lead=True) + \
     table(["Claim", "Evidence", "Not verified"], [
-        ["Chrome and Firefox open the session by certificate pinning, input and video flow", "The browser checks of " + c("prove/all.sh") + " drive a real browser through the page and the session. Round " + c("unione2") + " (18 Nov 2026, containers): GNOME 123 of 124 lines, KDE 121 of 124, LXQt 124 of 124, XFCE 126 of 128; the last container round, " + c("unione5") + " (19 Nov 2026): KDE, XFCE and LXQt all lines PASS, GNOME all but the pkexec line; full round on the GNOME virtual machine with the release package (19 Nov 2026): 120 PASS, 2 FAIL, 1 BLOCKED, 3 SKIP, the failures explained in " + rif("What was verified and what was not"), "Safari, iOS; a phone other than the owner's Android one; a real network between client and server"],
-        ["A dropped network is survived", c("prove/check-resilience.py") + ", check " + c("network-drop") + ": all UDP of the port is dropped for longer than the silence clock, then the same user logs in again and finds the session (passed on the GNOME virtual machine)", "Packet loss and reordering profiles (the benches that produced the dead-line numbers are not in this tree)"],
+        ["Chrome and Firefox open the session by certificate pinning, input and video flow", "The browser checks of " + c("prove/all.sh") + " drive a real browser through the page and the session. Round of 26-27 Nov 2026 on the four virtual machines: GNOME 125 PASS and one known FAIL (the pkexec line), KDE, XFCE and LXQt 126 PASS (" + rif("What was verified and what was not") + ")", "Safari, iOS; a phone other than the owner's Android one; a real network between client and server"],
+        ["A dropped network is survived", c("prove/check-resilience.py") + ", check " + c("network-drop") + ": all UDP of the port is dropped for longer than the silence clock, then the same user logs in again and finds the session (passed in the round of the virtual machines)", "Packet loss and reordering profiles (the benches that produced the dead-line numbers are not in this tree)"],
         ["A service restart closes the desktop and the client is told", c("prove/check-resilience.py") + ", check " + c("service-restart")
-         + ": after the restart the client is told or returns to the form, nothing of the old desktop is left, and a new login is a NEW session (passed on the GNOME virtual machine)", "—"],
-        ["Wrong passwords ban the address; the page still loads", c("prove/check-ban.py") + " (8 of 8 on the virtual machine after the bench entered as root)", "Other addresses than " + c("10.0.2.2") + " on a virtual machine (SKIP " + c("ban/other-addresses") + ")"],
-        ["The package installs, starts and runs behind its AppArmor profile", "Installed and signed in on four virtual machines and four live images; on a real machine the profile was in force and the log said " + c("CONNECTED") + " (REGISTRO C4)", c("prove/check-package.py") + " on a virtual machine (it needs a reset; SKIP " + c("package") + "); the profile in enforce mode; the 26.04 snap and cloud-init list of " + c("package-snap.py") + " was not run"],
+         + ": after the restart the client is told or returns to the form, nothing of the old desktop is left, and a new login is a NEW session (passed in the round of the virtual machines)", "—"],
+        ["Wrong passwords ban the address; the page still loads", c("prove/check-ban.py") + " (passed in the round of the virtual machines)", "Other addresses than " + c("10.0.2.2") + " on a virtual machine (SKIP " + c("ban/other-addresses") + ")"],
+        ["The package installs, starts and runs behind its AppArmor profile", "Installed, updated from 1.0.1 and purged on the four virtual machines, installed and signed in on the four live images; on a real machine the profile was in force and the log said " + c("CONNECTED") + " (REGISTRO C4)", c("prove/check-package.py") + " on a virtual machine (it needs a reset; SKIP " + c("package") + "); the profile in enforce mode; the 26.04 snap and cloud-init list of " + c("package-snap.py") + " was not run"],
         ["Retry, handshake rate buckets, caps and eviction, signed connection ids, Stateless Reset caps", "Present in the code and exercised implicitly by every connection of the checks (every connection passes the Retry)", "No check in " + c("prove/") + " floods the server. The unit and fuzz harnesses named in the comments of " + c("hsrate.h") + ", " + c("resetcap.h") + " and " + c("cid.h") + " are not in this tree and were not re-run"],
         ["Rotation of the session certificate", "Code path in " + c("certificates_rotate_if_needed()") + " and " + c("main.c"), "No check rotates a certificate or keeps a client connected through a rotation"],
         ["The post-quantum key share", "The code asks for " + c("X25519MLKEM768") + " first and, if OpenSSL does not know the name, sets the list without it and says so in the log (" + c("tls.c") + ")", "Not verified at run time on Ubuntu 26.04 (OpenSSL 3.5.5)"],
@@ -578,5 +601,6 @@ CHAPTER = ("Transport", [
     ("Idle timeout, keep-alive PINGs and the dead line", S11),
     ("Congestion, pacing and the video queue", S12),
     ("One connection from first packet to close", S13),
+    ("Why a connection closed", S13B),
     ("What was verified for the transport", S14),
 ])

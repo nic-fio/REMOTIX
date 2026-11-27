@@ -170,7 +170,7 @@ S4 = p("The profile is " + c("debian/remotix_network.apparmor") + ", installed a
          "empty (comment of the profile; study 5 §1.3, from the parser's debug output)."],
         ["Files", "The binary and " + sysf("/usr/share/remotix") + " read; the XKB data read (list below); " + sysf("/etc/machine-id")
          + " read; " + sysf("/var/lib/remotix/net") + " and " + sysf("/run/remotix/net") + " read, write and lock; the "
-         "system bus, the journal sockets and logind's session files; selected " + sysf("/proc") + ", " + sysf("/sys")
+         "system bus, the journal sockets and logind's session files; " + sysf("/usr/share/applications/org.kde.remotix.desktop") + " read (KWin's screencast permission file, which this side reads too on KDE); selected " + sysf("/proc") + ", " + sysf("/sys")
          + " and " + sysf("/dev") + " entries (" + c("null") + ", " + c("urandom") + ", " + c("random") + ")."],
         ["XKB data (Ubuntu 26.04)", sysf("/usr/share/xkeyboard-config-2") + ", " + sysf("/usr/share/xkeyboard-config-2.d") + ", " + sysf("/etc/xkb")
          + " and " + sysf("/etc/X11/xkb") + ", as well as " + sysf("/usr/share/X11/xkb") + ". With xkb-data 2.46 the data are in "
@@ -208,8 +208,9 @@ S4 = p("The profile is " + c("debian/remotix_network.apparmor") + ", installed a
       "the system bus and the journal reachable, the abstract sockets still refused, and the check of local sessions answering «CONNECTED» "
       "(the start-up log line of §5.1). The owner then tried the release by hand on the four virtual machines (QEMU, with a Radeon "
       "handed to them) and on the four live images, Ubuntu, Kubuntu, Xubuntu and Lubuntu (" + c("docs/STORIA-ubuntu-26.04.md") + ", 19 Nov 2026). "
-      "<b>Not verified:</b> a count of the ALLOWED or DENIED audit lines during a session in complain mode was not found in the tree or "
-      "in the register, so nothing is claimed about the profile's completeness; the profile was not moved to enforce, and the rule "
+      "Since 1.2.0 the sessions of the bench's virtual machines (a video card passed through) are checked by " + c("check-apparmor.py") + ": it reads the kernel journal of the machine (and the audit log if there is one) and fails on any " + c("apparmor=\"ALLOWED\"")
+      + " or " + c("apparmor=\"DENIED\"") + " line of the profile since a given moment (complain mode shows what the profile does not cover as ALLOWED); the bench's full round runs it last, and in the 1.2.0 round it gave no failure. "
+      "<b>Not verified:</b> the profile was not moved to enforce, and moving it is a decision not taken; the rule "
       "«not to enforce without a session observed with no unexpected audit line» stays (REGISTRO C4: to be looked at when it passes "
       "to enforce; study 5 §1.4 notes that Ubuntu's kernel supports AppArmor mediation of D-Bus and the profile has no " + c("dbus")
       + " rule, which enforce might need). The rules for " + sysf("/proc") + " are still marked «not tried» in the profile. The "
@@ -307,7 +308,9 @@ S5C = p("<b>The problem.</b> A user who has a REMOTIX desktop and then logs in a
          "only. PAM runs it as root, inside the login's own stack, and the login waits for it."],
         ["The PAM line", c("session optional pam_exec.so quiet /usr/libexec/remotix/remotix-local-login") + " in " + c("/etc/pam.d/common-session")
          + ", put there by " + c("pam-auth-update") + " from the profile " + c("/usr/share/pam-configs/remotix") + " ("
-         + rif("The PAM service file remotix.pam") + ", " + rif("Files the package installs") + ")."],
+         + rif("The PAM service file remotix.pam") + ", " + rif("Files the package installs") + "). It is also checked at every start of the "
+         "service: " + c("ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check") + " looks for the line and, if it is missing, puts it back with "
+         + c("pam-auth-update --package") + " and writes one line in the log; it never forces and never re-enables a profile the administrator switched off."],
         ["The requests", c("/run/remotix/prelocal/") + ": a folder of root, mode 0700, made by the root side (not by tmpfiles). "
          "A request is an empty file named by the uid. The file " + c(".lock") + " in it is held with an exclusive lock for as long "
          "as the root side lives."],
@@ -411,9 +414,10 @@ S6 = p("A REMOTIX session has no seat, so polkit gives it the answer meant for a
          + c("AUTH_ADMIN") + ": «challenge» would leave the entry in the menu asking a password, which promises "
          "something that is not there."],
         [c("remotix-remote-sessions.rules"), c("40-remotix-remote-sessions.rules"),
-         "Removes the unrequested password windows of a remote session, for five actions only. Catalogue refresh "
+         "Removes the unrequested password windows of a remote session, for six actions only. Catalogue refresh "
          "(" + c("Flatpak.metadata-update") + ", " + c("Flatpak.appstream-update") + ", "
-         + c("packagekit.system-sources-refresh") + "): " + c("YES") + " for every REMOTIX user, if the machine "
+         + c("packagekit.system-sources-refresh") + ", " + c("fwupd.refresh-remote") + " (gnome-software's firmware metadata refresh at login; "
+         "fwupd 2.1.1 of Ubuntu 26.04 has no such action, measured on the four bench machines, so the line is inert here and kept to stay aligned with Fedora)): " + c("YES") + " for every REMOTIX user, if the machine "
          "gives the seated user " + c("yes") + ". Network control and system repositories ("
          + c("NetworkManager.network-control") + ", " + c("Flatpak.modify-repo") + "): " + c("YES") + " for an "
          "administrator (member of " + c("wheel") + ", " + c("sudo") + " or " + c("admin") + ") under the same "
@@ -442,7 +446,7 @@ S6 = p("A REMOTIX session has no seat, so polkit gives it the answer meant for a
         + c("org.freedesktop.policykit.imply") + " = " + c("reboot") + " and the default «yes» for the active user seated at the machine; "
         "whoever is authorised for one of them is authorised for " + c("reboot") + " by implication, <b>despite</b> the explicit NO on "
         + c("reboot") + " (an explicit NO is not enough against an implication from an authorised action). The four are now forbidden, "
-        "and the version of the package stays 1.0.0. With other users logged in, logind asks " + c("reboot-multiple-sessions") + ", which "
+        "With other users logged in, logind asks " + c("reboot-multiple-sessions") + ", which "
         "was and is denied, so the hole let only a local user reboot, only when he was alone on the machine, and it never allowed a "
         "power-off. The round had not seen it because it looked only at the <i>remote</i> session, which is not «seated at the machine» "
         "so the «yes» for the active user does not apply to it, and only at the fifteen actions known by name. The same four annotations were found "
@@ -563,8 +567,8 @@ S8 = p("The honest list, from the code and the decisions:", lead=True) + \
          "and aarch64 have a seccomp filter. On the four Ubuntu 26.04 virtual machines (kernel 7.0) the "
          "network side reports Landlock ABI 8 and the scope is applied; the live images were not read."],
         ["AppArmor in a session", "The profile is in complain mode. It was run through real sessions on Ubuntu 26.04 (virtual machines and "
-         "live images), and its first run on a real machine found the defect C4 (previous section); it was never run in enforce mode, "
-         "no count of audit lines during a session was found, and the rules for " + c("/proc") + " and for " + c("dbus") + " in enforce "
+         "live images), its first run on a real machine found the defect C4 (previous section), and " + c("check-apparmor.py") + " now looks for audit lines in every round; it was never run in enforce mode, "
+         "and the rules for " + c("/proc") + " and for " + c("dbus") + " in enforce "
          "are untried."],
         ["Variables of the user manager", "The snapshot of the user manager's variables can be old after a close made from the root side, "
          "and the question «is the desktop alive» treats an unanswered question as «closed» in two places; not corrected because the "
@@ -590,7 +594,7 @@ S8 = p("The honest list, from the code and the decisions:", lead=True) + \
          "restarting REMOTIX closes every remote desktop, and needrestart would otherwise restart it by itself after the update of a library "
          "(" + c("debian/needrestart/remotix.conf") + "; " + rif("The package") + "). The uninstallation that leaves the system clean is in "
          + rif("Removal: prerm, postrm and purge") + "."],
-        ["Hardware and clients not tried", "NVIDIA (deferred), Samsung DeX (tried by the owner only on Debian; nothing about it was found "
+        ["Hardware and clients not tried", "NVIDIA (measured on an RTX 4090 on Ubuntu 26.04 in October 2026 with an earlier build, not run again on this tree), Samsung DeX (tried by the owner only on Debian; nothing about it was found "
          "for Ubuntu, not verified), a canvas above 3840x2160 (the page's own size ladder stops there; the protocol canvas is 4096×2304, "
          "and the <b>declared</b> limit of the product is 3K) and the first tap on GNOME touch (REGISTRO E2) are open or untried. The only "
          "hardware named for Ubuntu is the Radeon handed to the test virtual machines (" + c("server/vm-radeon.sh") + "), with its encoding "

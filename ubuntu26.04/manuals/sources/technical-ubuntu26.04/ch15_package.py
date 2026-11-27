@@ -4,11 +4,11 @@ from build import c, code, h4, note, p, rif, sysf, table, tree, ul, warn
 S1 = p("REMOTIX for Ubuntu 26.04 is one binary package, " + c("remotix") + ", built from the " + c("debian/") + " folder "
        "(source format " + c("3.0 (native)") + ", " + c("debhelper-compat (= 13)") + ", " + c("Rules-Requires-Root: no")
        + "). It is installed with " + c("apt install ./remotix_*.deb") + "; there is no installer program. The "
-       "build itself, in an " + c("ubuntu:26.04") + " container with the static ngtcp2 and nghttp3 and with the sources of "
-       "the package's own labwc, is in "
+       "build itself, in the build virtual machine " + c("costruzione") + " with the static ngtcp2 and nghttp3 and with the sources of "
+       "the package's own labwc (no containers), is in "
        + rif("Build and release") + ". The package is " + c("Architecture: any") + ": the binary is compiled for the "
        "machine, and the walls of the network side exist only for x86_64 and aarch64 (" + rif("Security model") + "). "
-       "The version of the file is " + c("1.0.1-1+ubuntu26.04") + " and the changelog names the suite " + c("resolute")
+       "The version of the file is " + c("1.2.0-1+ubuntu26.04") + " and the changelog names the suite " + c("resolute")
        + " (" + rif("Version and release") + ").",
        lead=True) + \
     p("The package changes the machine as little as possible, and says so in the maintainer scripts. It creates one "
@@ -178,9 +178,11 @@ S4 = p("The " + c("postinst") + " does, on " + c("configure") + ", in this order
         "<i>remotix: ⚠ pam-auth-update not found</i>, and <i>remotix: ⚠ common-session was edited by hand</i> (the line is not in the file after "
         "the step: a local login is then not held and only the periodic check remains). A failure of " + c("pam-auth-update")
         + " itself is said too. The step runs at every " + c("configure") + ", "
-        "upgrades included; whether an administrator's deselection of the profile survives an upgrade was not verified.",
+        "upgrades included; whether an administrator's deselection of the profile survives an upgrade was not verified. The line is "
+        "also checked at every start of the service (below). The check of the step uses a pattern that matches the line itself "
+        "(" + c("session … pam_exec.so … remotix-local-login") + "), not a comment that merely names the file.",
         "<b>The encoding test, on the first configuration only</b> (the second argument of the script is empty) and "
-        "only if the binary is there: " + c("timeout 30 /usr/libexec/remotix/remotix --encoding-test h264") + ". Its "
+        "only if the binary is there: " + c("MESA_SHADER_CACHE_DISABLE=true timeout 30 /usr/libexec/remotix/remotix --encoding-test h264") + " (Mesa then does not open a shader cache in " + sysf("/root/.cache") + " for a probe that runs once). Its "
         "exit status is 0 if the card encodes a test frame, 3 if no card can encode, 1 if it opens and produces "
         "nothing. Any non-zero status prints a two-line warning that REMOTIX will show no desktop until the card "
         "encodes, naming the driver to check (Intel and AMD: " + c("va-driver-all") + "; NVIDIA: its proprietary "
@@ -216,6 +218,7 @@ FILES = tree([
     "/usr/libexec/remotix/",
     "├── remotix  # the server, mode 0755: root side, network side, child, PAM helper (one executable)",
     "├── remotix-local-login  # the local-login hook, mode 0755, libc only: run by PAM at a local login",
+    "├── remotix-pam-hook  # shell script, mode 0755: puts the hook's PAM line back at every start of the service",
     "├── remotix-polkit-seated  # shell helper of the 40- polkit rule, mode 0755",
     "└── labwc  # OUR labwc 0.9.3 with a patched wlroots 0.19.2, static, mode 0755: the host of the nested KWin",
     "/usr/share/remotix/",
@@ -249,12 +252,12 @@ FILES = tree([
 
 S5 = p("Everything is installed by " + c("override_dh_auto_install") + " and " + c("execute_after_dh_auto_install")
        + " in " + c("debian/rules") + ", plus what debhelper adds by itself and the one line of " + c("debian/remotix.install")
-       + " (the needrestart drop-in). The package of the release has 59 entries in its file list, folders included.", lead=True) + FILES + \
+       + " (the needrestart drop-in). The tree below is the package's file list.", lead=True) + FILES + \
     ul([
         "<b>Conffiles.</b> debhelper marks everything under " + sysf("/etc") + " as a conffile, so dpkg keeps the "
         "administrator's edits on upgrade and on removal, and deletes the files on purge. The release package declares five: "
         "the AppArmor profile, the needrestart drop-in, the PAM file, the denied list and the ufw profile (the list is printed by "
-        + c("build-deb.sh") + " in " + sysf("controlli.txt") + "). " + c("remotix.conf") + " in " + sysf("/usr/share/remotix") + " is not one: "
+        + c("build-deb-vm.sh") + " in " + sysf("controlli.txt") + "). " + c("remotix.conf") + " in " + sysf("/usr/share/remotix") + " is not one: "
         "choices go in " + sysf("/etc/remotix/remotix.conf.d/*.conf") + ", with the same lines, and win.",
         "<b>The page certificate is not in the package.</b> The server makes its own certificates at start-up in "
         + sysf("/var/lib/remotix/net/certificates") + " (" + c("certificates_prepare()") + "); an administrator's own, "
@@ -262,13 +265,15 @@ S5 = p("Everything is installed by " + c("override_dh_auto_install") + " and " +
         "<b>The KDE file</b> " + c("org.kde.remotix.desktop") + " has " + c("Exec=/usr/libexec/remotix/remotix") + ", "
         + c("NoDisplay=true") + " and " + c("X-KDE-Wayland-Interfaces=zkde_screencast_unstable_v1") + ". The package "
         "ships it and the program only checks it at start-up (" + c("kwin_check_permission()") + "); it never writes it.",
-        "<b>The two polkit files and the helper</b> are active as soon as they are installed; the two files under "
+        "<b>The two polkit files and the helper</b> are active as soon as they are installed (the 40- rule has a fourth refresh action, "
+        + c("org.freedesktop.fwupd.refresh-remote") + ", which gnome-software asks at login; fwupd 2.1.1 of Ubuntu 26.04 has no such action, so the line is inert there); the two files under "
         + c("belts/") + " are not (" + rif("Security model") + ").",
         "<b>The unit comes from debhelper.</b> " + c("dh_installsystemd") + " picks " + c("debian/remotix.service") + " and "
         "installs it under " + sysf("/usr/lib/systemd/system/") + "; " + c("rules") + " has no line for it.",
-        "<b>The licences.</b> " + c("debian/copyright") + " carries the licence text of REMOTIX (appended by " + c("build-deb.sh") + ") and a section for "
+        "<b>The licences.</b> " + c("debian/copyright") + " carries the licence text of REMOTIX (appended by " + c("build-deb-vm.sh") + ") and a section for "
         + c("usr/libexec/remotix/labwc") + " («GPL-2 and Expat»: labwc is GPL-2, two of its files LGPL-2.0-or-later, wlroots is Expat). "
-        + c("THIRD-PARTY-LICENSES") + " is installed (compressed) under " + sysf("/usr/share/doc/remotix/") + ".",
+        + c("THIRD-PARTY-LICENSES") + " is installed (compressed) under " + sysf("/usr/share/doc/remotix/") + ": it holds the full texts of the third-party components (ngtcp2, nghttp3, libopus, the Emscripten and musl parts of the page's decoder, the Wayland protocol files, and labwc and wlroots). "
+        + c("LICENSE.md") + " (section 8) says the same of labwc and wlroots and promises the corresponding source with every release; there is no installer and no Go module in the package any more, and the licence files do not mention them.",
         "<b>No benchmark file and no bench option are in the package.</b> The build refuses to package if "
         + c("BENCH_ON") + " in " + c("rcp.c") + " is not 0, and its checks on the finished package assert that the unit "
         "passes no bench option and that no bench file is in the file list (" + rif("Build and release") + "). "
@@ -319,14 +324,14 @@ S5 = p("Everything is installed by " + c("override_dh_auto_install") + " and " +
     p("Both are in polkit's vendor folder, so polkit reads them in file-name order together with " + sysf("/etc/polkit-1/rules.d/") + "; an administrator "
       "writes a rule with a lower number there to decide otherwise. " + c("40-remotix-remote-sessions.rules") + " is about five actions that a distribution "
       "grants without a password only to a user at a seat: refreshing the software catalogue (" + c("Flatpak.metadata-update") + ", " + c("Flatpak.appstream-update")
-      + ", " + c("packagekit.system-sources-refresh") + ", yes for a REMOTIX user where the seated user gets yes) and, for network control and system repositories, "
+      + ", " + c("packagekit.system-sources-refresh") + ", " + c("fwupd.refresh-remote") + " (inert on Ubuntu 26.04: fwupd 2.1.1 has no such action), yes for a REMOTIX user where the seated user gets yes) and, for network control and system repositories, "
       "yes for an administrator and a silent no for anybody else. A REMOTIX session is recognised by the helper " + c("remotix-polkit-seated") + ", which looks in logind's "
       "state files for a session of the user with the PAM service " + c("remotix") + ". " + c("50-remotix-no-poweroff.rules") + " returns " + c("NO")
       + " for <b>19</b> login1 actions: " + c("power-off") + ", " + c("reboot") + ", " + c("halt") + ", " + c("suspend") + " and " + c("hibernate")
       + ", each in the plain form, " + c("-multiple-sessions") + " and " + c("-ignore-inhibit") + " (15 actions), and the four " + c("set-reboot-parameter")
       + ", " + c("set-reboot-to-firmware-setup") + ", " + c("set-reboot-to-boot-loader-menu") + " and " + c("set-reboot-to-boot-loader-entry") + ". The last four were "
       "added on 20 Nov 2026 (register C6): in logind's policy each of them <i>implies</i> " + c("reboot") + " and defaults to yes for the user at the machine, and polkit "
-      "grants an implied action even when a rule says no to it. The package " + c("unione10") + " has the rule with 15 actions; the tree and the package " + c("unione11") + " (20 Nov 2026, the one meant for the release) have 19. "
+      "grants an implied action even when a rule says no to it. The first package that had the rule carried 15 actions; the rule of the release has 19. "
       "Root is not affected, because logind does not ask polkit of a caller that holds " + c("CAP_SYS_BOOT") + ". The checks are in " + rif("The checks of all.sh and what each proves") + " (" + c("power-entries-absent") + ", " + c("power-implied") + ", " + c("power-local-seat") + ").") + \
     note("The unit starts the server with " + c("--address 0.0.0.0") + ": once enabled it listens on every address, TCP "
          "for the page and UDP for QUIC. The port is the variable " + c("REMOTIX_PORT") + " (7447) in "
@@ -360,7 +365,7 @@ S6A = p("The package carries a second program, " + sysf("/usr/libexec/remotix/la
          c("src/kwin.c")],
         ["Licence",
          "GPL-2 for labwc (two files LGPL-2.0-or-later), Expat for wlroots and for the patch. The corresponding source has to be published with every release: "
-         + c("remotix-<version>-labwc-source.tar.gz") + ", made by " + c("build/build-deb.sh") + " (" + rif("What build-deb.sh does, step by step") + "): the two tarballs, the patch and the recipe, 7 files in a deterministic archive.",
+         + c("remotix-<version>-labwc-source.tar.gz") + ", made by " + c("build/build-deb-vm.sh") + " (" + rif("What build-deb-vm.sh does, step by step") + "): the two tarballs, the patch and the recipe, 7 files in a deterministic archive.",
          c("debian/copyright") + ", " + c("LICENSE.md")],
     ], "«TAB» — The guest labwc of the package") + \
     p("The build of it runs inside " + c("override_dh_auto_build") + " with the dpkg flags already in the environment (hardening, " + c("-ffile-prefix-map")
@@ -381,11 +386,11 @@ S6 = p("Removal has two scripts and two outcomes. " + c("apt remove") + " keeps 
       "restart of the service that the " + c("postinst") + " does if it was running closes them, see the last section).</b> The order matters and each step was added "
       "deliberately (the closing of the sessions before the stop, after a measurement on 17 Nov 2026):") + \
     ul([
-        "<b>Take the PAM line out first.</b> " + c("pam-auth-update --package --remove remotix") + " (if " + c("pam-auth-update")
-        + " exists) removes the local-login line from " + sysf("/etc/pam.d/common-session") + ", before anything else and while the "
-        "profile file is still in place; a failure is said (<i>remotix: ⚠ pam-auth-update --remove remotix failed: check "
-        "/etc/pam.d/common-session</i>) and does not stop dpkg. A purge passes here too, because it runs the " + c("prerm") + " with "
-        + c("remove") + " first.",
+        "<b>Take the PAM line out, now that the service is down.</b> " + c("pam-auth-update --package --remove remotix") + " (if " + c("pam-auth-update")
+        + " exists) removes the local-login line from " + sysf("/etc/pam.d/common-session") + " while the profile file is still in place. It is done only after "
+        "the stop because the " + c("ExecStartPre") + " of the unit would put the line back if the service restarted in between. A failure is said "
+        "(<i>remotix: ⚠ pam-auth-update --remove remotix failed: check /etc/pam.d/common-session</i>) and does not stop dpkg. A purge passes here too, "
+        "because it runs the " + c("prerm") + " with " + c("remove") + " first.",
         "<b>Close the sessions, with the service still running.</b> " + c("remotix_close_sessions()") + " finds "
         "the logind sessions whose " + c("Service") + " is " + c("remotix") + " and which have no seat ("
         + c("remotix_sessions()") + "; a seated session is never ours whatever its service says) and runs "
@@ -462,14 +467,20 @@ S7 = p("The package installs the service disabled and does not start it. The adm
         ["Removal", "The " + c("prerm") + " closes the REMOTIX sessions and stops the service (see the previous section)."],
         ["Purge", "As removal, then the state is deleted."],
     ], "«TAB» — The package and the service") + \
+    p("<b>Two lines of the unit.</b> " + c("ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check") + ": at every start the script looks for the "
+      "hook's line in " + c("/etc/pam.d/common-session") + " and, if it is missing (an update, a hand edit), puts it back with " + c("pam-auth-update --package")
+      + " and writes one line in the service's log saying what it found; the " + c("-") + " means a failure never prevents the start, and the script never uses "
+      + c("--force") + " or " + c("--enable") + ", so a file edited by hand or a profile switched off in " + c("pam-auth-update") + " stay as they are (the line then "
+      "says the hook is not in place). And " + c("Environment=MESA_SHADER_CACHE_DISABLE=true") + ": the codec probe of the root side would otherwise make Mesa "
+      "open a shader cache in " + sysf("/root/.cache") + "; the users' desktops get their environment from PAM and keep their cache. That the root side no longer creates that folder was not measured on Ubuntu, and a 1.0.1 folder stays after a removal (register H5).") + \
     h4("Installing as the administrator does") + \
     p("The administrator's way is two commands, and it is the one the bench follows (" + c("server/vm-radeon-installa.sh") + "):") + \
-    code("sudo apt install ./remotix_1.0.1-1+ubuntu26.04_amd64.deb\nsudo systemctl enable --now remotix", "bash", "Install and start") + \
+    code("sudo apt install ./remotix_1.2.0-1+ubuntu26.04_amd64.deb\nsudo systemctl enable --now remotix", "bash", "Install and start") + \
     p("The same version installed over an earlier build of itself is not a change for apt, which then does nothing; " + c("apt install --reinstall ./remotix_*.deb")
       + " replaces the files (it is what " + c("prove/banco-vm/box.sh install") + ", " + c("server/live-installa.sh") + " and " + c("server/vm-radeon-installa.sh")
       + " run, so that a package rebuilt with the same version number is really installed). A reinstall runs the maintainer scripts as an upgrade would: "
-      "the service is restarted if it was running, and the encoding test of the " + c("postinst") + " is not repeated. On the run of the 1.0.0 release the line of apt was "
-      + c("Unpacking remotix (1.0.0-1+ubuntu26.04) over (1.0.0-1+ubuntu26.04)…") + " followed by " + c("Setting up remotix (1.0.0-1+ubuntu26.04)…") + ".") + \
+      "the service is restarted if it was running, and the encoding test of the " + c("postinst") + " is not repeated. The messages that tell the administrator to reinstall (the KDE permission file, a missing PAM file) give the command for a " + c(".deb") + ": "
+      + c("sudo apt install --reinstall ./remotix_<version>_amd64.deb") + ".") + \
     h4("needrestart") + \
     p("On Ubuntu, " + c("needrestart") + " (run by apt after an upgrade, by " + c("unattended-upgrades") + " or by hand) restarts a service that uses a library that has just "
       "been upgraded (" + c("libc6") + ", " + c("libssl3") + ", " + c("libpam") + "…) without asking, and a restart of REMOTIX closes every remote desktop. The package therefore installs "
@@ -481,7 +492,7 @@ S7 = p("The package installs the service disabled and does not start it. The adm
       "the rest of that decision is about the old installer) and is stated in the repository's " + c("CLAUDE.md")
       + ": the service is installed disabled and not started, and the administrator enables it. The unit uses the "
       "machine's name (" + c("%H") + ") for the certificate; an administrator who connects by IP address puts "
-      + c("REMOTIX_OPTIONS=--name 192.168.1.10") + " in a drop-in under " + sysf("/etc/remotix/remotix.conf.d/")
+      + c("REMOTIX_OPTIONS=--name 192.0.2.10") + " in a drop-in under " + sysf("/etc/remotix/remotix.conf.d/")
       + " (the last " + c("--name") + " wins). The runtime life cycle of the service is in "
       + rif("Startup and life cycle") + ".")
 

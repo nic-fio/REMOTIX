@@ -1,6 +1,7 @@
-"""Chapter 17 — Testing. Sources: prove/ (all.sh, fresh.sh, matrix.sh, check-*.py, lib.py, browserlib.py, inputlib.py,
-avlib.py, deskkit.py, the window scripts, package-snap.py, fanwatch.py, headless-*.sh, banco-vm/), boxes/, server/ (vm.sh,
-vm-radeon*.sh, live-installa.sh, vm-login-test.py, prepara-server.sh); docs/STORIA-ubuntu-26.04.md of 19 Nov 2026; docs/REGISTRO-problemi.md; studio/giro*.md;
+"""Chapter 17 — Testing. Sources: prove/ (all.sh, fresh.sh, matrix.sh, check-*.py, prelocal.sh, hold*.py, lib.py, browserlib.py, inputlib.py,
+avlib.py, deskkit.py, the window scripts, package-snap.py, fanwatch.py, headless-*.sh, banco-vm/), server/ (vm-radeon*.sh,
+prepara-server-vm.sh, live-installa.sh, VM-BANCO.md), boxes/ and server/ vm.sh, vm-login-test.py, prepara-server.sh (the older container
+files, still in the tree); docs/STORIA-ubuntu-26.04.md of 19 Nov 2026; docs/REGISTRO-problemi.md (sections F, G, H); studio/giro*.md; studio/prove-1.2.0/;
 the logs of the dev server (log/, albero/prove/log/)."""
 from build import arrow, box, c, code, fig, h4, note, p, rif, sysf, table, term, text, tip, ul, warn, zone
 
@@ -12,23 +13,22 @@ RIG = fig(
     + box(36, 112, 180, 44, "headless labwc", "software rendering", "soft", 11.5)
     + box(236, 112, 180, 44, "Chrome / Firefox", "real browser, real input", "soft", 11.5)
     + arrow(217, 68, 234, 68) + arrow(326, 92, 326, 110) + arrow(236, 134, 218, 134)
-    + zone(470, 14, 410, 160, "Box (container or bench VM, systemd, one desktop)")
+    + zone(470, 14, 410, 160, "Virtual machine of the bench (Ubuntu 26.04, systemd, AppArmor, one desktop)")
     + box(486, 46, 180, 44, "remotix.service", "installed from the .deb", "navy", 12)
     + box(686, 46, 180, 44, "user session", "the real desktop", "navy", 12)
     + box(686, 112, 180, 44, "test window (GTK)", "logs every event it gets", "green", 11.5)
     + arrow(667, 68, 684, 68) + arrow(776, 92, 776, 110)
     + arrow(417, 134, 484, 80, "#475569", True)
-    + text(560, 158, "page and WebTransport on the box's port", 10.5)
+    + text(560, 158, "page and WebTransport on the machine's port", 10.5)
     + arrow(686, 134, 640, 134, "#475569", True)
     + text(600, 128, "log read", 10.5),
-    900, 190, "«FIG» — What a check looks at: the browser is driven from outside, the verdict is read from inside the box")
+    900, 190, "«FIG» — What a check looks at: the browser is driven from outside, the verdict is read from inside the virtual machine")
 
 # ── 17.1 ─────────────────────────────────────────────────────────────────────
 S1 = p("The tests of REMOTIX are not unit tests of C functions: the tree has no unit-test target, and " + c("src/Makefile")
-       + " builds the product only. Every check in " + c("prove/") + " installs the package in a box (a container, or one of the four virtual machines of "
-       "the bench, " + rif("The VM bench") + "), drives a real "
+       + " builds the product only. Every check in " + c("prove/") + " works on one of the four virtual machines of the bench (" + rif("The VM bench") + ") with the package installed: it drives a real "
        "browser against it the way a person would (real mouse, keyboard and touch events through the browser's debugging "
-       "interface), and decides its verdict from what happened <b>inside</b> the box: a window in the user's session that "
+       "interface), and decides its verdict from what happened <b>inside</b> the machine: a window in the user's session that "
        "writes down every event it receives, the journal, logind, the process list.", lead=True) + RIG + \
     p("Rules that hold for every check, taken from the docstrings of " + c("prove/lib.py") + " and of the check files:") + \
     ul([
@@ -40,40 +40,40 @@ S1 = p("The tests of REMOTIX are not unit tests of C functions: the tree has no 
         + c("SKIP (reason)") + " and " + c("NOTE") + " (" + rif("Running the suite") + ").",
         "<b>Nothing is shared between runs.</b> Each run starts its own headless labwc in its own runtime directory (class "
         + c("Compositor") + ", started in a private user, network and mount namespace so that it takes none of the host's X "
-        "display numbers), its own browser profile, and DevTools or Marionette ports picked by the operating system. That is "
-        "what makes it safe to run the desktops at the same time on the container bench; on the VM bench the Radeon allows one machine at a time.",
+        "display numbers), its own browser profile, and DevTools or Marionette ports picked by the operating system. On the VM "
+        "bench the Radeon is handed to one machine at a time, so the desktops are tried one after the other.",
         "<b>Every wait has a deadline.</b> " + c("guard()") + " sets a whole-run alarm; every failure of the tool is a "
         + c("ToolError") + " that says why. The compositor and the browsers are children of the check and die with it. The environment "
         "variable " + c("RX_TEMPO") + " (an integer of at least 1, anything else is refused, never read as «no deadline») multiplies every deadline: "
-        "the VM bench runs with 2.",
+        "the VM bench runs with 2 (" + c("all.sh") + " sets it).",
         "<b>The users are the check's own.</b> Each check creates users with a prefix of its own (" + c("bc") + ", " + c("lc")
         + ", " + c("mu") + ", " + c("rs") + ", " + c("ac") + ", " + c("cb") + ", " + c("bn") + ", " + c("dk") + ", " + c("dkf") + ", " + c("md")
         + ", " + c("in") + ", " + c("ph") + ", " + c("pl") + ", followed by digits; " + c("check-package.py") + " uses " + c("pkg") + " and a desktop prefix), and "
         + c("sweep()") + " at the end of " + c("all.sh")
         + " ends every session of the thirteen prefixes just listed (the pattern is the same in " + c("lib.py") + " and in " + c("prove/banco-vm/fresh-vm.sh")
-        + ", which also deletes the users). A login with a user that may not exist is never tried, because a wrong "
+        + ", which also deletes the users). The checks that are not in " + c("all.sh") + " use the prefix " + c("kx") + " (" + c("check-exit.py") + ", " + c("check-kde-exit.py") + "), which the pattern does not contain: the check removes its own user. A login with a user that may not exist is never tried, because a wrong "
         "login counts for the address ban (" + rif("Login and its defences") + ").",
         "<b>Verdicts are built on the application, not on what the browser was told.</b> A key counts as delivered only when "
         + c("window-input.py") + " inside the session logged it.",
     ]) + \
-    note("The checks run on the dev server only. They need podman with root access (the container boxes), QEMU with OVMF and the vfio set-up (the VM bench), "
-         "the host's PipeWire-pulse for Firefox audio, two browsers, " + c("labwc") + " and PIL; " + c("server/prepara-server.sh") + " installs "
-         "them after every reboot (the server's root file system is in RAM; its VM packages are " + c("qemu-system-x86") + ", " + c("qemu-utils") + ", "
-         + c("genisoimage") + ", " + c("acl") + ", " + c("ovmf") + ", " + c("xorriso") + ", " + c("gdisk") + ", " + c("dosfstools") + ", " + c("rsync") + ").", "Where they run.") + \
+    note("The checks run on the dev server only. They need QEMU with OVMF and the vfio set-up (the VM bench), "
+         "the host's PipeWire-pulse for Firefox audio, two browsers, " + c("labwc") + " and PIL; " + c("server/prepara-server-vm.sh") + " installs "
+         "them after every reboot (the server's root file system is in RAM; no podman and no container). There are no containers on the bench: tests and studies run on virtual machines.", "Where they run.") + \
     p("Nothing in this chapter was run while writing the manual. The results quoted in "
       + rif("What was verified on Ubuntu 26.04, and what was not") + " are the recorded logs of the dev server and the "
       "notes of " + c("docs/STORIA-ubuntu-26.04.md") + " and of the register of problems.")
 
 # ── 17.2 ─────────────────────────────────────────────────────────────────────
 S2 = p("Everything is under " + c("prove/") + ". The Python files form three layers: libraries, checks, and test windows that "
-       "run inside the box.", lead=True) + \
+       "run inside the virtual machine.", lead=True) + \
     table(["File", "Role"], [
         "Libraries",
         [c("lib.py"), "the common kit: " + c("Results") + " (verdict lines), " + c("Box") + " (commands in a box through "
          + c("box.sh") + "; the one of " + c("boxes/") + ", or the one of " + c("prove/banco-vm/") + " when " + c("RX_BANCO=vm") + "), " + c("Compositor") + " (headless labwc), " + c("Chrome") + " (DevTools over a hand-made "
          "WebSocket), " + c("Firefox") + " (Marionette), " + c("Rig") + " (compositor + browser + user: open the page, log "
          "in, wait for the desktop, test window, key chords), " + c("sweep()") + ", the picture judges " + c("judge_pixel()")
-         + " and " + c("frac()") + ", and the port table: 8821 to 8824 for the containers, 8841 to 8844 for the VMs"],
+         + " and " + c("frac()") + ", the port table (8841 to 8844 for the VMs " + c("gnome") + ", " + c("kde") + ", " + c("xfce") + ", " + c("lxqt")
+         + "; the table keeps the 8821 to 8824 of the older container boxes) and " + c("Box.apparmor()") + ", which reads the kernel journal for lines of the profile " + c("remotix_network") + " (" + c("check-apparmor.py") + ")"],
         [c("browserlib.py"), "two small browser drivers with the same face (navigate, js, screenshot, move, click, type_text, "
          "press, close), used by " + c("base-check.py") + " and " + c("avlib.py")],
         [c("inputlib.py"), "on top of " + c("lib.py") + ": real mouse buttons, wheel and keys for both browsers, the input test "
@@ -95,9 +95,11 @@ S2 = p("Everything is under " + c("prove/") + ". The Python files form three lay
         [c("check-base.py") + ", " + c("check-lifecycle.py") + ", " + c("check-multiuser.py") + ", " + c("check-desktop.py")
          + ", " + c("check-media.py") + ", " + c("check-resilience.py") + ", " + c("check-audio.py") + ", "
          + c("check-clipboard.py") + ", " + c("check-input.py") + ", " + c("check-phone.py") + ", " + c("check-prelocal.py") + ", " + c("check-ban.py"),
-         "the twelve checks that " + c("all.sh") + " runs (next section)"],
+         "twelve of the thirteen checks that " + c("all.sh") + " runs (next section)"],
+        [c("check-apparmor.py"), "the thirteenth check of " + c("all.sh") + ": the kernel journal of the whole round holds no line of the AppArmor profile " + c("remotix_network") + " (verdict " + c("profile-coverage") + "); see the next section"],
+        [c("check-exit.py") + ", " + c("check-kde-exit.py"), "the ways a remote desktop ends leave nothing behind (XFCE and LXQt; KDE). NOT part of " + c("all.sh") + "; see " + rif("The tools of the 1.2.0 work")],
         [c("check-package.py"), "the package check: install, first start, remove, purge, reinstall, the refusal of a person "
-         "called remotix. NOT part of " + c("all.sh") + ": it resets the box"],
+         "called remotix. NOT part of " + c("all.sh") + ": it resets the box, which a VM cannot do (" + rif("The package check") + ")"],
         [c("base-check.py"), "the earlier form of " + c("check-base.py") + " (user " + c("prova") + ", options " + c("--user")
          + " and " + c("--password") + "); still imported by " + c("avlib.py") + " and run by " + c("matrix.sh")],
         "Test windows (copied into the box and started in the user's session)",
@@ -118,7 +120,9 @@ S2 = p("Everything is under " + c("prove/") + ". The Python files form three lay
         "Shell",
         [c("all.sh"), "every check on ONE box, in sequence, one log per check and a final table"],
         [c("fresh.sh"), "a fresh box with the package installed and the service enabled; with " + c("RX_BANCO=vm") + " it hands over to " + c("banco-vm/fresh-vm.sh")],
-        [c("matrix.sh"), "every desktop on a fresh container box: Chrome (new session) then Firefox (resumed)"],
+        [c("matrix.sh"), "every desktop on a fresh box: Chrome (new session) then Firefox (resumed); it calls " + c("fresh.sh") + " and so belongs to the container way"],
+        [c("prelocal.sh"), "the real local login on gdm3, sddm and lightdm in a VM (" + rif("The tools of the 1.2.0 work") + ")"],
+        [c("hold.py") + ", " + c("hold-user.py"), "helpers that log in from the browser and keep the remote session open for a number of seconds while the machine is looked at from outside (" + rif("The tools of the 1.2.0 work") + ")"],
         [c("headless-wayland.sh"), "start or stop a headless labwc (used by " + c("base-check.py") + " and " + c("avlib.py") + ")"],
         [c("headless-multi.sh"), "the same, but the pid written is labwc's own so that stop really stops it; no caller was found "
          "in " + c("prove/")],
@@ -127,13 +131,14 @@ S2 = p("Everything is under " + c("prove/") + ". The Python files form three lay
          + rif("The VM bench") + ")"],
         [c("banco-vm/fresh-vm.sh"), "the «fresh box» for a VM that stays on: stops the service, removes the test users and the checks' own drop-ins, keeps the ban file under another name, "
          "installs the missing tools, starts the service again"],
+        [c("banco-vm/autologin-gdm3.sh") + ", " + c("autologin-lightdm.sh") + ", " + c("autologin-sddm.sh"), "switch the automatic login of gdm3 (Ubuntu), lightdm (Xubuntu) and sddm (Kubuntu, Lubuntu) on and off in a machine, for the tests of the real local login; test-bench files, never installed by the package"],
     ], "«TAB» — The files of prove/") + \
     p("The folders " + c("shots/") + " (pictures), " + c("work/") + " and " + c("log/") + " are made by the checks and are not "
       "in git; the logs quoted in this manual are on the dev server, in " + sysf("/media/REMOTIX-UBUNTU/albero/prove/log/") + " (one folder per round, named by its tag).")
 
 # ── 17.3 ─────────────────────────────────────────────────────────────────────
-S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (REMOTIX ports 8821 to 8824 on the containers, 8841 to 8844 on the VM bench, see " + rif("The four test boxes")
-       + " and " + rif("The VM bench") + "). The limits are the seconds given to each " + c("run") + " call in " + c("all.sh") + "; the verdict names are the "
+S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (REMOTIX ports 8841 to 8844 on the virtual machines, see " + rif("The VM bench")
+       + "). The limits are the seconds given to each " + c("run") + " call in " + c("all.sh") + "; the verdict names are the "
        + c("NAMES") + " tuples of each file. The list is that of the tree when this chapter was written (20 Nov 2026): "
        + c("check-desktop.py") + " was being edited at that moment, and the two last names of its tuple, " + c("power-implied") + " and " + c("power-local-seat") + ", are of 20 Nov 2026.", lead=True) + \
     table(["Check (limit)", "Verdict names", "What it proves"], [
@@ -194,7 +199,7 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (REMOTIX ports 88
          "the page used as a phone, by emulation: portrait and landscape geometry, tap, drag, two- and three-finger taps, "
          "on-screen keyboard open, text, enter, delete and close, tap-and-half-drag selection, two-finger scroll, pinch zoom, "
          "rotation"],
-        [c("check-prelocal.py") + " (900 s)",
+        [c("check-prelocal.py") + " (1200 s by default, 3900 s with all nine cases)",
          c("P1-hook-closes-desktop") + ", " + c("P2-new-desktop-after") + ", " + c("P3-hook-ignores") + ", " + c("P4-no-desktop")
          + ", " + c("P5-service-stopped") + ", " + c("P6-pam-line-order"),
          "the local-login hold (" + rif("The local-login hold") + "), with Chrome and the check's own users " + c("pl1") + " and " + c("pl2")
@@ -205,7 +210,11 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (REMOTIX ports 88
          "greeter, tty, service remotix) each return 0 in under 1 s and the desktop is still alive. P4: a user with no remote "
          "desktop: the hook returns 0 in under 2 s. P5: with the service stopped the hook returns 0 in under 2 s (the service is "
          "started again at the end). P6: " + sysf("/etc/pam.d/common-session") + " has the " + c("pam_exec") + " line of the hook after the "
-         + c("pam_systemd") + " line"],
+         + c("pam_systemd") + " line. <b>P7, P8 and P9</b> (only with " + c("RX_LOCALE_VERO=1") + "; " + rif("The tools of the 1.2.0 work") + "): a REAL local login (the display manager's automatic login, restarted in the machine) of the same user while the remote desktop holds a running terminal (P7), an editor with unsaved text (P8: Kubuntu and Xubuntu; BLOCKED on GNOME and LXQt) or the snap Firefox (P9). "
+         "The local desktop must arrive and nothing of the remote one may be left (no process, no unit, no REMOTIX session, no snap scope, no new crash of the user's)"],
+        [c("check-apparmor.py") + " (180 s, after ban)", c("profile-coverage"),
+         "the kernel journal of the machine (and the audit log if there is one), from the start of the round, holds no line " + c("apparmor=\"DENIED\"") + " or " + c("apparmor=\"ALLOWED\"") + " of the profile " + c("remotix_network") + " or its children. "
+         "The package installs the profile in complain mode, so what it does not cover shows as ALLOWED; in enforce mode it would be DENIED: both are a FAIL. Other programs' profiles (snap) are not looked at. If the log cannot be read: BLOCKED, never PASS"],
         [c("check-ban.py") + " (900 s, always last)",
          c("wrong-password") + ", " + c("same-answer") + ", " + c("typed-names-not-logged") + ", " + c("ban-after-limit")
          + ", " + c("ban-survives-restart") + ", " + c("unblock") + ", " + c("unblock-shipped") + ", " + c("cleanup"),
@@ -215,9 +224,8 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (REMOTIX ports 88
          + " is 5, 20 and 30); the ban survives a restart; the package ships no administrator unblock (by decision); at the end the check always unblocks and "
          "logs a user in normally (" + c("cleanup") + ", reported on its own line)"],
     ], "«TAB» — The checks run by all.sh, in the order all.sh runs them") + \
-    p("In the tree the tuples give, per desktop, 125 verdict rows: base 5 and 5, lifecycle 4, multiuser 3, desktop 9, media 4, resilience 5, audio 1 and 1, clipboard 2, "
-      "input 26 with Chrome and 27 with Firefox, phone 19, prelocal 6, ban 8 (the seven names and " + c("cleanup") + "). The round of the release package ran with 7 names for the desktop check "
-      "and so counted 123 (" + rif("What was verified on Ubuntu 26.04, and what was not") + ").") + \
+    p("In the tree the tuples give, per desktop and with the default " + c("all.sh") + " (prelocal P1 to P6), 126 verdict rows: base 5 and 5, lifecycle 4, multiuser 3, desktop 9, media 4, resilience 5, audio 1 and 1, clipboard 2, "
+      "input 26 with Chrome and 27 with Firefox, phone 19, prelocal 6, ban 8 (the seven names and " + c("cleanup") + "), apparmor 1. The rounds of 1.2.0 on the four machines are in " + rif("What was verified on Ubuntu 26.04, and what was not") + ".") + \
     h4("The two checks added on 20 November 2026") + \
     p(c("power-implied") + " needs no session and no Python in the box. It reads the installed rule " + sysf("50-remotix-no-poweroff.rules") + " and <b>every</b> polkit policy file of the machine, builds the implications "
       "(the annotation " + c("org.freedesktop.policykit.imply") + ", followed along chains) and fails if an action that the rule does not forbid implies one that it forbids: polkit would then grant the forbidden action without "
@@ -241,8 +249,8 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (REMOTIX ports 88
         "inside the box by hand, with the environment " + c("pam_exec") + " would give it (" + c("PAM_TYPE=open_session") + ", "
         + c("XDG_SEAT=seat0") + ", class " + c("user") + ", type " + c("wayland") + "), and no local session is registered in logind. It "
         "proves the hook and the root side's answer; it does not prove the interplay with the periodic sweeps, which only a real local "
-        "login exercises (" + rif("Appendix C — Known issues and open points") + "). The VMs do have a real display manager, but " + c("all.sh") + " still calls the hook by hand there and adds a SKIP row, "
-        + c("prelocal/real-greeter") + ", because a real graphical login cannot be automated.",
+        "login exercises (" + rif("Appendix C — Known issues and open points") + "). P1 to P6 are the same on the VMs, which do have a real display manager: " + c("all.sh") + " calls the hook by hand there. The real local login is P7 to P9 (the automatic login of the display manager, restarted in the machine), which " + c("all.sh") + " runs only with " + c("RX_LOCALE_VERO=1") + " and otherwise lists as a SKIP row, "
+        + c("prelocal/real-login") + ". The owner decided on 26 Nov 2026 that these cases are allowed on the Ubuntu bench with the Radeon passed through (the freezes of the server on Debian came from the old drivers of the Debian machines).",
         c("check-phone.py") + " is an emulation, not a phone: Chrome with DevTools device emulation (412x915 CSS px, device scale 2, "
         "touch events with pointer type touch, a mobile user agent, Italian language). What it cannot prove is listed in "
         + rif("What only a real machine or a real phone can prove") + ".",
@@ -262,23 +270,24 @@ S3 = p("All checks take " + c("--box xfce|lxqt|gnome|kde") + " (REMOTIX ports 88
     ])
 
 # ── 17.4 ─────────────────────────────────────────────────────────────────────
-S4 = p("A run is one command per desktop, started on the dev server in " + c("prove/") + ". On the container bench the four desktops can run at the same "
-       "time: the runs share nothing (own compositor, browser profile and ports; each box has its own users and files). On the VM bench the machines run one at a time.",
+S4 = p("A run is one command per desktop, started on the dev server in " + c("prove/") + ". On the VM bench the machines run one at a time, because the Radeon is handed to one of them. "
+       "On the older container boxes the four desktops could run at the same time: the runs share nothing (own compositor, browser profile and ports; each box has its own users and files).",
        lead=True) + \
     term("""$ cd /media/REMOTIX-UBUNTU/albero/prove
-$ /media/REMOTIX-UBUNTU/albero/prove/all.sh xfce                    # container box: the package already installed in it
-$ /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --fresh /path/to/remotix_1.0.0-1+ubuntu26.04_amd64.deb
+$ /media/REMOTIX-UBUNTU/albero/prove/all.sh xfce                    # older container box: the package already installed in it
+$ /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --fresh /path/to/remotix_1.2.0-1+ubuntu26.04_amd64.deb     # container way
 $ TAG=myround /media/REMOTIX-UBUNTU/albero/prove/all.sh kde         # logs in log/myround/ instead of log/kde-<date>-<time>/
 $ RX_BANCO=vm /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --fresh <deb>   # the VM bench: the machine 'ubuntu', clean state, then the package
 $ RX_BANCO=vm /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --clean         # VM bench: clean state, the installed package stays
-$ RX_BANCO=vm /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --only ban,audio-firefox   # a partial round""",
+$ RX_BANCO=vm /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --only ban,audio-firefox   # a partial round
+$ RX_LOCALE_VERO=1 RX_BANCO=vm /media/REMOTIX-UBUNTU/albero/prove/all.sh gnome --clean   # also P7, P8, P9 (the real local login)""",
          "Running all.sh") + \
     ul([
         c("--fresh <deb>") + " first runs " + c("fresh.sh") + " (container: reset the box, install the package, enable and start the service, "
         "check it is active; VM: the clean state of " + c("fresh-vm.sh") + ", then the package); if that fails the run stops and every row is BLOCKED. "
         + c("--clean") + " exists only with " + c("RX_BANCO=vm") + ": the same clean-up with no package. <b>Without</b> " + c("--fresh") + " or " + c("--clean") + " nothing is cleaned, on a VM as on a container.",
         c("--only label,label") + " runs a subset. The labels are " + c("base-chrome") + " " + c("base-firefox") + " " + c("lifecycle") + " " + c("multiuser") + " " + c("desktop") + " " + c("media") + " "
-        + c("resilience") + " " + c("audio-chrome") + " " + c("audio-firefox") + " " + c("clipboard") + " " + c("input-chrome") + " " + c("input-firefox") + " " + c("phone") + " " + c("prelocal") + " " + c("ban") + " " + c("package")
+        + c("resilience") + " " + c("audio-chrome") + " " + c("audio-firefox") + " " + c("clipboard") + " " + c("input-chrome") + " " + c("input-firefox") + " " + c("phone") + " " + c("prelocal") + " " + c("ban") + " " + c("apparmor") + " " + c("package")
         + "; an unknown label is refused with the list. " + c("package") + " is a valid label but runs nothing: " + c("check-package.py") + " is not part of " + c("all.sh") + " (on a VM it is a SKIP row).",
         "The output of each check goes to " + c("log/<tag>/<check>.out") + ", ending with an " + c("exit=<n>") + " line. Each "
         "verdict line becomes one table row " + c("<check>/<name>") + "; a check that printed no verdict line is BLOCKED (\"no "
@@ -347,7 +356,7 @@ S6 = p("The container boxes are four systemd containers, one per desktop, built 
        + c("--build-arg DESKTOP=gnome|kde|xfce|lxqt") + ". There is NOTHING of REMOTIX inside the image: the package is installed "
        "later with apt, so the box is what a user's machine looks like before the install. <b>This is not the bench of the release</b>: it is the bench of the rounds of 18 and 19 Nov 2026 "
        "and of the first hand tests, and it is still in the tree. On the owner's order of 19 Nov 2026 the four containers and their images were deleted from the dev server, and the bench of the "
-       "release is the VM bench (" + rif("The VM bench") + "); the build images of the package remained (" + rif("Build and release") + "). The boxes can be rebuilt with " + c("boxes/box.sh build") + ".", lead=True) + \
+       "release is the VM bench (" + rif("The VM bench") + "); the package is no longer built in a container either (" + rif("Build and release") + "). The boxes can be rebuilt with " + c("boxes/box.sh build") + "; " + c("server/prepara-server.sh") + " prepares the server for them.", lead=True) + \
     table(["Box", "Container", "Image", "ssh port", "REMOTIX port (TCP + UDP)", "Desktop package", "Display manager"], [
         ["gnome", c("rxu-gnome"), c("rxu/gnome:latest"), "2221", "8821", c("ubuntu-desktop-minimal"), c("gdm3")],
         ["kde", c("rxu-kde"), c("rxu/kde:latest"), "2222", "8822", c("kubuntu-desktop"), c("sddm")],
@@ -429,19 +438,21 @@ S7 = p("A container shares the host's kernel, has no real boot and no real devic
 S7B = p("The container boxes could not show what a real Ubuntu does: the profile of AppArmor is not in force in a container, no snap runs there, and a display manager does not run. "
         "The first real machine (a live Ubuntu 26.04.1, 19 Nov 2026) found two defects in an afternoon, C4 and C5, that the container rounds had not (" + rif("What was verified on Ubuntu 26.04, and what was not") + "). "
         "The bench that followed is four QEMU virtual machines, one per flavour, installed from the desktop image of the flavour and handed the server's Radeon card by passthrough, with the checks of " + c("prove/")
-        + " adapted to run against them. It is the bench of the release.", lead=True) + \
+        + " adapted to run against them, and a fifth machine that only builds the package (" + rif("The build of the .deb on the build VM") + "). It is the bench of the release. There are no containers on it: tests and studies run on virtual machines only. The scripts are " + c("server/vm-radeon.sh") + ", " + c("server/prepara-server-vm.sh") + " and "
+        + c("prove/banco-vm/") + "; " + c("server/VM-BANCO.md") + " is the note that goes with them.", lead=True) + \
     h4("The four machines") + \
     table(["Machine (check key)", "ISO", "How the disk was made", "ssh / REMOTIX ports with the Radeon", "Display manager"], [
         [c("ubuntu") + " (" + c("gnome") + ")", c("ubuntu-26.04.1-desktop-amd64.iso"), "unattended installation, " + c("autoinstall") + ", with a temporary virtual video card; the VM powers itself off at the end", "2341 / 8841", c("gdm3")],
         [c("kubuntu") + " (" + c("kde") + ")", c("kubuntu-26.04.1-desktop-amd64.iso"), "built from the squashfs of the ISO (" + c("casper/filesystem.squashfs") + ") the way Calamares does", "2342 / 8842", c("sddm")],
         [c("xubuntu") + " (" + c("xfce") + ")", c("xubuntu-26.04.1-desktop-amd64.iso"), "built from the squashfs layers " + c("casper/minimal.squashfs") + " and " + c("casper/minimal.standard.squashfs"), "2343 / 8843", c("lightdm")],
         [c("lubuntu") + " (" + c("lxqt") + ")", c("lubuntu-26.04.1-desktop-amd64.iso"), "built from the same two layers as Xubuntu", "2344 / 8844", c("sddm")],
-    ], "«TAB» — The four VMs of server/vm-radeon.sh (ISO names and ports from the script; display managers from fresh-vm.sh)") + \
+        [c("costruzione"), c("xubuntu-26.04.1-desktop-amd64.iso"), "built like xubuntu; 8 CPUs, 6 GB, never the Radeon (the script refuses), host name " + c("rx-ub-costruzione"), "2345 / none", c("lightdm")],
+    ], "«TAB» — The five VMs of server/vm-radeon.sh (ISO names and ports from the script; display managers from fresh-vm.sh)") + \
     p("Why three disks are not an " + c("autoinstall") + ": Kubuntu and Lubuntu come with Calamares, and the live kernel of Xubuntu crashed the installer (a kernel oops, recorded in docs/STORIA-ubuntu-26.04.md and in the comment of the script). "
       + c("crea") + " then builds the disk by hand: a GPT partition table with a 512 MB EFI partition and an ext4 root, the layers of the ISO unpacked one over the other with " + c("rsync") + ", then a stage run in a chroot "
       "(fstab, hostname, an empty machine-id so that a new one is made at the first boot, the users " + c("prova") + " (with sudo) and " + c("prova2") + ", the installer's own removals, the bootloader packages from the ISO pool, " + c("openssh-server")
       + ", the initramfs, " + c("grub-install --no-nvram") + " so that the server's firmware variables are never touched), and converts the raw image to qcow2. The temporary raw image is the only thing the script deletes, and only after the qcow2 exists. "
-      "All four have a 40 GB disk, 12 GB of memory and 8 CPUs, " + c("q35") + " with UEFI (OVMF), KVM and the host CPU, no display, a serial console in " + c("serial.log") + ", and user networking with the ports of the table forwarded (ssh, and REMOTIX over TCP and UDP). "
+      "The four test machines have a 40 GB disk, 12 GB of memory and 8 CPUs with the Radeon (5 GB and 4 CPUs without it; " + c("RX_VM_MEM") + " overrides the memory), " + c("q35") + " with UEFI (OVMF), KVM and the host CPU, no display, a serial console in " + c("serial.log") + ", and user networking with the ports of the table forwarded (ssh, and REMOTIX over TCP and UDP). "
       "The kernel of the Ubuntu machine was 7.0.0-44-generic at the release run.") + \
     h4("server/vm-radeon.sh") + \
     table(["Command", "What it does"], [
@@ -451,16 +462,29 @@ S7B = p("The container boxes could not show what a real Ubuntu does: the profile
         [c("spegni <name>"), "poweroff over ssh, then ACPI power-down, then a declared kill as a last resort; waits until the process is really gone; only then gives the card back (the audio function to " + c("snd_hda_intel") + ", the GPU stays without a driver, as at boot)"],
         [c("ssh <name> [cmd]"), "ssh as " + c("prova") + " with the machine's key"],
         [c("stato <name>"), "running or stopped, which VM holds the Radeon, the driver of the two functions"],
-        [c("prova-avvio <name> [--resta]"), "a boot check <b>without</b> the Radeon: virtual card, 6 GB (override " + c("RX_VM_MEM") + "), 4 CPUs, ssh on the port plus 100 (2441 to 2444), no REMOTIX forward; prints the kernel, the display manager, the sessions, " + c("aa-status")
+        [c("prova-avvio <name> [--resta]"), "a boot check <b>without</b> the Radeon: virtual card, 5 GB (override " + c("RX_VM_MEM") + "), 4 CPUs, ssh on the port plus 100 (2441 to 2444), no REMOTIX forward; prints the kernel, the display manager, the sessions, " + c("aa-status")
          + ", then powers off; with " + c("--resta") + " it leaves the VM running"],
+        [c("schermo <name> <file.png>"), "a screen dump of a machine started with " + c("virtuale") + " (through the QEMU monitor)"],
+        [c("tasti <name> <key>…") + ", " + c("scrivi <name> <text>"), "send keys or type text through QEMU's " + c("sendkey") + " (names such as " + c("ret") + ", " + c("tab") + ", " + c("ctrl-alt-f2") + "), for a machine started " + c("virtuale")],
         [c("istantanea <name> <label>"), "a qcow2 snapshot of the disk; the VM must be off; refuses an existing label"],
         [c("ripristina <name> <label>"), "restores a snapshot; the VM must be off. It first saves the <b>current</b> state as a snapshot named " + c("prima-<date>-<time>") + ", then says the current state is replaced by the chosen one (it stays only in that snapshot). "
          "The UEFI variables file is not part of a snapshot"],
-    ], "«TAB» — The commands of vm-radeon.sh (the Italian words are the script's own: create, switch on, switch off, state, boot check, snapshot, restore)") + \
+    ], "«TAB» — The commands of vm-radeon.sh (the Italian words are the script's own: create, switch on, switch off, state, boot check, screen, keys, type, snapshot, restore)") + \
     p("One lock file serialises the commands: a second call while a VM is being started, stopped or built is refused with «another vm-radeon.sh holds the lock», and the scripts below retry. The Radeon is one, so <b>one VM at a time has it</b>; the four desktops are tried one after the other, "
       "and the change of machine is " + c("spegni") + " of one then " + c("accendi") + " of the other (about 5 s and 18 s, docs/STORIA-ubuntu-26.04.md). While a VM holds the card the containers cannot use it either. The script runs as a user that can use " + c("sudo") + ", because QEMU and vfio need root.") + \
+    h4("The server preparation and the kernel parameter that the Radeon machines need") + \
+    p("The dev server's root file system is in RAM. After every reboot " + c("prepara-server-vm.sh") + " is run first (no podman, no container): it puts back QEMU, OVMF, the disk tools, the kernel modules " + c("loop") + ", " + c("squashfs") + " and " + c("vfio-pci") + ", an ACL that lets the user open " + c("/dev/kvm") + ", the browsers and tools of the checks, "
+      "a sound server for Firefox (PipeWire with a null sink) and the inotify limits, and the server side of the Radeon protection: the kernel log written to disk line by line, " + c("vfio-pci") + " with " + c("disable_idle_d3=1") + " (in " + sysf("/etc/modprobe.d/remotix-vfio.conf") + "; a loaded module with another value is reloaded when nobody uses it, otherwise the step says FAIL) and " + c("power/control=on") + " for the card and the PCI bridges above it. "
+      "It prints one OK or FAIL line per step and the values it read back.") + \
+    p("<b>The rule.</b> On 26 Nov 2026 the dev server froze four times because the " + c("amdgpu") + " driver in a guest put the passed-through Radeon to sleep (that was on the Debian machines, with kernel 6.12). The rule is now in the script, whoever runs it, and it is kept on the Ubuntu bench too. "
+      + c("crea") + " writes " + c("amdgpu.runpm=0") + " on the guest's kernel command line (" + sysf("/etc/default/grub.d/zz-remotix-banco.cfg") + ", named to sort last so that no other " + c("99-*") + " file can undo it) and fails if the parameter is missing at the first boot. " + c("accendi") + " with the Radeon needs a marker, " + c("runpm.ok") + ", written only after the machine, started WITHOUT the Radeon, showed the parameter in " + c("/proc/cmdline") + "; "
+      "the marker is good for ONE boot, so every " + c("accendi") + " with the Radeon is preceded by a fresh proof (15 to 30 s more). If the marker is missing the script makes that virtual start itself, applies the parameter if needed, reboots and checks again; with no proof it refuses and the card is not given. There is no option to skip the check. "
+      "After the start with the Radeon, " + sysf("/sys/module/amdgpu/parameters/runpm") + " must read 0 and the parameter must be in " + c("/proc/cmdline") + " (read three times); otherwise the machine is switched off at once and the card given back. Only one machine of the whole server may hold the Radeon. "
+      "No freeze happened in the sessions of 26 and 27 Nov 2026 (register G1).") + \
     h4("The scripts around it") + \
     table(["Script", "What it does"], [
+        [c("prepara-server-vm.sh"), "the server preparation above."],
+        [c("banco-vm/autologin-gdm3.sh") + ", " + c("autologin-lightdm.sh") + ", " + c("autologin-sddm.sh"), "switch the automatic login on and off in the machine of that display manager, for the real local login of " + c("prelocal.sh") + " and P7 to P9 (test-bench files, never installed by the package)."],
         [c("vm-radeon-installa.sh <name> <deb> [label]"), "installs a package in one VM <b>as the administrator would</b> (" + c("apt-get install --reinstall") + " of the file, " + c("systemctl enable --now remotix") + "), without the Radeon and without opening a session: "
          "starts the VM with " + c("prova-avvio --resta") + ", copies the .deb, reports the packages apt brought in, the relations of the package, the state of the service, the journal lines about the walls and the dconf, " + c("aa-status")
          + ", the port, " + sysf("/etc/dconf/db/remotix") + ", the version, powers off and takes a snapshot named by the file (" + c("unione<N>") + ", else " + c("installato") + "). It runs apt with " + c("NEEDRESTART_MODE=a") + ". Its output goes to " + sysf("log/vm-radeon-installa-<name>.log") + "."],
@@ -468,7 +492,7 @@ S7B = p("The container boxes could not show what a real Ubuntu does: the profile
         [c("vm-radeon-controllo.sh <name> [--ripristina <label>]"), "a short control <b>with</b> the Radeon: a timed " + c("accendi") + ", the card, the driver, the render node, the journal lines of the start, the count of " + c("CANNOT ENCODE") + " lines, the display manager and the greeter, "
          "one login as " + c("prova2") + " through " + c("vm-radeon-login-test.py") + " with the picture saved as " + sysf("log/consegna/<name>.png") + ", the sessions left after the browser is closed (the script ends them with " + c("loginctl terminate-user") + " if any remain after 15 s; the exit from the desktop is not tried by this control), the new warnings during the login, a timed " + c("spegni") + " and, with " + c("--ripristina") + ", the restore of a snapshot. The VM is switched off only with " + c("--ripristina") + "; without it the VM stays on."],
         [c("vm-radeon-login-test.py"), "the page of REMOTIX in a VM with the Chrome driver of " + c("lib.py") + ", as " + c("prova") + " or " + c("--user") + "; " + c("--bad") + " for a wrong password; " + c("--png") + " saves the settled picture of the canvas. Exit 0 if the login reached a session."],
-        [c("server/live-installa.sh"), "<b>not part of the product</b>: a test installer for a real machine started from an Ubuntu 26.04 live image. Run as root from the live terminal, it downloads the package and its sha256 from the dev server, checks whether "
+        [c("server/live-installa.sh"), "<b>not part of the product</b> (" + rif("Testing the real machine from a live USB") + "): a test installer for a real machine started from an Ubuntu 26.04 live image. Run as root from the live terminal, it downloads the package and its sha256 from the dev server, checks whether "
          + c("universe") + " is on and, if it is not, turns it on (" + c("add-apt-repository -y universe") + ", else an edit of the apt sources), runs " + c("apt-get install -y --reinstall") + " of the file, makes the users " + c("prova") + " and " + c("prova2") + ", and runs " + c("systemctl enable --now remotix") + ". Apart from turning on " + c("universe") + " when missing and making the two users, it does what the user manual asks of the administrator. Re-runnable."],
     ], "«TAB» — The scripts of the VM bench") + \
     h4("The adapted round") + \
@@ -486,12 +510,12 @@ S7B = p("The container boxes could not show what a real Ubuntu does: the profile
         "<b>The initial control of " + c("all.sh") + " on a VM.</b> After the bench key is in place, " + c("all.sh") + " sends 300,000 random bytes through " + c("box.sh ssh <de> md5sum") + " and compares the checksum with the local one: the checks send data on stdin to commands in the VM, and it must arrive intact. "
         "If it does not, the run does not start (a line " + c("FAIL the VM of <de>: stdin through the root ssh is not intact") + ", exit 1). A first form of this control, over " + c("sudo -S") + ", stopped the first launches («stdin through sudo -S is not intact», the log " + sysf("vm-gnome-unione8b/summary.txt") + " holds only that line); "
         "it was then rewritten for root.",
-        "<b>SKIP rows.</b> Three things have no meaning on a VM and are listed, never counted as PASS and never as a failure: " + c("prelocal/real-greeter") + " (the real graphical login of the display manager cannot be automated; it is done by hand, below), "
+        "<b>SKIP rows.</b> Three things are listed on a VM, never counted as PASS and never as a failure: " + c("prelocal/real-login") + " (P7, P8, P9, the real local login with programs open: only with " + c("RX_LOCALE_VERO=1") + "), "
         + c("ban/other-addresses") + " (every client reaches the VM as " + c("10.0.2.2") + ", so only that address is banned; the " + c("127.0.0.1") + " case of the containers does not exist) and " + c("package") + " (" + c("check-package.py") + " needs a reset a VM cannot do).",
         "<b>NOTE rows.</b> The bench key was installed for root; the Welcome Center of KDE was hidden in " + sysf("/etc/skel") + " (it stays for users made by hand too).",
     ]) + \
-    h4("The round of the release package on the GNOME machine") + \
-    p("The round " + c("vm-gnome-unione10") + " (tag of the log folder; the package of the release at that moment) ran on the " + c("ubuntu") + " machine with the Radeon, 47 min. Result: <b>120 PASS, 2 FAIL, 1 BLOCKED, 3 SKIP</b> (123 verdict rows, 0 NOTE). This complete round is of the package <b>unione10</b> (polkit rule of 15 actions); the package with the rule of 19 actions, <b>unione11</b>, has the same build checks but had no complete round, only the partial desktop round described above. "
+    h4("The round of the release package of 19 Nov 2026 on the GNOME machine") + \
+    p("The round " + c("vm-gnome-unione10") + " (tag of the log folder; the package of the release at that moment, still numbered 1.0.0) ran on the " + c("ubuntu") + " machine with the Radeon, 47 min. Result: <b>120 PASS, 2 FAIL, 1 BLOCKED, 3 SKIP</b> (123 verdict rows, 0 NOTE). This complete round is of the package <b>unione10</b> (polkit rule of 15 actions); the package with the rule of 19 actions, <b>unione11</b>, has the same build checks but had no complete round, only the partial desktop round described above. "
       "The seven checks of " + c("check-desktop.py") + " that existed then were all there; " + c("power-implied") + " and " + c("power-local-seat") + " were not. The three lines that are not PASS:") + \
     ul([
         c("desktop/users-shell-and-environment") + " FAIL: <b>known and accepted</b>. The terminal of GNOME is " + c("ptyxis") + " and in it " + c("SHELL") + " is empty; " + c("pkexec") + " then says «The value for the SHELL variable was not found in the /etc/shells file» and the check, which wants " + c("pkexec")
@@ -501,14 +525,22 @@ S7B = p("The container boxes could not show what a real Ubuntu does: the profile
         c("audio-firefox") + " BLOCKED: " + c("ToolError: no answer from Marionette in 45 s") + ". The test Firefox was mute at its first start; the tool could not look, which is BLOCKED and not FAIL. Repeated, it gave PASS, twice (" + sysf("vm-gnome-rootfix/") + " and " + sysf("vm-gnome-rootfix-af2/") + ").",
         "The 3 SKIP rows are the three above.",
     ]) + \
-    p("Limits of this record. The round was run once, on one machine of the four; after the change of the bench to root, <b>the complete round was not run again</b>, only " + c("ban") + " and " + c("audio-firefox") + " (docs/STORIA-ubuntu-26.04.md says so). No complete round on the VMs of Kubuntu, Xubuntu or Lubuntu is on record; for them the "
-      "records are the installation logs, the short control with the Radeon (journal and a login as " + c("prova2") + ", log " + sysf("log/consegna/") + ") and the owner's hand tests. The full automated rounds of the three flavours are those of the container bench of 18 Nov 2026 (" + rif("What was verified on Ubuntu 26.04, and what was not") + ").") + \
+    p("Limits of this record. The round of 19 Nov 2026 was run once, on one machine of the four; after the change of the bench to root, the complete round was not run again, only " + c("ban") + " and " + c("audio-firefox") + " (docs/STORIA-ubuntu-26.04.md says so). The complete rounds of 1.2.0 on all four machines are the next block.") + \
+    h4("The rounds of 1.2.0 (26 and 27 November 2026)") + \
+    ul([
+        "<b>The automatic round</b> (" + c("all.sh") + " with " + c("RX_BANCO=vm") + ", one machine at a time with the Radeon): GNOME 125 PASS and 1 known FAIL (" + c("desktop/users-shell-and-environment") + ", " + c("SHELL") + " empty with " + c("pkexec") + "); KDE, XFCE and LXQt 126 PASS (register G3). The first round of 26 Nov 2026 found three faults of the tools, all corrected in the checks and none in the product: "
+        + c("check-resilience.py") + " read as its result a warning of systemd (" + sysf("unit file changed on disk") + ") on " + c("service-restart") + " (XFCE); " + c("unit_residue") + " of " + c("check-prelocal.py") + " counted " + sysf("gnome-keyring-daemon.service") + " as a leftover of the remote desktop although a local login starts it too (Xubuntu); " + c("check-desktop.py") + " read a panel file at the path of Debian (LXQt).",
+        "<b>The real local login with programs open</b> (P7 and P9 on all four desktops; P8 on Kubuntu and Xubuntu, BLOCKED by construction on GNOME and LXQt): all PASS. On Kubuntu the editor (" + c("kate") + ") closed gently in 5.03 s and then by force, as designed; on Lubuntu the gentle close took about 0.6 s and the local desktop (" + c("openbox") + ") was there after 4 s. " + c("check-exit.py") + " passed its three cases on XFCE and LXQt, and " + c("check-kde-exit.py") + " on KDE, with the desktop just born included.",
+        "<b>Update and removal:</b> the update from the published 1.0.1 to 1.2.0 and the removal (" + c("purge") + ") left the four machines clean.",
+        "<b>The owner's hand tests on the four VMs</b> (27 Nov 2026): all OK.",
+        "<b>Not explained:</b> one failure of mouse and keyboard (" + c("check-base") + ") on GNOME right after an update with a desktop open, not reproduced; the abnormal ends of " + c("wireplumber") + " on all desktops, of " + c("kwin_wayland") + " once on Kubuntu at the stop of the service and of " + c("xdg-desktop-portal-kde") + " once on Lubuntu (register H3 and H4).",
+    ]) + \
     h4("Snapshots") + \
     p("The snapshots are internal qcow2 snapshots of the disk. The names that the records show: " + c("pulito") + " (clean, after the installation of the flavour), " + c("aggiornato") + " (after " + c("vm-radeon-aggiorna.sh") + "), " + c("unione6") + " and " + c("unione10") + " (the machine just after the installation of that build of the package). "
-      "The control of 19 Nov 2026 took each machine back to the state «just installed with the release package» before the hand tests. A snapshot does not hold the UEFI variables.") + \
+      "The control of 19 Nov 2026 took each machine back to the state «just installed with the release package» before the hand tests. A snapshot does not hold the UEFI variables. For 1.2.0 the machines were handed to the owner clean, to be opened in the browser.") + \
     h4("What was done by hand on real machines") + \
     ul([
-        "<b>The four VMs, by the owner, 19 Nov 2026, with the release package of that evening:</b> GNOME, KDE, XFCE and LXQt all OK, including detach and reattach from Linux and from Android (docs/STORIA-ubuntu-26.04.md). Noted and not blocking: an «internal error» notice of Ubuntu that is " + c("wireplumber") + " stopping at the end of the user's session (seen also after leaving REMOTIX; whether it depends on the VM having no audio card is not known); small stutters in the video seen by Chrome on Android (register E4). "
+        "<b>The four VMs, by the owner, 27 Nov 2026, with the 1.2.0 package:</b> all OK (register G3). <b>The four VMs, by the owner, 19 Nov 2026, with the package of that evening (numbered 1.0.0):</b> GNOME, KDE, XFCE and LXQt all OK, including detach and reattach from Linux and from Android (docs/STORIA-ubuntu-26.04.md). Noted and not blocking: an «internal error» notice of Ubuntu that is " + c("wireplumber") + " stopping at the end of the user's session (seen also after leaving REMOTIX; whether it depends on the VM having no audio card is not known); small stutters in the video seen by Chrome on Android (register E4). "
         "The silence from the telephone on Kubuntu was another program on the tablet that carried the telephone's audio elsewhere, not a defect.",
         "<b>The four live systems, by the owner, 19 Nov 2026:</b> Ubuntu 26.04.1 (kernel 7.0), Kubuntu 26.04.1 (7.0.0-30), Xubuntu 26.04 and Lubuntu 26.04, each started from the live image of a USB stick on the server itself, the package installed with " + c("apt install") + " and " + c("systemctl enable --now remotix")
         + " (the way " + c("live-installa.sh") + " does it). On Ubuntu: the login worked at the first attempt, the line «§5.1 … CONNECTED» was in the log, no " + c("Unknown DConf source") + " in the journal, the installer of the live started in the remote session without error. On Kubuntu: the login worked at the first attempt, the profile was loaded, " + c("labwc")
@@ -518,13 +550,43 @@ S7B = p("The container boxes could not show what a real Ubuntu does: the profile
     ]) + \
     note("The server's cards: the live systems and the VMs use the same Radeon, so «a real card» in this chapter always means that one. The VMs encode through the Vulkan road, as the first line of the server's start says " + c("HEVC: yes via vulkan") + "; the live Kubuntu through VA-API. Intel and NVIDIA cards were not tried on Ubuntu 26.04.", "One card.")
 
+# ── 17.7C The tools of the 1.2.0 work ────────────────────────────────────────
+S7C = p("The 1.2.0 work added scripts and checks that are <b>not</b> all in " + c("all.sh") + ". Each was written for one question and is run by hand or by a small script.", lead=True) + \
+    table(["File", "What it does"], [
+        [c("check-exit.py") + " " + c("--box xfce|lxqt"), "three cases with the user " + c("kx1") + " logged in from the browser; after each, within 45 s no process of the desktop (labwc, the session, the panel, Xwayland) and no logind session of REMOTIX may be left: " + c("loginctl terminate-session") + " on the REMOTIX session (the desktop would be an orphan, the sweep of the root side must stop it), " + c("systemctl restart remotix") + " with the desktop open, and a close of the browser followed by 20 s away (the desktop must still be alive, then a new login resumes it)"],
+        [c("check-kde-exit.py"), "the same three cases on KDE (labwc, " + c("kwin_wayland") + ", " + c("plasmashell") + ", " + c("ksmserver") + ", " + c("kded6") + ", Xwayland); the state of " + sysf("plasma-kwin_wayland.service") + " is printed for information"],
+        [c("prelocal.sh") + " <de> 1|2a|2b|3", "with the real display manager of the machine (gdm3, sddm, lightdm): 1, remote desktop open, local automatic login of " + c("lc1") + ", the remote closes and the local desktop stays; 2a, the same after the remote leader is killed with SIGKILL; 2b, the same after a restart of the service; 3, a local session active and a remote login of the same user refused (\"already signed in locally\"). The login is a test-bench file written by " + c("banco-vm/autologin-*.sh") + ", and the display manager is restarted"],
+        [c("hold.py") + " [seconds]", "logs in from the browser (as " + c("lib.Rig") + " does) and stays logged in, writing " + c("/tmp/hold-ready") + " when the desktop has arrived. Variables " + c("RX_USER") + ", " + c("RX_PASS") + ", " + c("RX_BOX") + "; " + c("RX_KEEP=1") + " does not end the user's existing sessions first, to try a remote login while the same user has a local session"],
+        [c("hold-user.py"), "like " + c("hold.py") + ", but the user is made by the script with no card groups added: the product's own enrolment at the first connection must do it. " + c("RX_NOEND=1") + " keeps the user's existing manager. With " + c("pkill -9 -u <user> -x remotix") + " and a look at the journal it is the orphan-desktop test"],
+        [c("check-apparmor.py"), "also in " + c("all.sh") + " (" + rif("The checks of all.sh and what each proves") + ")"],
+    ], "«TAB» — The tools of the 1.2.0 work (the first five are not in all.sh, except P1 to P9 of check-prelocal.py)") + \
+    p("Why " + c("check-prelocal.py") + " has P7, P8 and P9: a check that opens an <i>empty</i> remote desktop only ever runs the orderly close, so the forced road, the one that stops a desktop with a program still open, was never asked. "
+      "P7, P8 and P9 open a desktop with a terminal running " + c("top") + ", with an editor holding unsaved text and with the snap Firefox, and then make a real local login. Ubuntu has what the other distributions do not: the snap program runs in its own transient scope, so P9 also asks that no " + sysf("snap.firefox.firefox-<uuid>.scope") + " and no " + c("firefox") + " process are left. "
+      "The case looks for new crashes of the user with " + c("coredumpctl") + " where " + c("systemd-coredump") + " is installed (Kubuntu) and in " + sysf("/var/crash") + " where apport is (the other three); apport records not every crash, so that line is a hint and not a proof of «none», and the result line says which of the two was looked at.") + \
+    note("The cases that restart the display manager inside a machine with the Radeon passed through are forbidden on the Debian bench (the server froze). On the Ubuntu bench the owner allowed them on 26 Nov 2026, with the protection of " + rif("The VM bench") + " in force (" + c("studio/prove-1.2.0/COME-SI-LANCIA.md") + ").", "Allowed on Ubuntu.")
+
+# ── 17.7D Live USB ───────────────────────────────────────────────────────────
+S7D = p("A virtual machine is not the machine: the display manager, the video card and the timings of a real boot are different. The owner therefore also tries the product on a <b>real machine started from a live image of Ubuntu 26.04.1</b> "
+        "(Ubuntu, Kubuntu, Xubuntu, Lubuntu), one image per flavour. The package is put in with " + c("server/live-installa.sh") + ", run as root from the live terminal and served from another machine on the same network, "
+        "and the trial is by hand: a remote desktop of the user " + c("prova") + " is opened with programs inside, then the same user logs in at the machine, and the remote desktop must close and the local one start.", lead=True) + \
+    ul([
+        "<b>What the script does</b> (numbered steps, re-runnable): initial checks (it stops with a clear message when the network is missing; it warns if the system is not Ubuntu 26.04); "
+        "downloads the " + c(".deb") + " and its " + c(".sha256") + " and refuses to go on if they differ; turns " + c("universe") + " on if it is off; " + c("apt-get install -y --reinstall") + " of the package with what it recommends; creates the two test users " + c("prova") + " and " + c("prova2") + " if they do not exist (it never touches an existing one, nor its password); "
+        + c("systemctl enable --now remotix") + ". Apart from " + c("universe") + " and the two users it does what the user manual asks of the administrator.",
+        "The name of the package is a variable at the head of the script (" + c("PACCHETTO") + "): " + c("remotix_1.2.0-1+ubuntu26.04_amd64.deb") + ".",
+        "<b>What was tried</b> (the owner, 27 Nov 2026, four live images 26.04.1 on a real machine): Ubuntu, Kubuntu and Xubuntu OK; Lubuntu OK after the point of register H7 was understood. On all four the local login closes the remote desktop of the same user; the local desktop starts a few seconds later, the time to close the remote one in order (seen by the owner and accepted). "
+        "<b>On the Lubuntu live image</b> the remote desktop takes the settings folder of the installer's session (" + sysf("/etc/xdg/xdg-lubuntu-live-environment") + ", the «Try or install» screen) and not the one of the normal session: icons missing and the panel complete only after about a minute (" + c("local_session_name_find()") + " in " + c("src/session.c") + "). It does not happen on the installed system, "
+        "where the installer declares the normal session (a Lubuntu virtual machine had icons and panel in order); the owner decided to leave it as it is. From then on the trials on a real machine are made with a distribution installed on a USB stick, not on a live image.",
+    ]) + \
+    p("The rule that comes out of the Fedora work holds here too: on a new distribution or desktop, the trial «the local login closes the remote one» is made <b>with programs open in the remote desktop</b>, on a real machine, before publishing.")
+
 # ── 17.8 ─────────────────────────────────────────────────────────────────────
 S8 = p("Each item below is something no file in " + c("prove/") + " or " + c("server/") + " can show, with the reason.", lead=True) + \
     table(["Not proven by the tests", "Why, and what exists instead"], [
         ["AppArmor in enforce mode",
          "the profile " + c("remotix_network") + " ships in complain mode. In the containers the kernel interface is not mounted "
          "(" + c("check-package.py") + " says BLOCKED). On the real kernel (live Ubuntu 26.04.1, kernel 7.0, 19 Nov 2026) the profile found defect C4, every sign-in refused by a " + c("deny") + " line that holds even in complain mode, "
-         "and the correction was measured there: the system bus and the journal reachable, the abstract sockets still refused, the check of local sessions «CONNECTED». A session works with the profile loaded and in complain mode on the four VMs and the live systems. "
+         "and the correction was measured there: the system bus and the journal reachable, the abstract sockets still refused, the check of local sessions «CONNECTED». A session works with the profile loaded and in complain mode on the four VMs and the live systems, and since 1.2.0 " + c("check-apparmor.py") + " reads the kernel journal of every round and fails on any line of the profile (the profile also reads " + sysf("/usr/share/applications/org.kde.remotix.desktop") + "). "
          "<b>Not verified:</b> a whole round with the profile in " + c("enforce") + "; docs/STORIA-ubuntu-26.04.md and the register ask for it before the switch."],
         ["A real phone",
          "the check emulates one. The header of " + c("check-phone.py") + " lists what only a phone shows: the Android on-screen keyboard "
@@ -539,14 +601,13 @@ S8 = p("Each item below is something no file in " + c("prove/") + " or " + c("se
          "unexplained: the first tap may land at the initial point if the pointer position reaches the page before Mutter is ready. "
          "Not demonstrated; low priority. On Ubuntu 26.04 (GNOME 50) the check " + c("phone/tap-click-portrait") + " passed in the round of the release (register E2 lists the first touch among the lines that are not always green)."],
         ["NVIDIA and Intel",
-         "the first version targets Intel and AMD, the code has a Vulkan Video road, and the dev server has one Radeon that is handed to the VMs and an Intel integrated graphics that stays with the server. No NVIDIA run is recorded, and no Intel encoding run on Ubuntu 26.04 is recorded either."],
+         "the code has a Vulkan Video road, chosen by capability, and the dev server has one Radeon that is handed to the VMs and an Intel integrated graphics that stays with the server. NVIDIA was measured on an RTX 4090 on Ubuntu 26.04 on 5 and 6 October 2026, with an earlier version of the code (the comments marked " + c("[M]") + " in the sources); no run of the current build on NVIDIA is recorded, and no Intel encoding run on Ubuntu 26.04 either."],
         ["Canvases above 3840x2160",
          "the page's size ladder (" + c("MEASURE_PROBES") + " in " + c("page.html") + ") stops at 3840x2160, so the page declares no larger " + c("video.max_size") + " with any browser; SPECS "
          "§6.1 allows up to 4096x2304, which is therefore not proven in the picture. " + c("canvas-limits") + " limits what it expects by the declared maximum (" + rif("The checks of all.sh and what each proves") + "). The declared limit of the product is 3K."],
         ["A real graphical login at the machine",
-         "the container boxes boot to " + c("multi-user.target") + " with no display manager running, and the VMs run a real one but " + c("all.sh") + " cannot type a password at a greeter. The only automated check of the hold is " + c("check-prelocal.py") + ", which covers the 0x04 on the hook's road and calls the hook by hand. "
-         "The RCP reason 0x05 (a local session is already active) and the sweeps of the network side and of the root side against a real local session are not covered by an automated check. On Ubuntu 26.04 the hold was tried by hand at the greeters of GDM (the live Ubuntu) and SDDM (the live Kubuntu), above; "
-         "<b>not tried</b> at LightDM (Xubuntu) and at the SDDM of Lubuntu. See " + rif("Appendix C — Known issues and open points") + "."],
+         "the container boxes boot to " + c("multi-user.target") + " with no display manager running; on the VMs P7 to P9 of " + c("check-prelocal.py") + " make a real local login by the automatic login of the display manager, and " + c("prelocal.sh") + " the cases 1 to 3, but nobody types a password at a greeter. "
+         "On the four live images on a real machine the owner tried the local login with the remote desktop open (27 Nov 2026, " + rif("Testing the real machine from a live USB") + "); the Lubuntu live image behaves differently from the installed system (register H7), and a Lubuntu installed on a real machine, with the Calamares of the image, was not tried. See " + rif("Appendix C — Known issues and open points") + "."],
         ["The programs of snap and Flutter in the remote session",
          "defect C5 (the settings file of the remote session that snap and Flutter programs could not read) appeared only on the real systems, because the containers have no snap. The correction (the system dconf database) was verified by hand: the installer of the live, Firmware Updater, Security Center and App Center opened without the error "
          "(docs/STORIA-ubuntu-26.04.md and register C5). No automated check opens such a program; " + c("package-snap.py") + " and " + c("check-desktop.py") + " do not know of them."],
@@ -560,7 +621,7 @@ S8 = p("Each item below is something no file in " + c("prove/") + " or " + c("se
          "the most users attached together in any check is three (" + c("three-users") + "). The capacity figures are in "
          + rif("Performance and capacity") + "."],
         ["The removal and the purge of the package on Ubuntu 26.04",
-         "they are run by " + c("check-package.py") + ", which needs a box that can be reset; no run of it on Ubuntu 26.04 is on record (" + rif("The package check") + ")."],
+         "" + c("check-package.py") + " needs a box that can be reset; no run of it on Ubuntu 26.04 is on record (" + rif("The package check") + "). The update from 1.0.1 to 1.2.0 and the removal with " + c("purge") + " were tried by script on the four VMs in the 1.2.0 round and left them clean (register G3)."],
     ], "«TAB» — What the test suite cannot prove") + \
     tip("A statement in this manual that depends on one of the rows above is marked as not verified where it appears.") + \
     h4("The lesson of the containers") + \
@@ -569,8 +630,7 @@ S8 = p("Each item below is something no file in " + c("prove/") + " or " + c("se
       "The second lesson (B3-bis): when the <i>same</i> line is red on all four desktops while it was green on the earlier distribution, suspect the tool and look at the raw events first. Three lines (" + c("mouse-drag") + " in two browsers and " + c("tap-and-half-drag-select") + ") failed identically everywhere, and the cause was the test window, not the product (GTK 4.22, above).")
 
 # ── 17.9 ─────────────────────────────────────────────────────────────────────
-S9 = p("This section reports what the records say: the reports in " + c("studio/") + ", " + c("docs/STORIA-ubuntu-26.04.md") + ", the register of problems and the logs on the dev server. Nothing was run to write it. The package under test is "
-       + c("remotix_1.0.0-1+ubuntu26.04_amd64.deb") + " in successive builds (the work called them " + c("unione1") + " to " + c("unione10") + ", and then " + c("unione11") + "); the name of a build does not matter here, the checks quoted are named with the build that ran them.", lead=True) + \
+S9 = p("This section reports what the records say: the reports in " + c("studio/") + ", " + c("docs/STORIA-ubuntu-26.04.md") + ", the register of problems and the logs on the dev server. Nothing was run to write it. The package of the container and first VM rounds is " + c("remotix_1.0.0-1+ubuntu26.04_amd64.deb") + " in successive builds (the work called them " + c("unione1") + " to " + c("unione10") + ", and then " + c("unione11") + "); the one of the 1.2.0 rounds is " + c("remotix_1.2.0-1+ubuntu26.04_amd64.deb") + ". The name of a build does not matter here, the checks quoted are named with the build that ran them.", lead=True) + \
     h4("Container rounds, 18 November 2026") + \
     p("Full rounds of " + c("all.sh") + " on the four container boxes, with the first build that had all four desktops (" + c("unione1") + ") and with the build after the first corrections (" + c("unione2") + ") (reports " + c("studio/giro1-<desktop>.md") + " and " + c("giro2-<desktop>.md") + "; the counts are theirs, not re-measured):") + \
     table(["Desktop", "unione1", "unione2", "Lines that explain the difference or stay red"], [
@@ -584,12 +644,14 @@ S9 = p("This section reports what the records say: the reports in " + c("studio/
     h4("The first real machine, and what it found") + \
     p("19 Nov 2026, afternoon: the live Ubuntu 26.04.1 on the server's own hardware, package of the build then current. Every sign-in was refused (C4: the " + c("deny unix") + " line of the profile); once corrected, the GNOME desktop opened, and the programs of snap made with Flutter failed on the settings file of the remote session (C5). "
       "Neither was visible on the containers. The corrections are described in " + rif("Files the package installs") + " and in " + rif("The startup declarations") + ".") + \
+    h4("The 1.2.0 rounds") + \
+    p("On 26 and 27 Nov 2026 the four machines of the bench had a complete automatic round with the 1.2.0 package (GNOME 125 PASS and 1 known FAIL, the others 126 PASS), the real local login with programs open, the update from 1.0.1 and the removal; the owner then tried the four VMs and the four live images by hand, all OK. The details are in " + rif("The VM bench") + " and " + rif("Testing the real machine from a live USB") + "; open points: registers H1 to H7.") + \
     h4("The VM bench") + \
-    p("The round of the release package on the GNOME machine, 120 PASS, 2 FAIL, 1 BLOCKED and 3 SKIP, with the explanation of each line, is in " + rif("The VM bench") + ". Everything else that the bench produced is the installation logs of the four machines and the short controls with the Radeon "
+    p("The round of the release package of 19 Nov 2026 on the GNOME machine, 120 PASS, 2 FAIL, 1 BLOCKED and 3 SKIP, with the explanation of each line, is in " + rif("The VM bench") + ". Everything else that the bench produced is the installation logs of the four machines and the short controls with the Radeon "
       "(log folder " + sysf("log/consegna/") + "): each machine started, the card arrived two seconds after the start of the service (" + rif("The startup declarations") + "), a login as " + c("prova2") + " reached a session with a picture, and the browser was then closed: the session of " + c("prova2") + " stayed (detached, as designed) and the bench ended it with " + c("loginctl terminate-user") + ". The exit from the desktop was not tried by that control.") + \
-    h4("Package checks of the build system (the release package)") + \
-    p("The checks that " + c("build/build-deb.sh") + " makes on the finished file, with " + c("TWICE=1") + ", are in " + rif("The package checks R4, R13, R14, R23 and R24") + ": all SI for the release package, lintian with 0 errors and 0 warnings. "
-      "The build image, the checks and the reproducibility are therefore verified for that file; the behaviour of the package scripts at removal and purge is not (see above).") + \
+    h4("Package checks of the build system") + \
+    p("The checks that " + c("build/build-deb.sh") + " and now " + c("build/build-deb-vm.sh") + " make on the finished file, with " + c("TWICE=1") + ", are in " + rif("The package checks R4, R13, R14, R23 and R24") + ": all SI for the package of 19 Nov 2026, lintian with 0 errors and 0 warnings. "
+      "The 1.2.0 package was built on the build VM and lintian was clean (register G2); its check files were not read for this manual.") + \
     h4("Open items that touch the tests") + \
     ul([
         "The three checks that the register lists as not always green: " + c("desktop/users-shell-and-environment") + " on GNOME (wanted so), the pointer at the corner covered by the panel on XFCE, and the first touch of the phone check on GNOME (register E2).",
@@ -597,7 +659,7 @@ S9 = p("This section reports what the records say: the reports in " + c("studio/
         c("check-package.py") + " not run on Ubuntu 26.04, and probably not aligned with the dconf database made by the postinst (" + rif("The package check") + ").",
         "AppArmor in enforce mode not tried; the autobind of unix sockets is not closed by the profile (register C4).",
         "The register's E3 (the snapshot of the user manager's environment can be old, and «could not look» counts as «closed») and E4 (video stutters from Chrome on Android) are open and not blocking.",
-        "The complete round after the change of the bench to root was not repeated on the VMs; the other three VMs have no complete round.",
+        "From the 1.2.0 round: one failure of mouse and keyboard on GNOME not explained and not reproduced, and the abnormal ends of some programs after the end of the session (registers H3 and H4); the Lubuntu live image (H7).",
     ])
 
 CHAPTER = ("Testing", [
@@ -609,6 +671,8 @@ CHAPTER = ("Testing", [
     ("The four test boxes", S6),
     ("The real-system virtual machine", S7),
     ("The VM bench", S7B),
+    ("The tools of the 1.2.0 work", S7C),
+    ("Testing the real machine from a live USB", S7D),
     ("What only a real machine or a real phone can prove", S8),
     ("What was verified on Ubuntu 26.04, and what was not", S9),
 ])

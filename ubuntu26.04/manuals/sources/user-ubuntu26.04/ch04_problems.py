@@ -55,7 +55,8 @@ S_SIGNIN = p("These are the sentences the page shows when you sign in or when th
          "than 1 and REMOTIX could not bring it back to 1.",
          "Try again in a moment. If it keeps happening, ask the administrator.",
          "Look in the journal at the time of the attempt (see " + rif("Where the administrator looks") + "). If the "
-         "cause is the ceiling, count the sessions and see " + rif("Settings you can change") + "."],
+         "cause is the ceiling, count the sessions and see " + rif("Settings you can change") + "; for the other "
+         "causes the line of the journal names the reason."],
         [ui("the server could not check your password just now, and it is not your mistake: try again in a moment, "
             "and if it happens again ask whoever administers the server"),
          "The machine's password checker did not answer, so your password was not judged at all.",
@@ -75,7 +76,7 @@ S_SIGNIN = p("These are the sentences the page shows when you sign in or when th
          "Tell the administrator.",
          "Run " + c("sudo /usr/libexec/remotix/remotix --encoding-test h264") + " and look for “THIS SERVER CANNOT "
          "ENCODE VIDEO” in the journal. Install the driver: " + c("va-driver-all") + " for Intel; for AMD the driver is Mesa, which "
-         "comes with the desktop (" + c("mesa-vulkan-drivers") + " too). A virtual machine with only the emulated "
+         "comes with the desktop (" + c("mesa-vulkan-drivers") + " too); NVIDIA's own driver for NVIDIA. A virtual machine with only the emulated "
          "card cannot encode: pass a real card to it."],
         [ui("incompatible protocol version") + "<br>" + ui("the server and this page misunderstood each other: "
                                                            "reload the page and try again"),
@@ -193,7 +194,15 @@ S_ADMIN = p("The administrator has three places to look, and three quick checks.
       + c("sudo journalctl -t remotix REMOTIX_TENANT=anna") + ".") + \
     p("At every start the service writes a report. Useful lines: “the desktop of this machine: …” (which desktop it "
       "found), “video.codec offered …” (the video card encodes) or “THIS SERVER CANNOT ENCODE VIDEO” (it does not), "
-      "and the PAM service line (the sign-in file is there).") + \
+      "and the PAM service line (the sign-in file is there). Every connection that closes is written with the "
+      "reason: whether the browser closed it (and with which error) or the server did, or the connection went "
+      "silent, in one phrase after the dash. A device with a wrong clock shows up here, as a certificate "
+      "error sent by the browser. The sentinel's line about the power-off rules shows the answer of the system for each "
+      "action (" + c("no") + " or " + c("na") + ", “not available on this machine”, are both fine) and, when the system "
+      "could not answer, the name of the call and the error.") + \
+    p("<b>The sign-in hook of the login screens.</b> At every start the service checks that the line which makes a "
+      "local sign-in close a remote desktop is in " + sysf("/etc/pam.d/common-session") + ", puts it back if it is "
+      "not, and writes one summary line (see it with " + c("sudo journalctl -u remotix") + ").") + \
     p("<b>2. The user's own session log.</b> Each desktop writes its own output to "
       + sysf("~/.local/state/remotix/session.log") + " in the user's home (if that folder cannot be used, to "
       + sysf("remotix-session.log") + " in the user's runtime folder, which disappears with the session). Useful "
@@ -206,7 +215,7 @@ S_ADMIN = p("The administrator has three places to look, and three quick checks.
 
 S_DESIGN = p("Some things REMOTIX does not offer, deliberately. They are not defects.", lead=True) + \
     ul([
-        "<b>No power off, restart, suspend or hibernate</b> from a remote desktop. The entries are not in the "
+        "<b>No power off, restart, suspend or hibernate</b> from any desktop, remote or at the machine. The entries are not in the "
         "menus, and the machine refuses the request from any user, at the machine or remote. "
         + c("sudo systemctl poweroff") + " as the administrator still works.",
         "<b>No unblocking of a ban by the administrator.</b> A ban ends with time (see " + rif("The login defences")
@@ -238,11 +247,37 @@ S_KNOWN = p("These are the problems known on Ubuntu 26.04 that a user or an admi
          "A program started with <code class=\"sys\">pkexec</code> does not start in a remote GNOME session. Use "
          "<code class=\"sys\">sudo</code> in a terminal. Not verified on a real machine for other programs."],
         ["<b>KDE Plasma</b>: the person at the machine waits to sign in",
-         "If somebody signs in at Kubuntu's own screen while your remote desktop is open, your desktop takes about "
-         "eleven seconds to close (about one second on GNOME). Nothing is lost beyond your open programs."],
+         "If somebody signs in at Kubuntu's own screen while your remote desktop is open, and a program of your "
+         "desktop does not close by itself (for example one that asks “save?”), REMOTIX gives the KDE desktop "
+         "5 seconds to close by itself and then closes it by force: the person at the machine waits about six "
+         "seconds. Unsaved work in that program is lost."],
+        ["<b>KDE Plasma</b>: the language",
+         "The language of the KDE desktop follows the <b>KDE Settings</b> of the user "
+         "(<code class=\"sys\">~/.config/plasma-localerc</code>), as at a local sign-in. A user who has already "
+         "used KDE in a language changes it from the KDE Settings."],
         ["<b>XFCE</b>: Log Out ignored, a corner that cannot be dragged",
          "A Log Out chosen in the first seconds, while the desktop is still starting, is ignored: choose it again. "
          "A window corner hidden under the panel cannot be dragged."],
+        ["<b>XFCE</b>: no colour-profile or Bluetooth programs",
+         "Two programs that XFCE would start at sign-in are not started in a remote session: the Bluetooth "
+         "applet (<code class=\"sys\">blueman</code>) and the colour-profile daemon "
+         "(<code class=\"sys\">xiccd</code>, which asked for an administrator password in the middle of the "
+         "desktop). Nothing else is changed."],
+        ["<b>LXQt</b>: no X11 compositor",
+         "A compositing program made for X11 (picom and the like) does not run in a remote session, because the "
+         "remote desktop has no X server for it to compose: it is left out so that LXQt does not restart it "
+         "again and again."],
+        ["<b>Lubuntu live system</b>: no icons, the panel late",
+         "On the live system of Lubuntu (the “Try or install” session) the remote desktop takes the settings "
+         "folder of the installer's session: icons are missing and the panel is complete only after about a "
+         "minute. This does not happen on an installed Lubuntu."],
+        ["The first click after signing in (GNOME)",
+         "REMOTIX sends the first pointer movement after signing in twice, a precaution for a defect seen on newer "
+         "GNOME versions; should the first touch land in the wrong place, touch again."],
+        ["The language of the desktop",
+         "The remote desktop uses the language the user chose in the desktop settings, otherwise the system's "
+         "language. The formats (dates, numbers) are the machine's, not the user's own choice. On XFCE the "
+         "settings service of the desktop stays in the language of the machine."],
         ["<b>The wallpaper</b> of XFCE differs from the one at the machine",
          "XFCE keeps one wallpaper for each screen: choose it again in the remote desktop."],
         ["Programs of <b>snap</b> and some of Ubuntu's own (the live installer, Firmware Updater, Security Center, App "
@@ -254,6 +289,13 @@ S_KNOWN = p("These are the problems known on Ubuntu 26.04 that a user or an admi
         ["The service is killed and is not yet started again",
          "If the service is killed outright (a crash), for about two seconds nobody can close the desktop left "
          "behind; the restarted service then ends it unless its user comes back first."],
+        ["<b>No desktop at all</b> on XFCE or LXQt",
+         "The package labwc is missing (it is only recommended: " + c("--no-install-recommends") + " leaves it out). "
+         "Install it with " + c("sudo apt install labwc") + ". The package prints a warning at installation, and a "
+         "user who signs in gets the generic “could not open your session” sentence."],
+        ["Still open and declared",
+         "Safari and Firefox on Windows were not tried; NVIDIA cards worked on Ubuntu 26.04 in October 2026 with an "
+         "earlier build of REMOTIX and have not been run again with this release."],
         ["A user with a screen scale other than 1 (GNOME)",
          "The scale of the remote desktop is always 1. REMOTIX tries once to bring it back; if it cannot, the "
          "session is refused and the page gives the generic “could not open your session” sentence."],

@@ -40,7 +40,9 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
         ["Server", "C (" + c("-std=gnu11") + "), Linux only, systemd, one server executable " + c("/usr/libexec/remotix/remotix")
          + " started by " + c("remotix.service") + " as root; it re-executes itself for the network side, the PAM "
          "helper and the per-user children (" + rif("Overall architecture") + "). The package also ships a second, very small "
-         "program, " + c("remotix-local-login") + ", that PAM runs at a local login (" + rif("The local-login hold") + "), and a "
+         "program, " + c("remotix-local-login") + ", that PAM runs at a local login (" + rif("The local-login hold") + "), a shell script, "
+         + c("remotix-pam-hook") + ", that the unit runs before every start to check that the line of that hook is still in "
+         + sysf("/etc/pam.d/common-session") + " (" + rif("Startup and life cycle") + "), and a "
          "second executable, " + sysf("/usr/libexec/remotix/labwc") + ": REMOTIX's own labwc (labwc 0.9.3 with wlroots 0.19.2 "
          "linked in statically, patched), which hosts the KWin of a KDE session (" + rif("Overall architecture") + ")"],
         ["Client", "The page " + c("src/page.html") + " (HTML and JavaScript in one file), served by the server itself "
@@ -61,12 +63,16 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
         ["Clocks", "30 s of client silence (" + c("SILENCE") + " in " + c("rcp.c") + "), 30 min without input "
          "(" + c("DEFAULT_INACTIVITY") + " in " + c("rcp.c") + "), 60 min until the session is closed (" + c("DEFAULT_ABANDON_MS")
          + " in " + c("main.c") + "); see " + rif("Startup and life cycle")],
-        ["Packaging", "A single " + c(".deb") + " built in an " + c("ubuntu:26.04") + " container (" + rif("Build and release")
-         + "); the service is installed disabled and not started (" + rif("The package") + ")"],
+        ["Packaging", "A single " + c(".deb") + " built in an Ubuntu 26.04 virtual machine, with no container (" + c("build/build-deb-vm.sh")
+         + ", " + rif("Build and release") + "); the service is installed disabled and not started (" + rif("The package") + "). The package carries "
+         "its own AppArmor profile for the network side, a " + c("needrestart") + " rule that keeps the service from being restarted by an update, "
+         "and the " + c("pam-auth-update") + " profile of the local-login hook"],
         ["Size", f"{righe(conta('.c') + conta('.h'))} lines of C and headers, {righe(conta('page.html'))} lines of page "
          "(counted when the manual is generated)"],
         ["Licence", "A licence text of the author, " + c("LICENSE.md") + ", shipped in the package with "
-         + c("THIRD-PARTY-LICENSES") + "; not an open-source licence for REMOTIX. The package also carries labwc (GPL-2, two "
+         + c("THIRD-PARTY-LICENSES") + "; not an open-source licence for REMOTIX. " + c("THIRD-PARTY-LICENSES") + " lists ngtcp2 1.25.0, nghttp3 1.18.0 "
+         "(with sfparse), libopus 1.5.2 (WebAssembly, inside the page), the Emscripten system libraries (with musl) and 10 Wayland protocol "
+         "files, and, for the separate program, labwc 0.9.3 and wlroots 0.19.2; there is no installer in the package. The package carries labwc (GPL-2, two "
          "files LGPL-2+) with wlroots (MIT) and a small patch of ours; their corresponding source is published with every "
          "release as " + c("remotix-<version>-labwc-source.tar.gz") + " (" + c("LICENSE.md") + " §8)"],
     ], "«TAB» — REMOTIX at a glance") + \
@@ -76,65 +82,37 @@ S1 = p("<b>REMOTIX</b> is the Linux desktop in the browser, for several users at
          "enforces (session cap, clocks, ban, minimum bandwidth) are configuration and hold as written.",
          "Goals, not promises.")
 
-S2 = p("Two kinds of statement are made in this manual and they are kept apart. What was <b>verified</b> was run by the "
-       "checks in " + c("prove/") + " (" + rif("Testing") + ") with real browsers, and by the owner by hand, on 18 and 19 "
-       "November 2026. What was <b>not verified</b> is said every time it matters, and collected in "
-       + rif("Appendix C — Known issues and open points") + ". Three kinds of machine were used: the containers of the "
-       "first rounds (" + c("boxes/") + "), four QEMU virtual machines with a real graphics card handed to one of them at a "
-       "time (" + c("server/vm-radeon.sh") + ", " + c("prove/banco-vm/") + ", " + c("RX_BANCO=vm") + "), and the four live "
-       "images on real hardware. The release was proved with the package called " + c("unione10") + " in the working notes (polkit rule with 15 actions); the rule with 19 actions came with " + c("unione11") + " on 20 Nov 2026.",
-       lead=True) + \
-    table(["Area", "Verified (docs/STORIA-ubuntu-26.04.md, 18-19 Nov 2026)", "Not verified"], [
-        ["Rounds in containers", "Round " + c("unione2") + ", 18 Nov 2026, one container per flavour (" + c("studio/giro2-*.md") + "): "
-         "GNOME 123 of 124 lines passing, KDE 121 of 124, LXQt 124 of 124, XFCE 126 of 128 (XFCE has four more lines than "
-         "the others: renamed and new checks). Then three more rounds on 19 Nov 2026 (" + c("log/unione3-<de>/summary.txt") + " and the "
-         "same for " + c("unione4") + " and " + c("unione5") + " on the server): " + c("unione3") + ": KDE, XFCE and LXQt all 124 lines "
-         "PASS, GNOME two red lines (" + c("desktop/users-shell-and-environment") + ", and " + c("desktop/settings-intact") + ", cured "
-         "afterwards); " + c("unione4") + ": KDE and LXQt all PASS, XFCE one red line (" + c("desktop/canvas-limits") + ", the crash window "
-         "of an application covering the screen, not a defect of REMOTIX: " + c("studio/14-canvas-xfce.md") + "), GNOME two (the pkexec line "
-         "and " + c("audio-firefox") + ", which passed when rerun); <b>" + c("unione5") + "</b>, the last round in containers: KDE, XFCE and "
-         "LXQt all lines PASS, GNOME all PASS except " + c("desktop/users-shell-and-environment") + ". The red lines are explained in the "
-         "round reports and in the history",
-         "The containers have no real login screen, no AppArmor in force and no snap (REGISTRO C4, C5): what depends on those "
-         "was not exercised there"],
-        ["Round on the virtual machine", "Full round on the GNOME machine with the package " + c("unione10") + " (19 Nov 2026, 47 minutes, "
-         + c("RX_BANCO=vm") + ", deadlines doubled by " + c("RX_TEMPO=2") + "): 120 lines PASS, 2 FAIL, 1 BLOCKED, 3 SKIP. "
-         "FAIL " + c("desktop/users-shell-and-environment") + ": the line that expects a password window from " + c("pkexec")
-         + " while the product opens none by design (REGISTRO E2). FAIL " + c("ban/typed-names-not-logged") + ": a false red of "
-         "the bench, its own " + c("sudo") + " lines in the journal; the bench now enters as root with a key and the "
-         + c("ban") + " check passes 8 of 8. BLOCKED " + c("audio-firefox") + ": the test Firefox was mute at its first start, "
-         "passed twice when repeated. SKIP: " + c("prelocal/real-greeter") + ", " + c("ban/other-addresses") + ", "
-         + c("package") + " (each with its reason in the table)",
-         "The full round with " + c("unione10") + " exists only for the GNOME virtual machine, and after the bench switched to root it was "
-         "not run again in full. The release package with the 19-action polkit rule (" + c("unione11") + ", 20 Nov 2026) has the same build "
-         "checks and only a partial run of the desktop check (8 PASS and the known FAIL, with " + c("power-implied") + " and "
-         + c("power-local-seat") + " PASS, log " + c("vm-gnome-poweroff-dopo") + " on the server). On the other three virtual machines "
-         "only a short run was made (start with the card, a login that reaches the desktop with video, exit); KDE, XFCE and "
-         "LXQt did not get the full round with the release package"],
-        ["Real machines", "By the owner, 19 Nov 2026: in the containers with " + c("unione5") + ", GNOME from Windows, Linux and Android (tablet, "
-         "Samsung DeX, notebook): detach and reattach, audio, video, clipboard, other resolutions; then the four virtual machines (GNOME, KDE, "
-         "XFCE, LXQt) with " + c("unione10") + ", with detach and reattach from Linux and from Android (different resolutions); then the four live images (Ubuntu 26.04.1, Kubuntu "
-         "26.04.1, Xubuntu 26.04, Lubuntu 26.04): sign-in at the first attempt, and on Ubuntu and Kubuntu also “a local "
-         "login closes the remote desktop” at the real login screen. Two defects found only there were fixed: the AppArmor "
-         "profile (REGISTRO C4) and the settings profile of the GNOME session for snap and Flutter programs (REGISTRO C5)",
-         "The local-login test at the real login screen of Xubuntu and Lubuntu; the logs of those two live sessions were not "
-         "read; AppArmor in enforce mode; NVIDIA; the branch “life UNKNOWN” of the child's start and the branch “different "
-         "or older database” of the dconf compilation (REGISTRO C5)"],
-        ["Browsers", "Chrome and Firefox on Linux, driven by the checks (base, input, audio; Chrome for the clipboard); the "
-         "owner's own tests from Windows, Linux and Android clients (tablet, phone, notebook, Samsung DeX). On Android Chrome small stalls were seen in video on the "
+S2 = p("Two kinds of statement are made in this manual and they are kept apart. What was <b>verified</b> was run "
+       "on the owner's development server, in four virtual machines (one per desktop, with a graphics card passed through to the one "
+       "being tested) with real browsers, by the checks in " + c("prove/") + " (" + rif("Testing") + "), and by the owner by hand "
+       "on those machines and on the four live images on a real machine. What was <b>not verified</b> is said every time it matters, "
+       "and collected in " + rif("Appendix C — Known issues and open points") + ".", lead=True) + \
+    table(["Area", "Verified (PIANO.md, 26-27 Nov 2026)", "Not verified"], [
+        ["Desktops", "Ubuntu (GNOME), Kubuntu (KDE Plasma), Xubuntu (XFCE) and Lubuntu (LXQt), each by " + c("prove/all.sh") + " in its own "
+         "virtual machine: 125 lines PASS and one known FAIL on GNOME (" + c("desktop/users-shell-and-environment") + ", the line that "
+         "expects a password window from " + c("pkexec") + " while the product opens none by design), 126 PASS on each of the other three. "
+         "The local login that closes the remote desktop <i>with programs open</i>: P7 and P9 were run on the four desktops, P8 on KDE and "
+         "XFCE (it cannot be automated on GNOME and LXQt); the owner tried it by hand on the four machines and on the four live images "
+         "26.04.1 on a real machine on 27 Nov 2026: all passed",
+         "Four desktops on one machine together; one FAIL of the mouse and keyboard check on GNOME right after an update with a desktop "
+         "open, seen once, neither explained nor reproduced (REGISTRO H3)"],
+        ["Browsers", "Chrome and Firefox on Linux (base, input, audio); Chrome for the clipboard; the owner's own tests "
+         "from Windows, Linux and Android clients (tablet, phone, notebook, Samsung DeX). On Android Chrome small stalls were seen in video on the "
          "GNOME machine; measured on the server, cause not told apart (REGISTRO E4, not blocking)",
-         "Safari; Firefox on Windows and on Android; Samsung DeX was tried by hand on GNOME in the Ubuntu containers (" + c("unione5") + ", 19 Nov 2026) and not again on the virtual machines and live images with " + c("unione10") + "; Firefox clipboard"],
+         "Firefox clipboard (open); Safari; Firefox on Windows and Android"],
         ["Life cycle", "Reattach (clean close, killed browser, other window size), Log Out, restart of the service, network drop, "
          "simultaneous entries of one user, one user leaving while another works, the clocks at short values ("
          + c("prove/check-lifecycle.py") + ", " + c("prove/check-resilience.py") + "); the local-login hold ("
-         + c("prove/check-prelocal.py") + ", the login simulated)",
+         + c("prove/check-prelocal.py") + ")",
          "The 30-min and 60-min clocks at their real values (only the mechanism at short values)"],
-        ["Package", "Release package (" + c("unione10") + ") built twice with the same checksum (" + c("R23") + "), no libwlroots among the labwc "
-         "dependencies (" + c("R4 ldd-labwc") + "), the labwc source archive built and checked (" + c("controlli.txt") + " of the "
-         "package); " + c("lintian") + " reports one informational tag, " + c("systemd-service-file-missing-documentation-key")
-         + "; installation on the four virtual machines and the four live images",
-         c("check-package.py") + " was not run on the virtual machines (it needs a reset they cannot do), so the purge "
-         "clean-up of this release (REGISTRO C5) was not checked by a run of it; a 4096×2304 canvas"],
+        ["Package", "Built in the " + c("costruzione") + " virtual machine, " + c("lintian") + " clean; update from 1.0.1 to 1.2.0 and "
+         + c("purge") + " clean on the four virtual machines; installation on the four live images",
+         "A card that is not an AMD or Intel one (NVIDIA: measured on Ubuntu 26.04 in October 2026, on a rented machine, with an earlier version "
+         "of the code; not run again on this tree); the AppArmor profile in enforce mode (it is shipped in complain mode); a 4096×2304 canvas"],
+        ["On the live images", "A remote desktop opened on a live image uses the settings folder of the session the machine declares at boot; on the "
+         "Lubuntu live that is the installer's session (REGISTRO H7), so the desktop opens without icons and the panel is complete only after "
+         "about a minute. The owner decided to leave it so: it does not happen on an installed system", "An installation made with the "
+         "Lubuntu installer, to look at the result"],
     ], "«TAB» — What has been checked, and where the checking stops") + \
     p("<b>Browsers as SPECS §11.5 declares them.</b> Chrome and the other Blink browsers on Linux and Windows: HEVC "
       "if the device decodes it, otherwise H.264. Chrome on Android: HEVC or H.264. Firefox on Linux: H.264 only. "
@@ -224,7 +202,7 @@ S3 = p("A handful of words recur in every chapter. Their names in the code are i
          "(" + c("na") + "), and an error is “not safe”"],
     ], "«TAB» — The invariants quoted in the code")
 
-S4 = p("The repository holds the product, the package recipe, the build container, the checks that drive real "
+S4 = p("The repository holds the product, the package recipe, the build scripts, the checks that drive real "
        "browsers, the dev-server scripts and the specifications. Everything is in English except part of the "
        "older documents.", lead=True) + tree([
     "REMOTIX-UBUNTU/",
@@ -232,9 +210,9 @@ S4 = p("The repository holds the product, the package recipe, the build containe
     "│   ├── protocols/  # Wayland protocol XML files the server is built against",
     "│   └── opus-wasm/  # the page's Opus decoder (build script and the .wasm)",
     "├── debian/         # the package: control, rules, unit, maintainer scripts, AppArmor profile, needrestart drop-in",
-    "├── build/          # build-deb.sh, the container recipe, quic-static.sh (ngtcp2 and nghttp3, static), labwc-ospite/ (our labwc)",
+    "├── build/          # build-deb-vm.sh (the build, on a virtual machine), build-deb.sh (its checks, and the older podman build), the older container recipe, quic-static.sh (ngtcp2 and nghttp3, static), labwc-ospite/ (our labwc)",
     "├── prove/          # the checks with real browsers: all.sh, one check-*.py per area, banco-vm/ (the VM bench)",
-    "├── boxes/          # the container boxes of the first rounds, one per flavour (kept; the release was proved on VMs)",
+    "├── boxes/          # the older test containers, one per flavour (kept; the tests run on virtual machines, prove/banco-vm/)",
     "├── server/         # scripts of the dev server: the QEMU VMs with the Radeon, the live-image installer, the VM login test",
     "├── docs/           # SPECS.md, RCP.md, DECISIONS*.md, LESSONS.md, REGISTRO-*.md and the cleaning inventories",
     "├── studio/         # the studies and the round reports of the Ubuntu work",
@@ -254,7 +232,8 @@ S4 = p("The repository holds the product, the package recipe, the build containe
          "at purge the small per-user files), " + c("remotix_network.apparmor") + ", " + c("denied-users") + ", the ufw profile "
          + c("remotix.ufw") + ", the KWin permission file " + c("org.kde.remotix.desktop") + " and "
          + c("needrestart/remotix.conf") + " (installed in " + sysf("/etc/needrestart/conf.d/") + ")."],
-        [c("build/"), c("build-deb.sh") + " builds the .deb in an " + c("ubuntu:26.04") + " podman container; "
+        [c("build/"), c("build-deb-vm.sh") + " builds the .deb in the " + c("costruzione") + " virtual machine (no container); " + c("build-deb.sh")
+         + " is the older build in an " + c("ubuntu:26.04") + " podman container, kept in the tree; "
          + c("quic-static.sh") + " builds ngtcp2 and nghttp3 as static libraries because the 26.04 packages (ngtcp2 1.16, "
          "nghttp3 1.12) are older than the versions needed (" + c("src/Makefile") + " lists them); "
          + c("labwc-ospite/") + " holds the recipe of our labwc (pinned tarballs, the wlroots patch, fetch and build scripts)."],
@@ -264,10 +243,12 @@ S4 = p("The repository holds the product, the package recipe, the build containe
          "(" + c("RX_BANCO=vm") + ")."],
         [c("boxes/"), "The container boxes (one per flavour: " + c("ubuntu-desktop-minimal") + ", " + c("kubuntu-desktop") + ", "
          + c("xubuntu-desktop") + ", " + c("lubuntu-desktop") + ") started by " + c("box.sh") + ". They are still in the tree and "
-         "were used for the first rounds; the release was proved on the virtual machines and the live images instead."],
+         "were used for the first rounds; the tests now run on the virtual machines."],
         [c("server/"), c("vm-radeon.sh") + " and its companions (" + c("vm-radeon-aggiorna.sh") + ", " + c("vm-radeon-installa.sh")
          + ", " + c("vm-radeon-controllo.sh") + ") run the four virtual machines, one at a time with the graphics card handed to it; "
-         + c("live-installa.sh") + " installs the package on a live image; " + c("prepara-server.sh") + " sets the dev server up."],
+         + c("live-installa.sh") + " installs the package on a live image; " + c("prepara-server-vm.sh") + " sets the dev server up for the virtual machines "
+         "(the older " + c("prepara-server.sh") + " is for the containers); " + c("VM-BANCO.md") + " describes the bench, including the guard that refuses to give the "
+         "Radeon to a machine that does not have " + c("amdgpu.runpm=0") + "."],
         [c("studio/"), "The studies of the Ubuntu work (numbered 1 to 16, the last being the inventory this manual was written from), the reports of the rounds " + c("giro1") + " and "
          + c("giro2") + " and the rules of work."],
         [c("docs/"), "Specifications and decisions, the register of problems " + c("REGISTRO-problemi.md") + " and the two cleaning documents: "
@@ -294,10 +275,10 @@ PARTS = [
      "how the server is built and what it installs around itself", lambda f: f.startswith("src/")),
     ("Package", c("debian/"), "control, rules, unit, maintainer scripts, AppArmor profile, needrestart drop-in",
      lambda f: f.startswith("debian/")),
-    ("Build", c("build/"), "the container build, and the recipe of our labwc (" + c("build/labwc-ospite/") + ")",
+    ("Build", c("build/"), "the build on a virtual machine, the older container build, and the recipe of our labwc (" + c("build/labwc-ospite/") + ")",
      lambda f: f.startswith("build/")),
     ("Checks and test rigs", c("prove/") + ", " + c("boxes/") + ", " + c("server/"),
-     "the checks with real browsers, the VM bench, the container boxes, the dev-server scripts",
+     "the checks with real browsers, the virtual-machine bench, the older container boxes, the dev-server scripts",
      lambda f: f.startswith(("prove/", "boxes/", "server/"))),
     ("Manual sources", c("manuals/sources/"), "this manual's generator, style and chapters", lambda f: True),
 ]

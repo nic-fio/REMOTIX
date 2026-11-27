@@ -34,7 +34,7 @@ S1 = p("REMOTIX serves four Wayland desktops that belong to three compositor fam
         ["«Alive» means", c("DisplayConfig.GetCurrentState") + " answers", c("org.kde.KWin") + " owns its bus name",
          c("org.xfce.SessionManager") + " owns its bus name", c("org.lxqt.session") + " owns its bus name"],
         ["Log Out", c("Logout(1)") + ", then " + c("Logout(2)"), c("org.kde.Shutdown.logout") + ", then "
-         + c("StopUnit") + " of " + c("plasma-workspace.target"), c("org.xfce.Session.Manager.Logout") + ", then SIGTERM to labwc",
+         + c("StopUnit") + " of " + c("graphical-session.target"), c("org.xfce.Session.Manager.Logout") + ", then SIGTERM to labwc",
          c("logout()") + " without waiting for a reply, then SIGTERM to labwc"],
     ], "«TAB» — The four desktops side by side") + \
     p("<b>Versions on Ubuntu 26.04.</b> The versions below are those of the Ubuntu 26.04 packages as read in the studies of "
@@ -168,9 +168,37 @@ S3 = p("The environment of the session is <b>composed, not inherited</b> (" + c(
         [c("DCONF_PROFILE"), "not set in the normal case: dconf reads " + sysf("$XDG_RUNTIME_DIR/dconf/profile") + ". Set only in the "
          "declared fallback (to the fallback's profile) and when an administrator's own variable exists (to REMOTIX's runtime file); "
          + rif("GNOME: headless Shell and session dconf"), "—", "—", "—"],
-        [c("LANG") + " (a UTF-8 locale that exists), " + c("HOME") + ", " + c("USER") + ", " + c("PATH"), "yes", "yes", "yes",
+        [c("LANG") + " (a UTF-8 locale that exists), " + c("LANGUAGE") + ", " + c("LC_*") + " (the language of the user, see below)",
+         "yes", "yes", "yes", "yes"],
+        [c("HOME") + ", " + c("USER") + ", " + c("PATH"), "yes", "yes", "yes",
          "yes, with REMOTIX's " + c("bin-lxqt") + " folder at the head of " + c("PATH")],
     ], "«TAB» — The composed environment") + \
+    p("<b>The language.</b> A local graphical login gives the session the language the user chose in the desktop settings and "
+      "otherwise the system's one; the remote session does the same (" + c("child_locale_read()") + " in " + c("child.c") + "). "
+      + c("LANG") + " is the first item of " + c("Languages=") + " (or the value of the older " + c("Language=")
+      + ") in " + sysf("/var/lib/AccountsService/users/<name>") + ", read by the child <b>as root before it changes identity</b>, because that "
+      "folder is " + c("root:root 0700") + "; with no such choice it is the " + c("LANG") + " that " + c("pam_env") + " put in the PAM "
+      "environment from " + sysf("/etc/default/locale") + " (the second " + c("pam_env") + " line of " + c("src/remotix.pam") + "). The system's "
+      + c("LC_*") + " and " + c("LANGUAGE") + " come from the same PAM environment (at most " + c("CHILD_LOCALE_MAX") + " = 12 of them). "
+      "Every value is checked for plain characters before it is written into an " + c("execve") + " environment, and " + c("local_utf8()")
+      + " in " + c("session.c") + " still checks that the locale exists and is UTF-8, falling back to " + c("C.UTF-8")
+      + " with a log line (until 1.0.1 the language was always " + c("C.UTF-8") + "). All these names are in " + c("OUR_VARIABLES")
+      + " (" + rif("Ending a session and tidying up") + ").") + \
+    p("<b>The language in the user manager (KDE, XFCE, LXQt).</b> On these three desktops the units of the session (KWin and its labwc, "
+      "labwc, the panel) are born with the environment of the user's systemd manager, which " + c("pam_systemd") + " made with the system's "
+      "language, not with the one composed for the start command. " + c("manager_set_locale()") + " (" + c("session.c") + ") therefore "
+      "puts the " + c("LANG") + ", " + c("LC_*") + " and " + c("LANGUAGE") + " words of the composed environment into the manager with "
+      + c("SetEnvironment") + " before the session starts; if the bus does not answer a ⚠ line says the desktop's units may get the system's. "
+      "At the end of a normal session the values go back as they were (they are in " + c("OUR_VARIABLES") + ", so the snapshot of birth "
+      "restores them); in the close for a local login (" + c("session_clear_out_light()") + ") they stay in the manager <b>on purpose</b>: it is the "
+      "language chosen by that same user, the one the local desktop now coming in uses too, and taking it away could take it from under "
+      "that desktop. They are put right at the next remote birth, or go away with the manager. GNOME needs none of this: " + c("gnome-session")
+      + " exports its whole environment.") + \
+    note("on <b>KDE</b> the language of the desktop follows the user's own " + sysf("~/.config/plasma-localerc") + ", as at a local login. "
+         "REMOTIX hands the right language to the session (the processes of the desktop carry it), but Plasma reads that file, which it "
+         "creates at its first start, and where it holds another language it wins. A user who has already used KDE in one language changes "
+         "it from KDE's own Settings; REMOTIX does not write that file. On <b>XFCE</b> " + c("xfconfd") + " stays in the system's language (register entry H2). "
+         "The formats (" + c("LC_*") + " chosen as «Formats» in the settings) do not reach the remote desktop (register entry H1).", "Language on KDE and XFCE.") + \
     p("<b>The PATH is the one PAM gives to a login.</b> The child opens a PAM session with the service " + c("remotix")
       + " (" + rif("How a session is born") + ") and takes the " + c("PATH") + " that " + c("pam_env") + " composed from "
       + sysf("/etc/environment") + ": on Ubuntu that file holds " + sysf("/snap/bin") + ", the sbin folders and the games "
@@ -353,7 +381,8 @@ S5 = p("A session ends in three ways: the user chooses «Log Out» in the deskto
          sysf("gnome-session-manager@<session>.service") + " (on Ubuntu " + sysf("@ubuntu") + "), " + sysf("gnome-session-restart-dbus.service")
          + " and " + sysf("graphical-session.target") + " all inactive"],
         ["KDE", c("org.kde.Shutdown.logout()") + " (not " + c("LogoutPrompt") + ", which asks for a confirmation nobody gives)",
-         c("StopUnit(plasma-workspace.target, fail)") + " (there is no " + c("Logout(2)") + " on KDE)",
+         c("StopUnit(graphical-session.target, fail)") + " (there is no " + c("Logout(2)") + " on KDE; it was " + c("plasma-workspace.target")
+         + " until 1.0.1, which is not enough in time: KWin, ksmserver and plasmashell are " + c("PartOf") + " the graphical target)",
          sysf("plasma-kwin_wayland.service") + " and " + sysf("plasma-workspace.target") + " inactive"],
         ["XFCE", c("org.xfce.Session.Manager.Logout(false, false)") + "", "SIGTERM to every " + c("labwc") + " of the user (" + c("kill_xfce()") + ")",
          "no " + c("labwc") + " process of the user is left (" + c("my_processes()") + ")"],
@@ -406,6 +435,14 @@ S5 = p("A session ends in three ways: the user chooses «Log Out» in the deskto
          "because the cases are forced (an old snapshot, lingering and a failed birth together; a live desktop that does not answer "
          "at that very moment) and cannot be provoked on the bench (" + c("docs/REGISTRO-problemi.md") + " E3).",
          "Known limit.") + \
+    p("<b>The close for a local login.</b> When a local login of the same user is held in PAM and the remote desktop must go first "
+      "(" + rif("Local excludes remote and the session cap") + "), the orderly step on KDE waits " + c("KDE_PRELOCAL_ORDERLY_MS") + " = 5 s "
+      "instead of 10 before the forced one. Plasma waits without limit for a program that does not close by itself (a «save changes?» "
+      "dialog, a terminal running a program) and nobody is there to answer, so the ten seconds were only a delay of the local login. Every "
+      "other close and every other desktop keeps " + c("WAIT_EXIT_MS") + ". The forced step is " + c("StopUnit") + " of "
+      + c("graphical-session.target") + ", which takes the whole desktop down. If the parent that asked for the close is gone by then (the "
+      "root side released its hold and the local desktop may be starting), the forced step is <b>not</b> taken and a line says so "
+      "(" + c("force_refused()") + "). The owner saw on the four live images that the local login starts a few seconds later for this reason, and accepted it.") + \
     h4("KDE: a Log Out that stops halfway") + \
     p("«Log Out» calls " + c("plasma-shutdown") + ", which stops " + sysf("plasma-workspace.target") + " and then asks the user "
       "manager to stop " + sysf("graphical-session.target") + ", which is what really stops KWin, plasmashell and the rest. If any "
@@ -495,6 +532,11 @@ S6 = p("GNOME is started through the machine's own GNOME session (on Ubuntu 26.0
         + c("ping") + " leaves only when Mutter releases the event; this is not verified in the code of this manual.",
         "<b>The pointer.</b> Mutter delivers the cursor as metadata (" + c("cursor-mode=2") + "); " + c("cursor.c")
         + " turns it into the wire's " + c("CURSOR_SHAPE") + " and discards sizes the protocol forbids.",
+        "<b>The first movement is sent twice.</b> The comment in " + c("input_pointer()") + " (" + c("input.c") + ") records that the first "
+        "absolute motion after the pointer device is (re)started reaches the windows with one of the two coordinates at 0, so a click made "
+        "at once (a tap from a phone) lands on the edge of the screen; the following motions, and the same position sent a second time "
+        "right after the first, are exact. The first one is therefore sent twice (" + c("pointer_primed") + "); a compositor that needs no "
+        "such thing ignores the repeat. The comment marks it as to be removed when Mutter is fixed (measured on Mutter 51; Ubuntu 26.04 has Mutter 50.1, where it was not measured).",
     ]) + \
     p("<b>The Ubuntu mode and its extensions.</b> The mode " + c("ubuntu") + " is the file " + sysf("/usr/share/gnome-shell/modes/ubuntu.json")
       + " of the package " + c("gnome-shell-common") + ": " + c("parentMode") + " " + c("user") + ", the Yaru style sheet and the "
@@ -867,8 +909,9 @@ S7 = p("Plasma is started with " + c("startplasma-wayland") + ", which starts KW
       "socket. The shape of the pointer comes from the metadata, where the session's cursor theme " + c("remotix-invisible")
       + " has one-pixel opaque images of unique colours that the dictionary " + c("shape_from_pixel()") + " maps back to a "
       "real cursor image (" + c("shape.c") + "; " + rif("Screen capture") + ").") + \
-    note(c("kwin_check_permission()") + " ends its failure messages with «Remedy: reinstall the package (apt install --reinstall remotix)» "
-         "(" + c("RX-KDE-001") + ", " + c("RX-KDE-002") + " and " + c("RX-KDE-003") + ", " + c("kwin.c") + "): the remedy is the package's, since there is no installer.",
+    note(c("kwin_check_permission()") + " ends its failure messages with «Remedy: reinstall the package from its file (sudo apt install "
+         "--reinstall ./remotix_&lt;version&gt;_amd64.deb)» (" + c("RX-KDE-001") + ", " + c("RX-KDE-002") + " and " + c("RX-KDE-003") + ", "
+         + c("kwin.c") + "): the remedy is the package's, since there is no installer.",
          "Remedy text.")
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -899,7 +942,7 @@ S8 = p("XFCE on Wayland has no compositor of its own: it runs on labwc, the dist
          "one opaque pixel of a unique colour under the hotspot, and " + c("wlroots.c") + " reads a 3×3 region around the pointer "
          "after every gesture (one probe in flight, a tail probe 120 ms after the last)", "The comment records the cost "
          "measured on LXQt: about 1.4 points of labwc CPU at a 60 Hz hand"],
-        ["Autostart cover", c("session_autostart_cover()") + " writes " + c("blueman.desktop") + " with " + c("Hidden=true")
+        ["Autostart cover", c("session_autostart_cover()") + " writes " + c("blueman.desktop") + " and " + c("xiccd.desktop") + " with " + c("Hidden=true")
          + " in the " + c("autostart") + " folder of the session's labwc folder (first in " + c("XDG_CONFIG_DIRS") + ")",
          "The Bluetooth applet crashed now and then (a race with " + c("obexd") + ", 5 sessions in 90, comment of 19 Nov 2026) "
          "and covered the screen with apport's «internal error» window; Bluetooth is a device of the machine, not of the remote "
@@ -939,8 +982,10 @@ S8 = p("XFCE on Wayland has no compositor of its own: it runs on labwc, the dist
       "by now, and never while " + c("xfconfd") + " still holds the lock in memory (" + c("xfconfd_holds_lock()") + " reads "
       + c("/proc/<pid>/environ") + " looking for " + c("/remotix/xdg-xfce") + "; if it cannot tell, it does not write).") + \
     p("<b>The autostart cover.</b> The entry in the session's " + c("autostart") + " folder has the same file name as the system's and "
-      + c("Hidden=true") + ", so XFCE does not start it. The list is " + c("SESSION_NOT_IN_REMOTE_AUTOSTART") + " (today only " + c("blueman.desktop") + "); "
-      "an entry is written only if the system's one exists, otherwise only an entry of ours (marked " + c("X-REMOTIX") + ") of an earlier "
+      + c("Hidden=true") + ", so XFCE does not start it. The list is " + c("SESSION_NOT_IN_REMOTE_AUTOSTART") + " (" + c("blueman.desktop") + " and " + c("xiccd.desktop") + "). " + c("xiccd") + " (colour profiles, a dependency of " + c("xfce4-settings") + ") at every login asks colord to create a device, "
+      "an action polkit gives to the seated user only: measured on Xubuntu 26.04 (bench machine, 26 Nov 2026), started by hand inside a remote desktop it opens an administrator's password window in the middle of the screen, holding the keyboard and the pointer. "
+      "It is deliberately <b>not</b> a polkit rule: colord's devices and profiles are one set for the whole machine, and granting the action to remote sessions would let any remote user touch the seated user's screen; a remote desktop has no monitor to profile anyway. "
+      "An entry is written only if the system's one exists, otherwise only an entry of ours (marked " + c("X-REMOTIX") + ") of an earlier "
       "birth is removed. It was measured on Xubuntu 26.04 that a " + c("Hidden=true") + " entry hides the file name wherever it is, so the user's own "
       "visible " + sysf("~/.config/autostart/blueman.desktop") + " is not started either (a differently named entry is). The code does not "
       "remove the cover at the end of the session: it disappears with " + sysf("/run/user/<uid>") + "; with another session of the same user alive "
@@ -997,7 +1042,7 @@ S9 = p("Ubuntu 26.04 has a launcher for LXQt on Wayland, " + c("lxqt-wayland-ses
          "message appears. The system's entry names it by absolute path, which the " + c("PATH") + " cannot catch, so the entry of the same file "
          "name covers it; it is <b>not</b> " + c("Hidden=true") + ", otherwise the script would not start by name. Its purpose, installing "
          "updates, also asks for a password window, which a remote session must not show"],
-        ["Autostart cover", c("blueman.desktop") + " with " + c("Hidden=true") + " (" + c("session_autostart_cover()") + ", as on XFCE)",
+        ["Autostart cover", c("blueman.desktop") + " and " + c("xiccd.desktop") + " with " + c("Hidden=true") + " (" + c("session_autostart_cover()") + ", as on XFCE)",
          "Same reason as on XFCE. On LXQt the user's own entry of the same name should win because the user's folder comes first; "
          "this was not measured"],
         ["Menu entries", c("settings_lxqt()") + " writes six " + c("Hidden=true") + ", " + c("NoDisplay=true") + " entries "
@@ -1052,12 +1097,12 @@ S10 = p("One table to answer «where does REMOTIX write, for this desktop?». " 
          sysf("$XDG_RUNTIME_DIR/remotix/xdg/") + " (first in " + c("XDG_CONFIG_DIRS") + "), the drop-in, memory",
          c("write_kde_menu_rules()") + " logs each file; the drop-in is re-read"],
         ["XFCE", "the locked keys of " + c("XFCE_LOCKS") + ", the panel's action and whisker entries (leaf keys only), labwc's " + c("rc.xml")
-         + ", the autostart cover of " + c("blueman.desktop"),
+         + ", the autostart covers of " + c("blueman.desktop") + " and " + c("xiccd.desktop"),
          sysf("$XDG_RUNTIME_DIR/remotix/xdg-xfce/") + " and " + sysf("labwc-xfce/") + ", the " + sysf("xfconfd.service") + " drop-in; "
          "a copy of the user's values in the state folder",
          "every key re-read through " + c("xfconf-query") + "; the manager's environment for " + sysf("xfconfd.service") + " re-read"],
         ["LXQt", "the labwc folder, the session's command scripts (" + c("lxqt-leave") + ", " + c("lxqt-powermanagement") + ", the X11 composition "
-         "managers, " + c("lubuntu-update") + "), the autostart covers (" + c("lubuntu-update") + ", " + c("blueman.desktop") + "), six hidden menu entries",
+         "managers, " + c("lubuntu-update") + "), the autostart covers (" + c("lubuntu-update") + ", " + c("blueman.desktop") + ", " + c("xiccd.desktop") + "), six hidden menu entries",
          sysf("$XDG_RUNTIME_DIR/remotix/labwc-lxqt/") + ", " + sysf("bin-lxqt/") + ", " + sysf("data-lxqt/"),
          "the six entries are re-read (" + c("n/6 entries hidden, RE-READ") + ")"],
     ], "«TAB» — What the session imposes, per desktop") + \

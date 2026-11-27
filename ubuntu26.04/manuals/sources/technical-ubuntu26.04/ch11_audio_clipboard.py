@@ -400,22 +400,21 @@ C5 = p("In the browser the clipboard is not REMOTIX's: the page gets it only und
       "hand the paste field must not open the system keyboard (" + rif("The on-screen keyboard on a phone")
       + "). Safari is not tested.")
 
-V1 = p("What the checks of " + c("prove/") + " exercise for audio and clipboard, and what they do not. In the rounds of 18 Nov 2026 they ran on the development server, one container per flavour, with real browsers; "
-       "on the virtual-machine bench (" + c("RX_BANCO=vm") + ") " + c("check-audio.py") + " runs: in the round " + c("vm-gnome-unione10") + " the line " + c("audio-chrome/audio-gnome-chrome") + " passed, and " + c("audio-firefox") + " was blocked at the first start of the test Firefox and passed in two repetitions. "
-       "What the virtual machines skip is only the private PulseAudio of the checks of " + c("avlib.py") + " (" + c("ensure_pulse()") + "), which does not exist there.", lead=True) + \
+V1 = p("What the checks of " + c("prove/") + " exercise for audio and clipboard, and what they do not. They run on the development server, one virtual machine per desktop, with real browsers. "
+       "What a virtual machine skips is only the private PulseAudio of the checks of " + c("avlib.py") + " (" + c("ensure_pulse()") + "), which does not exist there; " + c("check-audio.py") + " itself runs.", lead=True) + \
     table(["Area", "Check", "What it proves", "State on Ubuntu 26.04"], [
         ["Audio heard", c("check-audio.py"), "A 440 Hz tone played in the user's session is heard in the browser: an " + c("AnalyserNode") + " inserted between the blocks the page schedules and the " + c("AudioDestinationNode")
          + " measures level and peak frequency every 100 ms, counted only while the " + c("AudioContext") + " is " + c("running") + ". Stage A: no gesture beyond the login; stage B: after one real click on the canvas",
-         "green on the four desktops in the rounds of 18 Nov 2026 and in " + c("unione5") + " (19 Nov); on GNOME the Firefox run of the virtual-machine round was first blocked by a mute test Firefox at its first start and passed twice when repeated"],
-        ["Audio and video together", c("check-media.py") + " (" + c("video") + ")", "A moving bar and a flash with a 1 kHz beep each second; the sync error is the offset seen in the browser minus the offset in the container (a recorder on the sink's monitor). "
-         "The limits of the check are |median error| ≤ 250 ms (the audio cushion) and drift ≤ 150 ms over ten beeps; the numbers are always printed. The specification promises no figure", "green in the rounds of 18 and 19 Nov 2026"],
+         "green on the four desktops in the 1.2.0 round (a mute test Firefox at its first start has once blocked the Firefox run on GNOME, which passed when repeated)"],
+        ["Audio and video together", c("check-media.py") + " (" + c("video") + ")", "A moving bar and a flash with a 1 kHz beep each second; the sync error is the offset seen in the browser minus the offset in the user's session (a recorder on the sink's monitor). "
+         "The limits of the check are |median error| ≤ 250 ms (the audio cushion) and drift ≤ 150 ms over ten beeps; the numbers are always printed. The specification promises no figure", "green in the 1.2.0 round"],
         ["Clipboard, both ways", c("check-clipboard.py"), "A unique text typed in a desktop window, selected and copied with a real Ctrl+C must reach the browser clipboard; a text put in the browser clipboard and pasted with a real Ctrl+V must reach the window. Chrome only (its clipboard permission is driven by DevTools)",
-         "green with Chrome in the rounds of 18 and 19 Nov 2026"],
+         "green with Chrome in the 1.2.0 round"],
         ["Clipboard with Firefox", c("check-input.py") + " (" + c("clipboard-firefox-session-to-browser") + ", " + c("clipboard-firefox-browser-to-session") + ")", "The same two directions with Firefox through WebDriver, allowing the page's declared wait for a user gesture and up to three Ctrl+V attempts",
-         "green on all four desktops in the round of " + c("unione5") + " (19 Nov 2026)"],
+         "green on all four desktops in the 1.2.0 round"],
     ], "«TAB» — Audio and clipboard checks and their state") + \
-    p("The owner's hand tests of 19 Nov 2026 (GNOME on the container machines with " + c("unione5") + " from Windows, Linux and Android; then the four virtual machines and the four real live images with " + c("unione10") + ") found clipboard, audio and video regular. Samsung DeX was tried by hand on GNOME on the Ubuntu container machines (" + c("unione5") + ") and not again on the virtual machines and live images with " + c("unione10") + ". "
-      "On the Lubuntu machine the clipboard passes in both directions with the manager " + c("qlipper") + " running (round 1). The silence heard once from a phone on Kubuntu was another program on the tablet, not REMOTIX. Not verified: Safari, a real phone through the automatic checks (the owner's phone tests were by hand), Firefox on Windows or macOS, "
+    p("The automatic round of the 1.2.0 release passed these lines on the four virtual machines (GNOME 125 PASS and one known FAIL unrelated to audio and clipboard, the others 126 PASS). The owner's hand tests of 27 Nov 2026, on the four virtual machines and on a real machine with the four 26.04.1 live images, found clipboard, audio and video regular. "
+      "On the Lubuntu machine the clipboard passes in both directions with the manager " + c("qlipper") + " running. The silence heard once from a phone on Kubuntu was another program on the tablet, not REMOTIX. Not verified: Safari, a real phone through the automatic checks (the owner's phone tests were by hand), Firefox on Windows or macOS, "
       "the clipboard with a clipboard manager running on the desktop other than the qlipper case (for instance Klipper on Plasma), images or any non-text format (the protocol carries text only), and the microphone (not part of RCP/1).")
 
 D1 = p("The decisions of audio and clipboard, with the reason that made each one.", lead=True) + \

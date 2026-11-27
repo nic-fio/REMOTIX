@@ -189,6 +189,10 @@ S9 = p("This cure does not decide how well the desktop is seen but whether the c
       + c("dead-line") + " that carries every number of the decision, and the transport, the only owner of the QUIC connection, closes it. The page then returns to the login form (" + rif("The browser page")
       + "). The comments record that the stall threshold sits 5.0 times above the longest empty second of a line that holds and 2.9 times below the freeze of a line that serves nobody (measured on emulated "
       "lines on the earlier test machine); a wrong value would throw out someone who is working, so whoever changes " + c("WT_LM_STALL_MS") + " must measure those two margins again.") + \
+    p("<b>The line that says why a connection closed.</b> When a QUIC connection is reaped, " + c("close_why()") + " in " + c("transport.c") + " adds the reason to the log line "
+      "«connection with … closed (N left) — …»: who closed it (the peer or the server), the QUIC error or, for a close by silence, «idle timeout (silence)»; for a CRYPTO error the TLS alert is named "
+      "(42 bad_certificate, 45 certificate_expired, 46 certificate_unknown, 48 unknown_ca and others) and the line ends with «TLS handshake COMPLETED» or «NOT completed». "
+      "The reason text sent by the peer is cut to printable ASCII and 60 characters. The function decides nothing and changes no behaviour (" + rif("Why a connection closed") + ").") + \
     warn("DECISIONS.md also lists «copious loss within 1–2 s» as a cause, and the code does not use it: the comments record that the loss fraction was refuted by its own bench, because on a reordering line "
          + c("pkt_lost") + " over " + c("pkt_sent") + " measures reordering, not loss. The fraction stays in the log line as " + c("permille=") + ", a witness rather than a judge.", "Loss is not a cause.")
 
@@ -323,8 +327,8 @@ S14 = p("Two producers of unnecessary frames are cut before they reach the encod
     p("Capacity numbers for this tree, per card and desktop, are in " + rif("Performance and capacity") + ".") + \
     h4("What was verified, and what was not") + \
     ul(["<b>Verified on Ubuntu 26.04:</b> with the budget off (the default), " + c("prove/check-media.py") + " «two-sessions-budget» has two users animating at the same time and requires that neither goes below 25 frames/s and that the first does not lose more than 30 % of what it had alone; "
-        "the checks of " + c("prove/all.sh") + " (124 lines per desktop, 128 on XFCE after the new lines) were green on the four desktops in the rounds of 18 Nov 2026 apart from the lines listed in " + rif("Capture constants and what was verified") + "; in the round of " + c("unione5") + " (19 Nov 2026) KDE, XFCE and LXQt had every line green and GNOME all but the accepted " + c("desktop/users-shell-and-environment") + "; with " + c("unione10") + " the full round was run on the GNOME virtual machine only; "
-        "the dead line and the reconnection after a network drop are among the " + c("resilience") + " lines of those rounds. The figures of the budget's own measurements quoted above are from the earlier test machine.",
+        "the checks of " + c("prove/all.sh") + " were green on the four desktops in the round of 26-27 Nov 2026 on the virtual machines (GNOME 125 PASS and the accepted " + c("desktop/users-shell-and-environment") + ", KDE, XFCE and LXQt 126 PASS); "
+        "the dead line and the reconnection after a network drop are among the " + c("resilience") + " lines of that round. The figures of the budget's own measurements quoted above are from the earlier test machine.",
         "<b>Not verified on Ubuntu:</b> the budget switched on (the figures above are from the earlier test machine); the bandwidth cap and the quality rise on a real desktop; the decoder pace; a keyframe cap actually biting at 4096×2304; any of these on NVIDIA."])
 
 CHAPTER = ("Quality, degradation and budget", [

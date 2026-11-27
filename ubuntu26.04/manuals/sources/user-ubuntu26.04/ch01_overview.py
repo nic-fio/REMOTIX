@@ -45,6 +45,38 @@ S_WHAT = p("<b>REMOTIX</b> shows the desktop of a Linux machine inside a browser
          "(the administrator can change it); a machine may well serve fewer. On Ubuntu 26.04 no more than three "
          "people were tried together, and no figure for the capacity of a machine exists yet.", "How many people?")
 
+S_REQ = p("REMOTIX works only if five conditions are met. Read them <b>before</b> you install.", lead=True) + \
+    table(["", "Requirement", "Where to read more"], [
+        ["1", "<b>Ubuntu 26.04 with one of the four desktops</b>: Ubuntu (GNOME), Kubuntu (KDE Plasma), Xubuntu "
+              "(XFCE) or Lubuntu (LXQt), on an ordinary PC (<i>amd64</i>). REMOTIX does not install a desktop.",
+         rif("The desktops")],
+        ["2", "<b>A video card that encodes H.264</b>, Intel or AMD (or NVIDIA with its own driver). REMOTIX encodes "
+              "the desktop only on the video card and there is no encoding on the processor. On Ubuntu the Mesa "
+              "drivers already do it: " + c("va-driver-all") + " and " + c("mesa-vulkan-drivers") + " are installed "
+              "with REMOTIX as recommended packages (some of them from <i>universe</i>, which a normal Ubuntu "
+              "installation has switched on), and no other repository is needed.",
+         rif("Ubuntu 26.04: installing")],
+        ["3", "<b>Port 7447, TCP and UDP, open between the device and the machine.</b> If the machine has a "
+              "firewall (on Ubuntu, <i>ufw</i> is installed but switched off by default), the administrator opens "
+              "the port; with ufw the package brings an application profile called REMOTIX, which is defined but "
+              "never opened: " + c("sudo ufw allow REMOTIX") + ".",
+         rif("Ubuntu 26.04: the firewall")],
+        ["4", "<b>A recent browser</b>: Chrome, Edge or another Chromium browser, or Firefox on Linux.",
+         rif("What you need")],
+        ["5", "<b>The right date and time on the device you connect from.</b> The certificate of the video "
+              "connection is short-lived, made by the machine itself, and counts as valid from one hour before it "
+              "was made: a device whose clock is far wrong may fail to connect (the browser says “Opening "
+              "handshake failed”; setting the right time cures it).",
+         rif("When something does not work")],
+    ], "«TAB» — The five requirements") + \
+    p("<b>Limits that are declared, not defects.</b> These are known and were decided:") + \
+    ul([
+        "<b>A sign-in at the machine's own screen with the same user closes that user's remote desktop</b> "
+        "with its programs: unsaved work is lost (see " + rif("Leaving and coming back") + ").",
+        "<b>No power off, restart, suspend or hibernate</b> from any desktop, for any user (see "
+        + rif("What REMOTIX is not") + ").",
+    ])
+
 S_NEED = p("Five things have to be in place.", lead=True) + \
     table(["What", "What it has to be"], [
         ["The machine",
@@ -66,11 +98,13 @@ S_NEED = p("Five things have to be in place.", lead=True) + \
          "only an <b>AMD</b> card was used on Ubuntu 26.04 (a Radeon, in the test machines and on four live "
          "systems); Intel was not tried on Ubuntu 26.04."],
         ["NVIDIA cards",
-         "The program has a route for NVIDIA cards with NVIDIA's own driver (Vulkan Video), but nobody has seen it "
-         "work with this release on Ubuntu: <b>not yet verified</b>. Do not rely on it."],
+         "An NVIDIA card needs NVIDIA's own (proprietary) driver. REMOTIX then uses the card through Vulkan Video. "
+         "This worked on a real NVIDIA card (an RTX 4090) in October 2026, on Ubuntu 26.04 with an earlier build of "
+         "REMOTIX; it has not been run again with this release."],
         ["The network",
          "Port <b>7447</b>, both <b>TCP</b> (the page) and <b>UDP</b> (the video and the keys). Both must be open "
-         "between the device and the machine. A network that blocks UDP, as some company networks do, cannot be "
+         "between the device and the machine; if the machine has a firewall, the administrator opens them (see "
+         + rif("Ubuntu 26.04: the firewall") + "). A network that blocks UDP, as some company networks do, cannot be "
          "used."],
         ["The browser",
          "Chrome, Edge or another Chromium browser, or Firefox (the second table below)."],
@@ -91,8 +125,8 @@ S_NEED = p("Five things have to be in place.", lead=True) + \
       "of the table are what the design says, not something tried on Ubuntu.") + \
     note("a computer, a tablet or a phone; no app or plug-in. The device only has to decode video, which every "
          "recent browser does. If your device decodes HEVC, REMOTIX uses it; otherwise it uses H.264. Firefox on "
-         "Linux uses H.264. In the automatic tests on Ubuntu the browsers on Linux used H.264.", "What the device "
-         "needs.")
+         "Linux uses H.264. In the automatic tests on Ubuntu the browsers on Linux used H.264. The clock of the "
+         "device has to be right (see " + rif("Requirements") + ").", "What the device needs.")
 
 S_NOT = p("What REMOTIX deliberately does not do:", lead=True) + \
     ul([
@@ -134,6 +168,10 @@ S_DESKTOPS = p("On Ubuntu 26.04 REMOTIX works with the four official flavours: <
         "does not pass to the remote screen by itself.",
         "<b>GNOME: the Overview.</b> The remote GNOME desktop starts in the Activities Overview, and REMOTIX does "
         "not leave it by itself: press Escape or choose a program.",
+        "<b>If labwc is missing</b> on a machine whose desktop is XFCE or LXQt, nobody can be shown a desktop: "
+        "the package says so when it is installed, the journal names the package, and a user who signs in gets "
+        "the sentence “could not open your session” instead of a black screen (see "
+        + rif("When something does not work") + ").",
         "<b>No desktop at all</b> on the machine: the service says so at start-up and no desktop can be shown.",
     ]) + \
     note("REMOTIX applies a few rules to the desktop while a remote session lasts (the shut down, restart, suspend "
@@ -150,10 +188,12 @@ S_LICENCE = p("REMOTIX is free for personal use and for non-profit associations,
     p("The licence concerns whoever installs and runs the server: people who only connect with a browser need "
       "nothing from it. Its full text is in " + sysf("/usr/share/doc/remotix/copyright") + " after installation, "
       "and the licences of the third-party components are in " + sysf("/usr/share/doc/remotix/THIRD-PARTY-LICENSES.gz")
-      + ". This summary is not the licence; the text is.")
+      + ". They include the copy of labwc (with wlroots) that comes inside the package: it keeps its own licence (GPL-2.0 for labwc, MIT for wlroots), "
+        "which applies to it and not to REMOTIX. This summary is not the licence; the text is.")
 
 CHAPTER = ("What REMOTIX is", [
     ("REMOTIX in short", S_WHAT),
+    ("Requirements", S_REQ),
     ("What you need", S_NEED),
     ("What REMOTIX is not", S_NOT),
     ("The desktops", S_DESKTOPS),

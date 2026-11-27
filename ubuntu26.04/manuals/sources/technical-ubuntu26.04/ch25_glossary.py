@@ -24,6 +24,7 @@ TERMS = [
     ("PipeWire", "Media server used to capture the screen and the sound of the session."),
     ("QUIC", "Encrypted transport over UDP (library ngtcp2, linked statically)."),
     ("RCP/1", "REMOTIX's own protocol, specified in <code>docs/RCP.md</code>."),
+    ("remotix-pam-hook", "The script <code>/usr/libexec/remotix/remotix-pam-hook</code> that the unit runs before every start (<code>ExecStartPre</code>): it checks that the line of the local-login hook is in <code>/etc/pam.d/common-session</code> and puts it back through <code>pam-auth-update</code> if it is not."),
     ("Root side", "The part of the server that stays root: PAM, session birth, start of the network side; it answers a closed list of requests."),
     ("Runtime dconf profile", "The file <code>$XDG_RUNTIME_DIR/dconf/profile</code>, which the session writes and dconf reads when the variable <code>DCONF_PROFILE</code> is absent: the base profile's first line, <code>system-db:remotix</code>, <code>user-db:remotix</code>, then the rest of the base profile. Removed, or rewritten with the base profile alone, at the end of the session."),
     ("Sentinel", "The module (<code>sentinel.c</code>) that asks logind whether a user has a local graphical session; its answer is behind the farewells 0x04 and 0x05. It also asks whether power-off, reboot, suspend and hibernate are forbidden, and accepts \"no\" or \"not available\"."),
@@ -35,7 +36,7 @@ TERMS = [
     ("Unione", "The Italian word (union) in the names of the test packages of the Ubuntu work, such as <code>unione10</code>: a build that merges the fixes made so far. A \"round\" of the checks is called a <i>giro</i> in the log folders."),
     ("Vulkan Video", "Hardware video encoding through Vulkan; tried first, where the card's driver offers it."),
     ("VA-API", "Video Acceleration API; the way to encode on the card where Vulkan Video is missing."),
-    ("VM bench", "The test bench of the Ubuntu release: four QEMU virtual machines installed from the desktop images, with the server's Radeon passed through to one at a time by <code>vfio-pci</code> (<code>server/vm-radeon.sh</code>, <code>prove/banco-vm/</code>, <code>RX_BANCO=vm</code>, deadlines doubled by <code>RX_TEMPO=2</code>). It has a real login screen, AppArmor and snap, which the container boxes did not."),
+    ("VM bench", "The test bench of the Ubuntu release: four QEMU virtual machines installed from the desktop images, with the server's Radeon passed through to one at a time by <code>vfio-pci</code> (<code>server/vm-radeon.sh</code>, <code>prove/banco-vm/</code>, <code>RX_BANCO=vm</code>, deadlines doubled by <code>RX_TEMPO=2</code>). It has a real login screen, AppArmor and snap, which the container boxes did not. Before every start with the Radeon the script checks that the guest has <code>amdgpu.runpm=0</code> and refuses to hand the card over if not (<code>server/VM-BANCO.md</code>); a fifth machine, <code>costruzione</code>, builds the package and never gets the card."),
     ("Walls", "The ordered list of restrictions put on the network side before it starts (<code>walls.c</code>, applied as root just before the exec): identity, capabilities, mounts, seccomp, Landlock."),
     ("WebTransport", "Streams and datagrams over HTTP/3, used by the page to speak RCP/1."),
 ]

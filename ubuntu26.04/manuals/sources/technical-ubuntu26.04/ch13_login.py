@@ -97,6 +97,13 @@ S2 = p("REMOTIX authenticates against its own PAM service, named " + c("remotix"
       "does not carry the line: " + c("Session-Interactive-Only") + "); the program acts only for a graphical session on a seat and returns 0 at once everywhere else, and the line is "
       + c("optional") + ", so it can never make a login fail. What it does, and why, is in " + rif("The local-login hold")
       + "; the package side (postinst, prerm, the dependency) is in " + rif("Files the package installs") + ".") + \
+    p("<b>The line is checked at every start of the service.</b> Since 1.2.0 " + c("remotix.service") + " runs " + c("ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check") + " (the script is " + c("src/remotix-pam-hook") + "). "
+      "It looks in " + c("/etc/pam.d/common-session") + " for a real " + c("session") + " line with " + c("pam_exec.so") + " and " + c("remotix-local-login") + " (a commented line does not count). If it is there nothing is touched; "
+      "if it is not (an update of " + c("libpam-runtime") + ", a hand edit), it runs " + c("pam-auth-update --package") + ", the same call as the " + c("postinst") + ", and checks again. One summary line is written either way in the journal of the service: "
+      "«the local-login hook is in place», «was missing … and has been put back», or a warning that it is not there and could not be put back. The script never uses " + c("--force") + " or " + c("--enable") + ": a "
+      + c("common-session") + " edited by hand, or a profile the administrator switched off in " + c("pam-auth-update") + ", stay as they are because " + c("pam-auth-update") + " refuses by itself, and the warning says so. "
+      "The " + c("-") + " in front of the command and the exit status 0 of the script mean that it can never prevent the service from starting. On removal the line goes out in the " + c("prerm") + " <i>after</i> the service has been stopped, "
+      "because the check would otherwise put it back at a restart in between (" + rif("Files the package installs") + ").") + \
     p("The reason the service is not " + c("login") + ": on Debian and Ubuntu " + c("/etc/pam.d/login") + " is the local console "
       "stack (" + c("pam_securetty") + " and others), policies meant for whoever sits at the machine, and the "
       "network login would inherit them in a way that depends on how that machine is configured. sshd's stack is "
@@ -110,15 +117,10 @@ S2 = p("REMOTIX authenticates against its own PAM service, named " + c("remotix"
       "address (no brackets, no port, an IPv4-mapped IPv6 address turned back into IPv4; "
       + c("rcp_rhost_from_provenance()") + "), so " + c("pam_faillock") + ", " + c("pam_unix") + " and logind see "
       "where the attempt comes from; " + c("PAM_TTY") + " is the service name.") + \
-    note("Some text of the product still mentions other distributions' variants of the file. The one an administrator can "
-         "read is a <b>run-time log message</b>, not a comment: when " + c("/etc/pam.d/remotix") + " is missing, " + c("look_pam_service()")
-         + " in " + c("main.c") + " writes at start-up a line that begins “the PAM service «remotix» DOES NOT EXIST” and ends "
-         "“Install the file of the family: src/remotix.pam (Debian/Ubuntu), .fedora, .suse, .arch.”, and it also says that "
-         "on Fedora and Arch the fallback is " + c("pam_deny") + ". On this package the administrator should do one thing: "
-         + c("apt install --reinstall remotix") + ". A comment in " + c("authentication.c") + " also quotes a variant of the file "
-         "for another distribution. None of those files exists in this tree; the texts are leftovers of the earlier multi-distribution "
-         "product and are to be corrected at the next build "
-         "(" + rif("Appendix C — Known issues and open points") + ").", "Stale text.")
+    note("The message an administrator reads when the file is missing is a <b>run-time log line</b>: " + c("look_pam_service()")
+         + " in " + c("main.c") + " writes at start-up “the PAM service «remotix» DOES NOT EXIST”, says that PAM falls back to " + c("other")
+         + ", which on Debian and Ubuntu includes the common stacks and is not the REMOTIX stack, and ends “The package installs that file: reinstall the package from its file "
+         "(sudo apt install --reinstall ./remotix_<version>_amd64.deb).”", "PAM file message.")
 
 # ── 13.3 One PAM transaction ─────────────────────────────────────────────
 S3 = p("Only one function in the product touches " + c("libpam") + ": " + c("rcp_authenticate_judged()") + " in "

@@ -34,7 +34,9 @@ S_RESTART = p("<b>What a restart of the service does to people at work.</b> Stop
         "<b>Restarting the machine</b> ends every desktop and every program in the same way.",
         "A user who signs in at the machine's screen while their remote desktop is open waits a moment (a few "
         "seconds, at most about 25) while the remote desktop is closed; if the service is stopped there is no wait. "
-        "On Ubuntu (GNOME) it was about one second, on Kubuntu about eleven.",
+        "On KDE Plasma, if a program of the remote desktop does not close by itself (for example one that asks "
+        "“save?”), REMOTIX gives the KDE desktop 5 seconds to close by itself and then closes it by force, so the "
+        "person at the machine waits about six seconds.",
         "Ubuntu's own restarts after a library update (needrestart) do <b>not</b> restart REMOTIX: the package tells "
         "needrestart to leave it alone, and lists it for a manual restart. Do it when nobody is working "
         "(not seen at work on Ubuntu; read from the package).",
@@ -90,9 +92,10 @@ S_USERS = p("REMOTIX adds very little to the machine. This is the whole list.", 
          + ", taken back when the desktop is gone and by <i>remove</i>, and disappear at the next boot in any case."],
         ["Two polkit rules in " + sysf("/usr/share/polkit-1/rules.d/"),
          "<b>50-remotix-no-poweroff</b>: nobody can power off, restart, halt, suspend or hibernate the machine from "
-         "a desktop, remote or local; root with sudo still can. <b>40-remotix-remote-sessions</b>: three requests "
+         "a desktop, remote or local; root with sudo still can. <b>40-remotix-remote-sessions</b>: a few requests "
          "that desktops make on their own at sign-in, and that a remote user cannot answer, are settled instead "
-         "of showing a password window: the software centre refreshing its catalogue is allowed for every "
+         "of showing a password window: the software centre refreshing its catalogues (Flatpak, PackageKit and, "
+         "where the machine's fwupd has the action, the firmware list; Ubuntu 26.04's fwupd does not have it) is allowed for every "
          "REMOTIX user; changing the network or adding a system-wide software source is allowed to administrators "
          "(members of <code class=\"sys\">sudo</code>, <code class=\"sys\">wheel</code> or "
          "<code class=\"sys\">admin</code>) and silently refused to others. Everything else still asks for a "
@@ -100,7 +103,8 @@ S_USERS = p("REMOTIX adds very little to the machine. This is the whole list.", 
         ["An AppArmor profile " + sysf("/etc/apparmor.d/remotix_network"),
          "Describes what the network part may do. It is installed in <b>complain</b> mode: it logs what it would "
          "forbid and forbids almost nothing (a few explicit prohibitions — tracing other programs, mounting, and the private “abstract” "
-         "sockets — hold even in complain mode). Local additions go in " + sysf("/etc/apparmor.d/local/remotix_network") + ". On Ubuntu "
+         "sockets — hold even in complain mode). Local additions go in " + sysf("/etc/apparmor.d/local/remotix_network") + ". It also lets the program read "
+         "the KDE permission file named below. On Ubuntu "
          "26.04, whose kernel watches these sockets, a session was seen working with the profile loaded on the four "
          "test machines and on the live Ubuntu and Kubuntu (for Xubuntu and Lubuntu only the owner's report of a "
          "successful sign-in exists). <b>Enforcing mode was not tried</b>, so the profile is not switched to it."],
@@ -121,8 +125,12 @@ S_USERS = p("REMOTIX adds very little to the machine. This is the whole list.", 
          "from " + sysf("/usr/share/pam-configs/remotix"),
          "When somebody signs in at the machine's own screen, the login waits until that user's remote desktop is "
          "closed. The line is <i>optional</i> and ends within 25 seconds: it can never stop a login. "
-         "<i>remove</i> takes it out again. It was tried at the real login screens of Ubuntu and Kubuntu (see "
-         + rif("Leaving and coming back") + ")."],
+         "At every start the service checks that the line is there and, if it is not (after an update, for "
+         "example), puts it back with <code class=\"sys\">pam-auth-update</code> and writes one summary line in "
+         "its journal (the program is " + c("remotix-pam-hook") + "). If you edited the file by hand, or switched "
+         "the REMOTIX profile off in " + c("pam-auth-update") + ", the tool is not forced: the line stays out and "
+         "the summary line says so. <i>remove</i> takes it out again, once the service has stopped. It was tried "
+         "at the real login screens of all four flavours (see " + rif("Leaving and coming back") + ")."],
     ], "«TAB» — What REMOTIX adds to the machine") + \
     p("<b>Users' own settings.</b> While a user's remote session lasts, REMOTIX applies the session's rules to the "
       "desktop (no shut down, restart, suspend or lock buttons; “Log Out” always shown) and takes them away "
@@ -195,6 +203,8 @@ S_FILES = p("Where REMOTIX keeps things on an Ubuntu 26.04 machine:", lead=True)
     tree([
         "/usr/libexec/remotix/",
         "├── remotix  # the program",
+        "├── remotix-local-login  # the hook that closes a remote desktop when its user signs in at the machine",
+        "├── remotix-pam-hook  # checks that the hook's line is in the PAM file, at every start",
         "└── labwc  # the copy of labwc that hosts KDE Plasma's KWin",
         "/usr/share/remotix/",
         "├── page.html  # the page served to browsers",

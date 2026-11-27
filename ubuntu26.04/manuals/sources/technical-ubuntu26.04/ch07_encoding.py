@@ -4,7 +4,7 @@ from build import arrow, box, c, code, fig, flow, h4, note, p, rif, table, text,
 VIA = fig(
     box(20, 30, 160, 64, "Captured frame", "DMA-BUF or pixels", "navy")
     + box(220, 30, 200, 64, "encoder.c", "one front for two routes", "blue")
-    + box(470, 8, 190, 56, "vulkanvideo.c", "Vulkan Video (AMD, NVIDIA)", "light")
+    + box(470, 8, 190, 56, "vulkanvideo.c", "Vulkan Video (by capability)", "light")
     + box(470, 74, 190, 56, "vadirect.c", "VA-API via libva (Intel)", "light")
     + box(700, 30, 180, 64, "Annex-B bytes", "checked, then sent", "green")
     + arrow(182, 62, 218, 62) + arrow(422, 52, 468, 36) + arrow(422, 72, 468, 102)
@@ -161,7 +161,7 @@ S4 = p("Two different cards matter. The desktop is drawn by the compositor on <i
         "<b>Declared limits:</b> a device recreated while the desktop lives (driver reload, hotplug) loses the grant; removing the grant does not close descriptors already open."]) + \
     note("NVIDIA's proprietary driver opens the card through " + c("/dev/nvidia*") + " devices with group and mode set by module parameters, not through "
          + c("/dev/dri") + " alone. The code of this tree does not handle that case, and DECISIONS-11.md §11.38 records it as a known limit, not "
-         "measured on a real NVIDIA machine.", "NVIDIA device files.")
+         "measured on a real NVIDIA machine for the device files (the rest of the NVIDIA route was measured on Ubuntu 26.04, 5–6 Oct 2026, with an earlier version of the code).", "NVIDIA device files.")
 
 # ── 5 ───────────────────────────────────────────────────────────────────────
 S5 = p("The package asks the product itself whether the machine encodes a frame on the GPU. " + c("remotix --encoding-test [h264|hevc] [--node /dev/dri/…] "
@@ -186,7 +186,7 @@ S5 = p("The package asks the product itself whether the machine encodes a frame 
       + c("none") + " where root would see " + c("hardware") + ", so the probe must run with the identity in question.") + \
     p("<b>Where the package uses it.</b> " + c("debian/remotix.preinst") + " refuses a <i>new</i> installation when the kernel lists no DRM render node "
       "(" + c("/sys/class/drm/renderD*") + "), and " + c("debian/remotix.postinst") + " runs " + c("remotix --encoding-test h264") + " under a 30 s timeout at the "
-      "first configuration and, if it does not exit 0, prints that the card did not encode a test frame and what to check (the message names "
+      "first configuration (with " + c("MESA_SHADER_CACHE_DISABLE=true") + ", so that no shader cache is written in root's folders) and, if it does not exit 0, prints that the card did not encode a test frame and what to check (the message names "
       + c("va-driver-all") + " for Intel and AMD, or NVIDIA's own driver). It never makes " + c("apt") + " fail, because the driver may arrive with "
       "the Recommends configured after the package. On Ubuntu 26.04 " + c("va-driver-all") + " is in <i>universe</i> and pulls only the Intel drivers; "
       "the VA-API driver for AMD comes with Mesa (" + c("mesa-libgallium") + ", in <i>main</i>, which provides " + c("va-driver") + "), so the "
@@ -243,7 +243,7 @@ S7 = p(c("vulkanvideo.c") + " uses " + c("VK_KHR_video_encode_queue") + " with t
         ["AMD with RADV (Mesa)", "Vulkan", "[Measured on Ubuntu 26.04] On the four virtual machines with the Radeon RX 6800 handed over (19 Nov 2026, package " + c("unione10") + "), the journal of the service says «VULKAN VIDEO route on /dev/dri/renderD128 — AMD Radeon RX 6800 (RADV NAVI21) (radv Mesa 26.0.8-1ubuntu0.3, API 1.4) declares HEVC Main up to 8192x4352 … requested by CAPABILITY (Vulkan before VA-API)» and likewise H.264 High up to 4096x4096, and the probe opens " + c("hevc_vulkan") + " and " + c("h264_vulkan") + " (the lines «opened: HEVC 8 bit via hevc_vulkan (in HARDWARE …)»). Earlier measurements in the comments of " + c("encoder.c") + " (1 Oct 2026, RADV, Mesa 25.0.7) were taken on the development server. " + c("SPECS.md") + " §11.4-bis lists AMD on Ubuntu 26.04 as served by the official repositories. The package Recommends " + c("mesa-vulkan-drivers") + " (Mesa 26.0.8, <i>main</i>)."],
         ["Intel (integrated, Arc)", "VA-API", "Chosen by capability: " + c("vulkan_fit()") + " fails on a driver that does not declare encoding, and the Intel path is "
          + c("iHD") + " with " + c("EncSliceLP") + ". [Measured on Ubuntu 26.04] On the real live image of Kubuntu 26.04.1 booted on the server, the startup line read «video.codec offered … hevc,h264 — card /dev/dri/renderD128 (route requested «card») — HEVC: yes via vaapi» (owner's test, 19 Nov 2026, " + c("docs/STORIA-ubuntu-26.04.md") + "). That the card was the server's integrated Intel graphics is a deduction, not a recorded fact: the Radeon is visible on the live image as well. " + c("va-driver-all") + " is a Recommends, in <i>universe</i> on Ubuntu."],
-        ["NVIDIA, proprietary driver", "Vulkan, by capability", "Written, and recorded in comments as measured on an RTX 4090 (driver 595, 5–6 Oct 2026) on an earlier tree running Ubuntu 26.04 (round of 5–6 Oct 2026, not repeated on this tree); " + c("SPECS.md") + " §11.4-bis lists it as «not tested» on every distribution including Ubuntu 26.04. Treat it as unverified."],
+        ["NVIDIA, proprietary driver", "Vulkan, by capability", "NVIDIA cards encode through Vulkan Video with NVIDIA's proprietary driver. Measured on a real card (RTX 4090, driver 595) on 5–6 October 2026, on Ubuntu 26.04, with an earlier version of the same code (the " + c("[M]") + " comments in " + c("src/vulkanvideo.c") + ", " + c("src/child.c") + " and " + c("src/wlroots.c") + "); not run again on this tree."],
     ], "«TAB» — Which cards take which route") + \
     table(["Aspect", "What vulkanvideo.c does"], [
         ["Device choice", "The physical device behind the DRM node, matched with " + c("VK_EXT_physical_device_drm") + ", never «the first card». One encode queue and one compute queue."],
@@ -394,14 +394,14 @@ S13 = p("Every encoded frame carries its costs separately, so that a drop in fra
         "the entry point actually in force. " + c("remotix --encoding-test") + " with " + c("--encoding-route vulkan") + " or " + c("--encoding-route vaapi") + " reproduces one route in isolation.",
         "Diagnosis.") + \
     h4("What was verified, and what was not") + \
-    ul(["<b>Verified (Ubuntu 26.04, 18-19 Nov 2026):</b> the four desktops with real browsers through " + c("prove/all.sh") + ", and in particular " + c("prove/check-media.py")
-        + " «codec» (the line " + c("media/codec") + " is green in the rounds; Chrome 156 and Firefox 153.7 negotiate H.264 " + c("avc1.640033") + " at 8 bits on the test machines), "
+    ul(["<b>Verified (Ubuntu 26.04):</b> the four desktops with real browsers through " + c("prove/all.sh") + ", and in particular " + c("prove/check-media.py")
+        + " «codec» (the line " + c("media/codec") + " is green in the round of 26-27 Nov 2026 on the four virtual machines; Chrome 156 and Firefox 153.7 negotiate H.264 " + c("avc1.640033") + " at 8 bits on the test machines), "
         "which reads from the journal which codec, level and GPU node the server negotiated and that the picture is sharp at the default quality; on the "
         "virtual machines with the Radeon, the " + c("opened:") + " lines of the encoding test for HEVC and H.264 via Vulkan Video; on the real Kubuntu live image "
         "with Intel graphics, HEVC via VA-API; installation, remove and purge in the test machines (the package check " + c("check-package.py") + " does not run in the "
         "virtual-machine bench, which skips it).",
         "<b>Known behaviour without a card:</b> on the virtual machines, at service start, the card's driver is still loading and the log says the server cannot encode video; about 2 s later the retry of " + c("rootside.c") + " finds the card (" + rif("Codecs and their negotiation") + "). A machine with no card at all was not run on Ubuntu; the Debian notes recorded the error repeating every 2 s, which loop writes it was not traced.",
-        "<b>Not verified:</b> NVIDIA on Ubuntu 26.04 (any NVIDIA figure quoted in the code comments predates this tree); the VA-API route on an AMD card on Ubuntu; a "
+        "<b>Not verified:</b> NVIDIA on this tree (measured on Ubuntu 26.04 on 5–6 Oct 2026, with an earlier version of the code); the VA-API route on an AMD card on Ubuntu; a "
         "virtual machine with no video card at all (the refusal at installation is in the package scripts, not exercised on Ubuntu here); a canvas at 4096×2304 end to end (the test "
         "browser's decoder stops at 3840×2160); AV1 (not offered); the padding layers' effect by eye on AMD in this build; the render group and ACL grant on machines with "
         "lingering users on Ubuntu."])

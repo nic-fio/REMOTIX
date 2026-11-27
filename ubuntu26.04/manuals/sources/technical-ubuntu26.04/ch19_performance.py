@@ -10,9 +10,9 @@ S1 = p("A number in this chapter is one of three kinds, and each is labelled. <b
        + ", GNOME, one virtual machine). <b>Recorded</b>: written in " + c("docs/DECISIONS.md") + " or in the problem register from "
        "an earlier campaign or a hand test; it is quoted with its date and is NOT a measurement of this tree on a controlled bench. <b>Coded</b>: a "
        "constant or default in the source, cited by name; it is a limit or a target, not an observation.", lead=True) + \
-    p("Nothing here was measured while writing the manual, and no figure is derived or extrapolated. The only desktop for which the full "
-      "round of the checks was run on the release bench is GNOME (Ubuntu); Kubuntu, Xubuntu and Lubuntu were checked only by a short "
-      "start-up check and by hand (" + rif("Appendix C — Known issues and open points") + "), so no timing in this chapter holds for them. "
+    p("Nothing here was measured while writing the manual, and no figure is derived or extrapolated. The figures are those of the round of 19 November 2026 "
+      "(package " + c("unione10") + ", before 1.2.0), on GNOME only: none was measured again on 1.2.0. The rounds of 1.2.0 on the four virtual machines of " + rif("The VM bench") + " "
+      "(GNOME 125 PASS and one known FAIL, KDE, XFCE and LXQt 126 PASS) were made for their verdicts, and no timing of them is quoted here, so no timing in this chapter holds for Kubuntu, Xubuntu or Lubuntu. "
       "A figure that was measured on Debian 13 and not repeated here is marked <b>measured on Debian 13 only</b> or left out. Where a figure that a "
       "reader would expect does not exist, the section says so (" + rif("Where no measurement exists") + ").") + \
     note("A measurement made by a check that drives a browser through its debugging interface includes the check's own cost. "
@@ -20,8 +20,8 @@ S1 = p("A number in this chapter is one of three kinds, and each is labelled. <b
          "stated conditions, not a benchmark of the product.")
 
 # ── 19.2 ─────────────────────────────────────────────────────────────────────
-S2 = p("The figures come from one virtual machine on the dev server and from the conditions of the check suite. The bench is the release bench of "
-       "Ubuntu 26.04, not the container bench of Debian 13.", lead=True) + \
+S2 = p("The figures come from one virtual machine on the dev server and from the conditions of the check suite. The bench is the virtual-machine bench of "
+       "Ubuntu 26.04 (" + rif("The VM bench") + "), not the container bench of Debian 13.", lead=True) + \
     ul([
         "<b>Machine.</b> A QEMU/KVM virtual machine with UEFI, installed from the Ubuntu 26.04 desktop image like a user would install it, with "
         + c("CPUS=8 MEM=12G DISKSZ=40G") + " (" + c("server/vm-radeon.sh") + "). The server's AMD Radeon is passed through to the machine by "
@@ -106,7 +106,7 @@ S4 = p("From " + c("check-lifecycle.py") + ", " + c("check-resilience.py") + ", 
         "On Ubuntu the child may tell the clients \"the session is over\" before it dismantles its stage (" + c("session_over_early()") + " in " + c("child.c")
         + ", only on a certain death and never on KDE), so the \"client told\" time of a Log Out is not comparable with a Debian 13 figure. The "
         "Debian 13 figures (0 s on XFCE and LXQt, 5 s on GNOME, 4 s on KDE, round of 17 Nov 2026) were <b>measured on Debian 13 only</b> and are not carried over. "
-        "A process of the child can wait up to 25 s for RealtimeKit where that service is installed and does not answer (a property of the container bench; entry B2 of the "
+        "A process of the child can wait up to 25 s for RealtimeKit where that service is installed and does not answer (a property of the container boxes, the older bench; entry B2 of the "
         "register), which is why the child tells the clients first.",
         "After a restart of the service the log of the round says that the client was told after 0 s, that the old desktop was gone and that the next login took one try "
         "(the desktops are closed with the service, DECISIONS-11 §11.56).",
@@ -141,13 +141,13 @@ S5 = p("The question \"how many users can one machine serve\" has no measured an
     ], "«TAB» — Capacity figures recorded in DECISIONS.md (earlier build, not re-measured)") + \
     warn("These figures say where the limit comes from (the compositor's composition work, not the encoder), which is why the budget "
          "of " + rif("Quality, degradation and budget") + " counts composed pixels. They must not be quoted as the capacity of "
-         "REMOTIX 1.0.0 for Ubuntu, and a figure without its hardware must not be quoted at all (DECISIONS §4.6-septies).") + \
+         "REMOTIX for Ubuntu, and a figure without its hardware must not be quoted at all (DECISIONS §4.6-septies).") + \
     h4("Recorded: bandwidth and audio traffic, phase 9") + \
     ul([
         "DECISIONS §3.1-ter: the worst case on the real path (a client over a throttled link) asked for 21.5 to 23.1 Mbit/s and was held "
         "with all 7,125 frames delivered and painted, one keyframe, no abandonment.",
         "DECISIONS §3.1-septies: audio silence suppression cut the traffic of a still screen by 102 times (557.6 to 5.5 kbit/s).",
-        "Both are on an earlier build and an earlier page; they are context, not a specification of 1.0.0.",
+        "Both are on an earlier build and an earlier page; they are context, not a specification of the current version.",
     ]) + \
     h4("Measured on Ubuntu 26.04: the most users tried at once") + \
     p("The widest multi-user check attaches three users together (" + c("three-users") + ", GNOME, PASS: each canvas its own "
@@ -190,19 +190,19 @@ S6 = p("These are properties of the source, not observations. Each names its def
 # ── 19.7 ─────────────────────────────────────────────────────────────────────
 S7 = p("This list is deliberate: a manual that stays silent about a missing measurement invites a reader to invent one.", lead=True) + \
     table(["Not measured", "What is known instead"], [
-        ["capacity per number of users on 1.0.0", "the recorded campaign on the earlier build (above); three users attached together and two at 60 Hz tested "
+        ["capacity per number of users on the current version", "the recorded campaign on the earlier build (above); three users attached together and two at 60 Hz tested "
          "on Ubuntu GNOME. No run that fills the default cap of 10 and no search for the point where service degrades"],
-        ["timings and frame rate on Kubuntu, Xubuntu and Lubuntu", "none: the full round was run on GNOME only. For the other three the release was checked by a short "
-         "start-up check with the Radeon and by the owner's hand tests"],
+        ["timings and frame rate on Kubuntu, Xubuntu and Lubuntu", "none: the timed round of this chapter was run on GNOME only. The other three ran the 1.2.0 rounds for their verdicts (all PASS) and the owner's hand tests"],
         ["after the bench started to enter the machine as root", "only the ban check and the Firefox audio check were run again (all PASS); the full round was not repeated"],
         ["a card by vendor and model", "the log shows " + c("/dev/dri/renderD128") + " and not the card; no per-card table exists. The only card on the Ubuntu release bench is the "
          "passed-through Radeon"],
-        ["NVIDIA, and the integrated Intel card with GNOME 50", "no run recorded on Ubuntu 26.04; the functional suite was never run on an Intel card with this GNOME"],
+        ["NVIDIA", "no performance figure of the current build exists; NVIDIA was measured on an RTX 4090 on Ubuntu 26.04 on 5 and 6 October 2026, with an earlier version of the code (the comments marked " + c("[M]") + " in the sources, " + rif("What only a real machine or a real phone can prove") + "); Vulkan Video is a general road, chosen by capability"],
+        ["the integrated Intel card with GNOME 50", "no run recorded on Ubuntu 26.04; the functional suite was never run on an Intel card with this GNOME"],
         ["4096x2304 and larger canvases", "the declared limit is 3K; the coded limit is 4096x2304. In the round, " + c("canvas-limits") + " is PASS on GNOME: for a view of "
          "3840x2160 the canvas is 3824x2160, and for views of 4096x2304 and 5120x2880 it stays at 3840x2160, the last rung of the page's own size ladder "
          "(" + c("MEASURE_PROBES") + " in " + c("page.html") + "). No frame rate or quality figure at those sizes exists"],
         ["bitrate of the current build", "none printed by the round on Ubuntu. The only bitrate figures in the files read are the phase 9 ones above and the hand measurement below"],
-        ["real networks", "all figures of the round are on a virtual network; no loss, delay, jitter or throughput measurement of 1.0.0 over a real link is recorded, "
+        ["real networks", "all figures of the round are on a virtual network; no loss, delay, jitter or throughput measurement over a real link is recorded, "
          "except the single case below"],
         ["CPU and memory per session", "no per-session CPU or memory figure was found in the plan file, the register, the docs read or the logs read"],
         ["duration of a whole run of all.sh", "the full GNOME round took 47 minutes on the virtual-machine bench with " + c("RX_TEMPO=2") + " (" + c("docs/STORIA-ubuntu-26.04.md") + "); the sum of "

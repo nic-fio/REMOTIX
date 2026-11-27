@@ -163,6 +163,10 @@ S4 = p("In the classic layout (" + c("cl_*") + " functions, for “classic”, i
       + c("both") + ", both arrows overlaid, kept for comparison. In the touch layout the drawn arrow stays, because a finger has no cursor to restyle. "
       "A zero-by-zero shape (RCP §5.5) means “hidden” and is applied in both modes. The cursor "
       "shape itself comes from the capture (" + rif("Screen capture") + ").") + \
+    p("<b>Mutter and the first movement.</b> The comment of " + c("input.c") + " records that on Mutter 51 (Fedora 45 GNOME, measured on 23 Nov 2026, with one user and with a phone) the <i>first</i> absolute movement after the pointer device starts or restarts reaches the windows with one of its two "
+      "coordinates at 0 and the other right, so a click made at once, such as the tap of a phone, lands on the edge of the screen. The movements that follow are exact, and so is the same position sent a second time right after the first. "
+      "The cure is in " + c("input.c") + ": the field " + c("pointer_primed") + " is cleared at every " + c("DEVICE_RESUMED") + " of the pointer, and the first absolute movement is sent <i>twice</i>. It touches only the libei path (GNOME), "
+      "not the wlroots one, the comment in the code says it is to be removed when Mutter is fixed, and the repeat is harmless on compositors that do not need it. The Ubuntu 26.04 GNOME is Mutter 50.1: the defect was not measured there, and the repeat runs all the same.") + \
     p("<b>Pointer Lock only where hover is missing.</b> The lock is requested at the first click (the gesture "
       "it requires) only if, before that click, no move with buttons up arrived, or the last one is "
       + c("CL_JUMP_PX") + " = 8 px or more from the click point. On a computer the last move falls on the "
@@ -308,8 +312,8 @@ S7 = p("Some combinations never reach the page, and some reach it while the brow
          "and " + c("page-ctrl-alt-end-passes") + " passes when Ctrl+Alt+End reaches the desktop like any other combination. The old names " + c("page-cad-button") + " and " + c("page-ctrl-alt-end")
          + " are gone. The text of " + c("SPECS.md") + " §7.3-bis is still to be aligned (" + rif("Appendix C — Known issues and open points") + ").", "Hidden by design, not yet reconciled with the specification.") + \
     p("<b>Ctrl+Alt+Del on KDE.</b> On Plasma 6.4 and later the shortcut did not open the logout screen: " + c("kglobalaccel") + " emitted the signal but " + c("ksmserver") + " never opened the prompt "
-      "(round 2 of 18 Nov 2026, " + c("studio/giro2-kde.md") + "), because the prompt first asks " + c("org.freedesktop.ScreenSaver.GetActive") + " and nobody owned that name. The cure is the sidecar of " + c("kwin.c") + " "
-      "described in " + rif("KDE: the KWin screencast protocol and the nested KWin") + ". It was measured with a stand-in (the prompt appears within 1 s), and the sidecar is in the package " + c("unione3") + " and later: " + c("input-chrome/page-cad-chain") + " and " + c("input-firefox/page-cad-chain") + " are green on Kubuntu from the round of " + c("unione3") + " on, and every line of the Kubuntu box is green in " + c("unione5") + " (" + c("docs/STORIA-ubuntu-26.04.md") + ").") + \
+      "(measured on Kubuntu, 18 Nov 2026), because the prompt first asks " + c("org.freedesktop.ScreenSaver.GetActive") + " and nobody owned that name. The cure is the sidecar of " + c("kwin.c") + " "
+      "described in " + rif("KDE: the KWin screencast protocol and the nested KWin") + ". It was measured with a stand-in (the prompt appears within 1 s), and " + c("page-cad-chain") + " is green on Kubuntu in both browsers in the 1.2.0 round.") + \
     p("There is no page-side exit shortcut: " + c("Ctrl+Alt+End") + " was removed because the user's own desktop takes it before the browser, so every key combination "
       "the browser lets through reaches the remote desktop, and the way out is the desktop's own " + ui("Log Out…") + " (which " + c("session.c") + " keeps available, see " + rif("The four desktops") + "). "
       "The page says so in its log at the start of each session.")
@@ -535,7 +539,9 @@ S12 = p("On GNOME and KDE the child is a " + c("libei") + " sender on a socket t
       "the single-process server and the child) stops it when the session is over, <b>only if</b> a process of the unit's own cgroup is recognised as ours: its command line carries the folder "
       + c("remotix-kwin-host") + " or the option " + c("--kwin-nested") + " (" + c("KDEHOST_MARK") + ", " + c("KDEHOST_OPTION") + "). A service with the same name and no mark is a local desktop's, and is said in the "
       "log and never touched. The process is recognised from " + c("/proc") + " and its cgroup, never by name and never with " + c("kill") + "; the stop is " + c("systemctl --user stop") + " run as the user. In split mode "
-      "the root side does the periodic sweep (" + c("kdehost_sweep()") + " in " + c("rootside.c") + "), since the network-facing user can do neither.") + \
+      "the root side does the periodic sweep (" + c("kdehost_sweep()") + " in " + c("rootside.c") + "), since the network-facing user can do neither. "
+      "When a <i>local</i> login is held back, the child waits up to " + c("KDE_PRELOCAL_ORDERLY_MS") + " = 5000 ms for the orderly close of the KDE session and then forces it by stopping " + c("graphical-session.target")
+      + " (" + c("StopUnit") + " in " + c("session.c") + "), which takes with it the nested KWin, plasmashell and the rest of the desktop (" + rif("When the session ends before the stage is gone") + ").") + \
     warn("until 25 Aug 2026 " + c("input_close()") + " called " + c("ei_disconnect()") + " and "
          + c("ei_unref()") + " unconditionally, and a channel opened 33 ms earlier killed the child with "
          "SIGSEGV before the first frame. In libei 1.3.901 (Debian's version), a context whose handshake was requested but not "
@@ -643,27 +649,23 @@ S14 = p("labwc has no " + c("libei") + ". " + c("wlr_input.c") + " creates our o
       "then puts the pointer back where the user had it. On GNOME and KDE the function does nothing, because "
       "the compositor already does it. The shortcut itself is described in " + rif("The four desktops") + ".")
 
-S16 = p("What the checks of " + c("prove/") + " exercise for input, and what they cannot. In the rounds of 18 Nov 2026 they ran on the development server, one container per flavour (Ubuntu, Kubuntu, Xubuntu, Lubuntu); "
-        "the release was then tried on virtual machines with the Radeon handed over (" + c("RX_BANCO=vm") + ", " + c("RX_TEMPO=2") + ", " + rif("Testing") + "), where the lines that need a container or a real login are skipped with the reason "
-        "(" + c("prelocal/real-greeter") + ", " + c("ban/other-addresses") + ", " + c("package") + "). The checks use real browsers: Chrome through DevTools, Firefox through WebDriver, real mouse and key events. The desktop side is a window inside the user's session "
+S16 = p("What the checks of " + c("prove/") + " exercise for input, and what they cannot. They run on the development server, one virtual machine per desktop (Ubuntu, Kubuntu, Xubuntu, Lubuntu) with the Radeon passed through to one of them at a time (" + rif("Testing") + "), "
+        "with real browsers: Chrome through DevTools, Firefox through WebDriver, real mouse and key events. Lines that need a real login screen or several network addresses are skipped on a machine where they cannot run, with the reason "
+        "(" + c("prelocal/real-greeter") + ", " + c("ban/other-addresses") + ", " + c("package") + "). The desktop side is a window inside the user's session "
         "(" + c("window-input.py") + ") that logs every event it receives, so the verdicts are built on what the application got, never on what the browser was told to send.", lead=True) + \
-    table(["Area", "Checks of " + c("check-input.py"), "State on Ubuntu 26.04 (rounds of 18 Nov 2026)"], [
+    table(["Area", "Checks of " + c("check-input.py"), "State in the 1.2.0 round (26-27 Nov 2026)"], [
         ["Mouse", c("mouse-buttons") + ", " + c("mouse-doubleclick") + ", " + c("mouse-wheel") + ", " + c("mouse-drag") + ", " + c("mouse-coordinates") + ", pointer shapes, " + c("edge-drag") + ", " + c("no-double-cursor"),
-         "green in the second round on the four desktops. The first round had three red lines on all four, " + c("mouse-drag") + " (Chrome and Firefox) and " + c("tap-and-half-drag-select") + ": the test window did not register the button release "
-         "(GTK 4.22 denies the sequence to the window's gesture when a text field claims the drag), not a defect of the product (register entry B3-bis); the window now reads the release from the raw events. On XFCE " + c("base-firefox") + " (mouse and keyboard) was red in the second round and is explained in " + c("studio/giro2-xfce.md") + " as an apparent regression, not reproduced; it is green from " + c("unione3") + " on"],
+         "green on the four desktops (the test window reads the button release from the raw events, because GTK 4.22 denies the drag sequence to the window's gesture when a text field claims it: register entry B3-bis)"],
         ["Keyboard", c("kbd-text") + ", " + c("kbd-ctrl-clipboard") + ", " + c("kbd-shift-arrows") + ", " + c("kbd-alt-tab") + ", " + c("kbd-super") + ", " + c("kbd-function-keys") + ", " + c("kbd-repeat")
          + ", " + c("kbd-accents") + ", " + c("kbd-altgr") + ", " + c("kbd-not-producible") + ", " + c("kbd-capslock"),
-         "green; in the second round the Delete key of " + c("page-cad-chain") + " on KDE was taken by KWin (red), and from " + c("unione3") + " on that line is green"],
+         "green"],
         ["Page declarations", c("page-shortcuts-declared") + ", " + c("page-cad-hidden") + ", " + c("page-cad-chain") + ", " + c("page-keyboard-lock") + " (Chrome)",
-         c("page-cad-hidden") + " passes (outside diagnostics the page shows no Ctrl+Alt+Del button); " + c("page-cad-chain") + " proves that with diagnostics on it sends the three keys; red on KDE in the second round, green from " + c("unione3") + " on"],
+         c("page-cad-hidden") + " passes (outside diagnostics the page shows no Ctrl+Alt+Del button); " + c("page-cad-chain") + " proves that with diagnostics on it sends the three keys"],
         ["Exit shortcut", c("page-ctrl-alt-end-passes"), "passes: Ctrl+Alt+End reaches the desktop like any other combination"],
-        ["Phone", c("check-phone.py"), "Chrome device emulation only; 18 of 19 on GNOME in the first round and all passing in the second (the register entry E2 keeps the occasional first tap from a real phone on GNOME, " + rif("The touch pointer is announced to the server") + "); a real phone was not used by the checks"],
+        ["Phone", c("check-phone.py"), "Chrome device emulation only (the register entry E2 keeps the occasional first tap from a real phone on GNOME, " + rif("The touch pointer is announced to the server") + "); a real phone was not used by the checks"],
     ], "«TAB» — Input checks and their state") + \
-    p("The rounds of 18 Nov 2026 gave 116/124 (GNOME), 111/124 (KDE), 117/124 (XFCE) and 117/124 (LXQt) lines green with the first package, then 123/124, 121/124, 126/128 and 124/124 with the second (the line count rose "
-      "to 128 on XFCE with the renamed and new lines). The red line of GNOME is " + c("desktop/users-shell-and-environment") + " (" + c("pkexec") + " with an empty " + c("SHELL") + ", accepted); "
-      "the red lines of KDE were " + c("page-cad-chain") + " twice and " + c("desktop/canvas-limits") + " once (not reproduced). The rounds of 19 Nov 2026 (" + c("unione3") + " to " + c("unione5") + ") closed them: with " + c("unione5") + " KDE, XFCE and LXQt have every line green and GNOME all but that one. With " + c("unione10") + " the full round on the virtual machines was run on GNOME only. "
-      "The owner's hand tests of 19 Nov 2026 on the four virtual machines and the four real live images found the input regular, including detach and reattach from Linux and Android; "
-      "Samsung DeX was tried by hand on GNOME on the Ubuntu container machines (" + c("unione5") + ", 19 Nov 2026) and not again on the virtual machines and live images with " + c("unione10") + ". Not verified: a real phone, the Android on-screen keyboard, Safari, labwc's own shortcuts inside a full XFCE session, "
+    p("The automatic round of the 1.2.0 release gave GNOME 125 lines PASS and one known FAIL (" + c("desktop/users-shell-and-environment") + ", " + c("pkexec") + " with an empty " + c("SHELL") + ", accepted), and KDE, XFCE and LXQt 126 PASS each. "
+      "The owner's hand tests of 27 Nov 2026, on the four virtual machines and on a real machine with the four 26.04.1 live images, found the input regular. Not verified: a real phone, the Android on-screen keyboard, Safari, labwc's own shortcuts inside a full XFCE session, "
       "and the layout change on every compositor with a physical non-US keyboard (the check uses the Italian layout through " + c("navigator.language") + " and sends AltGr characters as the characters themselves, because DevTools and WebDriver cannot press AltGr).")
 
 S15 = p("The main decisions of the input subsystem, with the reason that made each one.", lead=True) + \

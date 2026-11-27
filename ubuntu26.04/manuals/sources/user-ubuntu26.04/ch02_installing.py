@@ -5,7 +5,7 @@ chapter 15 (the package) and 24 (what was and was not verified)."""
 from build import c, note, p, rif, steps, sysf, table, term, ui, ul, warn
 
 S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. There is no installer program. These "
-             "are the steps; the commands are in the sections below. REMOTIX 1.0.1 is for Ubuntu 26.04 (Ubuntu, Kubuntu, Xubuntu, Lubuntu).", lead=True) + \
+             "are the steps; the commands are in the sections below. REMOTIX 1.2.0 is for Ubuntu 26.04 (Ubuntu, Kubuntu, Xubuntu, Lubuntu).", lead=True) + \
     steps([
         "<b>Check the machine</b>: Ubuntu 26.04 with one of the four desktops installed, a video card that "
         "encodes (see " + rif("What you need") + "), the <i>universe</i> part of the archive switched on, and a way "
@@ -24,9 +24,9 @@ S_BEFORE = p("Installing REMOTIX is the installation of one package with apt. Th
       "(see " + rif("Users, groups and what REMOTIX changes") + ").")
 
 S_DEB_INSTALL = p("This section is for <b>Ubuntu 26.04</b>. The package is a single file named like "
-                  + c("remotix_1.0.1-1+ubuntu26.04_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
+                  + c("remotix_1.2.0-1+ubuntu26.04_amd64.deb") + " (the last part is the architecture: <i>amd64</i> for "
                   "an ordinary PC). Put it on the machine and, in the folder where it is, run:", lead=True) + \
-    term("$ sudo apt install ./remotix_1.0.1-1+ubuntu26.04_amd64.deb\n"
+    term("$ sudo apt install ./remotix_1.2.0-1+ubuntu26.04_amd64.deb\n"
          "$ sudo systemctl enable --now remotix\n"
          "$ systemctl status remotix", "Install and start") + \
     p("The first command installs REMOTIX and what it needs. The second makes the service start with the machine "
@@ -35,7 +35,7 @@ S_DEB_INSTALL = p("This section is for <b>Ubuntu 26.04</b>. The package is a sin
       "Use <b>apt install</b> and not <i>dpkg -i</i>: apt reads from the package what REMOTIX needs and installs it "
       "from Ubuntu's archive, while dpkg fetches nothing and leaves the installation incomplete. If you install the "
       "same version again over itself (for example a package rebuilt with the same number), use "
-      + c("sudo apt install --reinstall ./remotix_1.0.1-1+ubuntu26.04_amd64.deb") + ".") + \
+      + c("sudo apt install --reinstall ./remotix_1.2.0-1+ubuntu26.04_amd64.deb") + ".") + \
     p("<b>What apt brings along.</b> Besides REMOTIX's own files, apt installs what REMOTIX needs to run and the "
       "things it recommends:") + \
     table(["Kind", "Packages", "Why"], [
@@ -63,8 +63,9 @@ S_DEB_INSTALL = p("This section is for <b>Ubuntu 26.04</b>. The package is a sin
       "<i>main</i> they do not arrive.") + \
     warn("if you install with " + c("--no-install-recommends") + " you lose the recommended packages, among them "
          "the video card's drivers and, on XFCE and LXQt, labwc: the installation succeeds, but the desktop cannot be "
-         "shown until they are installed. On Xubuntu and Lubuntu the page then says it could not open your session, "
-         "and the journal names the missing package (" + c("sudo apt install labwc") + ").",
+         "shown until they are installed. When labwc is missing on a machine whose desktop is XFCE or LXQt (Xubuntu, "
+         "Lubuntu) the installation prints a warning (" + c("sudo apt install labwc") + "), and a user who signs in gets "
+         "the generic “could not open your session” sentence, with the missing package named in the journal.",
          "Do not skip the recommended packages.") + \
     p("<b>No desktop is installed by REMOTIX.</b> If the machine has none of the four, the service starts but says "
       "in its journal that it has found no desktop.") + \
@@ -123,7 +124,7 @@ S_DEB_FIREWALL = p("REMOTIX never changes the firewall: the package only <i>desc
     term("$ sudo ufw app info REMOTIX\n"
          "$ sudo ufw allow REMOTIX", "Open the port with ufw") + \
     p("To let only your own network in, give the port with an address instead of the profile (adapt the address):") + \
-    term("$ sudo ufw allow from 192.168.1.0/24 to any port 7447", "Only the local network") + \
+    term("$ sudo ufw allow from 192.0.2.0/24 to any port 7447", "Only the local network") + \
     p("<b>With another firewall</b>, or a firewall outside the machine (a provider's, a router's), open 7447 for TCP "
       "and for UDP by hand.") + \
     note("if you change the port (see " + rif("Ubuntu 26.04: port, name and other settings") + "), the ufw profile "
@@ -194,7 +195,7 @@ S_DEB_SETTINGS = p("The settings are a few lines in a small file. REMOTIX's defa
     p("A file that changes the port, names the machine by its IP address and lowers the ceiling to six sessions "
       "looks like this:") + \
     term("REMOTIX_PORT=7500\n"
-         "REMOTIX_OPTIONS=--name 192.168.1.10 --session-cap 6", "/etc/remotix/remotix.conf.d/local.conf") + \
+         "REMOTIX_OPTIONS=--name 192.0.2.10 --session-cap 6", "/etc/remotix/remotix.conf.d/local.conf") + \
     p("Then restart the service for the change to take effect:") + \
     term("$ sudo systemctl restart remotix", "Apply") + \
     p("The two lines are " + c("REMOTIX_PORT") + " (the port, for TCP and UDP; default 7447) and "
@@ -242,6 +243,8 @@ S_DEB_UPGRADE = p("<b>Upgrading.</b> Install the newer file in the same way. If 
         "REMOTIX by themselves: the package tells <code class=\"sys\">needrestart</code> never to do it, because a "
         "restart closes every desktop. The service is then listed as one to restart by hand: do it when nobody is "
         "working. This was written from the package; it was <b>not seen at work</b> on an Ubuntu machine.",
+        "If the journal ever tells you to <i>reinstall the package from its file</i> (a file of REMOTIX is missing "
+        "or damaged), run " + c("sudo apt install --reinstall ./remotix_1.2.0-1+ubuntu26.04_amd64.deb") + " from the folder of the file.",
     ]) + \
     p("<b>Removing.</b> There are two ways, and the difference is what stays behind. <b>Warn the people connected "
       "first</b>: both close the remote desktops and everything running in them, and unsaved work is lost.") + \
@@ -252,7 +255,7 @@ S_DEB_UPGRADE = p("<b>Upgrading.</b> Install the newer file in the same way. If 
         "The users that REMOTIX had added to a group for the video card are taken out of it again, and the "
         "permissions it gave on the card are taken back.",
         "The line REMOTIX had added to " + sysf("/etc/pam.d/common-session") + " (see "
-        + rif("Users, groups and what REMOTIX changes") + ") is taken out again.",
+        + rif("Users, groups and what REMOTIX changes") + ") is taken out again, once the service has stopped.",
         "The rules database for GNOME sessions, " + sysf("/etc/dconf/db/remotix") + ", that the package made is deleted, "
         "and the AppArmor profile is unloaded from the kernel (its file stays).",
         "The two polkit rules, including the one that forbids power off, go away with the package: the desktops' "

@@ -6,7 +6,9 @@ S1 = p("The server is one executable, " + c("/usr/libexec/remotix/remotix") + ",
        "certificate or socket is touched, so that each role starts from a fresh memory image: a child must not hold the "
        "server's TLS key, and the PAM dispatcher must not hold any password or secret. The package ships one more, very "
        "small program, " + c("/usr/libexec/remotix/remotix-local-login") + " (" + c("local_login.c") + ", libc only): it is "
-       "not a role of the server but a hook that PAM runs at a local login (" + rif("The local-login hold") + ").", lead=True) + \
+       "not a role of the server but a hook that PAM runs at a local login (" + rif("The local-login hold") + "); the line that starts it is put into "
+       + sysf("/etc/pam.d/common-session") + " by " + c("pam-auth-update") + " (the profile " + c("debian/remotix.pam-config") + "), and the shell script "
+       + c("/usr/libexec/remotix/remotix-pam-hook") + " (" + c("src/remotix-pam-hook") + ") checks at every start of the service that it is still there.", lead=True) + \
     table(["First argument", "Role", "Runs as", "Entry point", "Started by"], [
         ["(none)", "<b>Root side</b>: the process systemd starts; the main PID of the unit. Parses the options, binds the "
          "UDP and TCP port, then hands everything to " + c("rootside_main()") + " and never comes back",
@@ -327,6 +329,11 @@ S7 = p("For every admitted user the root side forks one child that becomes that 
          + sysf("/etc/environment") + " (on Ubuntu it lists " + sysf("/snap/bin") + ", the sbin folders and the games folder); it is "
          "accepted only if it is a list of absolute folders with no " + c("..") + " component, made of plain characters and at most "
          "400 long (" + c("child_path_ok()") + "), and the fixed " + c("/usr/local/bin:/usr/bin:/bin") + " is only the fallback. "
+         "<b>Language.</b> " + c("LANG") + " is the user's own choice (" + c("Languages=") + " or the older " + c("Language=") + " in AccountsService, the first item counting), else the system's ("
+         + sysf("/etc/default/locale") + ", which the second " + c("pam_env") + " line of " + c("remotix.pam") + " puts in the PAM environment), plus the system's " + c("LC_*") + " and "
+         + c("LANGUAGE") + " (up to " + c("CHILD_LOCALE_MAX") + " = 12 words). The AccountsService file belongs to root and is read <i>before</i> the "
+         "change of identity (" + c("child_locale_read()") + "); every value is checked for plain characters, and " + c("session.c") + " still checks that the "
+         "locale exists and is UTF-8, otherwise it falls back to " + c("C.UTF-8") + ". Before 1.2.0 the language was always " + c("C.UTF-8") + ". "
          "Every signal goes back to default, then " + c("execve()") + " of " + c("remotix-child --internal-child") + " with "
          "the user, uid, gid, canvas, serial and switches on the command line"],
     ], "«TAB» — The birth of a child") + \

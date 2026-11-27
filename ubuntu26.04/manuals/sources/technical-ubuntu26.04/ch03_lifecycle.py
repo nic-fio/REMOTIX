@@ -5,6 +5,9 @@ S1 = p("The service starts in two stages: the root side (" + rif("The root side"
        "network side, and the network side then runs the rest of " + c("main()") + ". Both write at startup what the "
        "machine can do and which values are in force, so that a missing piece is read in the log rather than discovered by "
        "the first user.", lead=True) + \
+    p("<b>Before the root side</b>, systemd runs " + c("ExecStartPre=-/usr/libexec/remotix/remotix-pam-hook check") + " (" + c("debian/remotix.service")
+      + "): it checks that the line of the local-login hook is in " + sysf("/etc/pam.d/common-session") + " and, if it is not, puts it back with "
+      + c("pam-auth-update --package") + "; it writes one line in the log either way, and the dash means that it can never prevent the start (" + rif("The local-login hold") + " has the hook).") + \
     p("<b>In the root side</b>, before the network side exists: the options are parsed; the network user is resolved once, "
       "as root (" + c("getpwnam()") + " of " + c("remotix") + "; if it is missing or is uid 0 the service exits with "
       + c("EXIT_CONFIG") + " = 78, which the unit's " + c("RestartPreventExitStatus=78") + " does not retry); the certificate "
@@ -84,6 +87,10 @@ S2 = p("The service is the system unit " + c("debian/remotix.service") + ", inst
         [c("RestartPreventExitStatus"), c("78"), "a configuration error (" + c("EXIT_CONFIG") + ") is not retried"],
         [c("LimitRTPRIO"), c("20"), "priority for audio and video threads"],
         [c("LimitNICE"), c("-11"), "the same"],
+        [c("Environment"), c("MESA_SHADER_CACHE_DISABLE=true"), "the root side's probe of the card must not open Mesa's shader cache in " + sysf("/root/.cache")
+         + ". Only the service's own environment: the users' desktops get theirs from PAM and keep the cache"],
+        [c("ExecStartPre"), c("-/usr/libexec/remotix/remotix-pam-hook check"), "checks at every start that the line of the local-login hook is in " + sysf("/etc/pam.d/common-session")
+         + " and puts it back through " + c("pam-auth-update") + " if not; the dash means that the start is never prevented"],
         [c("User="), "not set", "the unit runs as root; hardening is in the program (" + rif("The network side and its walls") + ")"],
         [c("EnvironmentFile"), c("/usr/share/remotix/remotix.conf") + " then " + c("/etc/remotix/remotix.conf.d/*.conf"),
          c("REMOTIX_PORT") + " (7447) and " + c("REMOTIX_OPTIONS") + " (empty); the last " + c("--name") + " wins"],
@@ -416,6 +423,8 @@ S8 = p("The user ends their session; the server ends it itself when it is abando
       + c("Logout(2)") + "; Plasma " + c("org.kde.Shutdown.logout") + " then a forced stop of the unit, with a rescue described "
       "below; XFCE "
       + c("org.xfce.Session.Manager.Logout") + " then SIGTERM to labwc; LXQt " + c("org.lxqt.session.logout") + " then the same. "
+      "When the close is the one for a local login held in PAM (" + rif("The local-login hold") + "), the orderly step on Plasma waits "
+      + c("KDE_PRELOCAL_ORDERLY_MS") + " (5 s) and not 10: a program that asks “save?” would keep the local login waiting for nobody. "
       "Then " + c("session_clear_out_scope()") + " removes what a desktop that detached itself left in the child's logind scope "
       "(SIGTERM, a pause, SIGKILL), and the user manager's variables and drop-ins carrying REMOTIX's mark are restored. If "
       "the close fails the log says the two truths do not match (the client has its farewell, the desktop is still there).") + \
@@ -574,6 +583,7 @@ S10 = p("A defect in this chain rarely names its cause: the user sees “black�
         lead=True) + \
     table(["Step", "Area", "The line contains"], [
         ["Service up", "rootside", "“ROOT SIDE on”, “network side started”, “the network side's walls in force”"],
+        ["Hook of the local login", "the unit's journal", "the line of " + c("remotix-pam-hook check") + " that the " + c("ExecStartPre") + " writes at every start: in place, put back, or “NOT in /etc/pam.d/common-session and could not be put back”"],
         ["Card probe", "startup", "“video.codec offered”, or “THIS SERVER CANNOT ENCODE VIDEO”"],
         ["Ready", "startup", "“ready: https://…”"],
         ["Clocks and cap", "startup", "“the three clocks in force”, “ADMINISTRATIVE session cap”"],

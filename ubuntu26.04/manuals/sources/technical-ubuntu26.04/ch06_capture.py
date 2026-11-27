@@ -435,7 +435,7 @@ S5 = p("On GNOME and KDE the capture is a PipeWire consumer created by " + c("ca
         ["Cursor metadata", "Up to " + c("CURSOR_META_BYTE(384, 384)"), "Mutter allocates 384×384; the wire limit of 256 is enforced in " + c("cursor.c") + "."],
     ], "«TAB» — The PipeWire negotiation, " + c("capture.c")) + \
     note("when the card refuses a linear render buffer (the comments record NVIDIA with GNOME 50 on Ubuntu 26.04, measured on 6 Oct 2026 "
-         "on an earlier tree; whether Intel or the Radeon negotiate DMA-BUF modifiers like that card is not verified), the proposal LINEAR + INVALID "
+         "with an earlier version of the code; not run again on this tree, and whether Intel or the Radeon negotiate DMA-BUF modifiers like that card is not verified), the proposal LINEAR + INVALID "
          "ended in «no more input formats». " + c("modifiers_per_route()") + " in " + c("child.c") + " asks "
          + c("vulkanvideo_card_rejects_linear()") + " and only then passes the modifiers the Vulkan encoder can import to "
          + c("capture_modifiers_card()"), "The card that refuses linear.") + \
@@ -712,23 +712,14 @@ S11 = p("The constants of the capture, where they live.", lead=True) + \
       + " and " + c("wlroots.c") + ". The line written when the stage is mounted names the route (CARD or MEMORY), because the timings "
       "of the two are not the same quantity (" + rif("Logging and diagnostics") + ").") + \
     h4("What was verified, and what was not") + \
-    ul(["The rounds of 18 Nov 2026 ran " + c("prove/all.sh") + " on the four desktops with Chrome and Firefox in the test containers "
-        "(Chrome 156.0.8078.79, Firefox 153.7.0 in the Kubuntu round). First round (the " + c("unione1") + " package): GNOME 116 of "
-        "124 checks green, KDE 111/124, XFCE 117/124, LXQt 117/124. Second round (" + c("unione2") + "): GNOME 123/124, KDE 121/124 (3 red: " + c("page-cad-chain") + " twice, "
-        + c("desktop/canvas-limits") + " once, not reproduced), XFCE 126/128, LXQt 124/124. The rounds of 19 Nov 2026 followed the corrections: " + c("unione3") + " (the early farewell of the session and the ScreenSaver sidecar): KDE, XFCE and LXQt all green, GNOME one more red line than the accepted one, "
-        + c("desktop/settings-intact") + ", cured afterwards; " + c("unione4") + ": the red line of XFCE " + c("desktop/canvas-limits") + " was the crash window of " + c("blueman-applet") + " covering the screen (" + c("studio/14-canvas-xfce.md") + "); "
-        + c("unione5") + " (it contains the lost-frame cure, the GNOME scale cure and the end-of-session farewell): KDE, XFCE and LXQt with every line green, GNOME all green except "
-        + c("desktop/users-shell-and-environment") + " (" + c("pkexec") + " with an empty " + c("SHELL") + ", accepted) (" + c("docs/STORIA-ubuntu-26.04.md") + "). The picture, a moving counter, bursts "
+    ul(["The round of 26-27 Nov 2026 ran " + c("prove/all.sh") + " on the four desktops, each in its own virtual machine with the Radeon handed over (" + c("RX_BANCO=vm") + "), with Chrome and Firefox: GNOME 125 PASS and one known FAIL, KDE, XFCE and LXQt 126 PASS. "
+        "The cures described in this chapter (the early farewell of the session, the ScreenSaver sidecar, the lost-frame cure, the GNOME scale cure) were made in the rounds of 18 and 19 Nov 2026, before 1.0.1 (" + c("docs/STORIA-ubuntu-26.04.md") + "). The picture, a moving counter, bursts "
         "that stop and the frame rate are measured by " + c("prove/check-media.py") + "; the capture is exercised through them but no "
         "check isolates the capture alone (" + rif("Testing") + ").",
-        "The release was then tried on virtual machines with the Radeon handed over (" + c("RX_BANCO=vm") + "): a full round on the "
-        "GNOME machine with the package " + c("unione10") + " (120 green, the known red line, one false red of the bench, one blocked "
-        "check that passed twice on repetition); with " + c("unione10") + " the full round was run on that machine only. On 19 Nov 2026 the owner's hand tests of the four desktops on the virtual machines "
-        "and of the four real live images found everything regular, detach and reattach from Linux and Android included.",
+        "The owner's hand tests: the four virtual machines and the four live images 26.04.1 on a real machine (27 Nov 2026) found everything regular.",
         "Not verified on Ubuntu: the nested KWin without our labwc (" + c("--virtual") + " fallback) beyond a first check on the Kubuntu "
-        "box; the shape probe and the encoded theme by eye; NVIDIA with GNOME; the whole functional suite on a Radeon or Intel card "
-        "(the card is in the virtual machines, where only the GNOME round was run in full); a canvas of 4096×2304 end to end (the test "
-        "browser's decoder stops at 3840×2160); the lost-frame cure on a real GPU machine."])
+        "box; the shape probe and the encoded theme by eye; NVIDIA with GNOME on this tree (the modifier path of " + c("capture_modifiers_card()") + "; measured on Ubuntu 26.04 on 6 Oct 2026 with an earlier version of the code); a canvas of 4096×2304 end to end (the test "
+        "browser's decoder stops at 3840×2160); the lost-frame cure on a real machine beyond the hand tests."])
 
 CHAPTER = ("Screen capture", [
     ("Capture at a glance: one contract, three compositor families", S1),
