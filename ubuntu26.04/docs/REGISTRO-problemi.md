@@ -388,7 +388,7 @@ sul banco a macchine virtuali (sezione G) e a mano, dal proprietario. Le piste d
 ### F2. Che cosa NON è stato portato, e perché
 - **KWin da solo e cambio di risoluzione a caldo (KDE):** su Kubuntu resta il nostro `labwc` 0.9.3 con `wlroots` 0.19.2.
 - **Ripiego del `PATH` di Fedora:** su Ubuntu è PAM a dare il `PATH`.
-- **`--session-fd` di Debian:** non portato.
+- **`--session-fd` di Debian:** non portato e da non portare. Serve al systemd 257 di Debian per tenere viva la sessione; Ubuntu 26.04 ha systemd 259, che segue la sessione da solo (pidfd, `src/child.c`). Copiarlo romperebbe la vita della sessione.
 - **SELinux e RPM:** non esistono su Ubuntu.
 
 ---
@@ -432,7 +432,7 @@ sul banco a macchine virtuali (sezione G) e a mano, dal proprietario. Le piste d
 - `wireplumber` su tutti i desktop; `kwin_wayland` una volta su Kubuntu allo stop del servizio; `xdg-desktop-portal-kde` una volta su Lubuntu.
 
 ### H5. `/root/.cache` della 1.0.1
-- La cartella lasciata dalla 1.0.1 resta dopo la rimozione (la 1.2.0 non ne crea più, grazie a `MESA_SHADER_CACHE_DISABLE`).
+- La cartella lasciata dalla 1.0.1 resta dopo la rimozione. La 1.2.0 spegne la cache di Mesa per il lato root (`MESA_SHADER_CACHE_DISABLE`, in `debian/remotix.service` e `debian/remotix.postinst`), come Debian (F12 di Debian); su Ubuntu non è stato misurato che REMOTIX non la crei più. Su Lubuntu la cartella c'è comunque e viene scritta a ogni avvio dal sistema stesso (il server grafico della schermata di accesso gira come root; misurato il 27 nov 2026): lì non è un residuo di REMOTIX.
 
 ### H6. Finestra del portafoglio KDE
 - Mai decisa.
