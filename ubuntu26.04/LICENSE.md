@@ -10,9 +10,8 @@ be modified or redistributed. This summary is not the licence; the sections belo
 
 ## 1. Definitions
 
-- **"REMOTIX"** means the software published by the Author: the installer (`remotix-*.run`), the packages it
-  contains, the web page that REMOTIX sends to browsers, the source code in the repository
-  `github.com/nic-fio/REMOTIX`, the manuals and every other file published with them by the Author, except
+- **"REMOTIX"** means the software published by the Author: the REMOTIX package, the web page that REMOTIX sends
+  to browsers, the source code in the repository `github.com/nic-fio/REMOTIX`, the manuals and every other file published with them by the Author, except
   third-party components (section 8).
 - **"Author"** means Nicola Fiorillo.
 - **"You"** means the person or the organisation that installs, runs or obtains a copy of REMOTIX.
