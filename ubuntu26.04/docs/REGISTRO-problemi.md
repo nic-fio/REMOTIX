@@ -412,7 +412,7 @@ sul banco a macchine virtuali (sezione G) e a mano, dal proprietario. Le piste d
 - **Accesso locale vero con programmi aperti:** P7 e P9 su tutti e quattro i desktop; P8 su KDE e XFCE (su GNOME e LXQt non è automatizzabile).
 - **Aggiornamento 1.0.1 -> 1.2.0 e rimozione (`purge`):** puliti sui quattro.
 - **Prove a mano del proprietario sulle quattro VM:** tutte OK (27 nov 2026).
-- **Prove sulle live:** da fare.
+- **Prove del proprietario sulle quattro live, su macchina vera (27 nov 2026):** Ubuntu, Kubuntu e Xubuntu OK; Lubuntu OK dopo aver capito la voce H7. Su tutte e quattro l'accesso locale chiude il desktop remoto dello stesso utente; l'accesso locale parte dopo qualche secondo, il tempo di chiudere in ordine il desktop remoto (visto dal proprietario, accettato: «va bene così»).
 
 ---
 
@@ -436,3 +436,12 @@ sul banco a macchine virtuali (sezione G) e a mano, dal proprietario. Le piste d
 
 ### H6. Finestra del portafoglio KDE
 - Mai decisa.
+
+### H7. Sulla live di Lubuntu il desktop remoto non ha le icone e la barra arriva dopo un minuto
+- **Quando:** 27 nov 2026, prova del proprietario sulla live Lubuntu 26.04.1, macchina vera.
+- **Che cosa è successo:** nel desktop remoto LXQt mancavano le icone (sul desktop e nella barra) e la barra in basso era completa solo dopo circa un minuto (due suoi programmi partivano 50 secondi dopo gli altri).
+- **Perché:** REMOTIX prende le cartelle di impostazioni della sessione che la macchina dichiara all'avvio (`local_session_name_find()` in `src/session.c`, regola del 14 nov 2026, non toccata dalla 1.2.0). Sulla live quella sessione è `lubuntu-live-environment`, la schermata «Prova o installa»: la sua cartella `/etc/xdg/xdg-lubuntu-live-environment` ha solo la barra, e così `/etc/xdg/xdg-Lubuntu` (tema delle icone e il resto) non veniva letta. Lo script di quella sessione aggiunge da solo tutte e due le cartelle; REMOTIX no.
+- **Prova:** sulla live, cambiata a mano la riga `Session=` di `/etc/sddm.conf` in `Lubuntu.desktop` e riavviato il servizio: con un utente nuovo icone presenti e tutti i programmi del desktop partiti entro 3 secondi.
+- **Sul sistema installato non succede:** il programma di installazione dichiara la sessione normale (`/etc/calamares/modules/displaymanager.conf`: `desktopFile: "Lubuntu"`, letto sulla live), e sulla macchina virtuale Lubuntu installata icone e barra erano a posto. Non è stata fatta un'installazione vera con quel programma per guardare il risultato.
+- **Deciso dal proprietario:** resta così, nessuna modifica al programma («la live non è funzionamento proprio normale»).
+- **Per le prossime volte (proprietario, 27 nov 2026):** niente più prove sulle live; le prove su macchina vera si fanno con una distribuzione installata su una chiavetta USB.
