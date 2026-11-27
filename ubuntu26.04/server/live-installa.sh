@@ -1,14 +1,14 @@
 #!/bin/bash
 # live-installa.sh - TEST installer for a real machine booted from an Ubuntu 26.04 live image
 # (Ubuntu, Kubuntu, Xubuntu, Lubuntu).  Run as root from the live terminal:
-#     wget -qO- http://192.168.0.2:8830/installa.sh | sudo bash
+#     wget -qO- http://192.168.0.22:8830/installa.sh | sudo bash
 # It does exactly what the user manual asks of the administrator (ch. 2): apt install of the .deb, then
 # `systemctl enable --now remotix`.  Nothing else on the system is changed, except the two test users.
 # Re-runnable.  Optional environment: SORGENTE (where the files are), PORTA (only for container tests).
 set -euo pipefail
 export LC_ALL=C DEBIAN_FRONTEND=noninteractive
 
-SORGENTE=${SORGENTE:-http://192.168.0.2:8830}
+SORGENTE=${SORGENTE:-http://192.168.0.22:8830}
 PACCHETTO=remotix_1.2.0-1+ubuntu26.04_amd64.deb
 UTENTI=(prova prova2)
 PASSWORD=prova2026
