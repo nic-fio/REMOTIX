@@ -9,7 +9,7 @@ set -euo pipefail
 export LC_ALL=C DEBIAN_FRONTEND=noninteractive
 
 SORGENTE=${SORGENTE:-http://192.168.0.2:8830}
-PACCHETTO=remotix_1.0.0-1+ubuntu26.04_amd64.deb
+PACCHETTO=remotix_1.2.0-1+ubuntu26.04_amd64.deb
 UTENTI=(prova prova2)
 PASSWORD=prova2026
 
