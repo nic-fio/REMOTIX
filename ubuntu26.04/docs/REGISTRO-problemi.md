@@ -360,3 +360,79 @@ virtuali e forse qualche gioco leggono invece la **posizione** del tasto, e most
   telefono («Android fa a pugni con i codec video»).
 - **Deciso:** non bloccante, nessuna modifica. **Per chiudere il dubbio:** stesso video dal tablet con la stessa misura
   sul server, e la stessa prova su una macchina vera.
+
+---
+
+## F. Versione 1.2.0 (26-27 nov 2026): Ubuntu 26.04 allineata a Fedora 45
+
+Stessa regola del proprietario già usata per Debian: dove Fedora fa una cosa e su Ubuntu si può fare, si fa come Fedora.
+Il lavoro è stato fatto a blocchi sui file di Ubuntu (mai copiando interi i file di un'altra distribuzione). Le prove sono
+sul banco a macchine virtuali (sezione G) e a mano, dal proprietario. Le piste di analisi sono in
+`studio/analisi-1.2.0/rapporto-*.md`. Dove una cura non è stata vista scattare, lo dico.
+
+### F1. Che cosa è stato portato da Fedora
+- **Lingua della sessione:** il desktop remoto usa la lingua scelta dall'utente (`Languages=` di AccountsService, letta
+  **prima** del cambio di utente) e, se manca, quella del sistema; passano `LC_*` e `LANGUAGE`. Vale per GNOME e, tramite il
+  gestore dei servizi dell'utente (`manager_set_locale`), per KDE, XFCE e LXQt.
+- **Primo movimento assoluto del puntatore:** mandato due volte, come su Fedora (GNOME).
+- **KDE, chiusura per accesso locale:** 5 secondi di attesa ordinata, poi chiusura forzata.
+- **Registro:** una riga dice chi ha chiuso la connessione e perché (`src/transport.c`).
+- **Aggancio PAM:** `remotix-pam-hook` si controlla anche a ogni avvio del servizio (`ExecStartPre`), non solo in installazione.
+- **Cache di Mesa:** `MESA_SHADER_CACHE_DISABLE` per il lato root.
+- **AppArmor:** riga per la lettura di `org.kde.remotix.desktop`, come Debian (F10 di Debian).
+- **`prerm`:** nuovo ordine, la riga PAM si toglie dopo l'arresto del servizio.
+- **Regola polkit per fwupd:** inserita ma **inerte** su Ubuntu: fwupd 2.1.1 non ha quell'azione (misurato).
+- **`xiccd.desktop`:** escluso dall'avvio automatico della sessione remota. Su Xubuntu era **necessario** (misurato), come
+  su Debian (F6 di Debian): altrimenti compaiono finestre di password di amministratore.
+
+### F2. Che cosa NON è stato portato, e perché
+- **KWin da solo e cambio di risoluzione a caldo (KDE):** su Kubuntu resta il nostro `labwc` 0.9.3 con `wlroots` 0.19.2.
+- **Ripiego del `PATH` di Fedora:** su Ubuntu è PAM a dare il `PATH`.
+- **`--session-fd` di Debian:** non portato.
+- **SELinux e RPM:** non esistono su Ubuntu.
+
+---
+
+## G. Banco di prova (26-27 nov 2026)
+
+### G1. Macchine virtuali con la Radeon, senza contenitori
+- **Regola:** niente contenitori; una sola Radeon. Procedura in `server/VM-BANCO.md`, tool `server/vm-radeon.sh` e
+  `server/prepara-server-vm.sh`, prove in `prove/`, come si lanciano in `studio/prove-1.2.0/COME-SI-LANCIA.md`.
+- **Protezione contro il blocco del server** (la lezione di Debian, G1 di Debian): `vm-radeon.sh accendi` verifica
+  `amdgpu.runpm=0` nell'ospite **prima** di dare la scheda, a ogni accensione; `disable_idle_d3` lato server; registro del
+  kernel scritto su disco. **Nessun blocco in tutta la sessione.**
+
+### G2. La costruzione del `.deb` in una VM
+- `build/build-deb-vm.sh` costruisce nella VM `costruzione` (mai con la Radeon), in modo riproducibile; `lintian` pulito.
+  Uscita in `/media/REMOTIX-UBUNTU/pacchetti/<etichetta>/`.
+
+### G3. Risultati
+- **Giro automatico:** GNOME 125 PASS + 1 FAIL noto (`desktop/users-shell-and-environment`, `SHELL` vuoto con `pkexec`);
+  KDE, XFCE e LXQt 126 PASS.
+- **Accesso locale vero con programmi aperti:** P7 e P9 su tutti e quattro i desktop; P8 su KDE e XFCE (su GNOME e LXQt non è automatizzabile).
+- **Aggiornamento 1.0.1 -> 1.2.0 e rimozione (`purge`):** puliti sui quattro.
+- **Prove a mano del proprietario sulle quattro VM:** tutte OK (27 nov 2026).
+- **Prove sulle live:** da fare.
+
+---
+
+## H. Rinviati o aperti nella 1.2.0 (non bloccanti)
+
+### H1. Formati dell'utente
+- I formati (`LC_*`, `FormatsLocale`) scelti dall'utente non arrivano al desktop remoto: lasciato come Fedora e Debian, per armonia tra le distribuzioni.
+
+### H2. Lingua su KDE e XFCE
+- Su KDE la lingua di AccountsService arriva solo se manca `plasma-localerc`; la scelta fatta dalle Impostazioni di KDE arriva.
+- Su XFCE `xfconfd` resta nella lingua di sistema.
+
+### H3. Un FAIL non spiegato
+- Un FAIL di mouse e tastiera (`check-base`) su GNOME subito dopo un aggiornamento con un desktop aperto: **non spiegato e non riprodotto**.
+
+### H4. Arresti anomali dopo la fine della sessione
+- `wireplumber` su tutti i desktop; `kwin_wayland` una volta su Kubuntu allo stop del servizio; `xdg-desktop-portal-kde` una volta su Lubuntu.
+
+### H5. `/root/.cache` della 1.0.1
+- La cartella lasciata dalla 1.0.1 resta dopo la rimozione (la 1.2.0 non ne crea più, grazie a `MESA_SHADER_CACHE_DISABLE`).
+
+### H6. Finestra del portafoglio KDE
+- Mai decisa.
