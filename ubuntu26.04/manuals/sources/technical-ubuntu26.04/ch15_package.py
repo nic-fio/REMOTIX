@@ -273,7 +273,7 @@ S5 = p("Everything is installed by " + c("override_dh_auto_install") + " and " +
         "<b>The licences.</b> " + c("debian/copyright") + " carries the licence text of REMOTIX (appended by " + c("build-deb-vm.sh") + ") and a section for "
         + c("usr/libexec/remotix/labwc") + " («GPL-2 and Expat»: labwc is GPL-2, two of its files LGPL-2.0-or-later, wlroots is Expat). "
         + c("THIRD-PARTY-LICENSES") + " is installed (compressed) under " + sysf("/usr/share/doc/remotix/") + ": it holds the full texts of the third-party components (ngtcp2, nghttp3, libopus, the Emscripten and musl parts of the page's decoder, the Wayland protocol files, and labwc and wlroots). "
-        + c("LICENSE.md") + " (section 8) says the same of labwc and wlroots and promises the corresponding source with every release; there is no installer and no Go module in the package any more, and the licence files do not mention them.",
+        + c("LICENSE.md") + " (section 8) says the same of labwc and wlroots and promises the corresponding source with every release; there is no installer and no Go module in the package any more, and " + c("LICENSE.md") + " and " + c("THIRD-PARTY-LICENSES") + " do not mention them.",
         "<b>No benchmark file and no bench option are in the package.</b> The build refuses to package if "
         + c("BENCH_ON") + " in " + c("rcp.c") + " is not 0, and its checks on the finished package assert that the unit "
         "passes no bench option and that no bench file is in the file list (" + rif("Build and release") + "). "

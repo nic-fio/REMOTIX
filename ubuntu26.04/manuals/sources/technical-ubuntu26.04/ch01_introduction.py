@@ -92,8 +92,7 @@ S2 = p("Two kinds of statement are made in this manual and they are kept apart. 
          "virtual machine: 125 lines PASS and one known FAIL on GNOME (" + c("desktop/users-shell-and-environment") + ", the line that "
          "expects a password window from " + c("pkexec") + " while the product opens none by design), 126 PASS on each of the other three. "
          "The local login that closes the remote desktop <i>with programs open</i>: P7 and P9 were run on the four desktops, P8 on KDE and "
-         "XFCE (it cannot be automated on GNOME and LXQt); the owner tried it by hand on the four machines and on the four live images "
-         "26.04.1 on a real machine on 27 Nov 2026: all passed",
+         "XFCE (it cannot be automated on GNOME and LXQt); the owner tried it by hand on the four live images 26.04.1 on a real machine (27 Nov 2026), where the local login closed the remote desktop of the same user on all four; his hand tests on the four virtual machines were all OK",
          "Four desktops on one machine together; one FAIL of the mouse and keyboard check on GNOME right after an update with a desktop "
          "open, seen once, neither explained nor reproduced (REGISTRO H3)"],
         ["Browsers", "Chrome and Firefox on Linux (base, input, audio); Chrome for the clipboard; the owner's own tests "
@@ -105,7 +104,7 @@ S2 = p("Two kinds of statement are made in this manual and they are kept apart. 
          + c("prove/check-lifecycle.py") + ", " + c("prove/check-resilience.py") + "); the local-login hold ("
          + c("prove/check-prelocal.py") + ")",
          "The 30-min and 60-min clocks at their real values (only the mechanism at short values)"],
-        ["Package", "Built in the " + c("costruzione") + " virtual machine, " + c("lintian") + " clean; update from 1.0.1 to 1.2.0 and "
+        ["Package", "Built in the " + c("costruzione") + " virtual machine (final package: build " + c("finale1") + " of 27 Nov 2026, built twice identical, all check lines YES, " + c("lintian") + " E=0 W=0, 35 files); update from 1.0.1 to 1.2.0 and "
          + c("purge") + " clean on the four virtual machines; installation on the four live images",
          "A card that is not an AMD or Intel one (NVIDIA: measured on Ubuntu 26.04 in October 2026, on a rented machine, with an earlier version "
          "of the code; not run again on this tree); the AppArmor profile in enforce mode (it is shipped in complain mode); a 4096×2304 canvas"],

@@ -36,7 +36,7 @@ S_RESTART = p("<b>What a restart of the service does to people at work.</b> Stop
         "seconds, at most about 25) while the remote desktop is closed; if the service is stopped there is no wait. "
         "On KDE Plasma, if a program of the remote desktop does not close by itself (for example one that asks "
         "“save?”), REMOTIX gives the KDE desktop 5 seconds to close by itself and then closes it by force, so the "
-        "person at the machine waits about six seconds.",
+        "person at the machine waits a few seconds (a little over 5).",
         "Ubuntu's own restarts after a library update (needrestart) do <b>not</b> restart REMOTIX: the package tells "
         "needrestart to leave it alone, and lists it for a manual restart. Do it when nobody is working "
         "(not seen at work on Ubuntu; read from the package).",

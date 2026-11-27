@@ -50,7 +50,7 @@ S_REQ = p("REMOTIX works only if five conditions are met. Read them <b>before</b
         ["1", "<b>Ubuntu 26.04 with one of the four desktops</b>: Ubuntu (GNOME), Kubuntu (KDE Plasma), Xubuntu "
               "(XFCE) or Lubuntu (LXQt), on an ordinary PC (<i>amd64</i>). REMOTIX does not install a desktop.",
          rif("The desktops")],
-        ["2", "<b>A video card that encodes H.264</b>, Intel or AMD (or NVIDIA with its own driver). REMOTIX encodes "
+        ["2", "<b>A video card that encodes H.264</b>, Intel or AMD (or NVIDIA with its own driver: it worked in October 2026 with an earlier build and has not been run again with this release). REMOTIX encodes "
               "the desktop only on the video card and there is no encoding on the processor. On Ubuntu the Mesa "
               "drivers already do it: " + c("va-driver-all") + " and " + c("mesa-vulkan-drivers") + " are installed "
               "with REMOTIX as recommended packages (some of them from <i>universe</i>, which a normal Ubuntu "
@@ -188,7 +188,7 @@ S_LICENCE = p("REMOTIX is free for personal use and for non-profit associations,
     p("The licence concerns whoever installs and runs the server: people who only connect with a browser need "
       "nothing from it. Its full text is in " + sysf("/usr/share/doc/remotix/copyright") + " after installation, "
       "and the licences of the third-party components are in " + sysf("/usr/share/doc/remotix/THIRD-PARTY-LICENSES.gz")
-      + ". They include the copy of labwc (with wlroots) that comes inside the package: it keeps its own licence (GPL-2.0 for labwc, MIT for wlroots), "
+      + ". They include the copy of labwc (with wlroots) that comes inside the package: it keeps its own licence (labwc: GNU GPL version 2 only, two of its files LGPL version 2 or later; wlroots: MIT), "
         "which applies to it and not to REMOTIX. This summary is not the licence; the text is.")
 
 CHAPTER = ("What REMOTIX is", [

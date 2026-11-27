@@ -195,7 +195,7 @@ S_ADMIN = p("The administrator has three places to look, and three quick checks.
     p("At every start the service writes a report. Useful lines: “the desktop of this machine: …” (which desktop it "
       "found), “video.codec offered …” (the video card encodes) or “THIS SERVER CANNOT ENCODE VIDEO” (it does not), "
       "and the PAM service line (the sign-in file is there). Every connection that closes is written with the "
-      "reason: whether the browser closed it (and with which error) or the server did, or the connection went "
+      "reason (for connections that never signed in, only the first five in every ten seconds are written as ordinary lines; the others go to the detail level, which is normally off, and one line counts them): whether the browser closed it (and with which error) or the server did, or the connection went "
       "silent, in one phrase after the dash. A device with a wrong clock shows up here, as a certificate "
       "error sent by the browser. The sentinel's line about the power-off rules shows the answer of the system for each "
       "action (" + c("no") + " or " + c("na") + ", “not available on this machine”, are both fine) and, when the system "
@@ -249,8 +249,8 @@ S_KNOWN = p("These are the problems known on Ubuntu 26.04 that a user or an admi
         ["<b>KDE Plasma</b>: the person at the machine waits to sign in",
          "If somebody signs in at Kubuntu's own screen while your remote desktop is open, and a program of your "
          "desktop does not close by itself (for example one that asks “save?”), REMOTIX gives the KDE desktop "
-         "5 seconds to close by itself and then closes it by force: the person at the machine waits about six "
-         "seconds. Unsaved work in that program is lost."],
+         "5 seconds to close by itself and then closes it by force: the person at the machine waits a few seconds "
+         "(a little over 5). Unsaved work in that program is lost."],
         ["<b>KDE Plasma</b>: the language",
          "The language of the KDE desktop follows the <b>KDE Settings</b> of the user "
          "(<code class=\"sys\">~/.config/plasma-localerc</code>), as at a local sign-in. A user who has already "

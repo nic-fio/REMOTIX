@@ -594,8 +594,7 @@ S8 = p("The honest list, from the code and the decisions:", lead=True) + \
          "restarting REMOTIX closes every remote desktop, and needrestart would otherwise restart it by itself after the update of a library "
          "(" + c("debian/needrestart/remotix.conf") + "; " + rif("The package") + "). The uninstallation that leaves the system clean is in "
          + rif("Removal: prerm, postrm and purge") + "."],
-        ["Hardware and clients not tried", "NVIDIA (measured on an RTX 4090 on Ubuntu 26.04 in October 2026 with an earlier build, not run again on this tree), Samsung DeX (tried by the owner only on Debian; nothing about it was found "
-         "for Ubuntu, not verified), a canvas above 3840x2160 (the page's own size ladder stops there; the protocol canvas is 4096×2304, "
+        ["Hardware and clients not tried", "NVIDIA (measured on an RTX 4090 on Ubuntu 26.04 in October 2026 with an earlier build, not run again on this tree), Samsung DeX (tried by the owner on Ubuntu only on GNOME, in the container round of 19 Nov 2026 with the build numbered 1.0.0; not on the other desktops and not with this release), a canvas above 3840x2160 (the page's own size ladder stops there; the protocol canvas is 4096×2304, "
          "and the <b>declared</b> limit of the product is 3K) and the first tap on GNOME touch (REGISTRO E2) are open or untried. The only "
          "hardware named for Ubuntu is the Radeon handed to the test virtual machines (" + c("server/vm-radeon.sh") + "), with its encoding "
          "route (Vulkan on the virtual machines, VA-API on the Kubuntu live; " + c("docs/STORIA-ubuntu-26.04.md") + "). The security model "

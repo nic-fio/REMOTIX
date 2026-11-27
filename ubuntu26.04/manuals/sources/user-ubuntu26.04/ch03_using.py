@@ -200,8 +200,8 @@ S_LEAVE = p("Your desktop belongs to <i>you</i>, not to the browser tab. Closing
          "machine you cannot sign in from the browser (the page says " + ui("that user is already signed in locally")
          + "); after they sign out you can, and you get a new desktop. On KDE Plasma, if a program in your desktop "
          "does not close by itself (for example one that asks “save?”), REMOTIX gives the KDE desktop 5 seconds to "
-         "close by itself and then closes everything by force, so the person at the machine waits about six "
-         "seconds. This was tried at the real login screens of all four flavours (GDM, SDDM, LightDM), in the test "
+         "close by itself and then closes everything by force, so the person at the machine waits a few seconds "
+         "(a little over 5). This was tried at the real login screens of all four flavours (GDM, SDDM, LightDM), in the test "
          "machines and by the owner on four live systems: the local login waits a few seconds, the time to close "
          "your desktop in order, your desktop is closed and the local login goes on."],
     ], "«TAB» — Leaving and coming back") + \
